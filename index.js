@@ -13,11 +13,9 @@ function nextOrderNumber() {
   return ++orderCounter;
 }
 
-// URL publica del menu — Railway la pone automaticamente en RAILWAY_PUBLIC_DOMAIN
+// URL publica del menu
 function getMenuUrl() {
-  if (process.env.MENU_PAGE_URL) return process.env.MENU_PAGE_URL;
-  if (process.env.RAILWAY_PUBLIC_DOMAIN) return "https://" + process.env.RAILWAY_PUBLIC_DOMAIN + "/menu";
-  return "https://lacurva.railway.app/menu";
+  return process.env.MENU_PAGE_URL || "https://bit.ly/LaCurvaStreetFood";
 }
 
 const MENU_TEXT = `
@@ -453,26 +451,20 @@ app.post("/webhook", async function(req, res) {
   var hourColombia = nowColombia.getUTCHours();
   var minuteColombia = nowColombia.getUTCMinutes();
   var timeStr = hourColombia.toString().padStart(2,"0") + ":" + minuteColombia.toString().padStart(2,"0");
-  // Horario: abierto 4pm-10:30pm. De 10:30pm a 12am solo informa cierre. Antes de 4pm silencio.
-  var totalMinutes = hourColombia * 60 + minuteColombia;
-  var isOpen      = totalMinutes >= 960 && totalMinutes < 1350;  // 16:00 a 22:30
-  var isClosing   = totalMinutes >= 1350 && totalMinutes < 1440; // 22:30 a 24:00
-  var isClosed    = totalMinutes < 960;                          // antes de 4pm
-
-  // Antes de las 4pm: silencio total
-  if (isClosed) {
-    console.log("Fuera de horario (" + timeStr + ") — mensaje ignorado de " + from);
-    return res.sendStatus(200);
-  }
-
-  // Determinar estado del horario para inyectar en el prompt
-  var horarioMsg;
-  if (isOpen) {
-    horarioMsg = "HORARIO: Son las " + timeStr + " (hora Colombia). Estas EN horario de atencion (4:00pm-10:30pm). Atiende normalmente.";
-  } else {
-    // isClosing: informa que ya no hay domicilios
-    horarioMsg = "HORARIO: Son las " + timeStr + " (hora Colombia). Los domicilios ya cerraron a las 10:30pm. Si alguien escribe, informale amablemente que los pedidos a domicilio son hasta las 10:30pm y que mañana estamos de nuevo desde las 4:00pm. No tomes pedidos.";
-  }
+  // ── HORARIO EN PAUSA PARA PRUEBAS — descomentar cuando se active ──────────
+  // var totalMinutes = hourColombia * 60 + minuteColombia;
+  // var isOpen      = totalMinutes >= 960 && totalMinutes < 1350;
+  // var isClosing   = totalMinutes >= 1350 && totalMinutes < 1440;
+  // var isClosed    = totalMinutes < 960;
+  // if (isClosed) { return res.sendStatus(200); }
+  // var horarioMsg;
+  // if (isOpen) {
+  //   horarioMsg = "HORARIO: Son las " + timeStr + " (hora Colombia). Estas EN horario de atencion (4:00pm-10:30pm). Atiende normalmente.";
+  // } else {
+  //   horarioMsg = "HORARIO: Son las " + timeStr + " (hora Colombia). Los domicilios ya cerraron a las 10:30pm. Informale amablemente y no tomes pedidos.";
+  // }
+  // ─────────────────────────────────────────────────────────────────────────
+  var horarioMsg = "HORARIO: Atiende normalmente (modo pruebas activo).";
 
   // Inyectar URL del menu y estado del horario en el system prompt
   var systemWithUrl = SYSTEM_PROMPT
