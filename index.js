@@ -1,5 +1,6 @@
 const express = require("express");
 const axios = require("axios");
+const path = require("path");
 const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
@@ -10,6 +11,13 @@ let orderCounter = 100;
 
 function nextOrderNumber() {
   return ++orderCounter;
+}
+
+// URL publica del menu — Railway la pone automaticamente en RAILWAY_PUBLIC_DOMAIN
+function getMenuUrl() {
+  if (process.env.MENU_PAGE_URL) return process.env.MENU_PAGE_URL;
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) return "https://" + process.env.RAILWAY_PUBLIC_DOMAIN + "/menu";
+  return "https://lacurva.railway.app/menu";
 }
 
 const MENU_TEXT = `
@@ -131,30 +139,35 @@ MENU KIDS (incluye jugo Hit cajita + sorpresa):
 - Perro con francesa: $21.400
 `;
 
-const SYSTEM_PROMPT = `Eres Luz, la encargada de atencion al cliente de La Curva Street Food, un restaurante de comida callejera en el barrio Canaveral, sur de Cali, Colombia.
+const SYSTEM_PROMPT = `Eres Luz, la encargada de atencion al cliente de La Curva Street Food, restaurante de comida callejera en Canaveral, Cali. Direccion: Cl. 16 #56-40, Comuna 17, Cali.
+
+HORARIO: Solo atiendes de 4:00pm a 12:00am. Si alguien escribe fuera de ese horario, NO respondas nada.
 
 PERSONALIDAD:
-- Eres una persona real, calida y cercana. No eres un robot.
-- Hablas natural, como una persona caleña amigable y profesional.
-- Usas expresiones como: "con gusto", "a listo", "claro que si", "digame", "ya le confirmo".
-- Puedes decir "Dama" o "Caballero" ocasionalmente.
-- Respuestas cortas y al grano. Sin discursos largos.
-- Nunca uses listas numeradas. Habla natural.
+- Eres una persona real, calenya, calida y cercana. Nunca admitas ser IA.
+- Hablas natural. Usas: "con gusto", "a listo", "claro que si", "digame", "ya le confirmo". Ocasionalmente "Dama" o "Caballero".
+- SIEMPRE responde en UN SOLO mensaje. Nunca mandes 2 o 3 mensajes separados.
+- Respuestas cortas y al grano.
 
-INFORMACION DEL RESTAURANTE:
-- Horario: todos los dias de 4:00pm a 12:00am
-- Ubicacion: Barrio Canaveral, sur de Cali
-- Zona de domicilio: sur de Cali y parte del centro
-- Tiempo estimado de domicilio: 25 a 35 minutos
+MENSAJES DE VOZ:
+Si el cliente envia un audio responde: "Hola! Por favor escribeme tu pedido, no puedo escuchar audios por aca. Con gusto te atiendo."
+
+INFORMACION:
+- Horario: 4:00pm a 12:00am todos los dias
+- Ubicacion: Cl. 16 #56-40, Canaveral, Cali
+- Domicilio: sur de Cali y parte del centro
+- Tiempo estimado: 25 a 35 minutos
 
 METODOS DE PAGO:
 - Nequi: @NEQUIJOS126
 - Bancolombia llave: 0089102980 (Jose Gregorio Charris)
-- Efectivo: el domiciliario lleva cambio (debes preguntar con que billete cancela)
-- Datafono: el domiciliario lleva el datafono
+- Efectivo: domiciliario lleva cambio (pregunta con que billete cancela)
+- Datafono: domiciliario lo lleva
+- Pago mixto: acepta parte digital + parte efectivo. Confirma cuanto va por cada medio y da datos de transferencia de inmediato.
+- NUNCA esperes a que el cliente pida los datos de pago. Delos siempre tu primero.
 
 PROMOCIONES SEMANALES:
-- Lunes y Jueves: Pague 2 lleve 3 en hamburguesas tradicionales
+- Lunes y Jueves: Pague 2 lleve 3 hamburguesas tradicionales
 - Martes: Pague 2 lleve 3 en todos los perros
 - Jueves: Pague 2 lleve 3 en Angus BBQ King o Celestina
 - Domingos: Pague 2 lleve 3 en asados junior
@@ -162,80 +175,100 @@ PROMOCIONES SEMANALES:
 MENU COMPLETO:
 ${MENU_TEXT}
 
-REGLAS DE COBRO:
-Desechables: $500 por cada producto. EXCEPCION: las arepas no cobran desechable.
-Domicilio:
-- Zona cercana (Canaveral, Ciudad Jardin, Pance, Tequendama, Meléndez, barrios aledanos): $2.000
-- Zona media (sur mas alejado, Valle del Lili, Calipso, Compartir, centro como San Nicolas): $3.000
-- Zona lejana (extremos del sur o centro muy alejado): $4.000
-- Si no reconoces el barrio, cobra $3.000 y avisa que puede variar maximo $1.000.
+PAGINA VISUAL DEL MENU:
+Cuando un cliente pida el menu o diga que quiere pedir, ofrece siempre:
+"Te comparto nuestro menu completo 👉 MENU_URL_PLACEHOLDER — ahi armas tu pedido y me lo mandas. O me dices aqui mismo con gusto."
 
-CALCULO DEL TOTAL:
-Total = productos + desechables + domicilio
-Ejemplo: 2 hamburguesas ($37.800) + desechables ($1.000) + domicilio ($3.000) = $41.800
-SIEMPRE muestra el desglose antes de dar el total.
-NUNCA proceses un pedido sin confirmar el total con el cliente primero.
+DESECHABLES — REGLA CRITICA:
+- $500 por cada producto de COMIDA.
+- BEBIDAS NO cobran desechable: Coca-Cola, Mr. Tee, Jugo Hit, Agua, Limonadas, Jugos, Soda italiana, cualquier bebida.
+- AREPAS tampoco cobran desechable.
+- Solo cobran: hamburguesas, angus, combos, desgranados, chuzos, alitas, asados, entradas, aplastados, especialidades, patacones, burritos, sandwiches, shawarmas.
 
-REGLA DE ORO - LEE ANTES DE PREGUNTAR:
-- Lee el mensaje completo antes de responder.
-- Si el cliente ya dio producto + direccion + forma de pago, confirma todo de una vez.
-- NUNCA preguntes algo que el cliente ya respondio en la misma conversacion.
-- Solo pregunta lo que falta.
+DOMICILIO — pregunta siempre el barrio:
+- $2.000: Canaveral, Ciudad Jardin, Pance, Tequendama, El Ingenio, Pampalinda
+- $3.000: Melendez, Univalle, Lili, Mojica, Poblado, Mario Correa
+- $4.000: Valle del Lili, Calipso, Compartir, Capri, Niza, Caney, Santa Barbara
+- $5.000: San Joaquin, centro (San Nicolas, San Bosco, Santa Rosa, Salomia)
+- $6.000: extremos norte, extremos sur, zonas muy alejadas
+- Si no reconoces el barrio: $4.000 y avisa que puede variar $1.000.
 
-MODIFICACIONES:
-- Acepta modificaciones como "sin queso", "sin pollo", "extra salsa".
-- Confirma la modificacion: "Listo, anotado sin queso."
-- Incluye la modificacion en el resumen del pedido.
+CALCULO — SIEMPRE muestra este desglose:
+  Productos:    $XX.XXX
+  Desechables:  $XXX
+  Domicilio:    $X.XXX
+  TOTAL:        $XX.XXX
+NUNCA des solo el numero sin desglose. NUNCA cobres desechable a bebidas o arepas.
 
-JERGA CALEÑA:
-- "litro y cuarto" = Coca-Cola 1.5L ($8.900)
-- "una gaseosa" = pregunta cual
-- "adicion de..." = porcion adicional de ese ingrediente
+REGLA ANTI-DUPLICADOS:
+- Si el cliente escribe mal y repite corregido, toma SOLO la version corregida.
+- Si dice "no, era X", reemplaza el anterior, no acumules.
+- Verifica que no haya duplicados antes de confirmar.
 
-FLUJO DEL PEDIDO:
-1. Cliente saluda o pregunta -> responde amable, pregunta que se le antoja
+REGLA DE ORO:
+- Si el cliente ya dio producto + direccion + pago en el mismo mensaje, confirma TODO de una vez.
+- NUNCA preguntes algo que el cliente ya respondio.
+
+CUANDO EL CLIENTE LLEGA DESDE LA PAGINA WEB:
+- Mensaje empieza con "Hola! Quiero hacer un pedido" con lista de productos.
+- Confirma los productos y pide la direccion directamente. No ofrezcas la pagina de nuevo.
+
+MODIFICACIONES: acepta "sin queso", "extra salsa", etc. Confirma y anota en el pedido.
+
+JERGA: "litro y cuarto" = Coca-Cola 1.5L. "una gaseosa" = pregunta cual.
+
+FLUJO:
+1. Saludo -> UN mensaje amable + ofrece link del menu
 2. Cliente pide -> confirma productos con precios
-3. Si no tiene direccion -> preguntala
-4. Con la direccion -> calcula desechables + domicilio y muestra desglose completo
-5. Cliente confirma -> pregunta metodo de pago
-6. Segun el pago:
+3. Pide barrio si no lo tiene
+4. Con barrio -> muestra desglose completo
+5. Cliente confirma -> pregunta pago Y da datos de inmediato sin esperar
+6. Pago:
    - Nequi: "Transferi a @NEQUIJOS126 y mandame el comprobante"
    - Bancolombia: "Transferi a la llave 0089102980 a nombre de Jose Gregorio Charris y mandame el comprobante"
-   - Efectivo: pregunta "Con cuanto nos cancela?" y escribe PAGO_EFECTIVO:[denominacion]
-   - Datafono: confirma que el domiciliario lo lleva, escribe PAGO_DATAFONO
-7. Cliente envia comprobante o confirma pago -> escribe PAGO_CONFIRMADO
+   - Efectivo: pregunta billete -> escribe PAGO_EFECTIVO:[denominacion]
+   - Datafono: confirma -> escribe PAGO_DATAFONO
+   - Mixto: confirma montos, da datos digitales, pregunta billete para el resto
+7. Cliente envia comprobante -> escribe PAGO_CONFIRMADO
 
-CUANDO EL PEDIDO ESTA CONFIRMADO escribe exactamente en este formato (sin mostrarlo al cliente):
+PEDIDO CONFIRMADO — escribe oculto (nunca visible al cliente):
 PEDIDO_LISTO:
 ITEMS: [producto1 $precio|producto2 $precio]
 DESECHABLES: [numero sin puntos]
 DOMICILIO: [numero sin puntos]
 TOTAL: [numero sin puntos]
 
-CUANDO TENGAS LA DIRECCION escribe: DIRECCION_LISTA:[direccion completa]
-SI EL CLIENTE DA TELEFONO ADICIONAL escribe: TELEFONO_ADICIONAL:[numero]
+CUANDO TENGAS DIRECCION: DIRECCION_LISTA:[direccion]
+TELEFONO ADICIONAL: TELEFONO_ADICIONAL:[numero]
 
 REGLAS FINALES:
-- NUNCA digas que eres IA, bot o asistente virtual. Eres Luz, una persona real.
-- Si te preguntan si eres IA, di que eres Luz, la encargada de atencion.
-- Siempre aplica promociones del dia automaticamente.
-- Si piden algo que no existe en el menu, ofrece alternativas similares.`;
+- NUNCA digas que eres IA. Eres Luz, la encargada de atencion.
+- Aplica promociones del dia automaticamente.
+- Si piden algo que no existe, ofrece alternativas similares.`;
+
 
 async function printTicket(orderData) {
-  const {
-    orderNumber, items, total, desechables, domicilio,
-    address, paymentMethod, cashDenomination, extraPhone, phone, timestamp
-  } = orderData;
+  var orderNumber = orderData.orderNumber;
+  var items = orderData.items;
+  var total = orderData.total;
+  var desechables = orderData.desechables;
+  var domicilio = orderData.domicilio;
+  var address = orderData.address;
+  var paymentMethod = orderData.paymentMethod;
+  var cashDenomination = orderData.cashDenomination;
+  var extraPhone = orderData.extraPhone;
+  var phone = orderData.phone;
+  var timestamp = orderData.timestamp;
 
-  const subtotal = Number(total) - Number(desechables || 0) - Number(domicilio || 0);
+  var subtotal = Number(total) - Number(desechables || 0) - Number(domicilio || 0);
 
-  const pagoLabel =
+  var pagoLabel =
     paymentMethod === "efectivo" ? "Efectivo - billete: " + cashDenomination :
     paymentMethod === "datafono" ? "Datafono (llevar)" :
     paymentMethod === "bancolombia" ? "Bancolombia llave: 0089102980" :
     "Nequi @NEQUIJOS126";
 
-  const lines = [
+  var lines = [
     "================================",
     "     LA CURVA STREET FOOD      ",
     "    Canaveral - Cali, Col.     ",
@@ -246,7 +279,11 @@ async function printTicket(orderData) {
     extraPhone ? "Tel adicional: " + extraPhone : null,
     "--------------------------------",
     "PRODUCTOS:",
-    ...items.map(function(i) { return "  " + i; }),
+  ].filter(function(l) { return l !== null; });
+
+  items.forEach(function(i) { lines.push("  " + i); });
+
+  lines = lines.concat([
     "--------------------------------",
     "Subtotal:    $" + subtotal.toLocaleString("es-CO"),
     "Desechables: $" + Number(desechables || 0).toLocaleString("es-CO"),
@@ -260,29 +297,48 @@ async function printTicket(orderData) {
     "     GRACIAS POR SU PEDIDO     ",
     "================================",
     ""
-  ].filter(function(l) { return l !== null; }).join("\n");
+  ]);
 
+  var ticketText = lines.join("\n");
   console.log("\n TICKET PARA COCINA:");
-  console.log(lines);
+  console.log(ticketText);
 
-  // Descomentar cuando tengas impresora termica en red:
-  // const net = require("net");
-  // const PRINTER_IP = process.env.PRINTER_IP || "192.168.1.100";
-  // const PRINTER_PORT = process.env.PRINTER_PORT || 9100;
-  // const client = new net.Socket();
-  // client.connect(PRINTER_PORT, PRINTER_IP, function() {
-  //   client.write(lines);
-  //   client.destroy();
-  // });
+  // ── ENVIAR TICKET AL SERVIDOR LOCAL DEL RESTAURANTE ────────────────────────
+  var PRINT_SERVER = process.env.PRINT_SERVER_URL || "http://localhost:3001/print";
+  var PRINT_SECRET = process.env.PRINT_SECRET     || "lacurva2024";
 
-  return lines;
+  var ticketPayload = {
+    secret: PRINT_SECRET,
+    orderNumber: orderNumber,
+    timestamp: timestamp,
+    phone: phone.replace("whatsapp:+57","").replace("whatsapp:+",""),
+    extraPhone: extraPhone || null,
+    items: items,
+    subtotal: subtotal,
+    desechables: Number(desechables || 0),
+    domicilio: Number(domicilio || 0),
+    total: Number(total),
+    address: address,
+    paymentMethod: paymentMethod,
+    cashDenomination: cashDenomination || null
+  };
+
+  axios.post(PRINT_SERVER, ticketPayload, { timeout: 6000 })
+    .then(function() {
+      console.log("Ticket #" + orderNumber + " enviado al servidor de impresion");
+    })
+    .catch(function(err) {
+      console.error("Error enviando a servidor de impresion:", err.message);
+    });
+  // ──────────────────────────────────────────────────────────────────────────
+
+  return ticketText;
 }
 
 function parseReply(reply, from) {
   var cleanReply = reply;
   var sideEffect = null;
 
-  // Detectar pedido listo
   if (reply.indexOf("PEDIDO_LISTO:") !== -1) {
     var itemsMatch = reply.match(/ITEMS:\s*(.+)/);
     var totalMatch = reply.match(/TOTAL:\s*(\d+)/);
@@ -309,7 +365,6 @@ function parseReply(reply, from) {
     cleanReply = reply.replace(/PEDIDO_LISTO:[\s\S]*?TOTAL:\s*\d+/g, "").trim();
   }
 
-  // Detectar direccion
   if (reply.indexOf("DIRECCION_LISTA:") !== -1) {
     var dirMatch = reply.match(/DIRECCION_LISTA:(.+)/);
     if (dirMatch && orderState[from]) {
@@ -320,7 +375,6 @@ function parseReply(reply, from) {
     cleanReply = cleanReply.replace(/DIRECCION_LISTA:.+/g, "").trim();
   }
 
-  // Detectar telefono adicional
   if (reply.indexOf("TELEFONO_ADICIONAL:") !== -1) {
     var telMatch = reply.match(/TELEFONO_ADICIONAL:(.+)/);
     if (telMatch && orderState[from]) {
@@ -329,7 +383,6 @@ function parseReply(reply, from) {
     cleanReply = cleanReply.replace(/TELEFONO_ADICIONAL:.+/g, "").trim();
   }
 
-  // Detectar pago efectivo
   if (reply.indexOf("PAGO_EFECTIVO:") !== -1) {
     var cashMatch = reply.match(/PAGO_EFECTIVO:(.+)/);
     if (cashMatch && orderState[from]) {
@@ -341,7 +394,6 @@ function parseReply(reply, from) {
     cleanReply = cleanReply.replace(/PAGO_EFECTIVO:.+/g, "").trim();
   }
 
-  // Detectar pago datafono
   if (reply.indexOf("PAGO_DATAFONO") !== -1) {
     if (orderState[from]) {
       orderState[from].paymentMethod = "datafono";
@@ -351,7 +403,6 @@ function parseReply(reply, from) {
     cleanReply = cleanReply.replace("PAGO_DATAFONO", "").trim();
   }
 
-  // Detectar pago digital confirmado
   if (reply.indexOf("PAGO_CONFIRMADO") !== -1) {
     if (orderState[from]) {
       orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
@@ -363,6 +414,13 @@ function parseReply(reply, from) {
 
   return { cleanReply: cleanReply, sideEffect: sideEffect };
 }
+
+// ─── RUTAS ────────────────────────────────────────────────────────────────────
+
+// Pagina visual del menu
+app.get("/menu", function(req, res) {
+  res.sendFile(path.join(__dirname, "menu.html"));
+});
 
 app.get("/webhook", function(req, res) {
   res.send("LUZ esta activa - La Curva Street Food");
@@ -390,13 +448,44 @@ app.post("/webhook", async function(req, res) {
     conversations[from] = conversations[from].slice(-20);
   }
 
+  // Hora actual en Colombia (UTC-5)
+  var nowColombia = new Date(Date.now() - (5 * 60 * 60 * 1000));
+  var hourColombia = nowColombia.getUTCHours();
+  var minuteColombia = nowColombia.getUTCMinutes();
+  var timeStr = hourColombia.toString().padStart(2,"0") + ":" + minuteColombia.toString().padStart(2,"0");
+  // Horario: abierto 4pm-10:30pm. De 10:30pm a 12am solo informa cierre. Antes de 4pm silencio.
+  var totalMinutes = hourColombia * 60 + minuteColombia;
+  var isOpen      = totalMinutes >= 960 && totalMinutes < 1350;  // 16:00 a 22:30
+  var isClosing   = totalMinutes >= 1350 && totalMinutes < 1440; // 22:30 a 24:00
+  var isClosed    = totalMinutes < 960;                          // antes de 4pm
+
+  // Antes de las 4pm: silencio total
+  if (isClosed) {
+    console.log("Fuera de horario (" + timeStr + ") — mensaje ignorado de " + from);
+    return res.sendStatus(200);
+  }
+
+  // Determinar estado del horario para inyectar en el prompt
+  var horarioMsg;
+  if (isOpen) {
+    horarioMsg = "HORARIO: Son las " + timeStr + " (hora Colombia). Estas EN horario de atencion (4:00pm-10:30pm). Atiende normalmente.";
+  } else {
+    // isClosing: informa que ya no hay domicilios
+    horarioMsg = "HORARIO: Son las " + timeStr + " (hora Colombia). Los domicilios ya cerraron a las 10:30pm. Si alguien escribe, informale amablemente que los pedidos a domicilio son hasta las 10:30pm y que mañana estamos de nuevo desde las 4:00pm. No tomes pedidos.";
+  }
+
+  // Inyectar URL del menu y estado del horario en el system prompt
+  var systemWithUrl = SYSTEM_PROMPT
+    .replace("MENU_URL_PLACEHOLDER", getMenuUrl())
+    .replace("HORARIO: Solo atiendes de 4:00pm a 12:00am. Si alguien escribe fuera de ese horario, NO respondas nada.", horarioMsg);
+
   try {
     var response = await axios.post(
       "https://api.anthropic.com/v1/messages",
       {
         model: "claude-sonnet-4-20250514",
         max_tokens: 1000,
-        system: SYSTEM_PROMPT,
+        system: systemWithUrl,
         messages: conversations[from]
       },
       {
@@ -474,6 +563,7 @@ app.get("/pedidos", function(req, res) {
 app.get("/", function(req, res) {
   res.json({
     status: "La Curva Bot activo",
+    menu_url: getMenuUrl(),
     hora: new Date().toLocaleString("es-CO"),
     conversaciones_activas: Object.keys(conversations).length,
     pedidos_activos: Object.keys(orderState).length
@@ -483,4 +573,5 @@ app.get("/", function(req, res) {
 var PORT = process.env.PORT || 3000;
 app.listen(PORT, function() {
   console.log("La Curva Street Food - LUZ corriendo en puerto " + PORT);
+  console.log("Menu disponible en: " + getMenuUrl());
 });
