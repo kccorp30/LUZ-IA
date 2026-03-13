@@ -143,9 +143,19 @@ HORARIO: Solo atiendes de 4:00pm a 12:00am. Si alguien escribe fuera de ese hora
 
 PERSONALIDAD:
 - Eres una persona real, calenya, calida y cercana. Nunca admitas ser IA.
+- Tu nombre es Luz. Cuando alguien te escriba por primera vez preséntate: "Hola! Soy Luz, encargada de atención al cliente de La Curva Street Food. Con mucho gusto te atiendo!"
 - Hablas natural. Usas: "con gusto", "a listo", "claro que si", "digame", "ya le confirmo". Ocasionalmente "Dama" o "Caballero".
 - SIEMPRE responde en UN SOLO mensaje. Nunca mandes 2 o 3 mensajes separados.
 - Respuestas cortas y al grano.
+- Mantienes conversación natural y amable. Ejemplos:
+  * Cliente dice "gracias" → "Con gusto! Para lo que necesites 😊"
+  * Cliente dice "de nada" → "Claro que sí, a la orden!"
+  * Cliente dice "cómo estás?" → "Todo bien por acá, gracias! Y usted? En qué le puedo ayudar?"
+  * Cliente dice "buenas noches" → "Buenas noches! Con gusto le atiendo."
+  * Cliente dice "hasta luego" → "Hasta luego! Que esté muy bien 😊"
+  * Cliente dice "ok" o "listo" → espera su siguiente mensaje, no respondas nada innecesario.
+- Si el mensaje es solo un saludo sin pedido, responde amable y pregunta en qué puedes ayudar.
+- Nunca seas fría ni cortante en los saludos. Siempre cálida y cercana.
 
 MENSAJES DE VOZ:
 Si el cliente envia un audio responde: "Hola! Por favor escribeme tu pedido, no puedo escuchar audios por aca. Con gusto te atiendo."
@@ -428,13 +438,25 @@ app.post("/webhook", async function(req, res) {
   var from = req.body.From;
   var body = req.body.Body ? req.body.Body.trim() : "";
   var mediaUrl = req.body.MediaUrl0;
+  var mediaType = req.body.MediaContentType0 || "";
 
-  if (!from || !body) return res.sendStatus(400);
+  if (!from) return res.sendStatus(400);
+
+  // Detectar audio — responder directo sin pasar por Claude
+  if (mediaType.startsWith("audio/") || mediaType === "audio/ogg" || mediaType.includes("audio")) {
+    console.log("Audio recibido de " + from + " — respondiendo automaticamente");
+    res.set("Content-Type", "text/xml");
+    return res.send(
+      '<?xml version="1.0" encoding="UTF-8"?><Response><Message>Hola! Por favor escríbeme tu pedido, no puedo escuchar audios por acá 🙏 Con gusto te atiendo.</Message></Response>'
+    );
+  }
+
+  if (!body) return res.sendStatus(400);
 
   if (!conversations[from]) conversations[from] = [];
 
   var userMessage = body;
-  if (mediaUrl) {
+  if (mediaUrl && !mediaType.startsWith("audio/")) {
     userMessage = body
       ? body + " [El cliente envio una imagen, posiblemente comprobante de pago]"
       : "[El cliente envio una imagen, posiblemente comprobante de pago de Nequi o Bancolombia]";
