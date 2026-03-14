@@ -512,6 +512,11 @@ app.get("/admin", function(req, res) {
   res.sendFile(path.join(__dirname, "admin.html"));
 });
 
+// Panel del restaurante (clientes)
+app.get("/restaurante", function(req, res) {
+  res.sendFile(path.join(__dirname, "restaurante.html"));
+});
+
 app.get("/webhook", function(req, res) {
   res.send("LUZ esta activa - La Curva Street Food");
 });
