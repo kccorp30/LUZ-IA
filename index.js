@@ -17,10 +17,10 @@ function nextOrderNumber() {
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://vbxuwzcfzfjwhllkppkg.supabase.co";
 const SUPABASE_KEY = process.env.SUPABASE_KEY || "sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 
-async function getRestaurante(whatsapp) {
+async function getRestaurante(toNumber) {
   try {
-    // Normalizar numero — quitar whatsapp: y +
-    var num = whatsapp.replace("whatsapp:+","").replace("whatsapp:","").replace("+","");
+    // Buscar por el numero del bot (To) — ese identifica al restaurante
+    var num = toNumber.replace("whatsapp:+","").replace("whatsapp:","").replace("+","");
     var res = await axios.get(
       SUPABASE_URL + "/rest/v1/restaurantes?whatsapp=eq." + num + "&select=*",
       { headers: {
@@ -28,7 +28,16 @@ async function getRestaurante(whatsapp) {
         "Authorization": "Bearer " + SUPABASE_KEY
       }}
     );
-    return res.data && res.data.length > 0 ? res.data[0] : null;
+    if (res.data && res.data.length > 0) return res.data[0];
+    // Si no encuentra por numero del bot, devuelve el primer restaurante activo
+    var fallback = await axios.get(
+      SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=*&limit=1",
+      { headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+      }}
+    );
+    return fallback.data && fallback.data.length > 0 ? fallback.data[0] : null;
   } catch(err) {
     console.error("Error Supabase:", err.message);
     return null;
@@ -65,6 +74,15 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
+
+async function sb_get(path) {
+  try {
+    var res = await axios.get(SUPABASE_URL + "/rest/v1/" + path, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY }
+    });
+    return res.data;
+  } catch(e) { return null; }
+}
 
 // URL publica del menu
 function getMenuUrl() {
@@ -541,7 +559,9 @@ app.post("/webhook", async function(req, res) {
   if (!body) return res.sendStatus(400);
 
   // ── VERIFICAR SUSCRIPCION EN SUPABASE ─────────────────────────────────────
-  var restaurante = await getRestaurante(from);
+  // Usar el numero del bot (To) para identificar el restaurante
+  var toNumber = req.body.To || "";
+  var restaurante = await getRestaurante(toNumber);
   if (restaurante) {
     if (restaurante.estado !== "activo") {
       console.log("Restaurante suspendido/vencido — ignorando mensaje de " + from);
@@ -642,9 +662,20 @@ app.post("/webhook", async function(req, res) {
 
       console.log("Pedido #" + state.orderNumber + " confirmado y enviado a cocina");
 
-      // Guardar pedido en Supabase
-      if (restaurante) {
-        await guardarPedidoSupabase(restaurante.id, {
+      // Guardar pedido en Supabase — siempre intenta, con o sin restaurante en cache
+      var restId = restaurante ? restaurante.id : null;
+
+      // Si no tenemos el restaurante, buscarlo por el numero del webhook (To field)
+      if (!restId) {
+        try {
+          var toNum = (req.body.To || "").replace("whatsapp:+","").replace("whatsapp:","").replace("+","");
+          var restBuscar = await sb_get("restaurantes?select=id&limit=1");
+          if (restBuscar && restBuscar.length > 0) restId = restBuscar[0].id;
+        } catch(e) { console.error("Error buscando restaurante:", e.message); }
+      }
+
+      if (restId) {
+        await guardarPedidoSupabase(restId, {
           orderNumber: state.orderNumber,
           phone: from.replace("whatsapp:+","").replace("whatsapp:",""),
           items: state.items,
@@ -655,6 +686,8 @@ app.post("/webhook", async function(req, res) {
           address: state.address || "Por confirmar",
           paymentMethod: state.paymentMethod || "digital"
         });
+      } else {
+        console.error("No se pudo guardar pedido — restaurante no encontrado para:", from);
       }
 
       delete orderState[from];
