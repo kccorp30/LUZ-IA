@@ -535,9 +535,75 @@ app.get("/restaurante", function(req, res) {
   res.sendFile(path.join(__dirname, "restaurante.html"));
 });
 
-// Provee la service key al frontend de forma segura
+// Endpoint para que el panel del restaurante actualice estados de pedidos
+app.post("/api/pedido-estado", async function(req, res) {
+  var id = req.body.id;
+  var estado = req.body.estado;
+  if (!id || !estado) return res.status(400).json({ error: "Faltan datos" });
+
+  try {
+    await axios.patch(
+      SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id,
+      { estado: estado },
+      { headers: {
+        "apikey": process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY,
+        "Authorization": "Bearer " + (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY),
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      }}
+    );
+    res.json({ ok: true });
+  } catch(err) {
+    console.error("Error actualizando pedido:", err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Endpoint para toggle de menu items
+app.post("/api/menu-toggle", async function(req, res) {
+  var id = req.body.id;
+  var disponible = req.body.disponible;
+  if (!id) return res.status(400).json({ error: "Falta id" });
+
+  try {
+    await axios.patch(
+      SUPABASE_URL + "/rest/v1/menu_items?id=eq." + id,
+      { disponible: disponible },
+      { headers: {
+        "apikey": process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY,
+        "Authorization": "Bearer " + (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY),
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      }}
+    );
+    res.json({ ok: true });
+  } catch(err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Endpoint para agregar productos al menu
+app.post("/api/menu-add", async function(req, res) {
+  try {
+    await axios.post(
+      SUPABASE_URL + "/rest/v1/menu_items",
+      req.body,
+      { headers: {
+        "apikey": process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY,
+        "Authorization": "Bearer " + (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY),
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      }}
+    );
+    res.json({ ok: true });
+  } catch(err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Supabase write key (deprecated - usar /api/pedido-estado)
 app.get("/supabase-write-key", function(req, res) {
-  res.json({ key: process.env.SUPABASE_SERVICE_KEY || "sb_secret_yJx63kqRMKVzlWpd2dJejw_6Z4xAfAd" });
+  res.json({ key: "" });
 });
 
 // Notificar al cliente cuando el pedido va en camino
