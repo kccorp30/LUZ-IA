@@ -504,12 +504,22 @@ async function loadPedidos() {
         </div>
         <div class="pedido-total">${fmt(p.total)}</div>
         <div class="estado-btns">
-          ${cfg.next ? `<button class="estado-btn ${cfg.btnClass}" onclick="cambiarEstado('${p.id}','${cfg.next}','${p.cliente_tel||''}')">${cfg.btnLabel}</button>` : ''}
-          ${p.estado !== 'entregado' ? `<button class="estado-btn btn-entregado" onclick="cambiarEstado('${p.id}','entregado','${p.cliente_tel||''}')">✅ Entregado</button>` : ''}
+          ${cfg.next ? `<button class="estado-btn ${cfg.btnClass}" data-id="${p.id}" data-estado="${cfg.next}" data-tel="${p.cliente_tel||''}">${cfg.btnLabel}</button>` : ''}
+          ${p.estado !== 'entregado' ? `<button class="estado-btn btn-entregado" data-id="${p.id}" data-estado="entregado" data-tel="${p.cliente_tel||''}">✅ Entregado</button>` : ''}
         </div>
       </div>
     </div>`;
   }).join('');
+
+  // Event delegation para botones de estado
+  document.getElementById('pedidosLista').onclick = function(e) {
+    var btn = e.target.closest('[data-id]');
+    if (!btn) return;
+    var id = btn.getAttribute('data-id');
+    var estado = btn.getAttribute('data-estado');
+    var tel = btn.getAttribute('data-tel');
+    cambiarEstado(id, estado, tel);
+  };
 }
 
 async function cambiarEstado(id, nuevoEstado, clienteTel) {
