@@ -606,9 +606,44 @@ app.post("/api/menu-add", async function(req, res) {
   }
 });
 
-// Supabase write key (deprecated - usar /api/pedido-estado)
+// Supabase write key (deprecated)
 app.get("/supabase-write-key", function(req, res) {
   res.json({ key: "" });
+});
+
+// Enviar mensaje libre al cliente desde el panel del restaurante
+app.post("/enviar-mensaje-cliente", async function(req, res) {
+  var telefono = req.body.telefono;
+  var mensaje = req.body.mensaje;
+  if (!telefono || !mensaje) return res.status(400).json({ error: "Faltan datos" });
+
+  try {
+    var twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
+    var twilioAuthToken  = process.env.TWILIO_AUTH_TOKEN;
+    var twilioFrom       = process.env.TWILIO_FROM || "whatsapp:+14155238886";
+
+    var toNum = telefono.replace(/[^0-9]/g, "");
+    if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
+
+    await axios.post(
+      "https://api.twilio.com/2010-04-01/Accounts/" + twilioAccountSid + "/Messages.json",
+      new URLSearchParams({
+        From: twilioFrom,
+        To:   "whatsapp:+" + toNum,
+        Body: mensaje
+      }),
+      {
+        auth: { username: twilioAccountSid, password: twilioAuthToken },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" }
+      }
+    );
+    console.log("Mensaje enviado al cliente: " + toNum);
+    res.json({ ok: true });
+  } catch(err) {
+    var errMsg = err.response ? JSON.stringify(err.response.data) : err.message;
+    console.error("Error enviando mensaje:", errMsg);
+    res.status(500).json({ ok: false, error: errMsg });
+  }
 });
 
 // Notificar al cliente cuando el pedido va en camino
