@@ -535,6 +535,41 @@ app.get("/restaurante", function(req, res) {
   res.sendFile(path.join(__dirname, "restaurante.html"));
 });
 
+// Notificar al cliente cuando el pedido va en camino
+app.post("/notificar-cliente", async function(req, res) {
+  var telefono = req.body.telefono;
+  if (!telefono) return res.status(400).json({ error: "Telefono requerido" });
+
+  var mensaje = "Hola! 🛵 Tu pedido ya va en camino. Llega en 25-35 minutos. Que lo disfrutes! — La Curva Street Food";
+
+  try {
+    var twilioAccountSid = process.env.TWILIO_ACCOUNT_SID;
+    var twilioAuthToken  = process.env.TWILIO_AUTH_TOKEN;
+    var twilioFrom       = process.env.TWILIO_FROM || "whatsapp:+14155238886";
+
+    var toNum = telefono.replace(/[^0-9]/g, "");
+    if (!toNum.startsWith("57")) toNum = "57" + toNum;
+
+    await axios.post(
+      "https://api.twilio.com/2010-04-01/Accounts/" + twilioAccountSid + "/Messages.json",
+      new URLSearchParams({
+        From: twilioFrom,
+        To: "whatsapp:+" + toNum,
+        Body: mensaje
+      }),
+      {
+        auth: { username: twilioAccountSid, password: twilioAuthToken },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" }
+      }
+    );
+    console.log("Cliente notificado: " + toNum);
+    res.json({ ok: true });
+  } catch(err) {
+    console.error("Error notificando cliente:", err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 app.get("/webhook", function(req, res) {
   res.send("LUZ esta activa - La Curva Street Food");
 });
