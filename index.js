@@ -507,6 +507,11 @@ app.get("/menu", function(req, res) {
   res.sendFile(path.join(__dirname, "menu.html"));
 });
 
+// Panel de administracion LUZ IA
+app.get("/admin", function(req, res) {
+  res.sendFile(path.join(__dirname, "admin.html"));
+});
+
 app.get("/webhook", function(req, res) {
   res.send("LUZ esta activa - La Curva Street Food");
 });
