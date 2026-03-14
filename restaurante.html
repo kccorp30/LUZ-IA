@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>LUZ IA — Mi Restaurante</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0d0d;
+  --surface: #161616;
+  --card: #1e1e1e;
+  --card2: #252525;
+  --border: rgba(255,255,255,0.08);
+  --orange: #ff6b2b;
+  --orange2: #e55a1f;
+  --orange-glow: rgba(255,107,43,0.15);
+  --green: #22c55e;
+  --blue: #3b82f6;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --white: #f0f0f0;
+  --muted: #666;
+  --muted2: #333;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { background:var(--bg); color:var(--white); font-family:'Archivo',sans-serif; min-height:100vh; overflow-x:hidden; }
+
+/* ── PIN SCREEN ── */
+#pinScreen {
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  background: radial-gradient(ellipse at 50% 30%, rgba(255,107,43,0.12) 0%, transparent 65%);
+  padding:20px;
+}
+.pin-box { width:100%; max-width:320px; text-align:center; }
+.pin-logo { font-family:'Archivo Black',sans-serif; font-size:42px; letter-spacing:-0.02em; margin-bottom:4px; }
+.pin-logo span { color:var(--orange); }
+.pin-subtitle { font-size:13px; color:var(--muted); margin-bottom:40px; }
+.pin-display {
+  display:flex; gap:12px; justify-content:center; margin-bottom:32px;
+}
+.pin-dot {
+  width:18px; height:18px; border-radius:50%;
+  border:2px solid var(--muted2); transition:all 0.2s;
+}
+.pin-dot.filled { background:var(--orange); border-color:var(--orange); transform:scale(1.1); }
+.pin-keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.key {
+  aspect-ratio:1; background:var(--card); border:1px solid var(--border);
+  border-radius:16px; font-size:22px; font-weight:600; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all 0.1s; user-select:none;
+}
+.key:active { background:var(--card2); transform:scale(0.94); }
+.key.del { font-size:18px; color:var(--muted); }
+.key.empty { background:transparent; border:none; cursor:default; }
+.pin-err { color:var(--red); font-size:13px; margin-top:16px; min-height:20px; }
+.pin-shake { animation:shake 0.4s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
+
+/* ── APP ── */
+#app { display:none; }
+
+/* ── TOP BAR ── */
+.topbar {
+  position:sticky; top:0; z-index:100;
+  background:rgba(13,13,13,0.95); backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:0 16px; height:56px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.topbar-name { font-family:'Archivo Black',sans-serif; font-size:16px; }
+.topbar-name span { color:var(--orange); }
+.live-badge {
+  display:flex; align-items:center; gap:6px;
+  background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.25);
+  border-radius:20px; padding:4px 10px; font-size:11px; color:var(--green);
+}
+.live-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0; z-index:100;
+  background:var(--surface); border-top:1px solid var(--border);
+  display:flex; padding:8px 0 calc(8px + env(safe-area-inset-bottom));
+}
+.nav-tab {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  gap:3px; cursor:pointer; padding:6px 0; transition:all 0.15s;
+}
+.nav-tab .tab-icon { font-size:20px; }
+.nav-tab .tab-label { font-size:10px; color:var(--muted); font-weight:500; }
+.nav-tab.active .tab-label { color:var(--orange); }
+.nav-tab.active .tab-icon { transform:scale(1.1); }
+
+/* ── CONTENT ── */
+.content { padding:16px 16px calc(80px + env(safe-area-inset-bottom)); }
+.page { display:none; }
+.page.active { display:block; animation:fadeUp 0.2s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── STATS ROW ── */
+.stats-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+.stat-tile {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:14px; padding:14px 16px;
+}
+.stat-tile-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px; }
+.stat-tile-val { font-family:'Archivo Black',sans-serif; font-size:28px; }
+.stat-tile-val.orange { color:var(--orange); }
+.stat-tile-val.green { color:var(--green); }
+
+/* ── PEDIDO CARD ── */
+.pedido-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:16px; margin-bottom:12px; overflow:hidden;
+  transition:border-color 0.3s;
+}
+.pedido-card.nuevo { border-color:rgba(255,107,43,0.5); animation:newOrder 0.5s ease; }
+@keyframes newOrder { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+.pedido-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; border-bottom:1px solid var(--border);
+}
+.pedido-num { font-family:'Archivo Black',sans-serif; font-size:20px; color:var(--orange); }
+.pedido-time { font-size:11px; color:var(--muted); }
+.pedido-body { padding:14px 16px; }
+.pedido-items { margin-bottom:10px; }
+.pedido-item { font-size:13px; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.pedido-item:last-child { border:none; }
+.pedido-meta {
+  display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;
+}
+.meta-chip {
+  background:var(--card2); border-radius:8px; padding:4px 10px;
+  font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px;
+}
+.pedido-total {
+  font-family:'Archivo Black',sans-serif; font-size:22px; color:var(--green);
+  margin-bottom:12px;
+}
+.estado-btns { display:flex; gap:8px; flex-wrap:wrap; }
+.estado-btn {
+  flex:1; min-width:100px; padding:10px 8px;
+  border-radius:12px; border:none; font-family:'Archivo',sans-serif;
+  font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s;
+  display:flex; align-items:center; justify-content:center; gap:5px;
+}
+.estado-btn:active { transform:scale(0.96); }
+.btn-preparar { background:rgba(59,130,246,0.2); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); }
+.btn-listo    { background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); }
+.btn-camino   { background:rgba(34,197,94,0.2);  color:#4ade80; border:1px solid rgba(34,197,94,0.3); }
+.btn-entregado{ background:rgba(255,255,255,0.08); color:var(--muted); border:1px solid var(--border); }
+.estado-tag {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600;
+}
+.tag-recibido    { background:rgba(255,107,43,0.15); color:var(--orange); }
+.tag-preparacion { background:rgba(59,130,246,0.15); color:#60a5fa; }
+.tag-listo       { background:rgba(245,158,11,0.15); color:#fbbf24; }
+.tag-camino      { background:rgba(34,197,94,0.15);  color:#4ade80; }
+.tag-entregado   { background:rgba(255,255,255,0.08); color:var(--muted); }
+
+/* ── EMPTY ── */
+.empty { text-align:center; padding:60px 20px; }
+.empty-icon { font-size:48px; margin-bottom:12px; }
+.empty-text { color:var(--muted); font-size:14px; }
+
+/* ── MENU ── */
+.menu-cat { margin-bottom:20px; }
+.menu-cat-title {
+  font-size:10px; color:var(--orange); font-weight:700;
+  letter-spacing:0.1em; text-transform:uppercase;
+  margin-bottom:8px; padding-bottom:6px;
+  border-bottom:1px solid rgba(255,107,43,0.2);
+}
+.menu-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.menu-item:last-child { border:none; }
+.menu-item-info { flex:1; }
+.menu-item-name { font-size:14px; font-weight:500; }
+.menu-item-desc { font-size:11px; color:var(--muted); margin-top:1px; }
+.menu-item-price { font-weight:700; color:var(--green); font-size:14px; min-width:70px; text-align:right; }
+.toggle-btn {
+  width:36px; height:20px; border-radius:10px; border:none;
+  cursor:pointer; transition:all 0.2s; position:relative; flex-shrink:0;
+}
+.toggle-btn.on { background:var(--orange); }
+.toggle-btn.off { background:var(--muted2); }
+.toggle-btn::after {
+  content:''; position:absolute; top:2px;
+  width:16px; height:16px; border-radius:50%; background:white;
+  transition:left 0.2s;
+}
+.toggle-btn.on::after { left:18px; }
+.toggle-btn.off::after { left:2px; }
+
+/* ── ADD PRODUCT FORM ── */
+.add-form {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:16px; padding:16px; margin-bottom:16px;
+}
+.add-form-title { font-weight:700; font-size:15px; margin-bottom:14px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.form-field { margin-bottom:10px; }
+.form-label { font-size:11px; color:var(--muted); margin-bottom:5px; display:block; text-transform:uppercase; letter-spacing:0.06em; }
+.form-input {
+  width:100%; padding:10px 12px; background:var(--card2);
+  border:1px solid var(--border); border-radius:10px;
+  color:var(--white); font-family:'Archivo',sans-serif; font-size:14px;
+  outline:none; transition:border 0.2s;
+}
+.form-input:focus { border-color:var(--orange); }
+.btn-add {
+  width:100%; padding:13px; background:var(--orange); border:none;
+  border-radius:12px; color:white; font-family:'Archivo',sans-serif;
+  font-size:15px; font-weight:700; cursor:pointer; transition:all 0.15s;
+  margin-top:4px;
+}
+.btn-add:active { background:var(--orange2); transform:scale(0.98); }
+
+/* ── NOTIFICATION ── */
+.notif {
+  position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-20px);
+  background:var(--orange); color:white; padding:10px 20px; border-radius:20px;
+  font-size:13px; font-weight:600; z-index:200; opacity:0;
+  transition:all 0.3s; pointer-events:none; white-space:nowrap;
+}
+.notif.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ── HISTORIAL ── */
+.hist-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:14px; padding:14px 16px; margin-bottom:8px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.hist-num { font-family:'Archivo Black',sans-serif; font-size:18px; color:var(--orange); }
+.hist-info { font-size:12px; color:var(--muted); margin-top:2px; }
+.hist-total { font-family:'Archivo Black',sans-serif; font-size:18px; color:var(--green); }
+</style>
+</head>
+<body>
+
+<!-- PIN -->
+<div id="pinScreen">
+  <div class="pin-box">
+    <div class="pin-logo">LUZ <span>IA</span></div>
+    <div class="pin-subtitle">Panel del Restaurante</div>
+    <div class="pin-display">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="pin-keypad">
+      <div class="key" onclick="pinKey('1')">1</div>
+      <div class="key" onclick="pinKey('2')">2</div>
+      <div class="key" onclick="pinKey('3')">3</div>
+      <div class="key" onclick="pinKey('4')">4</div>
+      <div class="key" onclick="pinKey('5')">5</div>
+      <div class="key" onclick="pinKey('6')">6</div>
+      <div class="key" onclick="pinKey('7')">7</div>
+      <div class="key" onclick="pinKey('8')">8</div>
+      <div class="key" onclick="pinKey('9')">9</div>
+      <div class="key empty"></div>
+      <div class="key" onclick="pinKey('0')">0</div>
+      <div class="key del" onclick="pinDel()">⌫</div>
+    </div>
+    <div class="pin-err" id="pinErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-name" id="restNombre">Mi <span>Restaurante</span></div>
+    <div class="live-badge"><div class="live-dot"></div> En vivo</div>
+  </div>
+
+  <div class="content">
+    <!-- PEDIDOS EN VIVO -->
+    <div class="page active" id="page-pedidos">
+      <div class="stats-row">
+        <div class="stat-tile"><div class="stat-tile-label">Pedidos hoy</div><div class="stat-tile-val orange" id="countHoy">0</div></div>
+        <div class="stat-tile"><div class="stat-tile-label">Ventas hoy</div><div class="stat-tile-val green" id="ventasHoy">$0</div></div>
+      </div>
+      <div id="pedidosLista"></div>
+    </div>
+
+    <!-- HISTORIAL -->
+    <div class="page" id="page-historial">
+      <div id="historialLista"></div>
+    </div>
+
+    <!-- MENU -->
+    <div class="page" id="page-menu">
+      <div class="add-form" id="addForm">
+        <div class="add-form-title">➕ Agregar producto</div>
+        <div class="form-row">
+          <div class="form-field"><label class="form-label">Categoría</label><input class="form-input" id="mi-cat" placeholder="Hamburguesas" /></div>
+          <div class="form-field"><label class="form-label">Nombre</label><input class="form-input" id="mi-nombre" placeholder="La Especial" /></div>
+        </div>
+        <div class="form-field"><label class="form-label">Descripción</label><input class="form-input" id="mi-desc" placeholder="Ingredientes..." /></div>
+        <div class="form-row">
+          <div class="form-field"><label class="form-label">Precio</label><input class="form-input" id="mi-precio" type="number" placeholder="18900" /></div>
+          <div class="form-field"><label class="form-label">Tipo</label>
+            <select class="form-input" id="mi-tipo">
+              <option value="comida">Comida</option>
+              <option value="bebida">Bebida</option>
+              <option value="arepa">Arepa</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-add" onclick="agregarProducto()">Guardar producto</button>
+      </div>
+      <div id="menuLista"></div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-tab active" id="tab-pedidos" onclick="showTab('pedidos')">
+      <div class="tab-icon">🛒</div>
+      <div class="tab-label">Pedidos</div>
+    </div>
+    <div class="nav-tab" id="tab-historial" onclick="showTab('historial')">
+      <div class="tab-icon">📊</div>
+      <div class="tab-label">Historial</div>
+    </div>
+    <div class="nav-tab" id="tab-menu" onclick="showTab('menu')">
+      <div class="tab-icon">📋</div>
+      <div class="tab-label">Mi Menú</div>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<!-- Sonido de notificación -->
+<audio id="notifSound" preload="auto">
+  <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbv4lFKjFPbpCkoH5WPUBWZ3mHiH1pWlhna4KWn5uJc19YX2t+jpSRg3BobHN9h5CUko2CdW9we4aOko+Jg3t2eH6GjY+OioWAfHuAho2Qj4yHgn57fYOJjY2KhoJ+e3yBh4uMioaBeXl8goeKioiEf3t6fYKGiImIhH96en2ChoeHhoN/e3p9goWGhoaEgH17foKFhoaFg4B+fH+Chod" type="audio/wav">
+</audio>
+
+<script>
+const SUPABASE_URL = "https://vbxuwzcfzfjwhllkppkg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
+
+let currentPin = "";
+let restaurante = null;
+let pedidosKnown = new Set();
+let refreshInterval = null;
+
+// ── PIN ───────────────────────────────────────────────────────────────────────
+function pinKey(k) {
+  if (currentPin.length >= 4) return;
+  currentPin += k;
+  updateDots();
+  if (currentPin.length === 4) setTimeout(checkPin, 150);
+}
+
+function pinDel() {
+  currentPin = currentPin.slice(0, -1);
+  updateDots();
+}
+
+function updateDots() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById('d' + i).classList.toggle('filled', i < currentPin.length);
+  }
+}
+
+async function checkPin() {
+  try {
+    const res = await fetch(SUPABASE_URL + "/rest/v1/restaurantes?pin=eq." + currentPin + "&estado=eq.activo&select=*", {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY }
+    });
+    const data = await res.json();
+    if (data && data.length > 0) {
+      restaurante = data[0];
+      enterApp();
+    } else {
+      document.getElementById('pinErr').textContent = "PIN incorrecto";
+      document.getElementById('pinScreen').querySelector('.pin-box').classList.add('pin-shake');
+      setTimeout(() => {
+        document.getElementById('pinScreen').querySelector('.pin-box').classList.remove('pin-shake');
+        document.getElementById('pinErr').textContent = "";
+      }, 500);
+      currentPin = "";
+      updateDots();
+    }
+  } catch(e) {
+    document.getElementById('pinErr').textContent = "Error de conexión";
+    currentPin = ""; updateDots();
+  }
+}
+
+function enterApp() {
+  document.getElementById('pinScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  // Nombre del restaurante
+  const nombre = restaurante.nombre.split(' ');
+  const last = nombre.pop();
+  document.getElementById('restNombre').innerHTML = nombre.join(' ') + ' <span>' + last + '</span>';
+  loadPedidos();
+  loadStats();
+  // Actualizar cada 15 segundos
+  refreshInterval = setInterval(() => { loadPedidos(); loadStats(); }, 15000);
+}
+
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
+async function sb(method, table, data, filters) {
+  let url = SUPABASE_URL + "/rest/v1/" + table;
+  if (filters) url += "?" + filters;
+  const opts = {
+    method, headers: {
+      "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY,
+      "Content-Type": "application/json",
+      "Prefer": method === "POST" ? "return=representation" : "return=minimal"
+    }
+  };
+  if (data) opts.body = JSON.stringify(data);
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error(await res.text());
+  return method === "GET" || opts.headers.Prefer === "return=representation" ? res.json() : null;
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'historial') loadHistorial();
+  if (name === 'menu') loadMenu();
+}
+
+// ── PEDIDOS ───────────────────────────────────────────────────────────────────
+function fmt(n) { return '$' + Number(n).toLocaleString('es-CO'); }
+
+function timeAgo(dateStr) {
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
+  if (diff < 1) return 'ahora';
+  if (diff < 60) return diff + ' min';
+  return Math.floor(diff/60) + 'h ' + (diff%60) + 'm';
+}
+
+const estadoConfig = {
+  confirmado:    { label:'Recibido',      class:'tag-recibido',    next:'en_preparacion', btnLabel:'🔵 Preparando', btnClass:'btn-preparar' },
+  en_preparacion:{ label:'Preparando',    class:'tag-preparacion', next:'listo',          btnLabel:'🟡 Listo',      btnClass:'btn-listo' },
+  listo:         { label:'Listo',         class:'tag-listo',       next:'en_camino',      btnLabel:'🛵 En camino',  btnClass:'btn-camino' },
+  en_camino:     { label:'En camino',     class:'tag-camino',      next:'entregado',      btnLabel:'✅ Entregado',  btnClass:'btn-entregado' },
+  entregado:     { label:'Entregado',     class:'tag-entregado',   next:null,             btnLabel:null,            btnClass:null }
+};
+
+async function loadPedidos() {
+  const pedidos = await sb("GET", "pedidos", null,
+    "restaurante_id=eq." + restaurante.id + "&estado=neq.entregado&order=created_at.desc&limit=20");
+
+  // Detectar nuevos pedidos
+  pedidos.forEach(p => {
+    if (!pedidosKnown.has(p.id) && pedidosKnown.size > 0) {
+      showNotif("🛒 Nuevo pedido #" + p.numero_pedido);
+      playSound();
+    }
+    pedidosKnown.add(p.id);
+  });
+
+  if (!pedidos.length) {
+    document.getElementById('pedidosLista').innerHTML =
+      '<div class="empty"><div class="empty-icon">🍔</div><div class="empty-text">No hay pedidos activos.<br>Los nuevos aparecen aquí automáticamente.</div></div>';
+    return;
+  }
+
+  document.getElementById('pedidosLista').innerHTML = pedidos.map(p => {
+    const cfg = estadoConfig[p.estado] || estadoConfig.confirmado;
+    const items = Array.isArray(p.items) ? p.items : [];
+    return `
+    <div class="pedido-card" id="pc-${p.id}">
+      <div class="pedido-header">
+        <div>
+          <div class="pedido-num">#${p.numero_pedido}</div>
+          <div class="pedido-time">${timeAgo(p.created_at)}</div>
+        </div>
+        <span class="estado-tag ${cfg.class}">${cfg.label}</span>
+      </div>
+      <div class="pedido-body">
+        <div class="pedido-items">
+          ${items.map(i => `<div class="pedido-item">• ${i}</div>`).join('')}
+        </div>
+        <div class="pedido-meta">
+          ${p.direccion ? `<div class="meta-chip">📍 ${p.direccion}</div>` : ''}
+          ${p.cliente_tel ? `<div class="meta-chip">📱 ${p.cliente_tel}</div>` : ''}
+          ${p.metodo_pago ? `<div class="meta-chip">💳 ${p.metodo_pago}</div>` : ''}
+        </div>
+        <div class="pedido-total">${fmt(p.total)}</div>
+        <div class="estado-btns">
+          ${cfg.next ? `<button class="estado-btn ${cfg.btnClass}" onclick="cambiarEstado('${p.id}','${cfg.next}')">${cfg.btnLabel}</button>` : ''}
+          ${p.estado !== 'entregado' ? `<button class="estado-btn btn-entregado" onclick="cambiarEstado('${p.id}','entregado')">✅ Entregado</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function cambiarEstado(id, nuevoEstado) {
+  await sb("PATCH", "pedidos?id=eq." + id, { estado: nuevoEstado });
+  loadPedidos();
+  loadStats();
+  showNotif("Estado actualizado ✓");
+}
+
+async function loadStats() {
+  const hoy = new Date().toISOString().split('T')[0];
+  const pedidos = await sb("GET", "pedidos", null,
+    "restaurante_id=eq." + restaurante.id + "&created_at=gte." + hoy + "T00:00:00&select=total,estado");
+  document.getElementById('countHoy').textContent = pedidos.length;
+  const total = pedidos.reduce((s, p) => s + Number(p.total), 0);
+  document.getElementById('ventasHoy').textContent = fmt(total);
+}
+
+// ── HISTORIAL ─────────────────────────────────────────────────────────────────
+async function loadHistorial() {
+  const pedidos = await sb("GET", "pedidos", null,
+    "restaurante_id=eq." + restaurante.id + "&order=created_at.desc&limit=30");
+
+  if (!pedidos.length) {
+    document.getElementById('historialLista').innerHTML =
+      '<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No hay pedidos aún</div></div>';
+    return;
+  }
+
+  // Stats totales
+  const totalVentas = pedidos.reduce((s,p) => s + Number(p.total), 0);
+
+  document.getElementById('historialLista').innerHTML = `
+    <div class="stats-row" style="margin-bottom:16px">
+      <div class="stat-tile"><div class="stat-tile-label">Total pedidos</div><div class="stat-tile-val orange">${pedidos.length}</div></div>
+      <div class="stat-tile"><div class="stat-tile-label">Total ventas</div><div class="stat-tile-val green" style="font-size:18px">${fmt(totalVentas)}</div></div>
+    </div>
+    ${pedidos.map(p => `
+    <div class="hist-card">
+      <div>
+        <div class="hist-num">#${p.numero_pedido}</div>
+        <div class="hist-info">${p.cliente_tel || '—'} · ${p.metodo_pago || '—'}</div>
+        <div class="hist-info">${new Date(p.created_at).toLocaleString('es-CO',{dateStyle:'short',timeStyle:'short'})}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="hist-total">${fmt(p.total)}</div>
+        <div style="margin-top:4px"><span class="estado-tag ${(estadoConfig[p.estado]||estadoConfig.confirmado).class}" style="font-size:10px">${(estadoConfig[p.estado]||estadoConfig.confirmado).label}</span></div>
+      </div>
+    </div>`).join('')}`;
+}
+
+// ── MENU ──────────────────────────────────────────────────────────────────────
+async function loadMenu() {
+  const items = await sb("GET", "menu_items", null,
+    "restaurante_id=eq." + restaurante.id + "&order=categoria,orden");
+
+  if (!items.length) {
+    document.getElementById('menuLista').innerHTML =
+      '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Agrega tu primer producto arriba</div></div>';
+    return;
+  }
+
+  const grupos = {};
+  items.forEach(i => { if (!grupos[i.categoria]) grupos[i.categoria] = []; grupos[i.categoria].push(i); });
+
+  document.getElementById('menuLista').innerHTML = Object.entries(grupos).map(([cat, its]) => `
+    <div class="menu-cat">
+      <div class="menu-cat-title">${cat}</div>
+      ${its.map(i => `
+        <div class="menu-item">
+          <div class="menu-item-info">
+            <div class="menu-item-name">${i.nombre}</div>
+            <div class="menu-item-desc">${i.descripcion || ''}</div>
+          </div>
+          <div class="menu-item-price">${fmt(i.precio)}</div>
+          <button class="toggle-btn ${i.disponible ? 'on' : 'off'}" onclick="toggleItem('${i.id}',${i.disponible})"></button>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+async function toggleItem(id, actual) {
+  await sb("PATCH", "menu_items?id=eq." + id, { disponible: !actual });
+  loadMenu();
+  showNotif(actual ? "Producto desactivado" : "Producto activado ✓");
+}
+
+async function agregarProducto() {
+  const tipo = document.getElementById('mi-tipo').value;
+  const nombre = document.getElementById('mi-nombre').value.trim();
+  const precio = parseInt(document.getElementById('mi-precio').value);
+  if (!nombre || !precio) { showNotif("Completa nombre y precio"); return; }
+
+  await sb("POST", "menu_items", {
+    restaurante_id: restaurante.id,
+    categoria: document.getElementById('mi-cat').value || 'General',
+    nombre, precio,
+    descripcion: document.getElementById('mi-desc').value || null,
+    es_bebida: tipo === 'bebida',
+    es_arepa: tipo === 'arepa',
+    disponible: true
+  });
+
+  // Limpiar form
+  ['mi-cat','mi-nombre','mi-desc','mi-precio'].forEach(id => document.getElementById(id).value = '');
+  loadMenu();
+  showNotif("Producto agregado ✓");
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function showNotif(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function playSound() {
+  try { document.getElementById('notifSound').play(); } catch(e) {}
+}
+</script>
+</body>
+</html>
