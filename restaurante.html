@@ -343,7 +343,8 @@ body { background:var(--bg); color:var(--white); font-family:'Archivo',sans-seri
 <script>
 const SUPABASE_URL = "https://vbxuwzcfzfjwhllkppkg.supabase.co";
 const SUPABASE_KEY = "sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
-const SUPABASE_SERVICE_KEY = "sb_secret_yJx63kqRMKVzlWpd2dJejw_6Z4xAfAd";
+// Service key se obtiene del servidor para no exponerla en frontend
+let SUPABASE_SERVICE_KEY = SUPABASE_KEY; // fallback, se actualiza al cargar
 
 let currentPin = "";
 let restaurante = null;
@@ -395,6 +396,8 @@ async function checkPin() {
 }
 
 function enterApp() {
+  // Obtener service key del servidor
+  fetch("/supabase-write-key").then(r=>r.json()).then(d=>{ if(d.key) SUPABASE_SERVICE_KEY = d.key; }).catch(()=>{});
   document.getElementById('pinScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   // Nombre del restaurante
@@ -639,7 +642,26 @@ function showNotif(msg) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-// playSound definido arriba con Web Audio API
+function playSound() {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [[523, 0], [659, 0.18], [784, 0.36]].forEach(function(note) {
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      var t = ctx.currentTime + note[1];
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(note[0], t);
+      osc.frequency.exponentialRampToValueAtTime(note[0] * 0.5, t + 1.2);
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.35, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 1.5);
+    });
+  } catch(e) {}
+}
 </script>
 </body>
 </html>
