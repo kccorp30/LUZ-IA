@@ -338,10 +338,7 @@ body { background:var(--bg); color:var(--white); font-family:'Archivo',sans-seri
 
 <div class="notif" id="notif"></div>
 
-<!-- Sonido de notificación -->
-<audio id="notifSound" preload="auto">
-  <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbv4lFKjFPbpCkoH5WPUBWZ3mHiH1pWlhna4KWn5uJc19YX2t+jpSRg3BobHN9h5CUko2CdW9we4aOko+Jg3t2eH6GjY+OioWAfHuAho2Qj4yHgn57fYOJjY2KhoJ+e3yBh4uMioaBeXl8goeKioiEf3t6fYKGiImIhH96en2ChoeHhoN/e3p9goWGhoaEgH17foKFhoaFg4B+fH+Chod" type="audio/wav">
-</audio>
+
 
 <script>
 const SUPABASE_URL = "https://vbxuwzcfzfjwhllkppkg.supabase.co";
@@ -490,25 +487,41 @@ async function loadPedidos() {
           ${items.map(i => `<div class="pedido-item">• ${i}</div>`).join('')}
         </div>
         <div class="pedido-meta">
-          ${p.direccion ? `<div class="meta-chip">📍 ${p.direccion}</div>` : ''}
+          <div class="meta-chip">📍 ${p.direccion || 'Sin dirección'}</div>
           ${p.cliente_tel ? `<div class="meta-chip">📱 ${p.cliente_tel}</div>` : ''}
           ${p.metodo_pago ? `<div class="meta-chip">💳 ${p.metodo_pago}</div>` : ''}
         </div>
         <div class="pedido-total">${fmt(p.total)}</div>
         <div class="estado-btns">
-          ${cfg.next ? `<button class="estado-btn ${cfg.btnClass}" onclick="cambiarEstado('${p.id}','${cfg.next}')">${cfg.btnLabel}</button>` : ''}
-          ${p.estado !== 'entregado' ? `<button class="estado-btn btn-entregado" onclick="cambiarEstado('${p.id}','entregado')">✅ Entregado</button>` : ''}
+          ${cfg.next ? `<button class="estado-btn ${cfg.btnClass}" onclick="cambiarEstado('${p.id}','${cfg.next}','${p.cliente_tel||''}')">${cfg.btnLabel}</button>` : ''}
+          ${p.estado !== 'entregado' ? `<button class="estado-btn btn-entregado" onclick="cambiarEstado('${p.id}','entregado','${p.cliente_tel||''}')">✅ Entregado</button>` : ''}
         </div>
       </div>
     </div>`;
   }).join('');
 }
 
-async function cambiarEstado(id, nuevoEstado) {
+async function cambiarEstado(id, nuevoEstado, clienteTel) {
   await sb("PATCH", "pedidos?id=eq." + id, { estado: nuevoEstado });
+
+  // Si el pedido va en camino, notificar al cliente via el servidor
+  if (nuevoEstado === "en_camino" && clienteTel) {
+    try {
+      await fetch("/notificar-cliente", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telefono: clienteTel, estado: "en_camino" })
+      });
+      showNotif("🛵 Cliente notificado!");
+    } catch(e) {
+      showNotif("Estado actualizado ✓");
+    }
+  } else {
+    showNotif("Estado actualizado ✓");
+  }
+
   loadPedidos();
   loadStats();
-  showNotif("Estado actualizado ✓");
 }
 
 async function loadStats() {
@@ -618,9 +631,7 @@ function showNotif(msg) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-function playSound() {
-  try { document.getElementById('notifSound').play(); } catch(e) {}
-}
+// playSound definido arriba con Web Audio API
 </script>
 </body>
 </html>
