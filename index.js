@@ -13,6 +13,59 @@ function nextOrderNumber() {
   return ++orderCounter;
 }
 
+// ── SUPABASE ─────────────────────────────────────────────────────────────────
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://vbxuwzcfzfjwhllkppkg.supabase.co";
+const SUPABASE_KEY = process.env.SUPABASE_KEY || "sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
+
+async function getRestaurante(whatsapp) {
+  try {
+    // Normalizar numero — quitar whatsapp: y +
+    var num = whatsapp.replace("whatsapp:+","").replace("whatsapp:","").replace("+","");
+    var res = await axios.get(
+      SUPABASE_URL + "/rest/v1/restaurantes?whatsapp=eq." + num + "&select=*",
+      { headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+      }}
+    );
+    return res.data && res.data.length > 0 ? res.data[0] : null;
+  } catch(err) {
+    console.error("Error Supabase:", err.message);
+    return null;
+  }
+}
+
+async function guardarPedidoSupabase(restauranteId, pedidoData) {
+  try {
+    await axios.post(
+      SUPABASE_URL + "/rest/v1/pedidos",
+      {
+        restaurante_id: restauranteId,
+        numero_pedido: pedidoData.orderNumber,
+        cliente_tel: pedidoData.phone,
+        items: pedidoData.items,
+        subtotal: pedidoData.subtotal,
+        desechables: pedidoData.desechables,
+        domicilio: pedidoData.domicilio,
+        total: pedidoData.total,
+        direccion: pedidoData.address,
+        metodo_pago: pedidoData.paymentMethod,
+        estado: "confirmado"
+      },
+      { headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      }}
+    );
+    console.log("Pedido #" + pedidoData.orderNumber + " guardado en Supabase");
+  } catch(err) {
+    console.error("Error guardando pedido en Supabase:", err.message);
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // URL publica del menu
 function getMenuUrl() {
   return process.env.MENU_PAGE_URL || "https://bit.ly/LaCurvaStreetFood";
@@ -226,6 +279,12 @@ CUANDO EL CLIENTE LLEGA DESDE LA PAGINA WEB:
 - Ejemplo: "Perfecto, tengo tu pedido listo. Me regalas la dirección completa con barrio para calcular el domicilio?"
 
 MODIFICACIONES: acepta "sin queso", "extra salsa", etc. Confirma y anota en el pedido.
+
+QUEJAS POR FALTANTES (salsas, ingredientes, etc.):
+- Si el cliente dice que le faltó algo (salsa, topping, ingrediente), responde con amabilidad y dile que se lo envían sin problema con el domiciliario.
+- Ejemplo: "Ay, disculpa! Ya le avisamos al equipo para que te lo enviemos enseguida 🙏"
+- SOLO si el cliente dice explicitamente que no quiere o que ya está bien, entonces no lo envíes.
+- No preguntes si lo quiere — asume que sí y ofrécelo de una vez.
 
 JERGA: "litro y cuarto" = Coca-Cola 1.5L. "una gaseosa" = pregunta cual.
 
@@ -471,6 +530,20 @@ app.post("/webhook", async function(req, res) {
 
   if (!body) return res.sendStatus(400);
 
+  // ── VERIFICAR SUSCRIPCION EN SUPABASE ─────────────────────────────────────
+  var restaurante = await getRestaurante(from);
+  if (restaurante) {
+    if (restaurante.estado !== "activo") {
+      console.log("Restaurante suspendido/vencido — ignorando mensaje de " + from);
+      return res.sendStatus(200);
+    }
+    console.log("Restaurante activo: " + restaurante.nombre);
+  } else {
+    // Si no está registrado en Supabase, sigue funcionando (modo legacy / La Curva hardcoded)
+    console.log("Restaurante no encontrado en Supabase, usando config por defecto");
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   if (!conversations[from]) conversations[from] = [];
 
   var userMessage = body;
@@ -558,6 +631,22 @@ app.post("/webhook", async function(req, res) {
       });
 
       console.log("Pedido #" + state.orderNumber + " confirmado y enviado a cocina");
+
+      // Guardar pedido en Supabase
+      if (restaurante) {
+        await guardarPedidoSupabase(restaurante.id, {
+          orderNumber: state.orderNumber,
+          phone: from.replace("whatsapp:+","").replace("whatsapp:",""),
+          items: state.items,
+          subtotal: Number(state.total) - Number(state.desechables||0) - Number(state.domicilio||0),
+          desechables: Number(state.desechables||0),
+          domicilio: Number(state.domicilio||0),
+          total: Number(state.total),
+          address: state.address || "Por confirmar",
+          paymentMethod: state.paymentMethod || "digital"
+        });
+      }
+
       delete orderState[from];
     }
 
