@@ -663,14 +663,19 @@ function getCartData() {
   const items = [];
   let subtotal = 0;
   let desechables = 0;
-  const AREPA_IDS = ['ar1','ar2','ar3','ar4','ar5'];
+
+  // Bebidas y arepas NO cobran desechable
+  const NO_DESECHABLE_IDS = [
+    'b1','b2','b3','b4','b5','b6','b7','b8','b9','b10','b11','b12', // bebidas
+    'ar1','ar2','ar3','ar4','ar5' // arepas
+  ];
 
   for (const [id, qty] of Object.entries(cart)) {
     const item = findItem(id);
     if (!item) continue;
     items.push({ ...item, qty });
     subtotal += item.price * qty;
-    if (!AREPA_IDS.includes(id)) desechables += 500 * qty;
+    if (!NO_DESECHABLE_IDS.includes(id)) desechables += 500 * qty;
   }
   return { items, subtotal, desechables };
 }
