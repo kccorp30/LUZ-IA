@@ -98,6 +98,20 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .badd:active{background:var(--orange2);transform:scale(0.98)}
 .notif{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--orange);color:white;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap}
 .notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.msg-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center}
+.msg-overlay.open{display:flex}
+.msg-box{width:100%;max-width:480px;background:var(--surface);border-top:1px solid var(--border);border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom))}
+.msg-handle{width:36px;height:4px;border-radius:2px;background:var(--card2);margin:0 auto 16px}
+.msg-title{font-family:'Archivo Black',sans-serif;font-size:18px;margin-bottom:4px}
+.msg-cliente{font-size:12px;color:var(--muted);margin-bottom:14px}
+.msg-textarea{width:100%;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--white);font-family:'Archivo',sans-serif;font-size:14px;outline:none;resize:none;height:100px;transition:border 0.2s}
+.msg-textarea:focus{border-color:var(--orange)}
+.msg-actions{display:flex;gap:10px;margin-top:12px}
+.msg-cancel{flex:1;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--muted);font-family:'Archivo',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+.msg-send{flex:2;padding:12px;background:#25D366;border:none;border-radius:12px;color:white;font-family:'Archivo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s}
+.msg-send:active{transform:scale(0.97)}
+.btn-msg{background:rgba(37,211,102,0.15);color:#4ade80;border:2px solid rgba(37,211,102,0.3);flex:1;min-width:80px;padding:10px 6px;border-radius:12px;font-family:'Archivo',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:4px}
+.btn-msg:active{transform:scale(0.96)}
 .hcard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
 .hnum{font-family:'Archivo Black',sans-serif;font-size:18px;color:var(--orange)}
 .hinfo{font-size:12px;color:var(--muted);margin-top:2px}
@@ -162,6 +176,21 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
   </div>
 </div>
 <div class="notif" id="notif"></div>
+
+<!-- Modal mensajes -->
+<div class="msg-overlay" id="msgOverlay">
+  <div class="msg-box">
+    <div class="msg-handle"></div>
+    <div class="msg-title">✉️ Escribir al cliente</div>
+    <div class="msg-cliente" id="msgClienteInfo"></div>
+    <textarea class="msg-textarea" id="msgTexto" placeholder="Escribe tu mensaje..."></textarea>
+    <div class="msg-actions">
+      <button class="msg-cancel" id="msgCancelar">Cancelar</button>
+      <button class="msg-send" id="msgEnviar">📤 Enviar WhatsApp</button>
+    </div>
+  </div>
+</div>
+
 <script>
 var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5",rest=null,pin="",known={},timer=null;
 var ESTADOS={confirmado:{l:"Recibido",c:"tr",n:"en_preparacion",bl:"🔵 Preparando",bc:"bp"},en_preparacion:{l:"Preparando",c:"tp",n:"listo",bl:"🟡 Listo",bc:"bl"},listo:{l:"Listo",c:"tl2",n:"en_camino",bl:"🛵 En camino",bc:"bc"},en_camino:{l:"En camino",c:"tc",n:"entregado",bl:"✅ Entregado",bc:"be"},entregado:{l:"Entregado",c:"te",n:null,bl:null,bc:null}};
@@ -242,6 +271,13 @@ function loadPedidos(){
         cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"));
       });
     });
+
+    lista.querySelectorAll(".btn-msg").forEach(function(b){
+      b.addEventListener("click",function(e){
+        e.stopPropagation();
+        abrirMensaje(this.getAttribute("data-tel"),this.getAttribute("data-num"));
+      });
+    });
   }).catch(function(e){console.error(e);});
 }
 
@@ -293,6 +329,7 @@ function loadMenu(){
       g[cat].forEach(function(i){
         h+='<div class="mitem"><div style="flex:1"><div class="mname">'+i.nombre+'</div><div class="mdesc">'+(i.descripcion||"")+'</div></div><div class="mprice">'+fmt(i.precio)+'</div><button class="tog '+(i.disponible?"on":"off")+'" data-iid="'+i.id+'" data-d="'+i.disponible+'"></button></div>';
       });
+      if(p.cliente_tel)h+='<button class="btn-msg" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">✉️ Escribir</button>';
       h+='</div>';
     });
     l.innerHTML=h;
@@ -305,6 +342,54 @@ function loadMenu(){
     });
   }).catch(function(){});
 }
+
+// ── MENSAJES AL CLIENTE ──────────────────────────────────────────────────────
+var msgTel = "";
+
+function abrirMensaje(tel, numPedido) {
+  msgTel = tel;
+  document.getElementById("msgClienteInfo").textContent = "Pedido #" + numPedido + " · " + tel;
+  document.getElementById("msgTexto").value = "";
+  document.getElementById("msgOverlay").classList.add("open");
+  setTimeout(function(){ document.getElementById("msgTexto").focus(); }, 300);
+}
+
+document.getElementById("msgCancelar").addEventListener("click", function() {
+  document.getElementById("msgOverlay").classList.remove("open");
+});
+
+document.getElementById("msgOverlay").addEventListener("click", function(e) {
+  if (e.target === this) this.classList.remove("open");
+});
+
+document.getElementById("msgEnviar").addEventListener("click", function() {
+  var texto = document.getElementById("msgTexto").value.trim();
+  if (!texto) { notif("Escribe un mensaje"); return; }
+  
+  var btn = this;
+  btn.textContent = "Enviando...";
+  btn.disabled = true;
+
+  fetch("/enviar-mensaje-cliente", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ telefono: msgTel, mensaje: texto })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.ok) {
+      notif("✅ Mensaje enviado!");
+      document.getElementById("msgOverlay").classList.remove("open");
+    } else {
+      notif("❌ Error: " + (d.error||"").substring(0,30));
+    }
+  })
+  .catch(function() { notif("❌ Error de conexión"); })
+  .finally(function() {
+    btn.textContent = "📤 Enviar WhatsApp";
+    btn.disabled = false;
+  });
+});
 
 document.getElementById("btnAdd").addEventListener("click",function(){
   if(!rest)return;
