@@ -163,12 +163,13 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 </div>
 <div class="notif" id="notif"></div>
 <script>
-var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5",SS="",rest=null,pin="",known={},timer=null;
+var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5",rest=null,pin="",known={},timer=null;
 var ESTADOS={confirmado:{l:"Recibido",c:"tr",n:"en_preparacion",bl:"🔵 Preparando",bc:"bp"},en_preparacion:{l:"Preparando",c:"tp",n:"listo",bl:"🟡 Listo",bc:"bl"},listo:{l:"Listo",c:"tl2",n:"en_camino",bl:"🛵 En camino",bc:"bc"},en_camino:{l:"En camino",c:"tc",n:"entregado",bl:"✅ Entregado",bc:"be"},entregado:{l:"Entregado",c:"te",n:null,bl:null,bc:null}};
 
 function get(t,f){return fetch(SU+"/rest/v1/"+t+"?"+(f||""),{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json()});}
-function patch(t,f,d){var k=SS||SK;return fetch(SU+"/rest/v1/"+t+"?"+f,{method:"PATCH",headers:{"apikey":k,"Authorization":"Bearer "+k,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(d)}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r});}
-function post(t,d){var k=SS||SK;return fetch(SU+"/rest/v1/"+t,{method:"POST",headers:{"apikey":k,"Authorization":"Bearer "+k,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(d)}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r});}
+function patchPedido(id,estado){return fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,estado:estado})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
+function toggleMenu(id,disp){return fetch("/api/menu-toggle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,disponible:disp})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
+function addMenu(d){return fetch("/api/menu-add",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
 function notif(m){var e=document.getElementById("notif");e.textContent=m;e.classList.add("show");setTimeout(function(){e.classList.remove("show")},2500);}
 function fmt(n){return"$"+Number(n).toLocaleString("es-CO");}
 function ago(d){var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<1?"ahora":diff<60?diff+" min":Math.floor(diff/60)+"h";}
@@ -186,7 +187,7 @@ function chkPin(){
   }).catch(function(){document.getElementById("pinErr").textContent="Error";pin="";dots();});
 }
 function goApp(){
-  fetch("/supabase-write-key").then(function(r){return r.json();}).then(function(d){if(d.key)SS=d.key;}).catch(function(){});
+  
   document.getElementById("pinScreen").style.display="none";
   document.getElementById("app").style.display="block";
   var p=rest.nombre.split(" "),l=p.pop();
@@ -246,7 +247,7 @@ function loadPedidos(){
 
 function cambiarEstado(id,estado,tel){
   notif("Actualizando...");
-  patch("pedidos","id=eq."+id,{estado:estado}).then(function(){
+  patchPedido(id,estado).then(function(){
     if(estado==="en_camino"&&tel){
       fetch("/notificar-cliente",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telefono:tel})}).catch(function(){});
       notif("🛵 Cliente notificado!");
@@ -297,7 +298,7 @@ function loadMenu(){
     l.innerHTML=h;
     l.querySelectorAll(".tog").forEach(function(b){
       b.addEventListener("click",function(){
-        patch("menu_items","id=eq."+this.getAttribute("data-iid"),{disponible:this.getAttribute("data-d")==="true"?false:true})
+        toggleMenu(this.getAttribute("data-iid"),this.getAttribute("data-d")==="true"?false:true)
           .then(function(){loadMenu();notif("Actualizado ✓");})
           .catch(function(e){notif("❌ "+e.message.substring(0,30));});
       });
@@ -310,7 +311,7 @@ document.getElementById("btnAdd").addEventListener("click",function(){
   var n=document.getElementById("mi-nombre").value.trim(),p=parseInt(document.getElementById("mi-precio").value);
   if(!n||!p){notif("Completa nombre y precio");return;}
   var t=document.getElementById("mi-tipo").value;
-  post("menu_items",{restaurante_id:rest.id,categoria:document.getElementById("mi-cat").value||"General",nombre:n,precio:p,descripcion:document.getElementById("mi-desc").value||null,es_bebida:t==="bebida",es_arepa:t==="arepa",disponible:true})
+  addMenu({restaurante_id:rest.id,categoria:document.getElementById("mi-cat").value||"General",nombre:n,precio:p,descripcion:document.getElementById("mi-desc").value||null,es_bebida:t==="bebida",es_arepa:t==="arepa",disponible:true})
     .then(function(){["mi-cat","mi-nombre","mi-desc","mi-precio"].forEach(function(id){document.getElementById(id).value="";});loadMenu();notif("Producto agregado ✓");})
     .catch(function(e){notif("❌ "+e.message.substring(0,30));});
 });
