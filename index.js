@@ -539,23 +539,28 @@ app.get("/restaurante", function(req, res) {
 app.post("/api/pedido-estado", async function(req, res) {
   var id = req.body.id;
   var estado = req.body.estado;
+  console.log("PATCH pedido — id:", id, "estado:", estado);
   if (!id || !estado) return res.status(400).json({ error: "Faltan datos" });
 
+  var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+  var url = SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id;
+  console.log("URL:", url);
+
   try {
-    await axios.patch(
-      SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id,
-      { estado: estado },
-      { headers: {
-        "apikey": process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY,
-        "Authorization": "Bearer " + (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY),
+    var resp = await axios.patch(url, { estado: estado }, {
+      headers: {
+        "apikey": svcKey,
+        "Authorization": "Bearer " + svcKey,
         "Content-Type": "application/json",
         "Prefer": "return=minimal"
-      }}
-    );
+      }
+    });
+    console.log("Supabase response status:", resp.status);
     res.json({ ok: true });
   } catch(err) {
-    console.error("Error actualizando pedido:", err.message);
-    res.status(500).json({ ok: false, error: err.message });
+    var errData = err.response ? JSON.stringify(err.response.data) : err.message;
+    console.error("Error actualizando pedido:", errData);
+    res.status(500).json({ ok: false, error: errData });
   }
 });
 
