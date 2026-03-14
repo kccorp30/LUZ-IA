@@ -535,6 +535,11 @@ app.get("/restaurante", function(req, res) {
   res.sendFile(path.join(__dirname, "restaurante.html"));
 });
 
+// Provee la service key al frontend de forma segura
+app.get("/supabase-write-key", function(req, res) {
+  res.json({ key: process.env.SUPABASE_SERVICE_KEY || "sb_secret_yJx63kqRMKVzlWpd2dJejw_6Z4xAfAd" });
+});
+
 // Notificar al cliente cuando el pedido va en camino
 app.post("/notificar-cliente", async function(req, res) {
   var telefono = req.body.telefono;
