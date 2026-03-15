@@ -73,55 +73,13 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
   }
 }
 
+// ── CHAT DESACTIVADO TEMPORALMENTE PARA NO AFECTAR PEDIDOS ───────────────────
 async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo) {
-  try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-
-    await axios.post(
-      SUPABASE_URL + "/rest/v1/mensajes",
-      {
-        restaurante_id: restauranteId || null,
-        telefono: telefono,
-        mensaje: mensaje,
-        tipo: tipo
-      },
-      {
-        headers: {
-          "apikey": svcKey,
-          "Authorization": "Bearer " + svcKey,
-          "Content-Type": "application/json",
-          "Prefer": "return=minimal"
-        }
-      }
-    );
-  } catch (err) {
-    var errData = err.response ? JSON.stringify(err.response.data) : err.message;
-    console.error("Error guardando mensaje en Supabase:", errData);
-  }
+  return true;
 }
 
 async function obtenerMensajesSupabase(restauranteId, telefono) {
-  try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-    var url = SUPABASE_URL + "/rest/v1/mensajes?telefono=eq." + encodeURIComponent(telefono) + "&order=created_at.asc&select=*";
-
-    if (restauranteId) {
-      url = SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + restauranteId + "&telefono=eq." + encodeURIComponent(telefono) + "&order=created_at.asc&select=*";
-    }
-
-    var res = await axios.get(url, {
-      headers: {
-        "apikey": svcKey,
-        "Authorization": "Bearer " + svcKey
-      }
-    });
-
-    return res.data || [];
-  } catch (err) {
-    var errData = err.response ? JSON.stringify(err.response.data) : err.message;
-    console.error("Error leyendo mensajes de Supabase:", errData);
-    return [];
-  }
+  return [];
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -724,13 +682,11 @@ app.post("/api/menu-add", async function (req, res) {
 app.post("/enviar-mensaje-cliente", async function (req, res) {
   var telefono = req.body.telefono;
   var mensaje = req.body.mensaje;
-  var restauranteId = req.body.restaurante_id || null;
 
   if (!telefono || !mensaje) return res.status(400).json({ error: "Faltan datos" });
 
   try {
     await sendWhatsAppMessage(telefono, mensaje, process.env.WHATSAPP_PHONE_ID);
-    await guardarMensajeSupabase(restauranteId, telefono, mensaje, "restaurante");
     console.log("Mensaje enviado al cliente: " + telefono);
     res.json({ ok: true });
   } catch (err) {
@@ -757,20 +713,9 @@ app.post("/notificar-cliente", async function (req, res) {
   }
 });
 
+// Chat responde vacío por ahora para no romper flujo
 app.get("/api/chat/:telefono", async function (req, res) {
-  var telefono = req.params.telefono;
-  var restauranteId = req.query.restaurante_id || null;
-
-  if (!telefono) return res.status(400).json({ ok: false, error: "Telefono requerido" });
-
-  try {
-    var mensajes = await obtenerMensajesSupabase(restauranteId, telefono);
-    res.json({ ok: true, mensajes: mensajes });
-  } catch (err) {
-    var errMsg = err.response ? JSON.stringify(err.response.data) : err.message;
-    console.error("Error cargando chat:", errMsg);
-    res.status(500).json({ ok: false, error: errMsg });
-  }
+  res.json({ ok: true, mensajes: [] });
 });
 
 // ── WEBHOOK META — GET: verificacion ─────────────────────────────────────────
@@ -856,9 +801,6 @@ app.post("/webhook", async function (req, res) {
     } else {
       console.log("Restaurante no encontrado en Supabase, usando config por defecto");
     }
-
-    var restIdMsg = restaurante ? restaurante.id : null;
-    await guardarMensajeSupabase(restIdMsg, from, userText, "cliente");
 
     if (!conversations[from]) conversations[from] = [];
 
