@@ -960,3 +960,10 @@ app.listen(PORT, function () {
   console.log("WhatsApp Cloud API (Meta) activa");
   console.log("Menu disponible en: " + getMenuUrl());
 });
+```
+
+---
+
+**Último paso obligatorio en Railway — agrega esta variable:**
+```
+SUPABASE_SERVICE_KEY = [tu service_role key de Supabase]
