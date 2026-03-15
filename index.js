@@ -166,8 +166,6 @@ async function sendWhatsAppMessage(to, message, phoneNumberId) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 const MENU_TEXT = `
 HAMBURGUESAS TRADICIONALES:
 
@@ -432,23 +430,28 @@ FLUJO:
 3. Pide la dirección completa con barrio si no la tiene. Ejemplo: "Me regalas la dirección completa con barrio?"
 4. Con la dirección -> identifica el barrio, calcula el domicilio y muestra desglose completo
 5. Cliente confirma -> pregunta pago Y da datos de inmediato sin esperar
-6. Pago:
-- Nequi: "Transferi a @NEQUIJOS126 y mandame el comprobante"
-- Bancolombia: "Transferi a la llave 0089102980 a nombre de Jose Gregorio Charris y mandame el comprobante"
-- Efectivo: pregunta billete -> escribe PAGO_EFECTIVO:[denominacion]
-- Datafono: confirma -> escribe PAGO_DATAFONO
-- Mixto: confirma montos, da datos digitales, pregunta billete para el resto
-7. Cliente envia comprobante -> escribe PAGO_CONFIRMADO
+6. Pago — TAGS OBLIGATORIOS (el sistema los necesita para registrar el pedido, NUNCA los omitas):
+- Nequi o Bancolombia: cuando el cliente mande el comprobante -> escribe PAGO_CONFIRMADO al final de tu mensaje
+- Efectivo: cuando el cliente diga el billete -> escribe OBLIGATORIAMENTE al final de tu mensaje: PAGO_EFECTIVO:[valor en pesos sin puntos]. Ejemplos: billete de 20mil = PAGO_EFECTIVO:20000, billete de 50mil = PAGO_EFECTIVO:50000, billete de 100mil = PAGO_EFECTIVO:100000. JAMAS confirmes un pedido en efectivo sin escribir este tag.
+- Datafono: cuando confirme -> escribe PAGO_DATAFONO al final de tu mensaje
+- Mixto: cuando confirme montos -> escribe PAGO_CONFIRMADO al final de tu mensaje
+7. Cliente envia comprobante -> escribe PAGO_CONFIRMADO al final de tu mensaje
 
-PEDIDO CONFIRMADO — escribe oculto (nunca visible al cliente):
+PEDIDO CONFIRMADO — escribe estos tags ocultos al final de tu mensaje (el cliente no los ve, son para el sistema):
 PEDIDO_LISTO:
 ITEMS: [producto1 $precio|producto2 $precio]
 DESECHABLES: [numero sin puntos]
 DOMICILIO: [numero sin puntos]
 TOTAL: [numero sin puntos]
 
-CUANDO TENGAS DIRECCION: DIRECCION_LISTA:[direccion]
-TELEFONO ADICIONAL: TELEFONO_ADICIONAL:[numero]
+CUANDO TENGAS DIRECCION: escribe al final DIRECCION_LISTA:[direccion completa con barrio]
+TELEFONO ADICIONAL: escribe TELEFONO_ADICIONAL:[numero]
+
+REGLA CRITICA DE TAGS:
+- Los tags PEDIDO_LISTO, PAGO_EFECTIVO, PAGO_CONFIRMADO, PAGO_DATAFONO, DIRECCION_LISTA son instrucciones del sistema.
+- SIEMPRE los escribes al final de tu mensaje, despues del texto visible al cliente.
+- NUNCA omitas un tag cuando corresponda. El sistema depende de ellos para registrar el pedido.
+- Si olvidas un tag, el pedido NO se registra y se pierde.
 
 REGLAS FINALES:
 
@@ -512,22 +515,22 @@ async function printTicket(orderData) {
   console.log("\n TICKET PARA COCINA:");
   console.log(ticketText);
 
-  var PRINT_SERVER  = process.env.PRINT_SERVER_URL || "http://localhost:3001/print";
-  var PRINT_SECRET  = process.env.PRINT_SECRET     || "lacurva2024";
+  var PRINT_SERVER = process.env.PRINT_SERVER_URL || "http://localhost:3001/print";
+  var PRINT_SECRET = process.env.PRINT_SECRET     || "lacurva2024";
 
   var ticketPayload = {
-    secret:          PRINT_SECRET,
-    orderNumber:     orderNumber,
-    timestamp:       timestamp,
-    phone:           phone.replace(/[^0-9]/g, ""),
-    extraPhone:      extraPhone || null,
-    items:           items,
-    subtotal:        subtotal,
-    desechables:     Number(desechables || 0),
-    domicilio:       Number(domicilio || 0),
-    total:           Number(total),
-    address:         address,
-    paymentMethod:   paymentMethod,
+    secret:           PRINT_SECRET,
+    orderNumber:      orderNumber,
+    timestamp:        timestamp,
+    phone:            phone.replace(/[^0-9]/g, ""),
+    extraPhone:       extraPhone || null,
+    items:            items,
+    subtotal:         subtotal,
+    desechables:      Number(desechables || 0),
+    domicilio:        Number(domicilio || 0),
+    total:            Number(total),
+    address:          address,
+    paymentMethod:    paymentMethod,
     cashDenomination: cashDenomination || null
   };
 
@@ -590,14 +593,14 @@ function parseReply(reply, from) {
   }
 
   if (reply.indexOf("PAGO_EFECTIVO:") !== -1) {
-    var cashMatch = reply.match(/PAGO_EFECTIVO:(.+)/);
+    var cashMatch = reply.match(/PAGO_EFECTIVO:(\d+)/);
     if (cashMatch && orderState[from]) {
       orderState[from].paymentMethod    = "efectivo";
       orderState[from].cashDenomination = cashMatch[1].trim();
       orderState[from].status           = "confirmado";
       sideEffect = "pago_confirmado";
     }
-    cleanReply = cleanReply.replace(/PAGO_EFECTIVO:.+/g, "").trim();
+    cleanReply = cleanReply.replace(/PAGO_EFECTIVO:\d+/g, "").trim();
   }
 
   if (reply.indexOf("PAGO_DATAFONO") !== -1) {
@@ -799,12 +802,10 @@ app.post("/webhook", async function (req, res) {
     }
 
     var userText = "";
-    var isImage  = false;
 
     if (msgType === "text") {
       userText = msg.text && msg.text.body ? msg.text.body.trim() : "";
     } else if (msgType === "image" || msgType === "document" || msgType === "sticker") {
-      isImage = true;
       var caption = msg.image ? msg.image.caption : (msg.document ? msg.document.caption : "");
       userText = caption
         ? caption + " [El cliente envio una imagen, posiblemente comprobante de pago]"
@@ -843,11 +844,6 @@ app.post("/webhook", async function (req, res) {
       conversations[from] = conversations[from].slice(-20);
     }
 
-    var nowColombia    = new Date(Date.now() - (5 * 60 * 60 * 1000));
-    var hourColombia   = nowColombia.getUTCHours();
-    var minuteColombia = nowColombia.getUTCMinutes();
-    var timeStr        = hourColombia.toString().padStart(2, "0") + ":" + minuteColombia.toString().padStart(2, "0");
-
     var horarioMsg = "HORARIO: Atiende normalmente (modo pruebas activo).";
 
     var systemWithUrl = SYSTEM_PROMPT
@@ -864,17 +860,20 @@ app.post("/webhook", async function (req, res) {
       },
       {
         headers: {
-          "x-api-key":          process.env.ANTHROPIC_API_KEY,
-          "anthropic-version":  "2023-06-01",
-          "Content-Type":       "application/json"
+          "x-api-key":         process.env.ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "Content-Type":      "application/json"
         }
       }
     );
 
     var rawReply   = claudeResponse.data.content[0].text;
+    console.log("RAW REPLY:", rawReply);
     var parsed     = parseReply(rawReply, from);
     var cleanReply = parsed.cleanReply;
     var sideEffect = parsed.sideEffect;
+
+    console.log("SIDE EFFECT:", sideEffect);
 
     conversations[from].push({ role: "assistant", content: rawReply });
 
@@ -939,18 +938,18 @@ app.post("/webhook", async function (req, res) {
 
 app.get("/pedidos", function (req, res) {
   res.json({
-    activos:  Object.keys(orderState).length,
-    pedidos:  orderState
+    activos: Object.keys(orderState).length,
+    pedidos: orderState
   });
 });
 
 app.get("/", function (req, res) {
   res.json({
-    status:                  "La Curva Bot activo - WhatsApp Cloud API (Meta)",
-    menu_url:                getMenuUrl(),
-    hora:                    new Date().toLocaleString("es-CO"),
-    conversaciones_activas:  Object.keys(conversations).length,
-    pedidos_activos:         Object.keys(orderState).length
+    status:                 "La Curva Bot activo - WhatsApp Cloud API (Meta)",
+    menu_url:               getMenuUrl(),
+    hora:                   new Date().toLocaleString("es-CO"),
+    conversaciones_activas: Object.keys(conversations).length,
+    pedidos_activos:        Object.keys(orderState).length
   });
 });
 
