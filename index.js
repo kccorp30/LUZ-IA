@@ -19,7 +19,6 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY || "sb_publishable_I5lP9lq6-6t0B0K
 
 async function getRestaurante(phoneNumberId) {
   try {
-    // Buscar por whatsapp_phone_id (columna nueva para Meta)
     if (phoneNumberId) {
       var res = await axios.get(
         SUPABASE_URL + "/rest/v1/restaurantes?whatsapp_phone_id=eq." + phoneNumberId + "&select=*",
@@ -27,7 +26,7 @@ async function getRestaurante(phoneNumberId) {
       );
       if (res.data && res.data.length > 0) return res.data[0];
     }
-    // Fallback: primer restaurante activo
+
     var fallback = await axios.get(
       SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=*&limit=1",
       { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
@@ -41,6 +40,8 @@ async function getRestaurante(phoneNumberId) {
 
 async function guardarPedidoSupabase(restauranteId, pedidoData) {
   try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+
     await axios.post(
       SUPABASE_URL + "/rest/v1/pedidos",
       {
@@ -58,8 +59,8 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
       },
       {
         headers: {
-          "apikey": SUPABASE_KEY,
-          "Authorization": "Bearer " + SUPABASE_KEY,
+          "apikey": svcKey,
+          "Authorization": "Bearer " + svcKey,
           "Content-Type": "application/json",
           "Prefer": "return=minimal"
         }
@@ -67,25 +68,79 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
     );
     console.log("Pedido #" + pedidoData.orderNumber + " guardado en Supabase");
   } catch (err) {
-    console.error("Error guardando pedido en Supabase:", err.message);
+    var errData = err.response ? JSON.stringify(err.response.data) : err.message;
+    console.error("Error guardando pedido en Supabase:", errData);
+  }
+}
+
+async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+
+    await axios.post(
+      SUPABASE_URL + "/rest/v1/mensajes",
+      {
+        restaurante_id: restauranteId || null,
+        telefono: telefono,
+        mensaje: mensaje,
+        tipo: tipo
+      },
+      {
+        headers: {
+          "apikey": svcKey,
+          "Authorization": "Bearer " + svcKey,
+          "Content-Type": "application/json",
+          "Prefer": "return=minimal"
+        }
+      }
+    );
+  } catch (err) {
+    var errData = err.response ? JSON.stringify(err.response.data) : err.message;
+    console.error("Error guardando mensaje en Supabase:", errData);
+  }
+}
+
+async function obtenerMensajesSupabase(restauranteId, telefono) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var url = SUPABASE_URL + "/rest/v1/mensajes?telefono=eq." + encodeURIComponent(telefono) + "&order=created_at.asc&select=*";
+
+    if (restauranteId) {
+      url = SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + restauranteId + "&telefono=eq." + encodeURIComponent(telefono) + "&order=created_at.asc&select=*";
+    }
+
+    var res = await axios.get(url, {
+      headers: {
+        "apikey": svcKey,
+        "Authorization": "Bearer " + svcKey
+      }
+    });
+
+    return res.data || [];
+  } catch (err) {
+    var errData = err.response ? JSON.stringify(err.response.data) : err.message;
+    console.error("Error leyendo mensajes de Supabase:", errData);
+    return [];
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function sb_get(path) {
+async function sb_get(pathPart) {
   try {
-    var res = await axios.get(SUPABASE_URL + "/rest/v1/" + path, {
+    var res = await axios.get(SUPABASE_URL + "/rest/v1/" + pathPart, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY }
     });
     return res.data;
-  } catch (e) { return null; }
+  } catch (e) {
+    return null;
+  }
 }
 
 function getMenuUrl() {
   return process.env.MENU_PAGE_URL || "https://bit.ly/LaCurvaStreetFood";
 }
 
-// ── WHATSAPP CLOUD API (META) ─────────────────────────────────────────────────
+// ── WHATSAPP CLOUD API (META) ────────────────────────────────────────────────
 async function sendWhatsAppMessage(to, message, phoneNumberId) {
   var token = process.env.WHATSAPP_TOKEN;
   var pid = phoneNumberId || process.env.WHATSAPP_PHONE_ID;
@@ -93,7 +148,7 @@ async function sendWhatsAppMessage(to, message, phoneNumberId) {
     console.error("Faltan WHATSAPP_TOKEN o WHATSAPP_PHONE_ID");
     return;
   }
-  // Limpiar numero: solo digitos
+
   var toNum = to.replace(/[^0-9]/g, "");
   if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
 
@@ -607,7 +662,6 @@ app.post("/api/pedido-estado", async function (req, res) {
     });
     console.log("Supabase response status:", resp.status);
 
-    // ── Notificar al cliente automaticamente cuando el pedido va en camino ──
     if (estado === "enviado" && telefonoCliente) {
       var mensaje = "Hola! 🛵 Tu pedido ya va en camino. Llega en 25-35 minutos. Que lo disfrutes! — La Curva Street Food";
       await sendWhatsAppMessage(telefonoCliente, mensaje, process.env.WHATSAPP_PHONE_ID);
@@ -667,14 +721,16 @@ app.post("/api/menu-add", async function (req, res) {
 });
 
 // Enviar mensaje libre al cliente desde el panel del restaurante
-// ✅ MIGRADO: Twilio → WhatsApp Cloud API (Meta)
 app.post("/enviar-mensaje-cliente", async function (req, res) {
   var telefono = req.body.telefono;
   var mensaje = req.body.mensaje;
+  var restauranteId = req.body.restaurante_id || null;
+
   if (!telefono || !mensaje) return res.status(400).json({ error: "Faltan datos" });
 
   try {
     await sendWhatsAppMessage(telefono, mensaje, process.env.WHATSAPP_PHONE_ID);
+    await guardarMensajeSupabase(restauranteId, telefono, mensaje, "restaurante");
     console.log("Mensaje enviado al cliente: " + telefono);
     res.json({ ok: true });
   } catch (err) {
@@ -685,7 +741,6 @@ app.post("/enviar-mensaje-cliente", async function (req, res) {
 });
 
 // Notificar al cliente cuando el pedido va en camino
-// ✅ MIGRADO: Twilio → WhatsApp Cloud API (Meta)
 app.post("/notificar-cliente", async function (req, res) {
   var telefono = req.body.telefono;
   if (!telefono) return res.status(400).json({ error: "Telefono requerido" });
@@ -702,8 +757,23 @@ app.post("/notificar-cliente", async function (req, res) {
   }
 });
 
+app.get("/api/chat/:telefono", async function (req, res) {
+  var telefono = req.params.telefono;
+  var restauranteId = req.query.restaurante_id || null;
+
+  if (!telefono) return res.status(400).json({ ok: false, error: "Telefono requerido" });
+
+  try {
+    var mensajes = await obtenerMensajesSupabase(restauranteId, telefono);
+    res.json({ ok: true, mensajes: mensajes });
+  } catch (err) {
+    var errMsg = err.response ? JSON.stringify(err.response.data) : err.message;
+    console.error("Error cargando chat:", errMsg);
+    res.status(500).json({ ok: false, error: errMsg });
+  }
+});
+
 // ── WEBHOOK META — GET: verificacion ─────────────────────────────────────────
-// ✅ MIGRADO: responde el hub.challenge que Meta envía al verificar el webhook
 app.get("/webhook", function (req, res) {
   var mode      = req.query["hub.mode"];
   var token     = req.query["hub.verify_token"];
@@ -716,7 +786,6 @@ app.get("/webhook", function (req, res) {
     return res.status(200).send(challenge);
   }
 
-  // Si no es verificacion de Meta, muestra estado normal
   if (!mode) {
     return res.send("LUZ esta activa - La Curva Street Food");
   }
@@ -724,16 +793,13 @@ app.get("/webhook", function (req, res) {
   res.sendStatus(403);
 });
 
-// ── WEBHOOK META — POST: recibe mensajes ──────────────────────────────────────
-// ✅ MIGRADO: lee formato JSON de Meta en vez del formato de Twilio
+// ── WEBHOOK META — POST: recibe mensajes ─────────────────────────────────────
 app.post("/webhook", async function (req, res) {
-  // Responder 200 INMEDIATO — Meta requiere respuesta en menos de 5 segundos
   res.sendStatus(200);
 
   try {
     var body = req.body;
 
-    // Validar que es un evento de WhatsApp
     if (!body.object || body.object !== "whatsapp_business_account") return;
 
     var entry   = body.entry && body.entry[0];
@@ -743,18 +809,16 @@ app.post("/webhook", async function (req, res) {
     if (!value || !value.messages || value.messages.length === 0) return;
 
     var msg           = value.messages[0];
-    var from          = msg.from; // numero del cliente (solo digitos, ej: 573001234567)
-    var phoneNumberId = value.metadata && value.metadata.phone_number_id; // ID del numero del restaurante
+    var from          = msg.from;
+    var phoneNumberId = value.metadata && value.metadata.phone_number_id;
     var msgType       = msg.type;
 
-    // ── Audio: responder directo ──────────────────────────────────────────────
     if (msgType === "audio") {
       console.log("Audio recibido de " + from + " — respondiendo automaticamente");
       await sendWhatsAppMessage(from, "Hola! Por favor escríbeme tu pedido, no puedo escuchar audios por acá 🙏 Con gusto te atiendo.", phoneNumberId);
       return;
     }
 
-    // Extraer texto del mensaje
     var userText = "";
     var isImage  = false;
 
@@ -770,21 +834,18 @@ app.post("/webhook", async function (req, res) {
       var loc = msg.location;
       userText = "Mi ubicacion es: lat " + loc.latitude + ", lng " + loc.longitude + (loc.name ? " (" + loc.name + ")" : "");
     } else if (msgType === "interactive") {
-      // Botones interactivos
       if (msg.interactive.type === "button_reply") {
         userText = msg.interactive.button_reply.title;
       } else if (msg.interactive.type === "list_reply") {
         userText = msg.interactive.list_reply.title;
       }
     } else {
-      // Tipo no soportado — ignorar silenciosamente
       console.log("Tipo de mensaje no soportado: " + msgType);
       return;
     }
 
     if (!userText) return;
 
-    // ── Verificar suscripcion en Supabase ─────────────────────────────────────
     var restaurante = await getRestaurante(phoneNumberId);
     if (restaurante) {
       if (restaurante.estado !== "activo") {
@@ -795,7 +856,9 @@ app.post("/webhook", async function (req, res) {
     } else {
       console.log("Restaurante no encontrado en Supabase, usando config por defecto");
     }
-    // ─────────────────────────────────────────────────────────────────────────
+
+    var restIdMsg = restaurante ? restaurante.id : null;
+    await guardarMensajeSupabase(restIdMsg, from, userText, "cliente");
 
     if (!conversations[from]) conversations[from] = [];
 
@@ -804,28 +867,17 @@ app.post("/webhook", async function (req, res) {
       conversations[from] = conversations[from].slice(-20);
     }
 
-    // Hora actual en Colombia (UTC-5)
     var nowColombia    = new Date(Date.now() - (5 * 60 * 60 * 1000));
     var hourColombia   = nowColombia.getUTCHours();
     var minuteColombia = nowColombia.getUTCMinutes();
     var timeStr        = hourColombia.toString().padStart(2, "0") + ":" + minuteColombia.toString().padStart(2, "0");
 
-    // ── HORARIO EN PAUSA PARA PRUEBAS — descomentar cuando se active ──────────
-    // var totalMinutes = hourColombia * 60 + minuteColombia;
-    // var isOpen       = totalMinutes >= 960 && totalMinutes < 1350;
-    // var isClosed     = totalMinutes < 960;
-    // if (isClosed) return;
-    // var horarioMsg = isOpen
-    //   ? "HORARIO: Son las " + timeStr + " (hora Colombia). Estas EN horario de atencion (4:00pm-10:30pm). Atiende normalmente."
-    //   : "HORARIO: Son las " + timeStr + " (hora Colombia). Los domicilios ya cerraron a las 10:30pm. Informale amablemente y no tomes pedidos.";
-    // ─────────────────────────────────────────────────────────────────────────
     var horarioMsg = "HORARIO: Atiende normalmente (modo pruebas activo).";
 
     var systemWithUrl = SYSTEM_PROMPT
       .replace("MENU_URL_PLACEHOLDER", getMenuUrl())
       .replace("HORARIO: Solo atiendes de 4:00pm a 12:00am. Si alguien escribe fuera de ese horario, NO respondas nada.", horarioMsg);
 
-    // Llamar a Claude
     var claudeResponse = await axios.post(
       "https://api.anthropic.com/v1/messages",
       {
@@ -843,20 +895,18 @@ app.post("/webhook", async function (req, res) {
       }
     );
 
-    var rawReply  = claudeResponse.data.content[0].text;
-    var parsed    = parseReply(rawReply, from);
+    var rawReply   = claudeResponse.data.content[0].text;
+    var parsed     = parseReply(rawReply, from);
     var cleanReply = parsed.cleanReply;
     var sideEffect = parsed.sideEffect;
 
     conversations[from].push({ role: "assistant", content: rawReply });
 
-    // Enviar respuesta al cliente via WhatsApp Cloud API
     await sendWhatsAppMessage(from, cleanReply, phoneNumberId);
 
     console.log("De " + from + ": " + userText);
     console.log("Luz: " + cleanReply.substring(0, 100));
 
-    // ── Procesar pago confirmado ──────────────────────────────────────────────
     if (sideEffect === "pago_confirmado" && orderState[from]) {
       var state = orderState[from];
       var timestamp = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
@@ -882,19 +932,21 @@ app.post("/webhook", async function (req, res) {
         try {
           var restBuscar = await sb_get("restaurantes?select=id&limit=1");
           if (restBuscar && restBuscar.length > 0) restId = restBuscar[0].id;
-        } catch (e) { console.error("Error buscando restaurante:", e.message); }
+        } catch (e) {
+          console.error("Error buscando restaurante:", e.message);
+        }
       }
 
       if (restId) {
         await guardarPedidoSupabase(restId, {
-          orderNumber:  state.orderNumber,
-          phone:        from,
-          items:        state.items,
-          subtotal:     Number(state.total) - Number(state.desechables || 0) - Number(state.domicilio || 0),
-          desechables:  Number(state.desechables || 0),
-          domicilio:    Number(state.domicilio || 0),
-          total:        Number(state.total),
-          address:      state.address || "Por confirmar",
+          orderNumber: state.orderNumber,
+          phone: from,
+          items: state.items,
+          subtotal: Number(state.total) - Number(state.desechables || 0) - Number(state.domicilio || 0),
+          desechables: Number(state.desechables || 0),
+          domicilio: Number(state.domicilio || 0),
+          total: Number(state.total),
+          address: state.address || "Por confirmar",
           paymentMethod: state.paymentMethod || "digital"
         });
       } else {
@@ -906,8 +958,6 @@ app.post("/webhook", async function (req, res) {
 
   } catch (err) {
     console.error("Error en webhook POST:", err.response ? JSON.stringify(err.response.data) : err.message);
-    // No se puede responder al cliente aqui porque ya se envio el 200
-    // El error queda en logs de Railway
   }
 });
 
