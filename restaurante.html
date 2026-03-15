@@ -116,6 +116,10 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .hnum{font-family:'Archivo Black',sans-serif;font-size:18px;color:var(--orange)}
 .hinfo{font-size:12px;color:var(--muted);margin-top:2px}
 .htot{font-family:'Archivo Black',sans-serif;font-size:18px;color:var(--green)}
+.chat-bubble{max-width:80%;padding:10px 12px;border-radius:14px;font-size:13px;line-height:1.35;word-break:break-word}
+.chat-cliente{align-self:flex-start;background:var(--card);border:1px solid var(--border);color:var(--white)}
+.chat-restaurante{align-self:flex-end;background:#25D366;color:white}
+.chat-time{font-size:10px;opacity:0.75;margin-top:4px}
 </style>
 </head>
 <body>
@@ -177,16 +181,16 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 </div>
 <div class="notif" id="notif"></div>
 
-<!-- Modal mensajes -->
 <div class="msg-overlay" id="msgOverlay">
   <div class="msg-box">
     <div class="msg-handle"></div>
-    <div class="msg-title">✉️ Escribir al cliente</div>
+    <div class="msg-title">💬 Chat con cliente</div>
     <div class="msg-cliente" id="msgClienteInfo"></div>
-    <textarea class="msg-textarea" id="msgTexto" placeholder="Escribe tu mensaje..."></textarea>
+    <div id="chatMensajes" style="max-height:320px; overflow-y:auto; margin:12px 0; display:flex; flex-direction:column; gap:8px;"></div>
+    <textarea class="msg-textarea" id="msgTexto" placeholder="Escribe tu mensaje..." style="height:90px;"></textarea>
     <div class="msg-actions">
-      <button class="msg-cancel" id="msgCancelar">Cancelar</button>
-      <button class="msg-send" id="msgEnviar">📤 Enviar WhatsApp</button>
+      <button class="msg-cancel" id="msgCancelar">Cerrar</button>
+      <button class="msg-send" id="msgEnviar">📤 Enviar</button>
     </div>
   </div>
 </div>
@@ -216,7 +220,6 @@ function chkPin(){
   }).catch(function(){document.getElementById("pinErr").textContent="Error";pin="";dots();});
 }
 function goApp(){
-  
   document.getElementById("pinScreen").style.display="none";
   document.getElementById("app").style.display="block";
   var p=rest.nombre.split(" "),l=p.pop();
@@ -262,6 +265,7 @@ function loadPedidos(){
       h+='<div class="ebtns">';
       if(cfg.n)h+='<button class="ebtn '+cfg.bc+'" data-id="'+p.id+'" data-e="'+cfg.n+'" data-t="'+(p.cliente_tel||"")+'">'+cfg.bl+'</button>';
       if(p.estado!=="entregado")h+='<button class="ebtn be" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'">✅ Entregado</button>';
+      if(p.cliente_tel)h+='<button class="btn-msg" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">💬 Chat</button>';
       h+='</div></div></div>';
     });
     lista.innerHTML=h;
@@ -329,7 +333,6 @@ function loadMenu(){
       g[cat].forEach(function(i){
         h+='<div class="mitem"><div style="flex:1"><div class="mname">'+i.nombre+'</div><div class="mdesc">'+(i.descripcion||"")+'</div></div><div class="mprice">'+fmt(i.precio)+'</div><button class="tog '+(i.disponible?"on":"off")+'" data-iid="'+i.id+'" data-d="'+i.disponible+'"></button></div>';
       });
-      if(p.cliente_tel)h+='<button class="btn-msg" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">✉️ Escribir</button>';
       h+='</div>';
     });
     l.innerHTML=h;
@@ -343,29 +346,82 @@ function loadMenu(){
   }).catch(function(){});
 }
 
-// ── MENSAJES AL CLIENTE ──────────────────────────────────────────────────────
+// ── MINI CHAT CON CLIENTE ────────────────────────────────────────────────────
 var msgTel = "";
+var chatTimer = null;
+
+function formatearHoraChat(fecha) {
+  try {
+    return new Date(fecha).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  } catch(e) {
+    return "";
+  }
+}
+
+function renderChat(mensajes) {
+  var box = document.getElementById("chatMensajes");
+  if (!mensajes || !mensajes.length) {
+    box.innerHTML = '<div style="color:var(--muted); font-size:12px; text-align:center; padding:20px 10px;">No hay mensajes aún</div>';
+    return;
+  }
+
+  var h = "";
+  mensajes.forEach(function(m) {
+    var cls = m.tipo === "cliente" ? "chat-cliente" : "chat-restaurante";
+    h += '<div class="chat-bubble ' + cls + '">';
+    h += '<div>' + (m.mensaje || "") + '</div>';
+    h += '<div class="chat-time">' + formatearHoraChat(m.created_at) + '</div>';
+    h += '</div>';
+  });
+
+  box.innerHTML = h;
+  box.scrollTop = box.scrollHeight;
+}
+
+function cargarChat() {
+  if (!msgTel || !rest) return;
+
+  fetch("/api/chat/" + encodeURIComponent(msgTel) + "?restaurante_id=" + encodeURIComponent(rest.id))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) renderChat(d.mensajes || []);
+    })
+    .catch(function() {});
+}
 
 function abrirMensaje(tel, numPedido) {
   msgTel = tel;
   document.getElementById("msgClienteInfo").textContent = "Pedido #" + numPedido + " · " + tel;
   document.getElementById("msgTexto").value = "";
   document.getElementById("msgOverlay").classList.add("open");
+  cargarChat();
+
+  if (chatTimer) clearInterval(chatTimer);
+  chatTimer = setInterval(cargarChat, 5000);
+
   setTimeout(function(){ document.getElementById("msgTexto").focus(); }, 300);
 }
 
-document.getElementById("msgCancelar").addEventListener("click", function() {
+function cerrarChat() {
   document.getElementById("msgOverlay").classList.remove("open");
+  if (chatTimer) {
+    clearInterval(chatTimer);
+    chatTimer = null;
+  }
+}
+
+document.getElementById("msgCancelar").addEventListener("click", function() {
+  cerrarChat();
 });
 
 document.getElementById("msgOverlay").addEventListener("click", function(e) {
-  if (e.target === this) this.classList.remove("open");
+  if (e.target === this) cerrarChat();
 });
 
 document.getElementById("msgEnviar").addEventListener("click", function() {
   var texto = document.getElementById("msgTexto").value.trim();
   if (!texto) { notif("Escribe un mensaje"); return; }
-  
+
   var btn = this;
   btn.textContent = "Enviando...";
   btn.disabled = true;
@@ -373,20 +429,25 @@ document.getElementById("msgEnviar").addEventListener("click", function() {
   fetch("/enviar-mensaje-cliente", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ telefono: msgTel, mensaje: texto })
+    body: JSON.stringify({
+      telefono: msgTel,
+      mensaje: texto,
+      restaurante_id: rest ? rest.id : null
+    })
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
     if (d.ok) {
+      document.getElementById("msgTexto").value = "";
       notif("✅ Mensaje enviado!");
-      document.getElementById("msgOverlay").classList.remove("open");
+      cargarChat();
     } else {
       notif("❌ Error: " + (d.error||"").substring(0,30));
     }
   })
   .catch(function() { notif("❌ Error de conexión"); })
   .finally(function() {
-    btn.textContent = "📤 Enviar WhatsApp";
+    btn.textContent = "📤 Enviar";
     btn.disabled = false;
   });
 });
