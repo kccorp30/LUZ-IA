@@ -21,7 +21,7 @@ function nextOrderNumber() {
   return ++orderCounter;
 }
 
-// ── SUPABASE ─────────────────────────────────────────────────────────────────
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://vbxuwzcfzfjwhllkppkg.supabase.co";
 const SUPABASE_KEY = process.env.SUPABASE_KEY || "sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 
@@ -34,7 +34,6 @@ async function getRestaurante(phoneNumberId) {
       );
       if (res.data && res.data.length > 0) return res.data[0];
     }
-
     var fallback = await axios.get(
       SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=*&limit=1",
       { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
@@ -93,28 +92,20 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
   } catch (err) {
     var errData = err.response ? JSON.stringify(err.response.data) : err.message;
     console.error("❌ Error guardando pedido en Supabase:", errData);
-    if (err.response) {
-      console.error("HTTP Status:", err.response.status);
-    }
+    if (err.response) console.error("HTTP Status:", err.response.status);
   }
 }
 
 function notificarDashboard(pedido) {
   var DASHBOARD_WEBHOOK = process.env.DASHBOARD_WEBHOOK_URL;
   if (!DASHBOARD_WEBHOOK || !pedido) return;
-
   axios.post(DASHBOARD_WEBHOOK, { evento: "nuevo_pedido", pedido: pedido }, { timeout: 4000 })
     .then(function () { console.log("Dashboard notificado del pedido #" + pedido.numero_pedido); })
     .catch(function (err) { console.error("Error notificando dashboard:", err.message); });
 }
 
-async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo) {
-  return true;
-}
-
-async function obtenerMensajesSupabase(restauranteId, telefono) {
-  return [];
-}
+async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo) { return true; }
+async function obtenerMensajesSupabase(restauranteId, telefono) { return []; }
 
 async function sb_get(pathPart) {
   try {
@@ -122,23 +113,18 @@ async function sb_get(pathPart) {
       headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY }
     });
     return res.data;
-  } catch (e) {
-    return null;
-  }
+  } catch (e) { return null; }
 }
 
 function getMenuUrl() {
   return process.env.MENU_PAGE_URL || "https://bit.ly/LaCurvaStreetFood";
 }
 
-// ── WHATSAPP CLOUD API (META) ────────────────────────────────────────────────
+// ── WHATSAPP CLOUD API ────────────────────────────────────────────────────────
 async function sendWhatsAppMessage(to, message, phoneNumberId) {
   var token = process.env.WHATSAPP_TOKEN;
-  var pid = phoneNumberId || process.env.WHATSAPP_PHONE_ID;
-  if (!token || !pid) {
-    console.error("Faltan WHATSAPP_TOKEN o WHATSAPP_PHONE_ID");
-    return;
-  }
+  var pid   = phoneNumberId || process.env.WHATSAPP_PHONE_ID;
+  if (!token || !pid) { console.error("Faltan WHATSAPP_TOKEN o WHATSAPP_PHONE_ID"); return; }
 
   var toNum = to.replace(/[^0-9]/g, "");
   if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
@@ -146,18 +132,8 @@ async function sendWhatsAppMessage(to, message, phoneNumberId) {
   try {
     await axios.post(
       "https://graph.facebook.com/v19.0/" + pid + "/messages",
-      {
-        messaging_product: "whatsapp",
-        to: toNum,
-        type: "text",
-        text: { body: message }
-      },
-      {
-        headers: {
-          "Authorization": "Bearer " + token,
-          "Content-Type": "application/json"
-        }
-      }
+      { messaging_product: "whatsapp", to: toNum, type: "text", text: { body: message } },
+      { headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } }
     );
     console.log("Mensaje enviado a " + toNum);
   } catch (err) {
@@ -166,6 +142,54 @@ async function sendWhatsAppMessage(to, message, phoneNumberId) {
   }
 }
 
+// ── HORARIO ───────────────────────────────────────────────────────────────────
+function estaEnHorario(restaurante) {
+  try {
+    var ahora     = new Date(Date.now() - 5 * 60 * 60 * 1000); // Colombia UTC-5
+    var horaActual = ahora.getUTCHours() * 60 + ahora.getUTCMinutes();
+
+    var apertura = restaurante.hora_apertura || "16:00:00";
+    var cierre   = restaurante.hora_cierre   || "00:00:00";
+
+    var partsA = apertura.split(":").map(Number);
+    var partsC = cierre.split(":").map(Number);
+
+    var minApertura = partsA[0] * 60 + partsA[1];
+    var minCierre   = partsC[0] * 60 + partsC[1];
+
+    // Día de semana en Colombia
+    var dias = ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
+    var diaHoy = dias[ahora.getUTCDay()];
+    var diasActivos = (restaurante.dias_activos || "lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
+
+    if (!diasActivos.includes(diaHoy)) return false;
+
+    // Horario que cruza medianoche (ej: 16:00 a 00:30)
+    if (minCierre <= minApertura) {
+      return horaActual >= minApertura || horaActual <= minCierre;
+    }
+    return horaActual >= minApertura && horaActual <= minCierre;
+
+  } catch (e) {
+    return true; // Si falla, deja pasar
+  }
+}
+
+function getMenuActivo(restaurante) {
+  // Si tiene menús configurados y modo_dia activo, usa menu_dia, si no menu_noche
+  // Si no tiene menús configurados, usa el MENU_TEXT por defecto
+  var modoDia = restaurante.modo_dia || false;
+
+  if (modoDia && restaurante.menu_dia && restaurante.menu_dia.trim().length > 10) {
+    return restaurante.menu_dia;
+  }
+  if (!modoDia && restaurante.menu_noche && restaurante.menu_noche.trim().length > 10) {
+    return restaurante.menu_noche;
+  }
+  return MENU_TEXT; // fallback al menú hardcodeado
+}
+
+// ── MENÚ ──────────────────────────────────────────────────────────────────────
 const MENU_TEXT = `
 HAMBURGUESAS TRADICIONALES:
 
@@ -302,8 +326,6 @@ MENU KIDS (incluye jugo Hit cajita + sorpresa):
 
 const SYSTEM_PROMPT = `Eres Luz, la encargada de atencion al cliente de La Curva Street Food, restaurante de comida callejera en Canaveral, Cali. Direccion: Cl. 16 #56-40, Comuna 17, Cali.
 
-HORARIO: Solo atiendes de 4:00pm a 12:00am. Si alguien escribe fuera de ese horario, NO respondas nada.
-
 PERSONALIDAD:
 
 - Eres una persona real, calenya, calida y cercana. Nunca admitas ser IA.
@@ -311,15 +333,7 @@ PERSONALIDAD:
 - Hablas natural. Usas: "con gusto", "a listo", "claro que si", "digame", "ya le confirmo". Ocasionalmente "Dama" o "Caballero".
 - SIEMPRE responde en UN SOLO mensaje. Nunca mandes 2 o 3 mensajes separados.
 - Respuestas cortas y al grano.
-- Mantienes conversación natural y amable. Ejemplos:
-  - Cliente dice "gracias" → "Con gusto! Para lo que necesites 😊"
-  - Cliente dice "de nada" → "Claro que sí, a la orden!"
-  - Cliente dice "cómo estás?" → "Todo bien por acá, gracias! Y usted?"
-  - Cliente dice "buenas noches" → "Buenas noches! Con gusto."
-  - Cliente dice "hasta luego" → "Hasta luego! Que esté muy bien 😊"
-  - Cliente dice "ok", "listo", "hola hola", "hola" en medio de conversacion → responde corto y natural, NO repitas el link del menu ni te presentes de nuevo.
-- Si el mensaje es solo un saludo sin pedido y es la primera vez, preséntate y ofrece el menu.
-- Si el mensaje es solo un saludo pero ya hay conversacion previa, responde solo el saludo de forma corta.
+- Mantienes conversación natural y amable.
 - NUNCA mandes el link del menu dos veces en la misma conversacion. Solo la primera vez.
 - Nunca seas fría ni cortante. Siempre cálida y cercana.
 
@@ -328,10 +342,11 @@ Si el cliente envia un audio responde: "Hola! Por favor escribeme tu pedido, no 
 
 INFORMACION:
 
-- Horario: 4:00pm a 12:00am todos los dias
-- Ubicacion: Cl. 16 #56-40, Canaveral, Cali
+- Ubicacion: UBICACION_PLACEHOLDER
 - Domicilio: sur de Cali y parte del centro
 - Tiempo estimado: 25 a 35 minutos
+
+HORARIO_PLACEHOLDER
 
 METODOS DE PAGO:
 
@@ -339,7 +354,7 @@ METODOS DE PAGO:
 - Bancolombia llave: 0089102980 (Jose Gregorio Charris)
 - Efectivo: domiciliario lleva cambio (pregunta con que billete cancela)
 - Datafono: domiciliario lo lleva
-- Pago mixto: acepta parte digital + parte efectivo. Confirma cuanto va por cada medio y da datos de transferencia de inmediato.
+- Pago mixto: acepta parte digital + parte efectivo.
 - NUNCA esperes a que el cliente pida los datos de pago. Delos siempre tu primero.
 
 PROMOCIONES SEMANALES:
@@ -349,8 +364,8 @@ PROMOCIONES SEMANALES:
 - Jueves: Pague 2 lleve 3 en Angus BBQ King o Celestina
 - Domingos: Pague 2 lleve 3 en asados junior
 
-MENU COMPLETO:
-${MENU_TEXT}
+MENU ACTIVO:
+MENU_PLACEHOLDER
 
 PAGINA VISUAL DEL MENU:
 Cuando un cliente pida el menu o diga que quiere pedir, ofrece siempre:
@@ -359,9 +374,8 @@ Cuando un cliente pida el menu o diga que quiere pedir, ofrece siempre:
 DESECHABLES — REGLA CRITICA:
 
 - $500 por cada producto de COMIDA.
-- BEBIDAS NO cobran desechable: Coca-Cola, Mr. Tee, Jugo Hit, Agua, Limonadas, Jugos, Soda italiana, cualquier bebida.
+- BEBIDAS NO cobran desechable.
 - AREPAS tampoco cobran desechable.
-- Solo cobran: hamburguesas, angus, combos, desgranados, chuzos, alitas, asados, entradas, aplastados, especialidades, patacones, burritos, sandwiches, shawarmas.
 
 DOMICILIO — pregunta siempre el barrio:
 
@@ -377,88 +391,57 @@ Productos:    $XX.XXX
 Desechables:  $XXX
 Domicilio:    $X.XXX
 TOTAL:        $XX.XXX
-NUNCA des solo el numero sin desglose. NUNCA cobres desechable a bebidas o arepas.
 
 REGLA ANTI-DUPLICADOS:
-
 - Si el cliente escribe mal y repite corregido, toma SOLO la version corregida.
-- Si dice "no, era X", reemplaza el anterior, no acumules.
 - Verifica que no haya duplicados antes de confirmar.
 
 REGLA DE ORO:
-
 - Si el cliente ya dio producto + direccion + pago en el mismo mensaje, confirma TODO de una vez.
 - NUNCA preguntes algo que el cliente ya respondio.
 
-CUANDO EL CLIENTE LLEGA DESDE LA PAGINA WEB:
+MODIFICACIONES: acepta "sin queso", "extra salsa", etc.
 
-- Mensaje empieza con "Hola! Quiero hacer un pedido" con lista de productos.
-- NO te presentes de nuevo. Ya te presentaste al inicio.
-- Ve directo a confirmar el pedido y pedir la direccion.
-- Ejemplo: "Perfecto, tengo tu pedido listo. Me regalas la dirección completa con barrio para calcular el domicilio?"
-
-MODIFICACIONES: acepta "sin queso", "extra salsa", etc. Confirma y anota en el pedido.
-
-QUEJAS POR FALTANTES (salsas, ingredientes, etc.):
-
-- Si el cliente dice que le faltó algo (salsa, topping, ingrediente), responde con amabilidad y dile que se lo envían sin problema con el domiciliario.
-- Ejemplo: "Ay, disculpa! Ya le avisamos al equipo para que te lo enviemos enseguida 🙏"
-- SOLO si el cliente dice explicitamente que no quiere o que ya está bien, entonces no lo envíes.
-- No preguntes si lo quiere — asume que sí y ofrécelo de una vez.
+QUEJAS POR FALTANTES:
+- Si el cliente dice que le faltó algo, ofrécelo de inmediato sin preguntar.
 
 JERGA: "litro y cuarto" = Coca-Cola 1.5L. "una gaseosa" = pregunta cual.
 
-VENTAS — MUY IMPORTANTE:
-
+VENTAS:
 - Eres vendedora. Tu objetivo es que el cliente pida más y quede feliz.
-- NUNCA limites ni cuestiones la cantidad que pide un cliente. Si pide 10 hamburguesas, perfecto.
-- Cuando el cliente confirme su pedido, SIEMPRE ofrece algo adicional de forma natural. Ejemplos:
-  - Si pidio hamburguesa sin bebida -> "Te apetece una limonada o gaseosa para acompañar?"
-  - Si pidio comida sin entrada -> "Le agregamos unas papas rústicas o aros de cebolla?"
-  - Si pidio alitas -> "Las alitas vienen solas o le sumamos una limonada?"
-  - Si pidio asado -> "Le agregamos una entrada para picar mientras llega?"
-  - Si es un pedido grande (familia) -> "Para los niños tenemos menú kids con sorpresa incluida, le interesa?"
-- Solo ofrece UNA cosa adicional, no bombardees al cliente con muchas opciones.
-- Si el cliente dice que no, acepta sin insistir y continúa con el pedido.
-- NUNCA digas frases que desanimen la compra como "con lo que tienes ya es bastante" o "eso es suficiente". Siempre positivo y motivador.
-- Cuando aplique una promoción del dia, mencionala con entusiasmo: "Hoy es martes y tenemos 2x3 en perros, aprovecha!"
+- Cuando el cliente confirme su pedido, SIEMPRE ofrece algo adicional de forma natural.
+- Solo ofrece UNA cosa adicional.
+- Cuando aplique una promoción del dia, mencionala con entusiasmo.
 
 FLUJO:
-
 1. Saludo -> UN mensaje amable + ofrece link del menu
 2. Cliente pide -> confirma productos con precios
-3. Pide la dirección completa con barrio si no la tiene. Ejemplo: "Me regalas la dirección completa con barrio?"
-4. Con la dirección -> identifica el barrio, calcula el domicilio y muestra desglose completo
-5. Cliente confirma -> pregunta pago Y da datos de inmediato sin esperar
-6. Pago — TAGS OBLIGATORIOS (el sistema los necesita para registrar el pedido, NUNCA los omitas):
-- Nequi o Bancolombia: cuando el cliente mande el comprobante -> escribe PAGO_CONFIRMADO al final de tu mensaje
-- Efectivo: cuando el cliente diga el billete -> escribe OBLIGATORIAMENTE al final de tu mensaje: PAGO_EFECTIVO:[valor en pesos sin puntos]. Ejemplos: billete de 20mil = PAGO_EFECTIVO:20000, billete de 50mil = PAGO_EFECTIVO:50000, billete de 100mil = PAGO_EFECTIVO:100000. JAMAS confirmes un pedido en efectivo sin escribir este tag.
-- Datafono: cuando confirme -> escribe PAGO_DATAFONO al final de tu mensaje
-- Mixto: cuando confirme montos -> escribe PAGO_CONFIRMADO al final de tu mensaje
-7. Cliente envia comprobante -> escribe PAGO_CONFIRMADO al final de tu mensaje
+3. Pide direccion completa con barrio
+4. Con direccion -> calcula domicilio y muestra desglose completo
+5. Cliente confirma -> pregunta pago Y da datos de inmediato
+6. Pago:
+- Nequi: "Transferi a @NEQUIJOS126 y mandame el comprobante"
+- Bancolombia: "Transferi a la llave 0089102980 a nombre de Jose Gregorio Charris y mandame el comprobante"
+- Efectivo: pregunta billete -> escribe PAGO_EFECTIVO:[denominacion]
+- Datafono: confirma -> escribe PAGO_DATAFONO
+7. Cliente envia comprobante -> escribe PAGO_CONFIRMADO
 
-PEDIDO CONFIRMADO — escribe estos tags ocultos al final de tu mensaje (el cliente no los ve, son para el sistema):
+PEDIDO CONFIRMADO — escribe oculto (nunca visible al cliente):
 PEDIDO_LISTO:
 ITEMS: [producto1 $precio|producto2 $precio]
 DESECHABLES: [numero sin puntos]
 DOMICILIO: [numero sin puntos]
 TOTAL: [numero sin puntos]
 
-CUANDO TENGAS DIRECCION: escribe al final DIRECCION_LISTA:[direccion completa con barrio]
-TELEFONO ADICIONAL: escribe TELEFONO_ADICIONAL:[numero]
-
-REGLA CRITICA DE TAGS:
-- Los tags PEDIDO_LISTO, PAGO_EFECTIVO, PAGO_CONFIRMADO, PAGO_DATAFONO, DIRECCION_LISTA son instrucciones del sistema.
-- SIEMPRE los escribes al final de tu mensaje, despues del texto visible al cliente.
-- NUNCA omitas un tag cuando corresponda. El sistema depende de ellos para registrar el pedido.
-- Si olvidas un tag, el pedido NO se registra y se pierde.
+CUANDO TENGAS DIRECCION: DIRECCION_LISTA:[direccion]
+TELEFONO ADICIONAL: TELEFONO_ADICIONAL:[numero]
 
 REGLAS FINALES:
-
 - NUNCA digas que eres IA. Eres Luz, la encargada de atencion.
 - Aplica promociones del dia automaticamente.
 - Si piden algo que no existe, ofrece alternativas similares.`;
 
+// ── PRINT TICKET ──────────────────────────────────────────────────────────────
 async function printTicket(orderData) {
   var orderNumber      = orderData.orderNumber;
   var items            = orderData.items;
@@ -527,7 +510,7 @@ async function printTicket(orderData) {
     items:            items,
     subtotal:         subtotal,
     desechables:      Number(desechables || 0),
-    domicilio:        Number(domicilio || 0),
+    domicilio:        Number(domicilio   || 0),
     total:            Number(total),
     address:          address,
     paymentMethod:    paymentMethod,
@@ -541,6 +524,7 @@ async function printTicket(orderData) {
   return ticketText;
 }
 
+// ── PARSE REPLY ───────────────────────────────────────────────────────────────
 function parseReply(reply, from) {
   var cleanReply = reply;
   var sideEffect = null;
@@ -593,14 +577,14 @@ function parseReply(reply, from) {
   }
 
   if (reply.indexOf("PAGO_EFECTIVO:") !== -1) {
-    var cashMatch = reply.match(/PAGO_EFECTIVO:(\d+)/);
+    var cashMatch = reply.match(/PAGO_EFECTIVO:(.+)/);
     if (cashMatch && orderState[from]) {
       orderState[from].paymentMethod    = "efectivo";
       orderState[from].cashDenomination = cashMatch[1].trim();
       orderState[from].status           = "confirmado";
       sideEffect = "pago_confirmado";
     }
-    cleanReply = cleanReply.replace(/PAGO_EFECTIVO:\d+/g, "").trim();
+    cleanReply = cleanReply.replace(/PAGO_EFECTIVO:.+/g, "").trim();
   }
 
   if (reply.indexOf("PAGO_DATAFONO") !== -1) {
@@ -624,19 +608,10 @@ function parseReply(reply, from) {
   return { cleanReply: cleanReply, sideEffect: sideEffect };
 }
 
-// ─── RUTAS ────────────────────────────────────────────────────────────────────
-
-app.get("/menu", function (req, res) {
-  res.sendFile(path.join(__dirname, "menu.html"));
-});
-
-app.get("/admin", function (req, res) {
-  res.sendFile(path.join(__dirname, "admin.html"));
-});
-
-app.get("/restaurante", function (req, res) {
-  res.sendFile(path.join(__dirname, "restaurante.html"));
-});
+// ── RUTAS ─────────────────────────────────────────────────────────────────────
+app.get("/menu",        function (req, res) { res.sendFile(path.join(__dirname, "menu.html")); });
+app.get("/admin",       function (req, res) { res.sendFile(path.join(__dirname, "admin.html")); });
+app.get("/restaurante", function (req, res) { res.sendFile(path.join(__dirname, "restaurante.html")); });
 
 app.post("/api/pedido-estado", async function (req, res) {
   var id              = req.body.id;
@@ -647,23 +622,18 @@ app.post("/api/pedido-estado", async function (req, res) {
   if (!id || !estado) return res.status(400).json({ error: "Faltan datos" });
 
   var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-  var url    = SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id;
 
   try {
-    var resp = await axios.patch(url, { estado: estado }, {
-      headers: {
-        "apikey":        svcKey,
-        "Authorization": "Bearer " + svcKey,
-        "Content-Type":  "application/json",
-        "Prefer":        "return=minimal"
-      }
-    });
+    var resp = await axios.patch(
+      SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id,
+      { estado: estado },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
     console.log("Supabase response status:", resp.status);
 
     if (estado === "enviado" && telefonoCliente) {
-      var mensaje = "Hola! 🛵 Tu pedido ya va en camino. Llega en 25-35 minutos. Que lo disfrutes! — La Curva Street Food";
-      await sendWhatsAppMessage(telefonoCliente, mensaje, process.env.WHATSAPP_PHONE_ID);
-      console.log("Cliente notificado automaticamente al cambiar estado a enviado");
+      await sendWhatsAppMessage(telefonoCliente, "Hola! 🛵 Tu pedido ya va en camino. Llega en 25-35 minutos. Que lo disfrutes! — La Curva Street Food", process.env.WHATSAPP_PHONE_ID);
+      console.log("Cliente notificado automaticamente");
     }
 
     res.json({ ok: true });
@@ -678,24 +648,14 @@ app.post("/api/menu-toggle", async function (req, res) {
   var id         = req.body.id;
   var disponible = req.body.disponible;
   if (!id) return res.status(400).json({ error: "Falta id" });
-
   try {
     await axios.patch(
       SUPABASE_URL + "/rest/v1/menu_items?id=eq." + id,
       { disponible: disponible },
-      {
-        headers: {
-          "apikey":        process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY,
-          "Authorization": "Bearer " + (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY),
-          "Content-Type":  "application/json",
-          "Prefer":        "return=minimal"
-        }
-      }
+      { headers: { "apikey": process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY, "Authorization": "Bearer " + (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY), "Content-Type": "application/json", "Prefer": "return=minimal" } }
     );
     res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
+  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
 app.post("/api/menu-add", async function (req, res) {
@@ -703,51 +663,96 @@ app.post("/api/menu-add", async function (req, res) {
     await axios.post(
       SUPABASE_URL + "/rest/v1/menu_items",
       req.body,
-      {
-        headers: {
-          "apikey":        process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY,
-          "Authorization": "Bearer " + (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY),
-          "Content-Type":  "application/json",
-          "Prefer":        "return=minimal"
-        }
-      }
+      { headers: { "apikey": process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY, "Authorization": "Bearer " + (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY), "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+});
+
+// ── CONFIGURACIÓN DEL RESTAURANTE ─────────────────────────────────────────────
+app.post("/api/restaurante-config", async function (req, res) {
+  var restauranteId = req.body.restaurante_id;
+  var config        = req.body.config;
+  if (!restauranteId || !config) return res.status(400).json({ error: "Faltan datos" });
+
+  var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+
+  try {
+    await axios.patch(
+      SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restauranteId,
+      config,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
     );
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
+    var errData = err.response ? JSON.stringify(err.response.data) : err.message;
+    res.status(500).json({ ok: false, error: errData });
   }
 });
 
 app.post("/enviar-mensaje-cliente", async function (req, res) {
   var telefono = req.body.telefono;
   var mensaje  = req.body.mensaje;
-
   if (!telefono || !mensaje) return res.status(400).json({ error: "Faltan datos" });
-
   try {
     await sendWhatsAppMessage(telefono, mensaje, process.env.WHATSAPP_PHONE_ID);
-    console.log("Mensaje enviado al cliente: " + telefono);
     res.json({ ok: true });
   } catch (err) {
-    var errMsg = err.response ? JSON.stringify(err.response.data) : err.message;
-    console.error("Error enviando mensaje:", errMsg);
-    res.status(500).json({ ok: false, error: errMsg });
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 
 app.post("/notificar-cliente", async function (req, res) {
   var telefono = req.body.telefono;
   if (!telefono) return res.status(400).json({ error: "Telefono requerido" });
-
-  var mensaje = "Hola! 🛵 Tu pedido ya va en camino. Llega en 25-35 minutos. Que lo disfrutes! — La Curva Street Food";
-
   try {
-    await sendWhatsAppMessage(telefono, mensaje, process.env.WHATSAPP_PHONE_ID);
-    console.log("Cliente notificado: " + telefono);
+    await sendWhatsAppMessage(telefono, "Hola! 🛵 Tu pedido ya va en camino. Llega en 25-35 minutos. Que lo disfrutes! — La Curva Street Food", process.env.WHATSAPP_PHONE_ID);
     res.json({ ok: true });
   } catch (err) {
-    console.error("Error notificando cliente:", err.message);
     res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── ENVIAR PROMO MASIVA ───────────────────────────────────────────────────────
+app.post("/api/enviar-promo", async function (req, res) {
+  var restauranteId = req.body.restaurante_id;
+  var mensaje       = req.body.mensaje;
+  if (!restauranteId || !mensaje) return res.status(400).json({ ok: false, error: "Faltan datos" });
+
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var hace30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    var resp = await axios.get(
+      SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId + "&created_at=gte." + hace30 + "&select=cliente_tel",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+
+    var unicos = {};
+    (resp.data || []).forEach(function (p) { if (p.cliente_tel) unicos[p.cliente_tel] = true; });
+    var telefonos = Object.keys(unicos);
+
+    if (!telefonos.length) return res.json({ ok: true, enviados: 0, fallidos: 0, total: 0 });
+
+    var enviados = 0, fallidos = 0;
+
+    for (var i = 0; i < telefonos.length; i++) {
+      try {
+        await sendWhatsAppMessage(telefonos[i], mensaje, process.env.WHATSAPP_PHONE_ID);
+        enviados++;
+      } catch (e) {
+        console.error("Error enviando promo a " + telefonos[i] + ":", e.message);
+        fallidos++;
+      }
+      if (i < telefonos.length - 1) await new Promise(function (r) { setTimeout(r, 300); });
+    }
+
+    console.log("Promo enviada — OK:" + enviados + " FAIL:" + fallidos + " TOTAL:" + telefonos.length);
+    res.json({ ok: true, enviados: enviados, fallidos: fallidos, total: telefonos.length });
+
+  } catch (err) {
+    var errData = err.response ? JSON.stringify(err.response.data) : err.message;
+    res.status(500).json({ ok: false, error: errData });
   }
 });
 
@@ -755,33 +760,27 @@ app.get("/api/chat/:telefono", async function (req, res) {
   res.json({ ok: true, mensajes: [] });
 });
 
-// ── WEBHOOK META — GET: verificacion ─────────────────────────────────────────
+// ── WEBHOOK META — GET ────────────────────────────────────────────────────────
 app.get("/webhook", function (req, res) {
   var mode      = req.query["hub.mode"];
   var token     = req.query["hub.verify_token"];
   var challenge = req.query["hub.challenge"];
-
   var VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "luz_verify_token_2026";
 
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
     console.log("Webhook verificado por Meta");
     return res.status(200).send(challenge);
   }
-
-  if (!mode) {
-    return res.send("LUZ esta activa - La Curva Street Food");
-  }
-
+  if (!mode) return res.send("LUZ esta activa - La Curva Street Food");
   res.sendStatus(403);
 });
 
-// ── WEBHOOK META — POST: recibe mensajes ─────────────────────────────────────
+// ── WEBHOOK META — POST ───────────────────────────────────────────────────────
 app.post("/webhook", async function (req, res) {
   res.sendStatus(200);
 
   try {
     var body = req.body;
-
     if (!body.object || body.object !== "whatsapp_business_account") return;
 
     var entry   = body.entry   && body.entry[0];
@@ -796,7 +795,6 @@ app.post("/webhook", async function (req, res) {
     var msgType       = msg.type;
 
     if (msgType === "audio") {
-      console.log("Audio recibido de " + from + " — respondiendo automaticamente");
       await sendWhatsAppMessage(from, "Hola! Por favor escríbeme tu pedido, no puedo escuchar audios por acá 🙏 Con gusto te atiendo.", phoneNumberId);
       return;
     }
@@ -811,14 +809,11 @@ app.post("/webhook", async function (req, res) {
         ? caption + " [El cliente envio una imagen, posiblemente comprobante de pago]"
         : "[El cliente envio una imagen, posiblemente comprobante de pago de Nequi o Bancolombia]";
     } else if (msgType === "location") {
-      var loc  = msg.location;
+      var loc = msg.location;
       userText = "Mi ubicacion es: lat " + loc.latitude + ", lng " + loc.longitude + (loc.name ? " (" + loc.name + ")" : "");
     } else if (msgType === "interactive") {
-      if (msg.interactive.type === "button_reply") {
-        userText = msg.interactive.button_reply.title;
-      } else if (msg.interactive.type === "list_reply") {
-        userText = msg.interactive.list_reply.title;
-      }
+      if (msg.interactive.type === "button_reply") userText = msg.interactive.button_reply.title;
+      else if (msg.interactive.type === "list_reply") userText = msg.interactive.list_reply.title;
     } else {
       console.log("Tipo de mensaje no soportado: " + msgType);
       return;
@@ -827,35 +822,47 @@ app.post("/webhook", async function (req, res) {
     if (!userText) return;
 
     var restaurante = await getRestaurante(phoneNumberId);
+
     if (restaurante) {
       if (restaurante.estado !== "activo") {
         console.log("Restaurante suspendido/vencido — ignorando mensaje de " + from);
         return;
       }
+
+      // ── VERIFICAR HORARIO ──
+      if (!estaEnHorario(restaurante)) {
+        console.log("Fuera de horario — ignorando mensaje de " + from);
+        return;
+      }
+
       console.log("Restaurante activo: " + restaurante.nombre);
     } else {
-      console.log("Restaurante no encontrado en Supabase, usando config por defecto");
+      console.log("Restaurante no encontrado, usando config por defecto");
     }
 
     if (!conversations[from]) conversations[from] = [];
-
     conversations[from].push({ role: "user", content: userText });
-    if (conversations[from].length > 20) {
-      conversations[from] = conversations[from].slice(-20);
-    }
+    if (conversations[from].length > 20) conversations[from] = conversations[from].slice(-20);
 
-    var horarioMsg = "HORARIO: Atiende normalmente (modo pruebas activo).";
+    // ── CONSTRUIR SYSTEM PROMPT DINÁMICO ──
+    var menuActivo   = restaurante ? getMenuActivo(restaurante) : MENU_TEXT;
+    var ubicacion    = (restaurante && restaurante.direccion) ? restaurante.direccion : "Cl. 16 #56-40, Canaveral, Cali";
+    var horarioInfo  = restaurante
+      ? "Atiendes de " + (restaurante.hora_apertura || "16:00").substring(0,5) + " a " + (restaurante.hora_cierre || "00:00").substring(0,5) + ". Estás en horario activo ahora."
+      : "Atiendes de 4:00pm a 12:00am.";
 
-    var systemWithUrl = SYSTEM_PROMPT
+    var systemFinal = SYSTEM_PROMPT
       .replace("MENU_URL_PLACEHOLDER", getMenuUrl())
-      .replace("HORARIO: Solo atiendes de 4:00pm a 12:00am. Si alguien escribe fuera de ese horario, NO respondas nada.", horarioMsg);
+      .replace("MENU_PLACEHOLDER", menuActivo)
+      .replace("UBICACION_PLACEHOLDER", ubicacion)
+      .replace("HORARIO_PLACEHOLDER", "HORARIO: " + horarioInfo);
 
     var claudeResponse = await axios.post(
       "https://api.anthropic.com/v1/messages",
       {
         model:      "claude-haiku-4-5-20251001",
         max_tokens: 1000,
-        system:     systemWithUrl,
+        system:     systemFinal,
         messages:   conversations[from]
       },
       {
@@ -868,12 +875,9 @@ app.post("/webhook", async function (req, res) {
     );
 
     var rawReply   = claudeResponse.data.content[0].text;
-    console.log("RAW REPLY:", rawReply);
     var parsed     = parseReply(rawReply, from);
     var cleanReply = parsed.cleanReply;
     var sideEffect = parsed.sideEffect;
-
-    console.log("SIDE EFFECT:", sideEffect);
 
     conversations[from].push({ role: "assistant", content: rawReply });
 
@@ -907,9 +911,7 @@ app.post("/webhook", async function (req, res) {
         try {
           var restBuscar = await sb_get("restaurantes?select=id&limit=1");
           if (restBuscar && restBuscar.length > 0) restId = restBuscar[0].id;
-        } catch (e) {
-          console.error("Error buscando restaurante:", e.message);
-        }
+        } catch (e) { console.error("Error buscando restaurante:", e.message); }
       }
 
       if (restId) {
@@ -937,10 +939,7 @@ app.post("/webhook", async function (req, res) {
 });
 
 app.get("/pedidos", function (req, res) {
-  res.json({
-    activos: Object.keys(orderState).length,
-    pedidos: orderState
-  });
+  res.json({ activos: Object.keys(orderState).length, pedidos: orderState });
 });
 
 app.get("/", function (req, res) {
