@@ -120,6 +120,38 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .chat-cliente{align-self:flex-start;background:var(--card);border:1px solid var(--border);color:var(--white)}
 .chat-restaurante{align-self:flex-end;background:#25D366;color:white}
 .chat-time{font-size:10px;opacity:0.75;margin-top:4px}
+
+/* ── PROMO ── */
+.promo-hero{background:linear-gradient(135deg,rgba(255,107,43,0.15) 0%,rgba(255,107,43,0.05) 100%);border:1px solid rgba(255,107,43,0.25);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center}
+.promo-hero-icon{font-size:40px;margin-bottom:8px}
+.promo-hero-title{font-family:'Archivo Black',sans-serif;font-size:18px;margin-bottom:4px}
+.promo-hero-sub{font-size:12px;color:var(--muted);line-height:1.5}
+.promo-counter{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.promo-counter-label{font-size:12px;color:var(--muted)}
+.promo-counter-val{font-family:'Archivo Black',sans-serif;font-size:24px;color:var(--orange)}
+.promo-templates{margin-bottom:16px}
+.promo-tit{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px}
+.promo-tpl{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;font-size:13px;line-height:1.4}
+.promo-tpl:active,.promo-tpl.sel{border-color:var(--orange);background:rgba(255,107,43,0.08)}
+.promo-tpl-label{font-size:10px;color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
+.promo-send{width:100%;padding:15px;background:var(--orange);border:none;border-radius:14px;color:white;font-family:'Archivo Black',sans-serif;font-size:16px;cursor:pointer;transition:all 0.15s;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+.promo-send:active{background:var(--orange2);transform:scale(0.98)}
+.promo-send:disabled{background:var(--muted2);cursor:not-allowed;transform:none}
+.promo-confirm{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px}
+.promo-confirm.open{display:flex}
+.promo-confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;width:100%;max-width:340px;text-align:center}
+.promo-confirm-icon{font-size:48px;margin-bottom:12px}
+.promo-confirm-title{font-family:'Archivo Black',sans-serif;font-size:20px;margin-bottom:8px}
+.promo-confirm-sub{font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5}
+.promo-confirm-preview{background:var(--card);border-radius:12px;padding:12px;font-size:12px;color:var(--white);text-align:left;margin-bottom:20px;line-height:1.5;max-height:100px;overflow-y:auto}
+.promo-confirm-btns{display:flex;gap:10px}
+.promo-confirm-cancel{flex:1;padding:13px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--muted);font-family:'Archivo',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+.promo-confirm-ok{flex:2;padding:13px;background:var(--orange);border:none;border-radius:12px;color:white;font-family:'Archivo Black',sans-serif;font-size:14px;cursor:pointer;transition:all 0.15s}
+.promo-confirm-ok:active{background:var(--orange2)}
+.promo-result{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-top:12px;display:none}
+.promo-result.show{display:block}
+.promo-result-title{font-size:12px;color:var(--muted);margin-bottom:6px}
+.promo-result-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
 </style>
 </head>
 <body>
@@ -140,6 +172,7 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
     <div class="pin-err" id="pinErr"></div>
   </div>
 </div>
+
 <div id="app">
   <div class="topbar">
     <div class="topbar-name" id="restNombre">Mi <span>Restaurante</span></div>
@@ -153,7 +186,9 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
       </div>
       <div id="pedidosLista"></div>
     </div>
+
     <div class="page" id="page-historial"><div id="historialLista"></div></div>
+
     <div class="page" id="page-menu">
       <div class="aform">
         <div class="aft">➕ Agregar producto</div>
@@ -172,21 +207,101 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
       </div>
       <div id="menuLista"></div>
     </div>
+
+    <!-- ── PÁGINA PROMO ── -->
+    <div class="page" id="page-promo">
+      <div class="promo-hero">
+        <div class="promo-hero-icon">📣</div>
+        <div class="promo-hero-title">Enviar Promoción</div>
+        <div class="promo-hero-sub">Llega directo al WhatsApp de tus clientes.<br>Más efectivo que un estado.</div>
+      </div>
+
+      <div class="promo-counter">
+        <div>
+          <div class="promo-counter-label">Clientes que recibirán el mensaje</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Últimos 30 días</div>
+        </div>
+        <div class="promo-counter-val" id="promoCount">...</div>
+      </div>
+
+      <div class="promo-templates">
+        <div class="promo-tit">Plantillas rápidas — toca para usar</div>
+
+        <div class="promo-tpl" data-msg="🔥 ¡Hoy en La Curva Street Food tenemos 2x3 en hamburguesas tradicionales! Pide ahora y aprovecha. Responde este mensaje con tu pedido 🍔">
+          <div class="promo-tpl-label">🍔 2x3 Hamburguesas</div>
+          Hoy 2x3 en hamburguesas tradicionales. ¡Aprovecha y pide ahora!
+        </div>
+
+        <div class="promo-tpl" data-msg="🌭 ¡Martes de perros en La Curva! Pague 2 y lleve 3 en todos los perros italianos. Responde este mensaje para pedir 🙌">
+          <div class="promo-tpl-label">🌭 2x3 Perros</div>
+          Martes de perros: pague 2 lleve 3. ¡Solo hoy!
+        </div>
+
+        <div class="promo-tpl" data-msg="🥩 ¡Domingos de asados en La Curva! 2x3 en asados junior. Ven o pide a domicilio. Respondenos aquí 🍖">
+          <div class="promo-tpl-label">🥩 2x3 Asados Junior</div>
+          Domingos de asados: 2x3 en asados junior. ¡Solo hoy!
+        </div>
+
+        <div class="promo-tpl" data-msg="🍺 ¡Esta noche La Curva Street Food está encendida! Abrimos desde las 4pm. Hamburguesas, asados, alitas y más. ¿Qué se te antoja? Escríbenos aquí 🔥">
+          <div class="promo-tpl-label">🔥 Recordatorio noche</div>
+          Abrimos esta noche. ¿Qué se te antoja hoy?
+        </div>
+
+        <div class="promo-tpl" data-msg="🎉 ¡Gracias por ser cliente de La Curva Street Food! Hoy tienes un 10% de descuento en tu próximo pedido. Solo dile a Luz el código: GRACIAS10 🙏">
+          <div class="promo-tpl-label">🎁 Descuento especial</div>
+          Regalo para clientes frecuentes: 10% de descuento con código GRACIAS10.
+        </div>
+      </div>
+
+      <div class="ffield">
+        <label class="flabel">O escribe tu propio mensaje</label>
+        <textarea class="finput msg-textarea" id="promoTexto" placeholder="Escribe aquí tu promoción personalizada..." style="height:110px;resize:none;"></textarea>
+      </div>
+
+      <button class="promo-send" id="promoEnviarBtn">
+        <span>📤</span><span id="promoBtnLabel">Enviar a todos los clientes</span>
+      </button>
+
+      <div class="promo-result" id="promoResult">
+        <div class="promo-result-title">Resultado del último envío</div>
+        <div class="promo-result-row"><span>✅ Enviados</span><span id="resOk" style="color:var(--green);font-weight:700">0</span></div>
+        <div class="promo-result-row"><span>❌ Fallidos</span><span id="resFail" style="color:var(--red);font-weight:700">0</span></div>
+        <div class="promo-result-row"><span>👥 Total</span><span id="resTotal" style="font-weight:700">0</span></div>
+      </div>
+    </div>
   </div>
+
   <div class="bottom-nav">
     <div class="nav-tab active" id="tab-pedidos"><div class="ti">🛒</div><div class="tl">Pedidos</div></div>
     <div class="nav-tab" id="tab-historial"><div class="ti">📊</div><div class="tl">Historial</div></div>
-    <div class="nav-tab" id="tab-menu"><div class="ti">📋</div><div class="tl">Mi Menú</div></div>
+    <div class="nav-tab" id="tab-menu"><div class="ti">📋</div><div class="tl">Menú</div></div>
+    <div class="nav-tab" id="tab-promo"><div class="ti">📣</div><div class="tl">Promo</div></div>
   </div>
 </div>
+
 <div class="notif" id="notif"></div>
 
+<!-- Overlay confirmación promo -->
+<div class="promo-confirm" id="promoConfirm">
+  <div class="promo-confirm-box">
+    <div class="promo-confirm-icon">📣</div>
+    <div class="promo-confirm-title">¿Enviar promoción?</div>
+    <div class="promo-confirm-sub">Este mensaje llegará al WhatsApp de <strong id="confirmCount">0</strong> clientes.</div>
+    <div class="promo-confirm-preview" id="confirmPreview"></div>
+    <div class="promo-confirm-btns">
+      <button class="promo-confirm-cancel" id="promoConfirmCancel">Cancelar</button>
+      <button class="promo-confirm-ok" id="promoConfirmOk">🚀 Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay chat -->
 <div class="msg-overlay" id="msgOverlay">
   <div class="msg-box">
     <div class="msg-handle"></div>
     <div class="msg-title">💬 Chat con cliente</div>
     <div class="msg-cliente" id="msgClienteInfo"></div>
-    <div id="chatMensajes" style="max-height:320px; overflow-y:auto; margin:12px 0; display:flex; flex-direction:column; gap:8px;"></div>
+    <div id="chatMensajes" style="max-height:320px;overflow-y:auto;margin:12px 0;display:flex;flex-direction:column;gap:8px;"></div>
     <textarea class="msg-textarea" id="msgTexto" placeholder="Escribe tu mensaje..." style="height:90px;"></textarea>
     <div class="msg-actions">
       <button class="msg-cancel" id="msgCancelar">Cerrar</button>
@@ -208,7 +323,7 @@ function fmt(n){return"$"+Number(n).toLocaleString("es-CO");}
 function ago(d){var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<1?"ahora":diff<60?diff+" min":Math.floor(diff/60)+"h";}
 function bell(){try{var c=new(window.AudioContext||window.webkitAudioContext)();[[523,0],[659,0.18],[784,0.36]].forEach(function(n){var o=c.createOscillator(),g=c.createGain(),t=c.currentTime+n[1];o.type="sine";o.frequency.setValueAtTime(n[0],t);o.frequency.exponentialRampToValueAtTime(n[0]*0.5,t+1.2);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.35,t+0.01);g.gain.exponentialRampToValueAtTime(0.001,t+1.5);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+1.5);});}catch(e){}}
 
-// PIN
+// ── PIN ───────────────────────────────────────────────────────────────────────
 for(var i=0;i<=9;i++){(function(n){var el=document.getElementById("k"+n);if(el)el.addEventListener("click",function(){pinKey(String(n));});})(i);}
 document.getElementById("kdel").addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
 function pinKey(k){if(pin.length>=4)return;pin+=k;dots();if(pin.length===4)setTimeout(chkPin,150);}
@@ -228,10 +343,11 @@ function goApp(){
   timer=setInterval(function(){loadPedidos();loadStats();},15000);
 }
 
-// TABS
+// ── TABS ──────────────────────────────────────────────────────────────────────
 document.getElementById("tab-pedidos").addEventListener("click",function(){showTab("pedidos");});
 document.getElementById("tab-historial").addEventListener("click",function(){showTab("historial");});
 document.getElementById("tab-menu").addEventListener("click",function(){showTab("menu");});
+document.getElementById("tab-promo").addEventListener("click",function(){showTab("promo");});
 function showTab(n){
   document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active");});
   document.querySelectorAll(".nav-tab").forEach(function(t){t.classList.remove("active");});
@@ -239,9 +355,10 @@ function showTab(n){
   document.getElementById("tab-"+n).classList.add("active");
   if(n==="historial")loadHistorial();
   if(n==="menu")loadMenu();
+  if(n==="promo")loadPromoCount();
 }
 
-// PEDIDOS
+// ── PEDIDOS ───────────────────────────────────────────────────────────────────
 function loadPedidos(){
   if(!rest)return;
   get("pedidos","restaurante_id=eq."+rest.id+"&estado=neq.entregado&order=created_at.desc&limit=20").then(function(pedidos){
@@ -275,7 +392,6 @@ function loadPedidos(){
         cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"));
       });
     });
-
     lista.querySelectorAll(".btn-msg").forEach(function(b){
       b.addEventListener("click",function(e){
         e.stopPropagation();
@@ -346,112 +462,132 @@ function loadMenu(){
   }).catch(function(){});
 }
 
-// ── MINI CHAT CON CLIENTE ────────────────────────────────────────────────────
-var msgTel = "";
-var chatTimer = null;
-
-function formatearHoraChat(fecha) {
-  try {
-    return new Date(fecha).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
-  } catch(e) {
-    return "";
-  }
+// ── PROMO MASIVA ──────────────────────────────────────────────────────────────
+function loadPromoCount(){
+  if(!rest)return;
+  var hace30=new Date(Date.now()-30*24*60*60*1000).toISOString();
+  get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+hace30+"&select=cliente_tel").then(function(ps){
+    var unicos={};
+    ps.forEach(function(p){if(p.cliente_tel)unicos[p.cliente_tel]=true;});
+    document.getElementById("promoCount").textContent=Object.keys(unicos).length;
+  }).catch(function(){document.getElementById("promoCount").textContent="?";});
 }
 
-function renderChat(mensajes) {
-  var box = document.getElementById("chatMensajes");
-  if (!mensajes || !mensajes.length) {
-    box.innerHTML = '<div style="color:var(--muted); font-size:12px; text-align:center; padding:20px 10px;">No hay mensajes aún</div>';
-    return;
-  }
-
-  var h = "";
-  mensajes.forEach(function(m) {
-    var cls = m.tipo === "cliente" ? "chat-cliente" : "chat-restaurante";
-    h += '<div class="chat-bubble ' + cls + '">';
-    h += '<div>' + (m.mensaje || "") + '</div>';
-    h += '<div class="chat-time">' + formatearHoraChat(m.created_at) + '</div>';
-    h += '</div>';
+// Plantillas — toca para seleccionar
+document.querySelectorAll(".promo-tpl").forEach(function(el){
+  el.addEventListener("click",function(){
+    document.querySelectorAll(".promo-tpl").forEach(function(e){e.classList.remove("sel");});
+    this.classList.add("sel");
+    document.getElementById("promoTexto").value=this.getAttribute("data-msg");
   });
-
-  box.innerHTML = h;
-  box.scrollTop = box.scrollHeight;
-}
-
-function cargarChat() {
-  if (!msgTel || !rest) return;
-
-  fetch("/api/chat/" + encodeURIComponent(msgTel) + "?restaurante_id=" + encodeURIComponent(rest.id))
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.ok) renderChat(d.mensajes || []);
-    })
-    .catch(function() {});
-}
-
-function abrirMensaje(tel, numPedido) {
-  msgTel = tel;
-  document.getElementById("msgClienteInfo").textContent = "Pedido #" + numPedido + " · " + tel;
-  document.getElementById("msgTexto").value = "";
-  document.getElementById("msgOverlay").classList.add("open");
-  cargarChat();
-
-  if (chatTimer) clearInterval(chatTimer);
-  chatTimer = setInterval(cargarChat, 5000);
-
-  setTimeout(function(){ document.getElementById("msgTexto").focus(); }, 300);
-}
-
-function cerrarChat() {
-  document.getElementById("msgOverlay").classList.remove("open");
-  if (chatTimer) {
-    clearInterval(chatTimer);
-    chatTimer = null;
-  }
-}
-
-document.getElementById("msgCancelar").addEventListener("click", function() {
-  cerrarChat();
 });
 
-document.getElementById("msgOverlay").addEventListener("click", function(e) {
-  if (e.target === this) cerrarChat();
+// Botón enviar — abre confirmación
+document.getElementById("promoEnviarBtn").addEventListener("click",function(){
+  var texto=document.getElementById("promoTexto").value.trim();
+  if(!texto){notif("Escribe o elige un mensaje");return;}
+  var count=document.getElementById("promoCount").textContent;
+  document.getElementById("confirmCount").textContent=count;
+  document.getElementById("confirmPreview").textContent=texto;
+  document.getElementById("promoConfirm").classList.add("open");
 });
 
-document.getElementById("msgEnviar").addEventListener("click", function() {
-  var texto = document.getElementById("msgTexto").value.trim();
-  if (!texto) { notif("Escribe un mensaje"); return; }
+document.getElementById("promoConfirmCancel").addEventListener("click",function(){
+  document.getElementById("promoConfirm").classList.remove("open");
+});
 
-  var btn = this;
-  btn.textContent = "Enviando...";
-  btn.disabled = true;
+document.getElementById("promoConfirmOk").addEventListener("click",function(){
+  document.getElementById("promoConfirm").classList.remove("open");
+  enviarPromo();
+});
 
-  fetch("/enviar-mensaje-cliente", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      telefono: msgTel,
-      mensaje: texto,
-      restaurante_id: rest ? rest.id : null
-    })
+function enviarPromo(){
+  var texto=document.getElementById("promoTexto").value.trim();
+  if(!texto||!rest)return;
+
+  var btn=document.getElementById("promoEnviarBtn");
+  var label=document.getElementById("promoBtnLabel");
+  btn.disabled=true;
+  label.textContent="Enviando...";
+
+  fetch("/api/enviar-promo",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({restaurante_id:rest.id,mensaje:texto})
   })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (d.ok) {
-      document.getElementById("msgTexto").value = "";
-      notif("✅ Mensaje enviado!");
-      cargarChat();
-    } else {
-      notif("❌ Error: " + (d.error||"").substring(0,30));
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.ok){
+      notif("✅ Enviado a "+d.enviados+" clientes!");
+      document.getElementById("resOk").textContent=d.enviados||0;
+      document.getElementById("resFail").textContent=d.fallidos||0;
+      document.getElementById("resTotal").textContent=d.total||0;
+      document.getElementById("promoResult").classList.add("show");
+      document.getElementById("promoTexto").value="";
+      document.querySelectorAll(".promo-tpl").forEach(function(e){e.classList.remove("sel");});
+    }else{
+      notif("❌ Error: "+(d.error||"").substring(0,40));
     }
   })
-  .catch(function() { notif("❌ Error de conexión"); })
-  .finally(function() {
-    btn.textContent = "📤 Enviar";
-    btn.disabled = false;
+  .catch(function(){notif("❌ Error de conexión");})
+  .finally(function(){
+    btn.disabled=false;
+    label.textContent="Enviar a todos los clientes";
   });
+}
+
+// ── CHAT CON CLIENTE ──────────────────────────────────────────────────────────
+var msgTel="",chatTimer=null;
+function formatearHoraChat(fecha){try{return new Date(fecha).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}catch(e){return "";}}
+function renderChat(mensajes){
+  var box=document.getElementById("chatMensajes");
+  if(!mensajes||!mensajes.length){box.innerHTML='<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px 10px;">No hay mensajes aún</div>';return;}
+  var h="";
+  mensajes.forEach(function(m){
+    var cls=m.tipo==="cliente"?"chat-cliente":"chat-restaurante";
+    h+='<div class="chat-bubble '+cls+'"><div>'+(m.mensaje||"")+'</div><div class="chat-time">'+formatearHoraChat(m.created_at)+'</div></div>';
+  });
+  box.innerHTML=h;
+  box.scrollTop=box.scrollHeight;
+}
+function cargarChat(){
+  if(!msgTel||!rest)return;
+  fetch("/api/chat/"+encodeURIComponent(msgTel)+"?restaurante_id="+encodeURIComponent(rest.id))
+    .then(function(r){return r.json();})
+    .then(function(d){if(d.ok)renderChat(d.mensajes||[]);})
+    .catch(function(){});
+}
+function abrirMensaje(tel,numPedido){
+  msgTel=tel;
+  document.getElementById("msgClienteInfo").textContent="Pedido #"+numPedido+" · "+tel;
+  document.getElementById("msgTexto").value="";
+  document.getElementById("msgOverlay").classList.add("open");
+  cargarChat();
+  if(chatTimer)clearInterval(chatTimer);
+  chatTimer=setInterval(cargarChat,5000);
+  setTimeout(function(){document.getElementById("msgTexto").focus();},300);
+}
+function cerrarChat(){
+  document.getElementById("msgOverlay").classList.remove("open");
+  if(chatTimer){clearInterval(chatTimer);chatTimer=null;}
+}
+document.getElementById("msgCancelar").addEventListener("click",function(){cerrarChat();});
+document.getElementById("msgOverlay").addEventListener("click",function(e){if(e.target===this)cerrarChat();});
+document.getElementById("msgEnviar").addEventListener("click",function(){
+  var texto=document.getElementById("msgTexto").value.trim();
+  if(!texto){notif("Escribe un mensaje");return;}
+  var btn=this;btn.textContent="Enviando...";btn.disabled=true;
+  fetch("/enviar-mensaje-cliente",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telefono:msgTel,mensaje:texto,restaurante_id:rest?rest.id:null})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){document.getElementById("msgTexto").value="";notif("✅ Mensaje enviado!");cargarChat();}
+      else{notif("❌ Error: "+(d.error||"").substring(0,30));}
+    })
+    .catch(function(){notif("❌ Error de conexión");})
+    .finally(function(){btn.textContent="📤 Enviar";btn.disabled=false;});
 });
 
+// ── AGREGAR PRODUCTO ──────────────────────────────────────────────────────────
 document.getElementById("btnAdd").addEventListener("click",function(){
   if(!rest)return;
   var n=document.getElementById("mi-nombre").value.trim(),p=parseInt(document.getElementById("mi-precio").value);
