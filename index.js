@@ -49,7 +49,7 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY;
     if (!svcKey) {
-      console.error("ADVERTENCIA: SUPABASE_SERVICE_KEY no definida — usando anon key, puede fallar por RLS");
+      console.error("ADVERTENCIA: SUPABASE_SERVICE_KEY no definida");
       svcKey = SUPABASE_KEY;
     }
 
@@ -86,12 +86,12 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
       }
     );
 
-    console.log("✅ Pedido #" + pedidoData.orderNumber + " guardado en Supabase. ID:", response.data[0] ? response.data[0].id : "sin id");
+    console.log("✅ Pedido #" + pedidoData.orderNumber + " guardado. ID:", response.data[0] ? response.data[0].id : "sin id");
     notificarDashboard(response.data[0]);
 
   } catch (err) {
     var errData = err.response ? JSON.stringify(err.response.data) : err.message;
-    console.error("❌ Error guardando pedido en Supabase:", errData);
+    console.error("❌ Error guardando pedido:", errData);
     if (err.response) console.error("HTTP Status:", err.response.status);
   }
 }
@@ -100,7 +100,7 @@ function notificarDashboard(pedido) {
   var DASHBOARD_WEBHOOK = process.env.DASHBOARD_WEBHOOK_URL;
   if (!DASHBOARD_WEBHOOK || !pedido) return;
   axios.post(DASHBOARD_WEBHOOK, { evento: "nuevo_pedido", pedido: pedido }, { timeout: 4000 })
-    .then(function () { console.log("Dashboard notificado del pedido #" + pedido.numero_pedido); })
+    .then(function () { console.log("Dashboard notificado #" + pedido.numero_pedido); })
     .catch(function (err) { console.error("Error notificando dashboard:", err.message); });
 }
 
@@ -120,7 +120,7 @@ function getMenuUrl() {
   return process.env.MENU_PAGE_URL || "https://bit.ly/LaCurvaStreetFood";
 }
 
-// ── WHATSAPP CLOUD API ────────────────────────────────────────────────────────
+// ── WHATSAPP ──────────────────────────────────────────────────────────────────
 async function sendWhatsAppMessage(to, message, phoneNumberId) {
   var token = process.env.WHATSAPP_TOKEN;
   var pid   = phoneNumberId || process.env.WHATSAPP_PHONE_ID;
@@ -138,14 +138,14 @@ async function sendWhatsAppMessage(to, message, phoneNumberId) {
     console.log("Mensaje enviado a " + toNum);
   } catch (err) {
     var errData = err.response ? JSON.stringify(err.response.data) : err.message;
-    console.error("Error enviando mensaje WhatsApp:", errData);
+    console.error("Error enviando WhatsApp:", errData);
   }
 }
 
 // ── HORARIO ───────────────────────────────────────────────────────────────────
 function estaEnHorario(restaurante) {
   try {
-    var ahora     = new Date(Date.now() - 5 * 60 * 60 * 1000); // Colombia UTC-5
+    var ahora      = new Date(Date.now() - 5 * 60 * 60 * 1000);
     var horaActual = ahora.getUTCHours() * 60 + ahora.getUTCMinutes();
 
     var apertura = restaurante.hora_apertura || "16:00:00";
@@ -157,36 +157,30 @@ function estaEnHorario(restaurante) {
     var minApertura = partsA[0] * 60 + partsA[1];
     var minCierre   = partsC[0] * 60 + partsC[1];
 
-    // Día de semana en Colombia
-    var dias = ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
-    var diaHoy = dias[ahora.getUTCDay()];
-    var diasActivos = (restaurante.dias_activos || "lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
+    var dias    = ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
+    var diaHoy  = dias[ahora.getUTCDay()];
+    var diasAct = (restaurante.dias_activos || "lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
 
-    if (!diasActivos.includes(diaHoy)) return false;
+    if (!diasAct.includes(diaHoy)) return false;
 
-    // Horario que cruza medianoche (ej: 16:00 a 00:30)
     if (minCierre <= minApertura) {
       return horaActual >= minApertura || horaActual <= minCierre;
     }
     return horaActual >= minApertura && horaActual <= minCierre;
-
-  } catch (e) {
-    return true; // Si falla, deja pasar
-  }
+  } catch (e) { return true; }
 }
 
 function getMenuActivo(restaurante) {
-  // Si tiene menús configurados y modo_dia activo, usa menu_dia, si no menu_noche
-  // Si no tiene menús configurados, usa el MENU_TEXT por defecto
   var modoDia = restaurante.modo_dia || false;
+  if (modoDia && restaurante.menu_dia && restaurante.menu_dia.trim().length > 10) return restaurante.menu_dia;
+  if (!modoDia && restaurante.menu_noche && restaurante.menu_noche.trim().length > 10) return restaurante.menu_noche;
+  return MENU_TEXT;
+}
 
-  if (modoDia && restaurante.menu_dia && restaurante.menu_dia.trim().length > 10) {
-    return restaurante.menu_dia;
-  }
-  if (!modoDia && restaurante.menu_noche && restaurante.menu_noche.trim().length > 10) {
-    return restaurante.menu_noche;
-  }
-  return MENU_TEXT; // fallback al menú hardcodeado
+function getMensaje(restaurante, clave, fallback) {
+  return (restaurante && restaurante[clave] && restaurante[clave].trim())
+    ? restaurante[clave].trim()
+    : fallback;
 }
 
 // ── MENÚ ──────────────────────────────────────────────────────────────────────
@@ -333,7 +327,6 @@ PERSONALIDAD:
 - Hablas natural. Usas: "con gusto", "a listo", "claro que si", "digame", "ya le confirmo". Ocasionalmente "Dama" o "Caballero".
 - SIEMPRE responde en UN SOLO mensaje. Nunca mandes 2 o 3 mensajes separados.
 - Respuestas cortas y al grano.
-- Mantienes conversación natural y amable.
 - NUNCA mandes el link del menu dos veces en la misma conversacion. Solo la primera vez.
 - Nunca seas fría ni cortante. Siempre cálida y cercana.
 
@@ -502,24 +495,17 @@ async function printTicket(orderData) {
   var PRINT_SECRET = process.env.PRINT_SECRET     || "lacurva2024";
 
   var ticketPayload = {
-    secret:           PRINT_SECRET,
-    orderNumber:      orderNumber,
-    timestamp:        timestamp,
-    phone:            phone.replace(/[^0-9]/g, ""),
-    extraPhone:       extraPhone || null,
-    items:            items,
-    subtotal:         subtotal,
-    desechables:      Number(desechables || 0),
-    domicilio:        Number(domicilio   || 0),
-    total:            Number(total),
-    address:          address,
-    paymentMethod:    paymentMethod,
-    cashDenomination: cashDenomination || null
+    secret: PRINT_SECRET, orderNumber: orderNumber, timestamp: timestamp,
+    phone: phone.replace(/[^0-9]/g, ""), extraPhone: extraPhone || null,
+    items: items, subtotal: subtotal,
+    desechables: Number(desechables || 0), domicilio: Number(domicilio || 0),
+    total: Number(total), address: address,
+    paymentMethod: paymentMethod, cashDenomination: cashDenomination || null
   };
 
   axios.post(PRINT_SERVER, ticketPayload, { timeout: 6000 })
-    .then(function () { console.log("Ticket #" + orderNumber + " enviado al servidor de impresion"); })
-    .catch(function (err) { console.error("Error enviando a servidor de impresion:", err.message); });
+    .then(function () { console.log("Ticket #" + orderNumber + " enviado a impresora"); })
+    .catch(function (err) { console.error("Error impresora:", err.message); });
 
   return ticketText;
 }
@@ -543,12 +529,8 @@ function parseReply(reply, from) {
       var orderNumber = nextOrderNumber();
 
       orderState[from] = {
-        status:      "esperando_direccion",
-        orderNumber: orderNumber,
-        items:       items,
-        desechables: desechables,
-        domicilio:   domicilio,
-        total:       total
+        status: "esperando_direccion", orderNumber: orderNumber,
+        items: items, desechables: desechables, domicilio: domicilio, total: total
       };
       sideEffect = "pedido_registrado";
     }
@@ -570,9 +552,7 @@ function parseReply(reply, from) {
 
   if (reply.indexOf("TELEFONO_ADICIONAL:") !== -1) {
     var telMatch = reply.match(/TELEFONO_ADICIONAL:(.+)/);
-    if (telMatch && orderState[from]) {
-      orderState[from].extraPhone = telMatch[1].trim();
-    }
+    if (telMatch && orderState[from]) orderState[from].extraPhone = telMatch[1].trim();
     cleanReply = cleanReply.replace(/TELEFONO_ADICIONAL:.+/g, "").trim();
   }
 
@@ -617,6 +597,8 @@ app.post("/api/pedido-estado", async function (req, res) {
   var id              = req.body.id;
   var estado          = req.body.estado;
   var telefonoCliente = req.body.telefono_cliente;
+  var numeroPedido    = req.body.numero_pedido || "";
+  var restauranteId   = req.body.restaurante_id || null;
 
   console.log("PATCH pedido — id:", id, "estado:", estado);
   if (!id || !estado) return res.status(400).json({ error: "Faltan datos" });
@@ -624,16 +606,47 @@ app.post("/api/pedido-estado", async function (req, res) {
   var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
 
   try {
-    var resp = await axios.patch(
+    await axios.patch(
       SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id,
       { estado: estado },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
     );
-    console.log("Supabase response status:", resp.status);
 
-    if (estado === "enviado" && telefonoCliente) {
-      await sendWhatsAppMessage(telefonoCliente, "Hola! 🛵 Tu pedido ya va en camino. Llega en 25-35 minutos. Que lo disfrutes! — La Curva Street Food", process.env.WHATSAPP_PHONE_ID);
-      console.log("Cliente notificado automaticamente");
+    // ── NOTIFICACIONES AUTOMÁTICAS AL CLIENTE ──
+    if (telefonoCliente) {
+      var restaurante = null;
+      if (restauranteId) {
+        try {
+          var rr = await axios.get(
+            SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restauranteId + "&select=*",
+            { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
+          );
+          if (rr.data && rr.data.length > 0) restaurante = rr.data[0];
+        } catch(e) { console.error("Error buscando restaurante para msg:", e.message); }
+      }
+
+      var numStr = numeroPedido ? " #" + numeroPedido : "";
+
+      if (estado === "en_preparacion") {
+        var msgPrep = getMensaje(restaurante, "msg_en_preparacion",
+          "👨‍🍳 ¡Tu pedido" + numStr + " ya está en preparación! En breve estará listo.");
+        await sendWhatsAppMessage(telefonoCliente, msgPrep, process.env.WHATSAPP_PHONE_ID);
+        console.log("Cliente notificado: en_preparacion");
+      }
+
+      if (estado === "listo") {
+        var msgListo = getMensaje(restaurante, "msg_listo",
+          "✅ ¡Tu pedido" + numStr + " está listo y esperando al domiciliario! Pronto va en camino 🛵");
+        await sendWhatsAppMessage(telefonoCliente, msgListo, process.env.WHATSAPP_PHONE_ID);
+        console.log("Cliente notificado: listo");
+      }
+
+      if (estado === "en_camino") {
+        var msgCamino = getMensaje(restaurante, "msg_en_camino",
+          "🛵 Tu pedido" + numStr + " ya va en camino. Llega en 25-35 minutos. ¡Que lo disfrutes!");
+        await sendWhatsAppMessage(telefonoCliente, msgCamino, process.env.WHATSAPP_PHONE_ID);
+        console.log("Cliente notificado: en_camino");
+      }
     }
 
     res.json({ ok: true });
@@ -645,78 +658,74 @@ app.post("/api/pedido-estado", async function (req, res) {
 });
 
 app.post("/api/menu-toggle", async function (req, res) {
-  var id         = req.body.id;
-  var disponible = req.body.disponible;
+  var id = req.body.id; var disponible = req.body.disponible;
   if (!id) return res.status(400).json({ error: "Falta id" });
   try {
-    await axios.patch(
-      SUPABASE_URL + "/rest/v1/menu_items?id=eq." + id,
-      { disponible: disponible },
-      { headers: { "apikey": process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY, "Authorization": "Bearer " + (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY), "Content-Type": "application/json", "Prefer": "return=minimal" } }
-    );
+    await axios.patch(SUPABASE_URL + "/rest/v1/menu_items?id=eq." + id, { disponible: disponible },
+      { headers: { "apikey": process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY, "Authorization": "Bearer " + (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY), "Content-Type": "application/json", "Prefer": "return=minimal" } });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
 app.post("/api/menu-add", async function (req, res) {
   try {
-    await axios.post(
-      SUPABASE_URL + "/rest/v1/menu_items",
-      req.body,
-      { headers: { "apikey": process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY, "Authorization": "Bearer " + (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY), "Content-Type": "application/json", "Prefer": "return=minimal" } }
-    );
+    await axios.post(SUPABASE_URL + "/rest/v1/menu_items", req.body,
+      { headers: { "apikey": process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY, "Authorization": "Bearer " + (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY), "Content-Type": "application/json", "Prefer": "return=minimal" } });
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
-// ── CONFIGURACIÓN DEL RESTAURANTE ─────────────────────────────────────────────
 app.post("/api/restaurante-config", async function (req, res) {
   var restauranteId = req.body.restaurante_id;
   var config        = req.body.config;
   if (!restauranteId || !config) return res.status(400).json({ error: "Faltan datos" });
-
   var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-
   try {
-    await axios.patch(
-      SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restauranteId,
-      config,
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
-    );
+    await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restauranteId, config,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
     res.json({ ok: true });
   } catch (err) {
-    var errData = err.response ? JSON.stringify(err.response.data) : err.message;
-    res.status(500).json({ ok: false, error: errData });
+    res.status(500).json({ ok: false, error: err.response ? JSON.stringify(err.response.data) : err.message });
   }
 });
 
 app.post("/enviar-mensaje-cliente", async function (req, res) {
-  var telefono = req.body.telefono;
-  var mensaje  = req.body.mensaje;
+  var telefono = req.body.telefono; var mensaje = req.body.mensaje;
   if (!telefono || !mensaje) return res.status(400).json({ error: "Faltan datos" });
   try {
     await sendWhatsAppMessage(telefono, mensaje, process.env.WHATSAPP_PHONE_ID);
     res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
+  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
 app.post("/notificar-cliente", async function (req, res) {
-  var telefono = req.body.telefono;
+  var telefono      = req.body.telefono;
+  var restauranteId = req.body.restaurante_id || null;
+  var numeroPedido  = req.body.numero_pedido  || "";
   if (!telefono) return res.status(400).json({ error: "Telefono requerido" });
-  try {
-    await sendWhatsAppMessage(telefono, "Hola! 🛵 Tu pedido ya va en camino. Llega en 25-35 minutos. Que lo disfrutes! — La Curva Street Food", process.env.WHATSAPP_PHONE_ID);
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
+
+  var restaurante = null;
+  if (restauranteId) {
+    try {
+      var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restauranteId + "&select=*",
+        { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } });
+      if (rr.data && rr.data.length > 0) restaurante = rr.data[0];
+    } catch(e) {}
   }
+
+  var numStr = numeroPedido ? " #" + numeroPedido : "";
+  var msg = getMensaje(restaurante, "msg_en_camino",
+    "🛵 Tu pedido" + numStr + " ya va en camino. Llega en 25-35 minutos. ¡Que lo disfrutes!");
+
+  try {
+    await sendWhatsAppMessage(telefono, msg, process.env.WHATSAPP_PHONE_ID);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
-// ── ENVIAR PROMO MASIVA ───────────────────────────────────────────────────────
+// ── PROMO MASIVA ──────────────────────────────────────────────────────────────
 app.post("/api/enviar-promo", async function (req, res) {
-  var restauranteId = req.body.restaurante_id;
-  var mensaje       = req.body.mensaje;
+  var restauranteId = req.body.restaurante_id; var mensaje = req.body.mensaje;
   if (!restauranteId || !mensaje) return res.status(400).json({ ok: false, error: "Faltan datos" });
 
   try {
@@ -735,24 +744,15 @@ app.post("/api/enviar-promo", async function (req, res) {
     if (!telefonos.length) return res.json({ ok: true, enviados: 0, fallidos: 0, total: 0 });
 
     var enviados = 0, fallidos = 0;
-
     for (var i = 0; i < telefonos.length; i++) {
-      try {
-        await sendWhatsAppMessage(telefonos[i], mensaje, process.env.WHATSAPP_PHONE_ID);
-        enviados++;
-      } catch (e) {
-        console.error("Error enviando promo a " + telefonos[i] + ":", e.message);
-        fallidos++;
-      }
+      try { await sendWhatsAppMessage(telefonos[i], mensaje, process.env.WHATSAPP_PHONE_ID); enviados++; }
+      catch (e) { console.error("Error promo a " + telefonos[i] + ":", e.message); fallidos++; }
       if (i < telefonos.length - 1) await new Promise(function (r) { setTimeout(r, 300); });
     }
 
-    console.log("Promo enviada — OK:" + enviados + " FAIL:" + fallidos + " TOTAL:" + telefonos.length);
     res.json({ ok: true, enviados: enviados, fallidos: fallidos, total: telefonos.length });
-
   } catch (err) {
-    var errData = err.response ? JSON.stringify(err.response.data) : err.message;
-    res.status(500).json({ ok: false, error: errData });
+    res.status(500).json({ ok: false, error: err.response ? JSON.stringify(err.response.data) : err.message });
   }
 });
 
@@ -762,15 +762,9 @@ app.get("/api/chat/:telefono", async function (req, res) {
 
 // ── WEBHOOK META — GET ────────────────────────────────────────────────────────
 app.get("/webhook", function (req, res) {
-  var mode      = req.query["hub.mode"];
-  var token     = req.query["hub.verify_token"];
-  var challenge = req.query["hub.challenge"];
+  var mode = req.query["hub.mode"], token = req.query["hub.verify_token"], challenge = req.query["hub.challenge"];
   var VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "luz_verify_token_2026";
-
-  if (mode === "subscribe" && token === VERIFY_TOKEN) {
-    console.log("Webhook verificado por Meta");
-    return res.status(200).send(challenge);
-  }
+  if (mode === "subscribe" && token === VERIFY_TOKEN) { console.log("Webhook verificado"); return res.status(200).send(challenge); }
   if (!mode) return res.send("LUZ esta activa - La Curva Street Food");
   res.sendStatus(403);
 });
@@ -815,7 +809,7 @@ app.post("/webhook", async function (req, res) {
       if (msg.interactive.type === "button_reply") userText = msg.interactive.button_reply.title;
       else if (msg.interactive.type === "list_reply") userText = msg.interactive.list_reply.title;
     } else {
-      console.log("Tipo de mensaje no soportado: " + msgType);
+      console.log("Tipo no soportado: " + msgType);
       return;
     }
 
@@ -824,54 +818,48 @@ app.post("/webhook", async function (req, res) {
     var restaurante = await getRestaurante(phoneNumberId);
 
     if (restaurante) {
-      if (restaurante.estado !== "activo") {
-        console.log("Restaurante suspendido/vencido — ignorando mensaje de " + from);
-        return;
-      }
-
-      // ── VERIFICAR HORARIO ──
-      if (!estaEnHorario(restaurante)) {
-        console.log("Fuera de horario — ignorando mensaje de " + from);
-        return;
-      }
-
+      if (restaurante.estado !== "activo") { console.log("Restaurante inactivo"); return; }
+      if (!estaEnHorario(restaurante)) { console.log("Fuera de horario"); return; }
       console.log("Restaurante activo: " + restaurante.nombre);
-    } else {
-      console.log("Restaurante no encontrado, usando config por defecto");
+    }
+
+    // ── MENSAJE DE BIENVENIDA si es primera vez ──
+    if (!conversations[from] || conversations[from].length === 0) {
+      var msgBienvenida = getMensaje(restaurante, "msg_bienvenida", "");
+      if (msgBienvenida) {
+        // Se inyecta como contexto al system, no se envía directamente
+        // El saludo lo maneja Luz naturalmente
+      }
     }
 
     if (!conversations[from]) conversations[from] = [];
     conversations[from].push({ role: "user", content: userText });
     if (conversations[from].length > 20) conversations[from] = conversations[from].slice(-20);
 
-    // ── CONSTRUIR SYSTEM PROMPT DINÁMICO ──
-    var menuActivo   = restaurante ? getMenuActivo(restaurante) : MENU_TEXT;
-    var ubicacion    = (restaurante && restaurante.direccion) ? restaurante.direccion : "Cl. 16 #56-40, Canaveral, Cali";
-    var horarioInfo  = restaurante
+    var menuActivo  = restaurante ? getMenuActivo(restaurante) : MENU_TEXT;
+    var ubicacion   = (restaurante && restaurante.direccion) ? restaurante.direccion : "Cl. 16 #56-40, Canaveral, Cali";
+    var horarioInfo = restaurante
       ? "Atiendes de " + (restaurante.hora_apertura || "16:00").substring(0,5) + " a " + (restaurante.hora_cierre || "00:00").substring(0,5) + ". Estás en horario activo ahora."
       : "Atiendes de 4:00pm a 12:00am.";
+
+    // Inyectar mensaje de bienvenida personalizado en el system prompt
+    var bienvenidaExtra = "";
+    var msgBienvenidaConf = getMensaje(restaurante, "msg_bienvenida", "");
+    if (msgBienvenidaConf && conversations[from].length === 1) {
+      bienvenidaExtra = "\n\nMENSAJE DE BIENVENIDA PERSONALIZADO (usa este texto como base para tu primer saludo, adaptándolo naturalmente):\n" + msgBienvenidaConf;
+    }
 
     var systemFinal = SYSTEM_PROMPT
       .replace("MENU_URL_PLACEHOLDER", getMenuUrl())
       .replace("MENU_PLACEHOLDER", menuActivo)
       .replace("UBICACION_PLACEHOLDER", ubicacion)
-      .replace("HORARIO_PLACEHOLDER", "HORARIO: " + horarioInfo);
+      .replace("HORARIO_PLACEHOLDER", "HORARIO: " + horarioInfo)
+      + bienvenidaExtra;
 
     var claudeResponse = await axios.post(
       "https://api.anthropic.com/v1/messages",
-      {
-        model:      "claude-haiku-4-5-20251001",
-        max_tokens: 1000,
-        system:     systemFinal,
-        messages:   conversations[from]
-      },
-      {
-        headers: {
-          "x-api-key":         process.env.ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "Content-Type":      "application/json"
-        }
-      }
+      { model: "claude-haiku-4-5-20251001", max_tokens: 1000, system: systemFinal, messages: conversations[from] },
+      { headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" } }
     );
 
     var rawReply   = claudeResponse.data.content[0].text;
@@ -891,20 +879,12 @@ app.post("/webhook", async function (req, res) {
       var timestamp = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
 
       await printTicket({
-        orderNumber:      state.orderNumber,
-        items:            state.items,
-        desechables:      state.desechables,
-        domicilio:        state.domicilio,
-        total:            state.total,
-        address:          state.address          || "Por confirmar",
-        paymentMethod:    state.paymentMethod    || "digital",
-        cashDenomination: state.cashDenomination || null,
-        extraPhone:       state.extraPhone       || null,
-        phone:            from,
-        timestamp:        timestamp
+        orderNumber: state.orderNumber, items: state.items,
+        desechables: state.desechables, domicilio: state.domicilio, total: state.total,
+        address: state.address || "Por confirmar", paymentMethod: state.paymentMethod || "digital",
+        cashDenomination: state.cashDenomination || null, extraPhone: state.extraPhone || null,
+        phone: from, timestamp: timestamp
       });
-
-      console.log("Pedido #" + state.orderNumber + " confirmado y enviado a cocina");
 
       var restId = restaurante ? restaurante.id : null;
       if (!restId) {
@@ -916,25 +896,21 @@ app.post("/webhook", async function (req, res) {
 
       if (restId) {
         await guardarPedidoSupabase(restId, {
-          orderNumber:   state.orderNumber,
-          phone:         from,
-          items:         state.items,
-          subtotal:      Number(state.total) - Number(state.desechables || 0) - Number(state.domicilio || 0),
-          desechables:   Number(state.desechables || 0),
-          domicilio:     Number(state.domicilio   || 0),
-          total:         Number(state.total),
-          address:       state.address       || "Por confirmar",
+          orderNumber: state.orderNumber, phone: from, items: state.items,
+          subtotal: Number(state.total) - Number(state.desechables || 0) - Number(state.domicilio || 0),
+          desechables: Number(state.desechables || 0), domicilio: Number(state.domicilio || 0),
+          total: Number(state.total), address: state.address || "Por confirmar",
           paymentMethod: state.paymentMethod || "digital"
         });
       } else {
-        console.error("No se pudo guardar pedido — restaurante no encontrado para:", from);
+        console.error("No se pudo guardar pedido — restaurante no encontrado");
       }
 
       delete orderState[from];
     }
 
   } catch (err) {
-    console.error("Error en webhook POST:", err.response ? JSON.stringify(err.response.data) : err.message);
+    console.error("Error webhook POST:", err.response ? JSON.stringify(err.response.data) : err.message);
   }
 });
 
@@ -944,11 +920,10 @@ app.get("/pedidos", function (req, res) {
 
 app.get("/", function (req, res) {
   res.json({
-    status:                 "La Curva Bot activo - WhatsApp Cloud API (Meta)",
-    menu_url:               getMenuUrl(),
-    hora:                   new Date().toLocaleString("es-CO"),
+    status: "La Curva Bot activo - WhatsApp Cloud API (Meta)",
+    menu_url: getMenuUrl(), hora: new Date().toLocaleString("es-CO"),
     conversaciones_activas: Object.keys(conversations).length,
-    pedidos_activos:        Object.keys(orderState).length
+    pedidos_activos: Object.keys(orderState).length
   });
 });
 
