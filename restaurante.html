@@ -152,9 +152,32 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .promo-result.show{display:block}
 .promo-result-title{font-size:12px;color:var(--muted);margin-bottom:6px}
 .promo-result-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+
+/* ── CONFIG ── */
+.cfg-section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+.cfg-title{font-family:'Archivo Black',sans-serif;font-size:15px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.cfg-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.cfg-row:last-child{border:none;padding-bottom:0}
+.cfg-label{font-size:14px;font-weight:500}
+.cfg-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.big-toggle{width:56px;height:30px;border-radius:15px;border:none;cursor:pointer;transition:all 0.25s;position:relative;flex-shrink:0}
+.big-toggle.on{background:var(--orange)}
+.big-toggle.off{background:var(--muted2)}
+.big-toggle::after{content:'';position:absolute;top:3px;width:24px;height:24px;border-radius:50%;background:white;transition:left 0.25s;box-shadow:0 1px 4px rgba(0,0,0,0.3)}
+.big-toggle.on::after{left:29px}
+.big-toggle.off::after{left:3px}
+.dias-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.dia-btn{padding:8px 4px;border-radius:10px;border:2px solid var(--border);background:var(--card2);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.15s}
+.dia-btn.activo{border-color:var(--orange);background:rgba(255,107,43,0.12);color:var(--orange)}
+.cfg-save{width:100%;padding:13px;background:var(--orange);border:none;border-radius:12px;color:white;font-family:'Archivo Black',sans-serif;font-size:15px;cursor:pointer;transition:all 0.15s;margin-top:6px}
+.cfg-save:active{background:var(--orange2);transform:scale(0.98)}
+.modo-banner{border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
+.modo-dia{background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#fbbf24}
+.modo-noche{background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.25);color:#60a5fa}
 </style>
 </head>
 <body>
+
 <div id="pinScreen">
   <div class="pin-box">
     <div class="pin-logo">LUZ <span>IA</span></div>
@@ -178,7 +201,10 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
     <div class="topbar-name" id="restNombre">Mi <span>Restaurante</span></div>
     <div class="live-badge"><div class="live-dot"></div> En vivo</div>
   </div>
+
   <div class="content">
+
+    <!-- PEDIDOS -->
     <div class="page active" id="page-pedidos">
       <div class="stats-row">
         <div class="stat-tile"><div class="stl">Pedidos hoy</div><div class="stv orange" id="countHoy">0</div></div>
@@ -187,8 +213,10 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
       <div id="pedidosLista"></div>
     </div>
 
+    <!-- HISTORIAL -->
     <div class="page" id="page-historial"><div id="historialLista"></div></div>
 
+    <!-- MENÚ -->
     <div class="page" id="page-menu">
       <div class="aform">
         <div class="aft">➕ Agregar producto</div>
@@ -208,14 +236,13 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
       <div id="menuLista"></div>
     </div>
 
-    <!-- ── PÁGINA PROMO ── -->
+    <!-- PROMO -->
     <div class="page" id="page-promo">
       <div class="promo-hero">
         <div class="promo-hero-icon">📣</div>
         <div class="promo-hero-title">Enviar Promoción</div>
         <div class="promo-hero-sub">Llega directo al WhatsApp de tus clientes.<br>Más efectivo que un estado.</div>
       </div>
-
       <div class="promo-counter">
         <div>
           <div class="promo-counter-label">Clientes que recibirán el mensaje</div>
@@ -223,45 +250,36 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
         </div>
         <div class="promo-counter-val" id="promoCount">...</div>
       </div>
-
       <div class="promo-templates">
         <div class="promo-tit">Plantillas rápidas — toca para usar</div>
-
-        <div class="promo-tpl" data-msg="🔥 ¡Hoy en La Curva Street Food tenemos 2x3 en hamburguesas tradicionales! Pide ahora y aprovecha. Responde este mensaje con tu pedido 🍔">
+        <div class="promo-tpl" data-msg="🔥 ¡Hoy en nuestro restaurante tenemos 2x3 en hamburguesas tradicionales! Pide ahora y aprovecha. Responde este mensaje con tu pedido 🍔">
           <div class="promo-tpl-label">🍔 2x3 Hamburguesas</div>
           Hoy 2x3 en hamburguesas tradicionales. ¡Aprovecha y pide ahora!
         </div>
-
-        <div class="promo-tpl" data-msg="🌭 ¡Martes de perros en La Curva! Pague 2 y lleve 3 en todos los perros italianos. Responde este mensaje para pedir 🙌">
+        <div class="promo-tpl" data-msg="🌭 ¡Martes de perros! Pague 2 y lleve 3 en todos los perros italianos. Responde este mensaje para pedir 🙌">
           <div class="promo-tpl-label">🌭 2x3 Perros</div>
           Martes de perros: pague 2 lleve 3. ¡Solo hoy!
         </div>
-
-        <div class="promo-tpl" data-msg="🥩 ¡Domingos de asados en La Curva! 2x3 en asados junior. Ven o pide a domicilio. Respondenos aquí 🍖">
+        <div class="promo-tpl" data-msg="🥩 ¡Domingos de asados! 2x3 en asados junior. Ven o pide a domicilio. Respondenos aquí 🍖">
           <div class="promo-tpl-label">🥩 2x3 Asados Junior</div>
           Domingos de asados: 2x3 en asados junior. ¡Solo hoy!
         </div>
-
-        <div class="promo-tpl" data-msg="🍺 ¡Esta noche La Curva Street Food está encendida! Abrimos desde las 4pm. Hamburguesas, asados, alitas y más. ¿Qué se te antoja? Escríbenos aquí 🔥">
+        <div class="promo-tpl" data-msg="🍺 ¡Esta noche estamos encendidos! Abrimos desde las 4pm. Hamburguesas, asados, alitas y más. ¿Qué se te antoja? Escríbenos aquí 🔥">
           <div class="promo-tpl-label">🔥 Recordatorio noche</div>
           Abrimos esta noche. ¿Qué se te antoja hoy?
         </div>
-
-        <div class="promo-tpl" data-msg="🎉 ¡Gracias por ser cliente de La Curva Street Food! Hoy tienes un 10% de descuento en tu próximo pedido. Solo dile a Luz el código: GRACIAS10 🙏">
+        <div class="promo-tpl" data-msg="🎉 ¡Gracias por ser nuestro cliente! Hoy tienes un 10% de descuento en tu próximo pedido. Solo dile a Luz el código: GRACIAS10 🙏">
           <div class="promo-tpl-label">🎁 Descuento especial</div>
           Regalo para clientes frecuentes: 10% de descuento con código GRACIAS10.
         </div>
       </div>
-
       <div class="ffield">
         <label class="flabel">O escribe tu propio mensaje</label>
         <textarea class="finput msg-textarea" id="promoTexto" placeholder="Escribe aquí tu promoción personalizada..." style="height:110px;resize:none;"></textarea>
       </div>
-
       <button class="promo-send" id="promoEnviarBtn">
         <span>📤</span><span id="promoBtnLabel">Enviar a todos los clientes</span>
       </button>
-
       <div class="promo-result" id="promoResult">
         <div class="promo-result-title">Resultado del último envío</div>
         <div class="promo-result-row"><span>✅ Enviados</span><span id="resOk" style="color:var(--green);font-weight:700">0</span></div>
@@ -269,6 +287,77 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
         <div class="promo-result-row"><span>👥 Total</span><span id="resTotal" style="font-weight:700">0</span></div>
       </div>
     </div>
+
+    <!-- CONFIGURACIÓN -->
+    <div class="page" id="page-config">
+
+      <!-- Banner modo actual -->
+      <div class="modo-banner modo-noche" id="modoBanner">
+        <span style="font-size:20px">🌙</span>
+        <div>
+          <div id="modoLabel">Modo noche activo</div>
+          <div style="font-size:11px;font-weight:400;opacity:0.8">Luz usa el menú de noche</div>
+        </div>
+      </div>
+
+      <!-- Toggle día/noche -->
+      <div class="cfg-section">
+        <div class="cfg-title">🌅 Modo del menú</div>
+        <div class="cfg-row">
+          <div>
+            <div class="cfg-label">Menú de día</div>
+            <div class="cfg-sub">Activa cuando abres en horario diurno</div>
+          </div>
+          <button class="big-toggle off" id="toggleModoDia"></button>
+        </div>
+        <div style="margin-top:12px">
+          <label class="flabel">Menú de día (pega tu carta completa)</label>
+          <textarea class="finput" id="cfg-menu-dia" placeholder="Escribe o pega aquí el menú de día completo con precios..." style="height:130px;resize:none;margin-top:4px;"></textarea>
+        </div>
+        <div style="margin-top:10px">
+          <label class="flabel">Menú de noche (pega tu carta completa)</label>
+          <textarea class="finput" id="cfg-menu-noche" placeholder="Escribe o pega aquí el menú de noche completo con precios..." style="height:130px;resize:none;margin-top:4px;"></textarea>
+        </div>
+      </div>
+
+      <!-- Horario -->
+      <div class="cfg-section">
+        <div class="cfg-title">🕐 Horario de atención</div>
+        <div class="frow">
+          <div class="ffield">
+            <label class="flabel">Abre a las</label>
+            <input class="finput" type="time" id="cfg-apertura" value="16:00">
+          </div>
+          <div class="ffield">
+            <label class="flabel">Cierra a las</label>
+            <input class="finput" type="time" id="cfg-cierre" value="00:00">
+          </div>
+        </div>
+        <div style="margin-top:4px">
+          <label class="flabel">Días que atiende</label>
+          <div class="dias-grid" id="diasGrid">
+            <div class="dia-btn activo" data-dia="lunes">Lun</div>
+            <div class="dia-btn activo" data-dia="martes">Mar</div>
+            <div class="dia-btn activo" data-dia="miercoles">Mié</div>
+            <div class="dia-btn activo" data-dia="jueves">Jue</div>
+            <div class="dia-btn activo" data-dia="viernes">Vie</div>
+            <div class="dia-btn activo" data-dia="sabado">Sáb</div>
+            <div class="dia-btn activo" data-dia="domingo">Dom</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dirección -->
+      <div class="cfg-section">
+        <div class="cfg-title">📍 Dirección del restaurante</div>
+        <div class="ffield">
+          <input class="finput" id="cfg-direccion" placeholder="Ej: Cl. 16 #56-40, Canaveral, Cali">
+        </div>
+      </div>
+
+      <button class="cfg-save" id="cfgGuardar">💾 Guardar configuración</button>
+    </div>
+
   </div>
 
   <div class="bottom-nav">
@@ -276,12 +365,13 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
     <div class="nav-tab" id="tab-historial"><div class="ti">📊</div><div class="tl">Historial</div></div>
     <div class="nav-tab" id="tab-menu"><div class="ti">📋</div><div class="tl">Menú</div></div>
     <div class="nav-tab" id="tab-promo"><div class="ti">📣</div><div class="tl">Promo</div></div>
+    <div class="nav-tab" id="tab-config"><div class="ti">⚙️</div><div class="tl">Config</div></div>
   </div>
 </div>
 
 <div class="notif" id="notif"></div>
 
-<!-- Overlay confirmación promo -->
+<!-- Confirm promo -->
 <div class="promo-confirm" id="promoConfirm">
   <div class="promo-confirm-box">
     <div class="promo-confirm-icon">📣</div>
@@ -295,7 +385,7 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
   </div>
 </div>
 
-<!-- Overlay chat -->
+<!-- Chat overlay -->
 <div class="msg-overlay" id="msgOverlay">
   <div class="msg-box">
     <div class="msg-handle"></div>
@@ -340,6 +430,7 @@ function goApp(){
   var p=rest.nombre.split(" "),l=p.pop();
   document.getElementById("restNombre").innerHTML=p.join(" ")+" <span>"+l+"</span>";
   loadPedidos();loadStats();
+  cargarConfig();
   timer=setInterval(function(){loadPedidos();loadStats();},15000);
 }
 
@@ -348,6 +439,7 @@ document.getElementById("tab-pedidos").addEventListener("click",function(){showT
 document.getElementById("tab-historial").addEventListener("click",function(){showTab("historial");});
 document.getElementById("tab-menu").addEventListener("click",function(){showTab("menu");});
 document.getElementById("tab-promo").addEventListener("click",function(){showTab("promo");});
+document.getElementById("tab-config").addEventListener("click",function(){showTab("config");});
 function showTab(n){
   document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active");});
   document.querySelectorAll(".nav-tab").forEach(function(t){t.classList.remove("active");});
@@ -387,16 +479,10 @@ function loadPedidos(){
     });
     lista.innerHTML=h;
     lista.querySelectorAll(".ebtn").forEach(function(b){
-      b.addEventListener("click",function(e){
-        e.stopPropagation();
-        cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"));
-      });
+      b.addEventListener("click",function(e){e.stopPropagation();cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"));});
     });
     lista.querySelectorAll(".btn-msg").forEach(function(b){
-      b.addEventListener("click",function(e){
-        e.stopPropagation();
-        abrirMensaje(this.getAttribute("data-tel"),this.getAttribute("data-num"));
-      });
+      b.addEventListener("click",function(e){e.stopPropagation();abrirMensaje(this.getAttribute("data-tel"),this.getAttribute("data-num"));});
     });
   }).catch(function(e){console.error(e);});
 }
@@ -462,7 +548,96 @@ function loadMenu(){
   }).catch(function(){});
 }
 
-// ── PROMO MASIVA ──────────────────────────────────────────────────────────────
+// ── CONFIGURACIÓN ─────────────────────────────────────────────────────────────
+var modoDiaActual = false;
+
+function cargarConfig(){
+  if(!rest)return;
+  modoDiaActual = rest.modo_dia || false;
+  actualizarToggleModoDia(modoDiaActual);
+
+  document.getElementById("cfg-apertura").value  = (rest.hora_apertura||"16:00:00").substring(0,5);
+  document.getElementById("cfg-cierre").value    = (rest.hora_cierre||"00:00:00").substring(0,5);
+  document.getElementById("cfg-menu-dia").value  = rest.menu_dia   || "";
+  document.getElementById("cfg-menu-noche").value= rest.menu_noche || "";
+  document.getElementById("cfg-direccion").value = rest.direccion  || "";
+
+  var diasActivos = (rest.dias_activos || "lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
+  document.querySelectorAll(".dia-btn").forEach(function(b){
+    if(diasActivos.includes(b.getAttribute("data-dia"))){b.classList.add("activo");}
+    else{b.classList.remove("activo");}
+  });
+}
+
+function actualizarToggleModoDia(activo){
+  var btn    = document.getElementById("toggleModoDia");
+  var banner = document.getElementById("modoBanner");
+  var label  = document.getElementById("modoLabel");
+  if(activo){
+    btn.className    = "big-toggle on";
+    banner.className = "modo-banner modo-dia";
+    banner.querySelector("span").textContent = "🌅";
+    label.textContent = "Modo día activo";
+  } else {
+    btn.className    = "big-toggle off";
+    banner.className = "modo-banner modo-noche";
+    banner.querySelector("span").textContent = "🌙";
+    label.textContent = "Modo noche activo";
+  }
+}
+
+document.getElementById("toggleModoDia").addEventListener("click",function(){
+  modoDiaActual = !modoDiaActual;
+  actualizarToggleModoDia(modoDiaActual);
+});
+
+document.querySelectorAll(".dia-btn").forEach(function(b){
+  b.addEventListener("click",function(){
+    this.classList.toggle("activo");
+  });
+});
+
+document.getElementById("cfgGuardar").addEventListener("click",function(){
+  if(!rest){notif("Error: no hay restaurante");return;}
+
+  var diasSeleccionados=[];
+  document.querySelectorAll(".dia-btn.activo").forEach(function(b){diasSeleccionados.push(b.getAttribute("data-dia"));});
+
+  var config = {
+    modo_dia:      modoDiaActual,
+    hora_apertura: document.getElementById("cfg-apertura").value + ":00",
+    hora_cierre:   document.getElementById("cfg-cierre").value   + ":00",
+    menu_dia:      document.getElementById("cfg-menu-dia").value.trim(),
+    menu_noche:    document.getElementById("cfg-menu-noche").value.trim(),
+    dias_activos:  diasSeleccionados.join(","),
+    direccion:     document.getElementById("cfg-direccion").value.trim()
+  };
+
+  var btn=this;
+  btn.textContent="Guardando...";
+  btn.disabled=true;
+
+  fetch("/api/restaurante-config",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({restaurante_id:rest.id, config:config})
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.ok){
+      // Actualizar rest local
+      Object.keys(config).forEach(function(k){rest[k]=config[k];});
+      notif("✅ Configuración guardada!");
+      actualizarToggleModoDia(modoDiaActual);
+    } else {
+      notif("❌ Error: "+(d.error||"").substring(0,40));
+    }
+  })
+  .catch(function(){notif("❌ Error de conexión");})
+  .finally(function(){btn.textContent="💾 Guardar configuración";btn.disabled=false;});
+});
+
+// ── PROMO ─────────────────────────────────────────────────────────────────────
 function loadPromoCount(){
   if(!rest)return;
   var hace30=new Date(Date.now()-30*24*60*60*1000).toISOString();
@@ -473,7 +648,6 @@ function loadPromoCount(){
   }).catch(function(){document.getElementById("promoCount").textContent="?";});
 }
 
-// Plantillas — toca para seleccionar
 document.querySelectorAll(".promo-tpl").forEach(function(el){
   el.addEventListener("click",function(){
     document.querySelectorAll(".promo-tpl").forEach(function(e){e.classList.remove("sel");});
@@ -482,12 +656,10 @@ document.querySelectorAll(".promo-tpl").forEach(function(el){
   });
 });
 
-// Botón enviar — abre confirmación
 document.getElementById("promoEnviarBtn").addEventListener("click",function(){
   var texto=document.getElementById("promoTexto").value.trim();
   if(!texto){notif("Escribe o elige un mensaje");return;}
-  var count=document.getElementById("promoCount").textContent;
-  document.getElementById("confirmCount").textContent=count;
+  document.getElementById("confirmCount").textContent=document.getElementById("promoCount").textContent;
   document.getElementById("confirmPreview").textContent=texto;
   document.getElementById("promoConfirm").classList.add("open");
 });
@@ -504,39 +676,27 @@ document.getElementById("promoConfirmOk").addEventListener("click",function(){
 function enviarPromo(){
   var texto=document.getElementById("promoTexto").value.trim();
   if(!texto||!rest)return;
-
   var btn=document.getElementById("promoEnviarBtn");
   var label=document.getElementById("promoBtnLabel");
-  btn.disabled=true;
-  label.textContent="Enviando...";
-
-  fetch("/api/enviar-promo",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({restaurante_id:rest.id,mensaje:texto})
-  })
-  .then(function(r){return r.json();})
-  .then(function(d){
-    if(d.ok){
-      notif("✅ Enviado a "+d.enviados+" clientes!");
-      document.getElementById("resOk").textContent=d.enviados||0;
-      document.getElementById("resFail").textContent=d.fallidos||0;
-      document.getElementById("resTotal").textContent=d.total||0;
-      document.getElementById("promoResult").classList.add("show");
-      document.getElementById("promoTexto").value="";
-      document.querySelectorAll(".promo-tpl").forEach(function(e){e.classList.remove("sel");});
-    }else{
-      notif("❌ Error: "+(d.error||"").substring(0,40));
-    }
-  })
-  .catch(function(){notif("❌ Error de conexión");})
-  .finally(function(){
-    btn.disabled=false;
-    label.textContent="Enviar a todos los clientes";
-  });
+  btn.disabled=true;label.textContent="Enviando...";
+  fetch("/api/enviar-promo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,mensaje:texto})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){
+        notif("✅ Enviado a "+d.enviados+" clientes!");
+        document.getElementById("resOk").textContent=d.enviados||0;
+        document.getElementById("resFail").textContent=d.fallidos||0;
+        document.getElementById("resTotal").textContent=d.total||0;
+        document.getElementById("promoResult").classList.add("show");
+        document.getElementById("promoTexto").value="";
+        document.querySelectorAll(".promo-tpl").forEach(function(e){e.classList.remove("sel");});
+      }else{notif("❌ Error: "+(d.error||"").substring(0,40));}
+    })
+    .catch(function(){notif("❌ Error de conexión");})
+    .finally(function(){btn.disabled=false;label.textContent="Enviar a todos los clientes";});
 }
 
-// ── CHAT CON CLIENTE ──────────────────────────────────────────────────────────
+// ── CHAT ──────────────────────────────────────────────────────────────────────
 var msgTel="",chatTimer=null;
 function formatearHoraChat(fecha){try{return new Date(fecha).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}catch(e){return "";}}
 function renderChat(mensajes){
@@ -547,8 +707,7 @@ function renderChat(mensajes){
     var cls=m.tipo==="cliente"?"chat-cliente":"chat-restaurante";
     h+='<div class="chat-bubble '+cls+'"><div>'+(m.mensaje||"")+'</div><div class="chat-time">'+formatearHoraChat(m.created_at)+'</div></div>';
   });
-  box.innerHTML=h;
-  box.scrollTop=box.scrollHeight;
+  box.innerHTML=h;box.scrollTop=box.scrollHeight;
 }
 function cargarChat(){
   if(!msgTel||!rest)return;
