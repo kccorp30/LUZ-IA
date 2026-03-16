@@ -65,6 +65,7 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .bl{background:rgba(245,158,11,0.25);color:#fbbf24;border:2px solid rgba(245,158,11,0.4)}
 .bc{background:rgba(34,197,94,0.25);color:#4ade80;border:2px solid rgba(34,197,94,0.4)}
 .be{background:rgba(255,255,255,0.08);color:var(--muted);border:2px solid var(--border)}
+.bdel{background:rgba(239,68,68,0.15);color:#f87171;border:2px solid rgba(239,68,68,0.3)}
 .etag{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
 .tr{background:rgba(255,107,43,0.15);color:var(--orange)}
 .tp{background:rgba(59,130,246,0.15);color:#60a5fa}
@@ -112,14 +113,32 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .msg-send:active{transform:scale(0.97)}
 .btn-msg{background:rgba(37,211,102,0.15);color:#4ade80;border:2px solid rgba(37,211,102,0.3);flex:1;min-width:80px;padding:10px 6px;border-radius:12px;font-family:'Archivo',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:4px}
 .btn-msg:active{transform:scale(0.96)}
-.hcard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.hcard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px}
+.hcard-top{display:flex;align-items:center;justify-content:space-between}
 .hnum{font-family:'Archivo Black',sans-serif;font-size:18px;color:var(--orange)}
 .hinfo{font-size:12px;color:var(--muted);margin-top:2px}
 .htot{font-family:'Archivo Black',sans-serif;font-size:18px;color:var(--green)}
+.hcard-btns{display:flex;gap:8px;margin-top:10px}
+.hbtn{padding:8px 12px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s}
+.hbtn-chat{background:rgba(37,211,102,0.15);color:#4ade80;border:1px solid rgba(37,211,102,0.3)}
+.hbtn-del{background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)}
 .chat-bubble{max-width:80%;padding:10px 12px;border-radius:14px;font-size:13px;line-height:1.35;word-break:break-word}
 .chat-cliente{align-self:flex-start;background:var(--card);border:1px solid var(--border);color:var(--white)}
 .chat-restaurante{align-self:flex-end;background:#25D366;color:white}
 .chat-time{font-size:10px;opacity:0.75;margin-top:4px}
+/* FILTROS HISTORIAL */
+.filtros-row{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
+.filtro-btn{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.15s}
+.filtro-btn.active{background:var(--orange);border-color:var(--orange);color:white}
+/* INFORME */
+.informe-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px}
+.informe-title{font-family:'Archivo Black',sans-serif;font-size:16px;margin-bottom:14px;color:var(--orange)}
+.informe-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px}
+.informe-row:last-child{border:none}
+.informe-label{color:var(--muted)}
+.informe-val{font-weight:700}
+.btn-imprimir{width:100%;padding:13px;background:var(--blue);border:none;border-radius:12px;color:white;font-family:'Archivo Black',sans-serif;font-size:15px;cursor:pointer;transition:all 0.15s;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-imprimir:active{opacity:0.8;transform:scale(0.98)}
 /* PROMO */
 .promo-hero{background:linear-gradient(135deg,rgba(255,107,43,0.15) 0%,rgba(255,107,43,0.05) 100%);border:1px solid rgba(255,107,43,0.25);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center}
 .promo-hero-icon{font-size:40px;margin-bottom:8px}
@@ -181,12 +200,39 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .comprobante-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(37,211,102,0.1);font-size:12px;font-weight:600;color:#4ade80}
 .comprobante-img{width:100%;max-height:200px;object-fit:contain;cursor:pointer;transition:transform 0.2s}
 .comprobante-img:active{transform:scale(0.98)}
-.comprobante-loading{padding:20px;text-align:center;font-size:12px;color:var(--muted)}
-/* OVERLAY IMAGEN GRANDE */
 .img-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.95);align-items:center;justify-content:center}
 .img-overlay.open{display:flex}
 .img-overlay img{max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px}
 .img-overlay-close{position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:24px;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+/* CONFIRM ELIMINAR */
+.confirm-overlay{display:none;position:fixed;inset:0;z-index:450;background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px}
+.confirm-overlay.open{display:flex}
+.confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;width:100%;max-width:320px;text-align:center}
+.confirm-icon{font-size:44px;margin-bottom:12px}
+.confirm-title{font-family:'Archivo Black',sans-serif;font-size:18px;margin-bottom:8px}
+.confirm-sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+.confirm-btns{display:flex;gap:10px}
+.confirm-cancel{flex:1;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--muted);font-family:'Archivo',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+.confirm-ok{flex:2;padding:12px;background:var(--red);border:none;border-radius:12px;color:white;font-family:'Archivo Black',sans-serif;font-size:14px;cursor:pointer}
+@media print{
+  .bottom-nav,.topbar,.notif,.img-overlay,.confirm-overlay,.msg-overlay,.promo-confirm{display:none!important}
+  body{background:white;color:black}
+  .content{padding:0}
+  #page-historial{display:block!important}
+  .hcard{border:1px solid #ccc;background:white;color:black;break-inside:avoid}
+  .hnum,.htot{color:#ff6b2b}
+  .hinfo{color:#666}
+  .hcard-btns{display:none!important}
+  .filtros-row{display:none!important}
+  .informe-card{border:1px solid #ccc;background:white;break-inside:avoid}
+  .informe-label{color:#666}
+  .btn-imprimir{display:none!important}
+  .stats-row .stat-tile{border:1px solid #ccc;background:white}
+  .stl{color:#666}
+  .stv{color:#333}
+  .stv.green{color:#22c55e}
+  .stv.orange{color:#ff6b2b}
+}
 </style>
 </head>
 <body>
@@ -227,7 +273,16 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
     </div>
 
     <!-- HISTORIAL -->
-    <div class="page" id="page-historial"><div id="historialLista"></div></div>
+    <div class="page" id="page-historial">
+      <div class="filtros-row">
+        <button class="filtro-btn active" data-filtro="hoy">Hoy</button>
+        <button class="filtro-btn" data-filtro="semana">Semana</button>
+        <button class="filtro-btn" data-filtro="mes">Mes</button>
+        <button class="filtro-btn" data-filtro="todo">Todo</button>
+      </div>
+      <div id="informeLista"></div>
+      <div id="historialLista"></div>
+    </div>
 
     <!-- MENÚ -->
     <div class="page" id="page-menu">
@@ -262,11 +317,11 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
       </div>
       <div class="promo-templates">
         <div class="promo-tit">Plantillas rápidas — toca para usar</div>
-        <div class="promo-tpl" data-msg="🔥 ¡Hoy tenemos 2x3 en hamburguesas tradicionales! Pide ahora y aprovecha. Responde este mensaje con tu pedido 🍔"><div class="promo-tpl-label">🍔 2x3 Hamburguesas</div>Hoy 2x3 en hamburguesas. ¡Aprovecha!</div>
-        <div class="promo-tpl" data-msg="🌭 ¡Martes de perros! Pague 2 y lleve 3 en todos los perros italianos. Responde para pedir 🙌"><div class="promo-tpl-label">🌭 2x3 Perros</div>Martes de perros: pague 2 lleve 3.</div>
-        <div class="promo-tpl" data-msg="🥩 ¡Domingos de asados! 2x3 en asados junior. Ven o pide a domicilio 🍖"><div class="promo-tpl-label">🥩 2x3 Asados Junior</div>Domingos de asados: 2x3 en asados junior.</div>
-        <div class="promo-tpl" data-msg="🍺 ¡Esta noche estamos encendidos! Abrimos desde las 4pm. ¿Qué se te antoja? Escríbenos 🔥"><div class="promo-tpl-label">🔥 Recordatorio noche</div>Abrimos esta noche. ¿Qué se te antoja?</div>
-        <div class="promo-tpl" data-msg="🎉 ¡Gracias por ser nuestro cliente! Hoy tienes 10% de descuento. Dile a Luz el código: GRACIAS10 🙏"><div class="promo-tpl-label">🎁 Descuento especial</div>Regalo para clientes: 10% con código GRACIAS10.</div>
+        <div class="promo-tpl" data-msg="🔥 ¡Hoy tenemos 2x3 en hamburguesas tradicionales! Pide ahora y aprovecha 🍔"><div class="promo-tpl-label">🍔 2x3 Hamburguesas</div>Hoy 2x3 en hamburguesas. ¡Aprovecha!</div>
+        <div class="promo-tpl" data-msg="🌭 ¡Martes de perros! Pague 2 y lleve 3 en todos los perros italianos 🙌"><div class="promo-tpl-label">🌭 2x3 Perros</div>Martes de perros: pague 2 lleve 3.</div>
+        <div class="promo-tpl" data-msg="🥩 ¡Domingos de asados! 2x3 en asados junior 🍖"><div class="promo-tpl-label">🥩 2x3 Asados Junior</div>Domingos de asados: 2x3 en asados junior.</div>
+        <div class="promo-tpl" data-msg="🍺 ¡Esta noche estamos encendidos! Abrimos desde las 4pm 🔥"><div class="promo-tpl-label">🔥 Recordatorio noche</div>Abrimos esta noche. ¿Qué se te antoja?</div>
+        <div class="promo-tpl" data-msg="🎉 ¡Gracias por ser nuestro cliente! Hoy tienes 10% de descuento con código: GRACIAS10 🙏"><div class="promo-tpl-label">🎁 Descuento especial</div>Regalo para clientes: 10% con código GRACIAS10.</div>
       </div>
       <div class="ffield">
         <label class="flabel">O escribe tu propio mensaje</label>
@@ -296,14 +351,8 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
           <div><div class="cfg-label">Menú de día</div><div class="cfg-sub">Activa cuando abres en horario diurno</div></div>
           <button class="big-toggle off" id="toggleModoDia"></button>
         </div>
-        <div style="margin-top:12px">
-          <label class="flabel">Menú de día</label>
-          <textarea class="finput" id="cfg-menu-dia" placeholder="Pega aquí el menú de día con precios..." style="height:120px;resize:none;margin-top:4px;"></textarea>
-        </div>
-        <div style="margin-top:10px">
-          <label class="flabel">Menú de noche</label>
-          <textarea class="finput" id="cfg-menu-noche" placeholder="Pega aquí el menú de noche con precios..." style="height:120px;resize:none;margin-top:4px;"></textarea>
-        </div>
+        <div style="margin-top:12px"><label class="flabel">Menú de día</label><textarea class="finput" id="cfg-menu-dia" placeholder="Pega aquí el menú de día con precios..." style="height:120px;resize:none;margin-top:4px;"></textarea></div>
+        <div style="margin-top:10px"><label class="flabel">Menú de noche</label><textarea class="finput" id="cfg-menu-noche" placeholder="Pega aquí el menú de noche con precios..." style="height:120px;resize:none;margin-top:4px;"></textarea></div>
       </div>
       <div class="cfg-section">
         <div class="cfg-title">🕐 Horario de atención</div>
@@ -362,6 +411,19 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
   </div>
 </div>
 
+<!-- Confirm eliminar -->
+<div class="confirm-overlay" id="confirmEliminar">
+  <div class="confirm-box">
+    <div class="confirm-icon">🗑️</div>
+    <div class="confirm-title">¿Eliminar pedido?</div>
+    <div class="confirm-sub">Esta acción no se puede deshacer.</div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" id="confirmEliminarCancel">Cancelar</button>
+      <button class="confirm-ok" id="confirmEliminarOk">Eliminar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Overlay imagen comprobante -->
 <div class="img-overlay" id="imgOverlay">
   <button class="img-overlay-close" id="imgOverlayClose">✕</button>
@@ -386,13 +448,11 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 <script>
 var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5",rest=null,pin="",known={},timer=null;
 var ESTADOS={confirmado:{l:"Recibido",c:"tr",n:"en_preparacion",bl:"🔵 Preparando",bc:"bp"},en_preparacion:{l:"Preparando",c:"tp",n:"listo",bl:"🟡 Listo",bc:"bl"},listo:{l:"Listo",c:"tl2",n:"en_camino",bl:"🛵 En camino",bc:"bc"},en_camino:{l:"En camino",c:"tc",n:"entregado",bl:"✅ Entregado",bc:"be"},entregado:{l:"Entregado",c:"te",n:null,bl:null,bc:null}};
+var filtroActual="hoy";
+var pedidoAEliminar=null;
 
 function get(t,f){return fetch(SU+"/rest/v1/"+t+"?"+(f||""),{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json()});}
-function patchPedido(id,estado,tel,num){
-  return fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null})
-  }).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});
-}
+function patchPedido(id,estado,tel,num){return fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
 function toggleMenu(id,disp){return fetch("/api/menu-toggle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,disponible:disp})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
 function addMenu(d){return fetch("/api/menu-add",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
 function notif(m){var e=document.getElementById("notif");e.textContent=m;e.classList.add("show");setTimeout(function(){e.classList.remove("show")},2500);}
@@ -456,15 +516,7 @@ function loadPedidos(){
       if(p.cliente_tel)h+='<div class="chip">📱 '+p.cliente_tel+'</div>';
       if(p.metodo_pago)h+='<div class="chip">💳 '+p.metodo_pago+'</div>';
       h+='</div>';
-
-      // COMPROBANTE
-      if(p.comprobante_media_id){
-        h+='<div class="comprobante-box">';
-        h+='<div class="comprobante-header">🧾 Comprobante de pago</div>';
-        h+='<img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" alt="Comprobante" data-src="/api/comprobante/'+p.comprobante_media_id+'" onerror="this.style.display=\'none\'">';
-        h+='</div>';
-      }
-
+      if(p.comprobante_media_id){h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante de pago</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" alt="Comprobante" onerror="this.style.display=\'none\'"></div>';}
       h+='<div class="ptotal">'+fmt(p.total)+'</div>';
       h+='<div class="ebtns">';
       if(cfg.n)h+='<button class="ebtn '+cfg.bc+'" data-id="'+p.id+'" data-e="'+cfg.n+'" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">'+cfg.bl+'</button>';
@@ -473,25 +525,12 @@ function loadPedidos(){
       h+='</div></div></div>';
     });
     lista.innerHTML=h;
-
-    // Click en comprobante para ver grande
-    lista.querySelectorAll(".comprobante-img").forEach(function(img){
-      img.addEventListener("click",function(){
-        document.getElementById("imgOverlayImg").src=this.src;
-        document.getElementById("imgOverlay").classList.add("open");
-      });
-    });
-
-    lista.querySelectorAll(".ebtn").forEach(function(b){
-      b.addEventListener("click",function(e){e.stopPropagation();cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"),this.getAttribute("data-n"));});
-    });
-    lista.querySelectorAll(".btn-msg").forEach(function(b){
-      b.addEventListener("click",function(e){e.stopPropagation();abrirMensaje(this.getAttribute("data-tel"),this.getAttribute("data-num"));});
-    });
+    lista.querySelectorAll(".comprobante-img").forEach(function(img){img.addEventListener("click",function(){document.getElementById("imgOverlayImg").src=this.src;document.getElementById("imgOverlay").classList.add("open");});});
+    lista.querySelectorAll(".ebtn").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"),this.getAttribute("data-n"));});});
+    lista.querySelectorAll(".btn-msg").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();abrirMensaje(this.getAttribute("data-tel"),this.getAttribute("data-num"));});});
   }).catch(function(e){console.error(e);});
 }
 
-// Cerrar overlay imagen
 document.getElementById("imgOverlayClose").addEventListener("click",function(){document.getElementById("imgOverlay").classList.remove("open");});
 document.getElementById("imgOverlay").addEventListener("click",function(e){if(e.target===this)this.classList.remove("open");});
 
@@ -513,20 +552,120 @@ function loadStats(){
   }).catch(function(){});
 }
 
+// HISTORIAL CON FILTROS
+document.querySelectorAll(".filtro-btn").forEach(function(b){
+  b.addEventListener("click",function(){
+    document.querySelectorAll(".filtro-btn").forEach(function(x){x.classList.remove("active");});
+    this.classList.add("active");
+    filtroActual=this.getAttribute("data-filtro");
+    loadHistorial();
+  });
+});
+
+function getFechaFiltro(){
+  var ahora=new Date();
+  if(filtroActual==="hoy") return new Date(ahora.getFullYear(),ahora.getMonth(),ahora.getDate()).toISOString();
+  if(filtroActual==="semana"){var d=new Date(ahora);d.setDate(d.getDate()-7);return d.toISOString();}
+  if(filtroActual==="mes"){var d=new Date(ahora);d.setDate(d.getDate()-30);return d.toISOString();}
+  return null;
+}
+
 function loadHistorial(){
   if(!rest)return;
-  get("pedidos","restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=30").then(function(ps){
-    var l=document.getElementById("historialLista");
-    if(!ps.length){l.innerHTML='<div class="empty"><div class="ei">📊</div><div class="et">No hay pedidos aún</div></div>';return;}
+  var fecha=getFechaFiltro();
+  var filtro="restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=100";
+  if(fecha) filtro+="&created_at=gte."+fecha;
+
+  get("pedidos",filtro).then(function(ps){
+    var il=document.getElementById("informeLista");
+    var hl=document.getElementById("historialLista");
+
+    if(!ps.length){
+      il.innerHTML="";
+      hl.innerHTML='<div class="empty"><div class="ei">📊</div><div class="et">No hay pedidos en este período</div></div>';
+      return;
+    }
+
+    // Calcular informe
     var tot=ps.reduce(function(s,p){return s+Number(p.total)},0);
-    var h='<div class="stats-row" style="margin-bottom:16px"><div class="stat-tile"><div class="stl">Total pedidos</div><div class="stv orange">'+ps.length+'</div></div><div class="stat-tile"><div class="stl">Total ventas</div><div class="stv green" style="font-size:18px">'+fmt(tot)+'</div></div></div>';
+    var pagos={};
+    var productos={};
+    ps.forEach(function(p){
+      var met=p.metodo_pago||"otro";
+      pagos[met]=(pagos[met]||0)+1;
+      if(Array.isArray(p.items))p.items.forEach(function(it){
+        var nombre=it.split("$")[0].trim().replace("•","").trim();
+        productos[nombre]=(productos[nombre]||0)+1;
+      });
+    });
+    var topPago=Object.keys(pagos).sort(function(a,b){return pagos[b]-pagos[a]})[0]||"—";
+    var topProd=Object.keys(productos).sort(function(a,b){return productos[b]-productos[a]})[0]||"—";
+    var promedio=ps.length>0?Math.round(tot/ps.length):0;
+
+    var labelFiltro={hoy:"Hoy",semana:"Últimos 7 días",mes:"Últimos 30 días",todo:"Todo el tiempo"}[filtroActual];
+
+    il.innerHTML='<div class="informe-card">'+
+      '<div class="informe-title">📈 Informe — '+labelFiltro+'</div>'+
+      '<div class="informe-row"><span class="informe-label">Total pedidos</span><span class="informe-val">'+ps.length+'</span></div>'+
+      '<div class="informe-row"><span class="informe-label">Total ventas</span><span class="informe-val" style="color:var(--green)">'+fmt(tot)+'</span></div>'+
+      '<div class="informe-row"><span class="informe-label">Promedio por pedido</span><span class="informe-val">'+fmt(promedio)+'</span></div>'+
+      '<div class="informe-row"><span class="informe-label">Método de pago más usado</span><span class="informe-val">'+topPago+'</span></div>'+
+      '<div class="informe-row"><span class="informe-label">Producto más pedido</span><span class="informe-val" style="font-size:11px;max-width:160px;text-align:right">'+topProd+'</span></div>'+
+      '<button class="btn-imprimir" onclick="imprimirInforme()">🖨️ Imprimir informe</button>'+
+      '</div>';
+
+    var h="";
     ps.forEach(function(p){
       var cfg=ESTADOS[p.estado]||ESTADOS.confirmado;
-      h+='<div class="hcard"><div><div class="hnum">#'+p.numero_pedido+'</div><div class="hinfo">'+(p.cliente_tel||"—")+" · "+(p.metodo_pago||"—")+'</div><div class="hinfo">'+new Date(p.created_at).toLocaleString("es-CO",{dateStyle:"short",timeStyle:"short"})+'</div></div><div style="text-align:right"><div class="htot">'+fmt(p.total)+'</div><span class="etag '+cfg.c+'" style="font-size:10px">'+cfg.l+'</span></div></div>';
+      h+='<div class="hcard">'+
+        '<div class="hcard-top">'+
+          '<div><div class="hnum">#'+p.numero_pedido+'</div>'+
+          '<div class="hinfo">'+(p.cliente_tel||"—")+" · "+(p.metodo_pago||"—")+'</div>'+
+          '<div class="hinfo">'+new Date(p.created_at).toLocaleString("es-CO",{dateStyle:"short",timeStyle:"short"})+'</div></div>'+
+          '<div style="text-align:right"><div class="htot">'+fmt(p.total)+'</div>'+
+          '<span class="etag '+cfg.c+'" style="font-size:10px">'+cfg.l+'</span></div>'+
+        '</div>'+
+        '<div class="hcard-btns">'+
+          (p.cliente_tel?'<button class="hbtn hbtn-chat" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">💬 Ver chat</button>':'')+
+          '<button class="hbtn hbtn-del" data-id="'+p.id+'">🗑️ Eliminar</button>'+
+        '</div>'+
+        '</div>';
     });
-    l.innerHTML=h;
+    hl.innerHTML=h;
+
+    hl.querySelectorAll(".hbtn-chat").forEach(function(b){
+      b.addEventListener("click",function(){abrirMensaje(this.getAttribute("data-tel"),this.getAttribute("data-num"));});
+    });
+    hl.querySelectorAll(".hbtn-del").forEach(function(b){
+      b.addEventListener("click",function(){
+        pedidoAEliminar=this.getAttribute("data-id");
+        document.getElementById("confirmEliminar").classList.add("open");
+      });
+    });
   }).catch(function(){});
 }
+
+// ELIMINAR PEDIDO
+document.getElementById("confirmEliminarCancel").addEventListener("click",function(){
+  document.getElementById("confirmEliminar").classList.remove("open");
+  pedidoAEliminar=null;
+});
+document.getElementById("confirmEliminarOk").addEventListener("click",function(){
+  if(!pedidoAEliminar)return;
+  var id=pedidoAEliminar;
+  document.getElementById("confirmEliminar").classList.remove("open");
+  pedidoAEliminar=null;
+  fetch("/api/pedido/"+id,{method:"DELETE"})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.ok){notif("🗑️ Pedido eliminado");loadHistorial();loadStats();}
+      else{notif("❌ Error al eliminar");}
+    })
+    .catch(function(){notif("❌ Error de conexión");});
+});
+
+// IMPRIMIR
+function imprimirInforme(){window.print();}
 
 function loadMenu(){
   if(!rest)return;
@@ -570,48 +709,24 @@ function cargarConfig(){
   document.getElementById("cfg-msg-listo").value=rest.msg_listo||"";
   document.getElementById("cfg-msg-camino").value=rest.msg_en_camino||"";
   var diasActivos=(rest.dias_activos||"lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
-  document.querySelectorAll(".dia-btn").forEach(function(b){
-    diasActivos.includes(b.getAttribute("data-dia"))?b.classList.add("activo"):b.classList.remove("activo");
-  });
+  document.querySelectorAll(".dia-btn").forEach(function(b){diasActivos.includes(b.getAttribute("data-dia"))?b.classList.add("activo"):b.classList.remove("activo");});
 }
-
 function actualizarToggleModoDia(activo){
-  var btn=document.getElementById("toggleModoDia");
-  var banner=document.getElementById("modoBanner");
-  var label=document.getElementById("modoLabel");
-  var subLabel=document.getElementById("modoSubLabel");
-  var icon=document.getElementById("modoIcon");
+  var btn=document.getElementById("toggleModoDia"),banner=document.getElementById("modoBanner"),label=document.getElementById("modoLabel"),subLabel=document.getElementById("modoSubLabel"),icon=document.getElementById("modoIcon");
   if(activo){btn.className="big-toggle on";banner.className="modo-banner modo-dia";icon.textContent="🌅";label.textContent="Modo día activo";subLabel.textContent="Luz usa el menú de día";}
   else{btn.className="big-toggle off";banner.className="modo-banner modo-noche";icon.textContent="🌙";label.textContent="Modo noche activo";subLabel.textContent="Luz usa el menú de noche";}
 }
-
 document.getElementById("toggleModoDia").addEventListener("click",function(){modoDiaActual=!modoDiaActual;actualizarToggleModoDia(modoDiaActual);});
 document.querySelectorAll(".dia-btn").forEach(function(b){b.addEventListener("click",function(){this.classList.toggle("activo");});});
-
 document.getElementById("cfgGuardar").addEventListener("click",function(){
   if(!rest){notif("Error: no hay restaurante");return;}
   var diasSel=[];
   document.querySelectorAll(".dia-btn.activo").forEach(function(b){diasSel.push(b.getAttribute("data-dia"));});
-  var config={
-    modo_dia:modoDiaActual,
-    hora_apertura:document.getElementById("cfg-apertura").value+":00",
-    hora_cierre:document.getElementById("cfg-cierre").value+":00",
-    menu_dia:document.getElementById("cfg-menu-dia").value.trim(),
-    menu_noche:document.getElementById("cfg-menu-noche").value.trim(),
-    dias_activos:diasSel.join(","),
-    direccion:document.getElementById("cfg-direccion").value.trim(),
-    msg_bienvenida:document.getElementById("cfg-msg-bienvenida").value.trim(),
-    msg_en_preparacion:document.getElementById("cfg-msg-preparacion").value.trim(),
-    msg_listo:document.getElementById("cfg-msg-listo").value.trim(),
-    msg_en_camino:document.getElementById("cfg-msg-camino").value.trim()
-  };
+  var config={modo_dia:modoDiaActual,hora_apertura:document.getElementById("cfg-apertura").value+":00",hora_cierre:document.getElementById("cfg-cierre").value+":00",menu_dia:document.getElementById("cfg-menu-dia").value.trim(),menu_noche:document.getElementById("cfg-menu-noche").value.trim(),dias_activos:diasSel.join(","),direccion:document.getElementById("cfg-direccion").value.trim(),msg_bienvenida:document.getElementById("cfg-msg-bienvenida").value.trim(),msg_en_preparacion:document.getElementById("cfg-msg-preparacion").value.trim(),msg_listo:document.getElementById("cfg-msg-listo").value.trim(),msg_en_camino:document.getElementById("cfg-msg-camino").value.trim()};
   var btn=this;btn.textContent="Guardando...";btn.disabled=true;
   fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:config})})
     .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.ok){Object.keys(config).forEach(function(k){rest[k]=config[k];});notif("✅ Configuración guardada!");actualizarToggleModoDia(modoDiaActual);}
-      else{notif("❌ Error: "+(d.error||"").substring(0,40));}
-    })
+    .then(function(d){if(d.ok){Object.keys(config).forEach(function(k){rest[k]=config[k];});notif("✅ Configuración guardada!");actualizarToggleModoDia(modoDiaActual);}else{notif("❌ Error: "+(d.error||"").substring(0,40));} })
     .catch(function(){notif("❌ Error de conexión");})
     .finally(function(){btn.textContent="💾 Guardar configuración";btn.disabled=false;});
 });
@@ -625,20 +740,8 @@ function loadPromoCount(){
     document.getElementById("promoCount").textContent=Object.keys(u).length;
   }).catch(function(){document.getElementById("promoCount").textContent="?";});
 }
-document.querySelectorAll(".promo-tpl").forEach(function(el){
-  el.addEventListener("click",function(){
-    document.querySelectorAll(".promo-tpl").forEach(function(e){e.classList.remove("sel");});
-    this.classList.add("sel");
-    document.getElementById("promoTexto").value=this.getAttribute("data-msg");
-  });
-});
-document.getElementById("promoEnviarBtn").addEventListener("click",function(){
-  var texto=document.getElementById("promoTexto").value.trim();
-  if(!texto){notif("Escribe o elige un mensaje");return;}
-  document.getElementById("confirmCount").textContent=document.getElementById("promoCount").textContent;
-  document.getElementById("confirmPreview").textContent=texto;
-  document.getElementById("promoConfirm").classList.add("open");
-});
+document.querySelectorAll(".promo-tpl").forEach(function(el){el.addEventListener("click",function(){document.querySelectorAll(".promo-tpl").forEach(function(e){e.classList.remove("sel");});this.classList.add("sel");document.getElementById("promoTexto").value=this.getAttribute("data-msg");});});
+document.getElementById("promoEnviarBtn").addEventListener("click",function(){var texto=document.getElementById("promoTexto").value.trim();if(!texto){notif("Escribe o elige un mensaje");return;}document.getElementById("confirmCount").textContent=document.getElementById("promoCount").textContent;document.getElementById("confirmPreview").textContent=texto;document.getElementById("promoConfirm").classList.add("open");});
 document.getElementById("promoConfirmCancel").addEventListener("click",function(){document.getElementById("promoConfirm").classList.remove("open");});
 document.getElementById("promoConfirmOk").addEventListener("click",function(){document.getElementById("promoConfirm").classList.remove("open");enviarPromo();});
 function enviarPromo(){
@@ -648,10 +751,7 @@ function enviarPromo(){
   btn.disabled=true;label.textContent="Enviando...";
   fetch("/api/enviar-promo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,mensaje:texto})})
     .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.ok){notif("✅ Enviado a "+d.enviados+" clientes!");document.getElementById("resOk").textContent=d.enviados||0;document.getElementById("resFail").textContent=d.fallidos||0;document.getElementById("resTotal").textContent=d.total||0;document.getElementById("promoResult").classList.add("show");document.getElementById("promoTexto").value="";document.querySelectorAll(".promo-tpl").forEach(function(e){e.classList.remove("sel");});}
-      else{notif("❌ Error: "+(d.error||"").substring(0,40));}
-    })
+    .then(function(d){if(d.ok){notif("✅ Enviado a "+d.enviados+" clientes!");document.getElementById("resOk").textContent=d.enviados||0;document.getElementById("resFail").textContent=d.fallidos||0;document.getElementById("resTotal").textContent=d.total||0;document.getElementById("promoResult").classList.add("show");document.getElementById("promoTexto").value="";document.querySelectorAll(".promo-tpl").forEach(function(e){e.classList.remove("sel");});}else{notif("❌ Error: "+(d.error||"").substring(0,40));}})
     .catch(function(){notif("❌ Error de conexión");})
     .finally(function(){btn.disabled=false;label.textContent="Enviar a todos los clientes";});
 }
@@ -659,7 +759,13 @@ function enviarPromo(){
 // CHAT
 var msgTel="",chatTimer=null;
 function formatearHoraChat(f){try{return new Date(f).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}catch(e){return "";}}
-function renderChat(m){var box=document.getElementById("chatMensajes");if(!m||!m.length){box.innerHTML='<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px;">No hay mensajes aún</div>';return;}var h="";m.forEach(function(x){var cls=x.tipo==="cliente"?"chat-cliente":"chat-restaurante";h+='<div class="chat-bubble '+cls+'"><div>'+(x.mensaje||"")+'</div><div class="chat-time">'+formatearHoraChat(x.created_at)+'</div></div>';});box.innerHTML=h;box.scrollTop=box.scrollHeight;}
+function renderChat(m){
+  var box=document.getElementById("chatMensajes");
+  if(!m||!m.length){box.innerHTML='<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px;">No hay mensajes aún — los nuevos mensajes aparecerán aquí.</div>';return;}
+  var h="";
+  m.forEach(function(x){var cls=x.tipo==="cliente"?"chat-cliente":"chat-restaurante";h+='<div class="chat-bubble '+cls+'"><div>'+(x.mensaje||"")+'</div><div class="chat-time">'+formatearHoraChat(x.created_at)+'</div></div>';});
+  box.innerHTML=h;box.scrollTop=box.scrollHeight;
+}
 function cargarChat(){if(!msgTel||!rest)return;fetch("/api/chat/"+encodeURIComponent(msgTel)+"?restaurante_id="+encodeURIComponent(rest.id)).then(function(r){return r.json();}).then(function(d){if(d.ok)renderChat(d.mensajes||[]);}).catch(function(){});}
 function abrirMensaje(tel,num){msgTel=tel;document.getElementById("msgClienteInfo").textContent="Pedido #"+num+" · "+tel;document.getElementById("msgTexto").value="";document.getElementById("msgOverlay").classList.add("open");cargarChat();if(chatTimer)clearInterval(chatTimer);chatTimer=setInterval(cargarChat,5000);setTimeout(function(){document.getElementById("msgTexto").focus();},300);}
 function cerrarChat(){document.getElementById("msgOverlay").classList.remove("open");if(chatTimer){clearInterval(chatTimer);chatTimer=null;}}
