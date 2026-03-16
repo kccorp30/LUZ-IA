@@ -21,7 +21,6 @@ function nextOrderNumber() {
   return ++orderCounter;
 }
 
-// ── SUPABASE ──────────────────────────────────────────────────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://vbxuwzcfzfjwhllkppkg.supabase.co";
 const SUPABASE_KEY = process.env.SUPABASE_KEY || "sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 
@@ -106,8 +105,26 @@ function notificarDashboard(pedido) {
     .catch(function (err) { console.error("Error notificando dashboard:", err.message); });
 }
 
-async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo) { return true; }
-async function obtenerMensajesSupabase(restauranteId, telefono) { return []; }
+async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(
+      SUPABASE_URL + "/rest/v1/mensajes",
+      { restaurante_id: restauranteId, telefono: telefono, mensaje: mensaje, tipo: tipo },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+  } catch (e) { console.error("Error guardando mensaje:", e.message); }
+}
+
+async function obtenerMensajesSupabase(restauranteId, telefono) {
+  try {
+    var res = await axios.get(
+      SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + restauranteId + "&telefono=eq." + encodeURIComponent(telefono) + "&order=created_at.asc&limit=100",
+      { headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } }
+    );
+    return res.data || [];
+  } catch (e) { return []; }
+}
 
 async function sb_get(pathPart) {
   try {
@@ -122,7 +139,6 @@ function getMenuUrl() {
   return process.env.MENU_PAGE_URL || "https://bit.ly/LaCurvaStreetFood";
 }
 
-// ── DESCARGAR IMAGEN META ─────────────────────────────────────────────────────
 async function descargarImagenMeta(mediaId) {
   try {
     var token = process.env.WHATSAPP_TOKEN;
@@ -146,7 +162,6 @@ async function descargarImagenMeta(mediaId) {
   }
 }
 
-// ── WHATSAPP ──────────────────────────────────────────────────────────────────
 async function sendWhatsAppMessage(to, message, phoneNumberId) {
   var token = process.env.WHATSAPP_TOKEN;
   var pid   = phoneNumberId || process.env.WHATSAPP_PHONE_ID;
@@ -168,7 +183,6 @@ async function sendWhatsAppMessage(to, message, phoneNumberId) {
   }
 }
 
-// ── HORARIO ───────────────────────────────────────────────────────────────────
 function estaEnHorario(restaurante) {
   try {
     var ahora      = new Date(Date.now() - 5 * 60 * 60 * 1000);
@@ -201,7 +215,6 @@ function getMensaje(restaurante, clave, fallback) {
     : fallback;
 }
 
-// ── MENÚ ──────────────────────────────────────────────────────────────────────
 const MENU_TEXT = `
 HAMBURGUESAS TRADICIONALES:
 
@@ -453,7 +466,6 @@ REGLAS FINALES:
 - Aplica promociones del dia automaticamente.
 - Si piden algo que no existe, ofrece alternativas similares.`;
 
-// ── PRINT TICKET ──────────────────────────────────────────────────────────────
 async function printTicket(orderData) {
   var orderNumber      = orderData.orderNumber;
   var items            = orderData.items;
@@ -529,7 +541,6 @@ async function printTicket(orderData) {
   return ticketText;
 }
 
-// ── PARSE REPLY ───────────────────────────────────────────────────────────────
 function parseReply(reply, from) {
   var cleanReply = reply;
   var sideEffect = null;
@@ -611,7 +622,6 @@ function parseReply(reply, from) {
   return { cleanReply: cleanReply, sideEffect: sideEffect };
 }
 
-// ── RUTAS ─────────────────────────────────────────────────────────────────────
 app.get("/menu",        function (req, res) { res.sendFile(path.join(__dirname, "menu.html")); });
 app.get("/admin",       function (req, res) { res.sendFile(path.join(__dirname, "admin.html")); });
 app.get("/restaurante", function (req, res) { res.sendFile(path.join(__dirname, "restaurante.html")); });
@@ -766,7 +776,6 @@ app.post("/api/enviar-promo", async function (req, res) {
   }
 });
 
-// ── ENDPOINT COMPROBANTE ──────────────────────────────────────────────────────
 app.get("/api/comprobante/:mediaId", async function (req, res) {
   var mediaId = req.params.mediaId;
   try {
@@ -784,10 +793,25 @@ app.get("/api/comprobante/:mediaId", async function (req, res) {
 });
 
 app.get("/api/chat/:telefono", async function (req, res) {
-  res.json({ ok: true, mensajes: [] });
+  var telefono      = req.params.telefono;
+  var restauranteId = req.query.restaurante_id;
+  if (!restauranteId) return res.json({ ok: true, mensajes: [] });
+  var mensajes = await obtenerMensajesSupabase(restauranteId, telefono);
+  res.json({ ok: true, mensajes: mensajes });
 });
 
-// ── WEBHOOK META — GET ────────────────────────────────────────────────────────
+app.delete("/api/pedido/:id", async function (req, res) {
+  var id     = req.params.id;
+  var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+  try {
+    await axios.delete(
+      SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+});
+
 app.get("/webhook", function (req, res) {
   var mode = req.query["hub.mode"], token = req.query["hub.verify_token"], challenge = req.query["hub.challenge"];
   var VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "luz_verify_token_2026";
@@ -796,7 +820,6 @@ app.get("/webhook", function (req, res) {
   res.sendStatus(403);
 });
 
-// ── WEBHOOK META — POST ───────────────────────────────────────────────────────
 app.post("/webhook", async function (req, res) {
   res.sendStatus(200);
 
@@ -894,7 +917,6 @@ app.post("/webhook", async function (req, res) {
     var cleanReply = parsed.cleanReply;
     var sideEffect = parsed.sideEffect;
 
-    // ── GUARDAR COMPROBANTE DESPUÉS DE parseReply PERO ANTES DE GUARDAR PEDIDO ──
     if (esComprobante && mediaId && orderState[from]) {
       orderState[from].comprobanteMediaId = mediaId;
       orderState[from].comprobanteUrl     = "/api/comprobante/" + mediaId;
@@ -907,6 +929,11 @@ app.post("/webhook", async function (req, res) {
 
     console.log("De " + from + ": " + userText);
     console.log("Luz: " + cleanReply.substring(0, 100));
+
+    if (restaurante) {
+      guardarMensajeSupabase(restaurante.id, from, userText, "cliente").catch(function(){});
+      guardarMensajeSupabase(restaurante.id, from, cleanReply, "restaurante").catch(function(){});
+    }
 
     if (sideEffect === "pago_confirmado" && orderState[from]) {
       var state     = orderState[from];
