@@ -21,6 +21,13 @@ function nextOrderNumber() {
   return ++orderCounter;
 }
 
+function limpiarNumero(str) {
+  if (!str) return "0";
+  var s = String(str).toLowerCase().trim();
+  if (s === "pendiente") return "0";
+  return s.replace(/[^0-9]/g, "") || "0";
+}
+
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://vbxuwzcfzfjwhllkppkg.supabase.co";
 const SUPABASE_KEY = process.env.SUPABASE_KEY || "sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 
@@ -498,9 +505,9 @@ FLUJO:
 ⚠️ OBLIGATORIO — EN CADA RESPUESTA DONDE CONFIRMES PRODUCTOS escribe SIEMPRE esto al final, sin excepcion:
 PEDIDO_LISTO:
 ITEMS: [producto1 $precio|producto2 $precio]
-DESECHABLES: [numero]
-DOMICILIO: 0
-TOTAL: [productos+desechables]
+DESECHABLES: [solo el numero sin puntos ni $ — ejemplo: 500 o 1000 o 1500]
+DOMICILIO: [solo el numero sin puntos ni $ — si no sabes escribe 0]
+TOTAL: [solo el numero sin puntos ni $ — ejemplo: 23400]
 
 Si no escribes PEDIDO_LISTO el sistema no puede procesar el pedido. ES OBLIGATORIO.
 CUANDO TENGAS DIRECCION: DIRECCION_LISTA:[direccion completa con calle numero y barrio]
@@ -591,16 +598,16 @@ function parseReply(reply, from) {
   var sideEffect = null;
 
   if (reply.indexOf("PEDIDO_LISTO:") !== -1) {
-    var itemsMatch       = reply.match(/ITEMS:\s*(.+)/);
-    var totalRaw         = reply.match(/TOTAL:\s*([\d]+|pendiente)/i);
-    var desechablesRaw   = reply.match(/DESECHABLES:\s*([\d]+|pendiente)/i);
-    var domicilioRaw     = reply.match(/DOMICILIO:\s*([\d]+|pendiente)/i);
+    var itemsMatch     = reply.match(/ITEMS:\s*(.+)/);
+    var totalMatch     = reply.match(/TOTAL:\s*([^\n]+)/);
+    var desechMatch    = reply.match(/DESECHABLES:\s*([^\n]+)/);
+    var domicilioMatch = reply.match(/DOMICILIO:\s*([^\n]+)/);
 
-    if (itemsMatch && totalRaw) {
+    if (itemsMatch && totalMatch) {
       var items       = itemsMatch[1].split("|").map(function (i) { return i.trim(); });
-      var total       = (totalRaw[1].toLowerCase() === "pendiente") ? "0" : totalRaw[1];
-      var desechables = (desechablesRaw && desechablesRaw[1].toLowerCase() !== "pendiente") ? desechablesRaw[1] : "0";
-      var domicilio   = (domicilioRaw && domicilioRaw[1].toLowerCase() !== "pendiente") ? domicilioRaw[1] : "0";
+      var total       = limpiarNumero(totalMatch[1]);
+      var desechables = limpiarNumero(desechMatch ? desechMatch[1] : "0");
+      var domicilio   = limpiarNumero(domicilioMatch ? domicilioMatch[1] : "0");
       var orderNumber = nextOrderNumber();
 
       orderState[from] = {
@@ -611,7 +618,7 @@ function parseReply(reply, from) {
         domicilio:   domicilio,
         total:       total
       };
-      console.log("📦 orderState creado para:", from, "pedido #" + orderNumber);
+      console.log("📦 orderState creado para:", from, "pedido #" + orderNumber, "total:", total, "desech:", desechables, "domi:", domicilio);
       sideEffect = "pedido_registrado";
     }
 
