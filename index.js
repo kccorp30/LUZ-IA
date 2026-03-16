@@ -566,6 +566,7 @@ function parseReply(reply, from) {
         domicilio:   domicilio,
         total:       total
       };
+      console.log("📦 orderState creado para:", from, "pedido #" + orderNumber);
       sideEffect = "pedido_registrado";
     }
 
@@ -611,10 +612,14 @@ function parseReply(reply, from) {
   }
 
   if (reply.indexOf("PAGO_CONFIRMADO") !== -1) {
+    console.log("✅ PAGO_CONFIRMADO detectado para:", from);
+    console.log("📦 orderState actual:", JSON.stringify(orderState[from]));
     if (orderState[from]) {
       orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
       orderState[from].status        = "confirmado";
       sideEffect = "pago_confirmado";
+    } else {
+      console.error("❌ orderState VACIO para:", from, "— el pedido se perderá");
     }
     cleanReply = cleanReply.replace("PAGO_CONFIRMADO", "").trim();
   }
@@ -935,6 +940,8 @@ app.post("/webhook", async function (req, res) {
       guardarMensajeSupabase(restaurante.id, from, cleanReply, "restaurante").catch(function(){});
     }
 
+    console.log("🎯 sideEffect:", sideEffect, "| orderState existe:", !!orderState[from]);
+
     if (sideEffect === "pago_confirmado" && orderState[from]) {
       var state     = orderState[from];
       var timestamp = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
@@ -956,11 +963,17 @@ app.post("/webhook", async function (req, res) {
       console.log("Pedido #" + state.orderNumber + " confirmado");
 
       var restId = restaurante ? restaurante.id : null;
+      console.log("🔍 restId inicial:", restId);
       if (!restId) {
         try {
-          var restBuscar = await sb_get("restaurantes?select=id&limit=1");
-          if (restBuscar && restBuscar.length > 0) restId = restBuscar[0].id;
-        } catch (e) { console.error("Error buscando restaurante:", e.message); }
+          var svcKey2 = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+          var restFallback = await axios.get(
+            SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=id&limit=1",
+            { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2 } }
+          );
+          if (restFallback.data && restFallback.data.length > 0) restId = restFallback.data[0].id;
+          console.log("🔍 restId por fallback:", restId);
+        } catch (e) { console.error("Error fallback restaurante:", e.message); }
       }
 
       if (restId) {
@@ -978,7 +991,7 @@ app.post("/webhook", async function (req, res) {
           comprobanteMediaId: state.comprobanteMediaId || null
         });
       } else {
-        console.error("No se pudo guardar pedido — restaurante no encontrado");
+        console.error("❌ No se pudo guardar pedido — restaurante no encontrado");
       }
 
       delete orderState[from];
