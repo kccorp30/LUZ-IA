@@ -126,6 +126,39 @@ async function obtenerMensajesSupabase(restauranteId, telefono) {
   } catch (e) { return []; }
 }
 
+async function getOrderState(telefono) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var res = await axios.get(
+      SUPABASE_URL + "/rest/v1/order_state?telefono=eq." + encodeURIComponent(telefono) + "&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    if (res.data && res.data.length > 0) return res.data[0].estado;
+    return null;
+  } catch (e) { console.error("Error getOrderState:", e.message); return null; }
+}
+
+async function setOrderState(telefono, estado) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(
+      SUPABASE_URL + "/rest/v1/order_state",
+      { telefono: telefono, estado: estado, updated_at: new Date().toISOString() },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } }
+    );
+  } catch (e) { console.error("Error setOrderState:", e.message); }
+}
+
+async function deleteOrderState(telefono) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.delete(
+      SUPABASE_URL + "/rest/v1/order_state?telefono=eq." + encodeURIComponent(telefono),
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+  } catch (e) { console.error("Error deleteOrderState:", e.message); }
+}
+
 async function sb_get(pathPart) {
   try {
     var res = await axios.get(SUPABASE_URL + "/rest/v1/" + pathPart, {
@@ -619,7 +652,7 @@ function parseReply(reply, from) {
       orderState[from].status        = "confirmado";
       sideEffect = "pago_confirmado";
     } else {
-      console.error("❌ orderState VACIO para:", from, "— el pedido se perderá");
+      console.error("❌ orderState VACIO para:", from, "— intentando recuperar de Supabase");
     }
     cleanReply = cleanReply.replace("PAGO_CONFIRMADO", "").trim();
   }
@@ -874,6 +907,15 @@ app.post("/webhook", async function (req, res) {
 
     if (!userText) return;
 
+    // Recuperar orderState de Supabase si no está en memoria
+    if (!orderState[from]) {
+      var savedState = await getOrderState(from);
+      if (savedState) {
+        orderState[from] = savedState;
+        console.log("📦 orderState recuperado de Supabase para:", from);
+      }
+    }
+
     var restaurante = await getRestaurante(phoneNumberId);
 
     if (restaurante) {
@@ -940,6 +982,11 @@ app.post("/webhook", async function (req, res) {
       guardarMensajeSupabase(restaurante.id, from, cleanReply, "restaurante").catch(function(){});
     }
 
+    // Persistir orderState en Supabase después de cada mensaje
+    if (orderState[from]) {
+      await setOrderState(from, orderState[from]);
+    }
+
     console.log("🎯 sideEffect:", sideEffect, "| orderState existe:", !!orderState[from]);
 
     if (sideEffect === "pago_confirmado" && orderState[from]) {
@@ -995,6 +1042,7 @@ app.post("/webhook", async function (req, res) {
       }
 
       delete orderState[from];
+      await deleteOrderState(from);
     }
 
   } catch (err) {
