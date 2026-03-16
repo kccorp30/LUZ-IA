@@ -441,7 +441,6 @@ DOMICILIO — pregunta siempre la direccion completa:
 - $6.000: Ciudad Jardin, Pance, Tequendama, El Ingenio, Pampalinda, Melendez, Univalle, Lili, Mojica, Poblado, Mario Correa, Valle del Lili, Calipso, Compartir, Capri, Niza, Caney, Santa Barbara, San Joaquin, centro (San Nicolas, San Bosco, Santa Rosa, Salomia), extremos norte, extremos sur
 - Si no reconoces el barrio: $4.000 y avisa que puede variar $1.000.
 
-
 CALCULO — SIEMPRE muestra este desglose:
 Productos:    $XX.XXX
 Desechables:  $XXX
@@ -457,13 +456,15 @@ REGLA DE ORO:
 - NUNCA preguntes algo que el cliente ya respondio.
 
 PEDIDO DESDE PAGINA DE MENU:
-- Si el cliente llega con un mensaje que ya incluye productos con precios y totales (formato de la pagina del menu con bullets • y precios), escribe INMEDIATAMENTE las señales ocultas PEDIDO_LISTO con esos productos.
+- Si el cliente llega con un mensaje que ya incluye productos con precios y totales (formato de la pagina del menu con bullets y precios), escribe INMEDIATAMENTE las señales ocultas PEDIDO_LISTO con esos productos.
 - No esperes confirmacion adicional — el cliente ya eligio sus productos desde la pagina visual.
 - Calcula desechables ($500 por cada comida, no bebidas ni arepas) con los productos recibidos.
-- Luego pide la direccion completa.
+- En DOMICILIO escribe 0 porque aun no sabes el barrio.
+- En TOTAL escribe solo productos + desechables sin domicilio.
+- Luego en el mismo mensaje pide la direccion completa al cliente.
 
 MODIFICAR PEDIDO EN CURSO:
-- Si el cliente quiere agregar un producto MIENTRAS el pedido ya está registrado (antes de confirmar el pago), escribe de nuevo PEDIDO_LISTO completo con TODOS los productos — los anteriores MAS el nuevo.
+- Si el cliente quiere agregar un producto MIENTRAS el pedido ya esta registrado (antes de confirmar el pago), escribe de nuevo PEDIDO_LISTO completo con TODOS los productos — los anteriores MAS el nuevo.
 - Recalcula desechables y total con todos los productos.
 - NUNCA pierdas los productos anteriores al actualizar.
 
@@ -497,9 +498,9 @@ FLUJO:
 PEDIDO CONFIRMADO — escribe oculto (nunca visible al cliente):
 PEDIDO_LISTO:
 ITEMS: [producto1 $precio|producto2 $precio]
-DESECHABLES: [numero sin puntos]
-DOMICILIO: [numero sin puntos]
-TOTAL: [numero sin puntos]
+DESECHABLES: [numero sin puntos — SIEMPRE un numero, NUNCA la palabra pendiente]
+DOMICILIO: [numero sin puntos — si aun no sabes el barrio escribe 0]
+TOTAL: [suma de productos + desechables — SIEMPRE un numero, NUNCA la palabra pendiente]
 
 CUANDO TENGAS DIRECCION: DIRECCION_LISTA:[direccion completa con calle numero y barrio]
 TELEFONO ADICIONAL: TELEFONO_ADICIONAL:[numero]
@@ -590,15 +591,15 @@ function parseReply(reply, from) {
 
   if (reply.indexOf("PEDIDO_LISTO:") !== -1) {
     var itemsMatch       = reply.match(/ITEMS:\s*(.+)/);
-    var totalMatch       = reply.match(/TOTAL:\s*(\d+)/);
-    var desechablesMatch = reply.match(/DESECHABLES:\s*(\d+)/);
-    var domicilioMatch   = reply.match(/DOMICILIO:\s*(\d+)/);
+    var totalRaw         = reply.match(/TOTAL:\s*([\d]+|pendiente)/i);
+    var desechablesRaw   = reply.match(/DESECHABLES:\s*([\d]+|pendiente)/i);
+    var domicilioRaw     = reply.match(/DOMICILIO:\s*([\d]+|pendiente)/i);
 
-    if (itemsMatch && totalMatch) {
+    if (itemsMatch && totalRaw) {
       var items       = itemsMatch[1].split("|").map(function (i) { return i.trim(); });
-      var total       = totalMatch[1];
-      var desechables = desechablesMatch ? desechablesMatch[1] : "0";
-      var domicilio   = domicilioMatch   ? domicilioMatch[1]   : "3000";
+      var total       = (totalRaw[1].toLowerCase() === "pendiente") ? "0" : totalRaw[1];
+      var desechables = (desechablesRaw && desechablesRaw[1].toLowerCase() !== "pendiente") ? desechablesRaw[1] : "0";
+      var domicilio   = (domicilioRaw && domicilioRaw[1].toLowerCase() !== "pendiente") ? domicilioRaw[1] : "0";
       var orderNumber = nextOrderNumber();
 
       orderState[from] = {
