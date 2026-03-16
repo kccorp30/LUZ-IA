@@ -970,6 +970,7 @@ app.post("/webhook", async function (req, res) {
     }
 
     var rawReply   = claudeResponse.data.content[0].text;
+    console.log("🤖 RAW:", rawReply.substring(0, 600));
     var parsed     = parseReply(rawReply, from);
     var cleanReply = parsed.cleanReply;
     var sideEffect = parsed.sideEffect;
