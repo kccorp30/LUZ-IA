@@ -960,7 +960,7 @@ app.post("/webhook", async function (req, res) {
 
     var claudeResponse = await axios.post(
       "https://api.anthropic.com/v1/messages",
-      { model: "claude-haiku-4-5-20251001", max_tokens: 1000, system: systemFinal, messages: conversations[from] },
+      { model: "claude-haiku-4-5-20251001", max_tokens: 2000, system: systemFinal, messages: conversations[from] },
       { headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" } }
     );
 
