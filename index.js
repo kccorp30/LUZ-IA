@@ -457,6 +457,12 @@ REGLA DE ORO:
 - Si el cliente ya dio producto + direccion + pago en el mismo mensaje, confirma TODO de una vez.
 - NUNCA preguntes algo que el cliente ya respondio.
 
+PEDIDO DESDE PAGINA DE MENU:
+- Si el cliente llega con un mensaje que ya incluye productos con precios y totales (formato de la pagina del menu con bullets • y precios), escribe INMEDIATAMENTE las señales ocultas PEDIDO_LISTO con esos productos.
+- No esperes confirmacion adicional — el cliente ya eligio sus productos desde la pagina visual.
+- Calcula desechables ($500 por cada comida, no bebidas ni arepas) con los productos recibidos.
+- Luego pide la direccion completa.
+
 MODIFICACIONES: acepta "sin queso", "extra salsa", etc.
 
 QUEJAS POR FALTANTES:
