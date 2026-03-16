@@ -145,8 +145,7 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .promo-confirm-preview{background:var(--card);border-radius:12px;padding:12px;font-size:12px;color:var(--white);text-align:left;margin-bottom:20px;line-height:1.5;max-height:100px;overflow-y:auto}
 .promo-confirm-btns{display:flex;gap:10px}
 .promo-confirm-cancel{flex:1;padding:13px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--muted);font-family:'Archivo',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
-.promo-confirm-ok{flex:2;padding:13px;background:var(--orange);border:none;border-radius:12px;color:white;font-family:'Archivo Black',sans-serif;font-size:14px;cursor:pointer;transition:all 0.15s}
-.promo-confirm-ok:active{background:var(--orange2)}
+.promo-confirm-ok{flex:2;padding:13px;background:var(--orange);border:none;border-radius:12px;color:white;font-family:'Archivo Black',sans-serif;font-size:14px;cursor:pointer}
 .promo-result{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-top:12px;display:none}
 .promo-result.show{display:block}
 .promo-result-title{font-size:12px;color:var(--muted);margin-bottom:6px}
@@ -177,6 +176,17 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .msg-tag-amber{background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)}
 .msg-tag-green{background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3)}
 .msg-tag-orange{background:rgba(255,107,43,0.15);color:var(--orange);border:1px solid rgba(255,107,43,0.3)}
+/* COMPROBANTE */
+.comprobante-box{margin:10px 0;border-radius:12px;overflow:hidden;border:2px solid rgba(37,211,102,0.3);background:rgba(37,211,102,0.05)}
+.comprobante-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(37,211,102,0.1);font-size:12px;font-weight:600;color:#4ade80}
+.comprobante-img{width:100%;max-height:200px;object-fit:contain;cursor:pointer;transition:transform 0.2s}
+.comprobante-img:active{transform:scale(0.98)}
+.comprobante-loading{padding:20px;text-align:center;font-size:12px;color:var(--muted)}
+/* OVERLAY IMAGEN GRANDE */
+.img-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.95);align-items:center;justify-content:center}
+.img-overlay.open{display:flex}
+.img-overlay img{max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px}
+.img-overlay-close{position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);border:none;color:white;font-size:24px;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
@@ -247,10 +257,7 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
         <div class="promo-hero-sub">Llega directo al WhatsApp de tus clientes.<br>Más efectivo que un estado.</div>
       </div>
       <div class="promo-counter">
-        <div>
-          <div class="promo-counter-label">Clientes que recibirán el mensaje</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">Últimos 30 días</div>
-        </div>
+        <div><div class="promo-counter-label">Clientes que recibirán el mensaje</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Últimos 30 días</div></div>
         <div class="promo-counter-val" id="promoCount">...</div>
       </div>
       <div class="promo-templates">
@@ -276,7 +283,6 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 
     <!-- CONFIGURACIÓN -->
     <div class="page" id="page-config">
-
       <div class="modo-banner modo-noche" id="modoBanner">
         <span style="font-size:20px" id="modoIcon">🌙</span>
         <div>
@@ -284,8 +290,6 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
           <div id="modoSubLabel" style="font-size:11px;font-weight:400;opacity:0.8">Luz usa el menú de noche</div>
         </div>
       </div>
-
-      <!-- Modo menú -->
       <div class="cfg-section">
         <div class="cfg-title">🌅 Modo del menú</div>
         <div class="cfg-row">
@@ -301,8 +305,6 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
           <textarea class="finput" id="cfg-menu-noche" placeholder="Pega aquí el menú de noche con precios..." style="height:120px;resize:none;margin-top:4px;"></textarea>
         </div>
       </div>
-
-      <!-- Horario -->
       <div class="cfg-section">
         <div class="cfg-title">🕐 Horario de atención</div>
         <div class="frow">
@@ -320,42 +322,17 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
           <div class="dia-btn activo" data-dia="domingo">Dom</div>
         </div>
       </div>
-
-      <!-- Mensajes automáticos -->
       <div class="cfg-section">
         <div class="cfg-title">💬 Mensajes automáticos de Luz</div>
-
-        <div class="ffield">
-          <div class="msg-tag msg-tag-blue">👋 Bienvenida</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Primer mensaje cuando un cliente escribe por primera vez</div>
-          <textarea class="finput" id="cfg-msg-bienvenida" placeholder="¡Hola! Bienvenido. Soy Luz, ¿en qué te puedo ayudar hoy? 🍔" style="height:80px;resize:none;"></textarea>
-        </div>
-
-        <div class="ffield" style="margin-top:12px">
-          <div class="msg-tag msg-tag-amber">👨‍🍳 En preparación</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Se envía cuando marcas el pedido como "Preparando"</div>
-          <textarea class="finput" id="cfg-msg-preparacion" placeholder="👨‍🍳 ¡Tu pedido ya está en preparación! En breve estará listo." style="height:80px;resize:none;"></textarea>
-        </div>
-
-        <div class="ffield" style="margin-top:12px">
-          <div class="msg-tag msg-tag-green">✅ Listo</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Se envía cuando el pedido está listo esperando al domiciliario</div>
-          <textarea class="finput" id="cfg-msg-listo" placeholder="✅ ¡Tu pedido está listo y esperando al domiciliario! Pronto va en camino 🛵" style="height:80px;resize:none;"></textarea>
-        </div>
-
-        <div class="ffield" style="margin-top:12px">
-          <div class="msg-tag msg-tag-orange">🛵 En camino</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Se envía cuando marcas el pedido como "En camino"</div>
-          <textarea class="finput" id="cfg-msg-camino" placeholder="🛵 Tu pedido ya va en camino. Llega en 25-35 minutos. ¡Que lo disfrutes!" style="height:80px;resize:none;"></textarea>
-        </div>
+        <div class="ffield"><div class="msg-tag msg-tag-blue">👋 Bienvenida</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Primer mensaje cuando un cliente escribe</div><textarea class="finput" id="cfg-msg-bienvenida" placeholder="¡Hola! Bienvenido. Soy Luz 🍔" style="height:80px;resize:none;"></textarea></div>
+        <div class="ffield" style="margin-top:12px"><div class="msg-tag msg-tag-amber">👨‍🍳 En preparación</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Se envía al marcar como Preparando</div><textarea class="finput" id="cfg-msg-preparacion" placeholder="👨‍🍳 ¡Tu pedido ya está en preparación!" style="height:80px;resize:none;"></textarea></div>
+        <div class="ffield" style="margin-top:12px"><div class="msg-tag msg-tag-green">✅ Listo</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Se envía cuando está listo esperando domiciliario</div><textarea class="finput" id="cfg-msg-listo" placeholder="✅ ¡Tu pedido está listo!" style="height:80px;resize:none;"></textarea></div>
+        <div class="ffield" style="margin-top:12px"><div class="msg-tag msg-tag-orange">🛵 En camino</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Se envía al marcar como En camino</div><textarea class="finput" id="cfg-msg-camino" placeholder="🛵 Tu pedido ya va en camino." style="height:80px;resize:none;"></textarea></div>
       </div>
-
-      <!-- Dirección -->
       <div class="cfg-section">
         <div class="cfg-title">📍 Dirección</div>
         <input class="finput" id="cfg-direccion" placeholder="Ej: Cl. 16 #56-40, Canaveral, Cali">
       </div>
-
       <button class="cfg-save" id="cfgGuardar">💾 Guardar configuración</button>
     </div>
 
@@ -385,6 +362,13 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
   </div>
 </div>
 
+<!-- Overlay imagen comprobante -->
+<div class="img-overlay" id="imgOverlay">
+  <button class="img-overlay-close" id="imgOverlayClose">✕</button>
+  <img id="imgOverlayImg" src="" alt="Comprobante">
+</div>
+
+<!-- Chat overlay -->
 <div class="msg-overlay" id="msgOverlay">
   <div class="msg-box">
     <div class="msg-handle"></div>
@@ -472,6 +456,15 @@ function loadPedidos(){
       if(p.cliente_tel)h+='<div class="chip">📱 '+p.cliente_tel+'</div>';
       if(p.metodo_pago)h+='<div class="chip">💳 '+p.metodo_pago+'</div>';
       h+='</div>';
+
+      // COMPROBANTE
+      if(p.comprobante_media_id){
+        h+='<div class="comprobante-box">';
+        h+='<div class="comprobante-header">🧾 Comprobante de pago</div>';
+        h+='<img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" alt="Comprobante" data-src="/api/comprobante/'+p.comprobante_media_id+'" onerror="this.style.display=\'none\'">';
+        h+='</div>';
+      }
+
       h+='<div class="ptotal">'+fmt(p.total)+'</div>';
       h+='<div class="ebtns">';
       if(cfg.n)h+='<button class="ebtn '+cfg.bc+'" data-id="'+p.id+'" data-e="'+cfg.n+'" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">'+cfg.bl+'</button>';
@@ -480,17 +473,27 @@ function loadPedidos(){
       h+='</div></div></div>';
     });
     lista.innerHTML=h;
-    lista.querySelectorAll(".ebtn").forEach(function(b){
-      b.addEventListener("click",function(e){
-        e.stopPropagation();
-        cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"),this.getAttribute("data-n"));
+
+    // Click en comprobante para ver grande
+    lista.querySelectorAll(".comprobante-img").forEach(function(img){
+      img.addEventListener("click",function(){
+        document.getElementById("imgOverlayImg").src=this.src;
+        document.getElementById("imgOverlay").classList.add("open");
       });
+    });
+
+    lista.querySelectorAll(".ebtn").forEach(function(b){
+      b.addEventListener("click",function(e){e.stopPropagation();cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"),this.getAttribute("data-n"));});
     });
     lista.querySelectorAll(".btn-msg").forEach(function(b){
       b.addEventListener("click",function(e){e.stopPropagation();abrirMensaje(this.getAttribute("data-tel"),this.getAttribute("data-num"));});
     });
   }).catch(function(e){console.error(e);});
 }
+
+// Cerrar overlay imagen
+document.getElementById("imgOverlayClose").addEventListener("click",function(){document.getElementById("imgOverlay").classList.remove("open");});
+document.getElementById("imgOverlay").addEventListener("click",function(e){if(e.target===this)this.classList.remove("open");});
 
 function cambiarEstado(id,estado,tel,num){
   notif("Actualizando...");
@@ -578,19 +581,8 @@ function actualizarToggleModoDia(activo){
   var label=document.getElementById("modoLabel");
   var subLabel=document.getElementById("modoSubLabel");
   var icon=document.getElementById("modoIcon");
-  if(activo){
-    btn.className="big-toggle on";
-    banner.className="modo-banner modo-dia";
-    icon.textContent="🌅";
-    label.textContent="Modo día activo";
-    subLabel.textContent="Luz usa el menú de día";
-  }else{
-    btn.className="big-toggle off";
-    banner.className="modo-banner modo-noche";
-    icon.textContent="🌙";
-    label.textContent="Modo noche activo";
-    subLabel.textContent="Luz usa el menú de noche";
-  }
+  if(activo){btn.className="big-toggle on";banner.className="modo-banner modo-dia";icon.textContent="🌅";label.textContent="Modo día activo";subLabel.textContent="Luz usa el menú de día";}
+  else{btn.className="big-toggle off";banner.className="modo-banner modo-noche";icon.textContent="🌙";label.textContent="Modo noche activo";subLabel.textContent="Luz usa el menú de noche";}
 }
 
 document.getElementById("toggleModoDia").addEventListener("click",function(){modoDiaActual=!modoDiaActual;actualizarToggleModoDia(modoDiaActual);});
