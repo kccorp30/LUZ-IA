@@ -388,7 +388,7 @@ DESECHABLES — REGLA CRITICA:
 - BEBIDAS NO cobran desechable.
 - AREPAS tampoco cobran desechable.
 
-DOMICILIO — pregunta siempre el barrio:
+DOMICILIO — pregunta siempre la direccion completa:
 
 - $2.000: Canaveral, Ciudad Jardin, Pance, Tequendama, El Ingenio, Pampalinda
 - $3.000: Melendez, Univalle, Lili, Mojica, Poblado, Mario Correa
@@ -427,8 +427,8 @@ VENTAS:
 FLUJO:
 1. Saludo -> UN mensaje amable + ofrece link del menu
 2. Cliente pide -> confirma productos con precios
-3. Pide direccion completa con barrio
-4. Con direccion -> calcula domicilio y muestra desglose completo
+3. Pide la direccion completa: calle, numero, barrio y cualquier referencia. Ejemplo: "Me regalas la direccion completa — calle, numero y barrio?"
+4. Con direccion -> identifica barrio, calcula domicilio y muestra desglose completo
 5. Cliente confirma -> pregunta pago Y da datos de inmediato
 6. Pago:
 - Nequi: "Transferi a @NEQUIJOS126 y mandame el comprobante"
@@ -436,6 +436,7 @@ FLUJO:
 - Efectivo: pregunta billete -> escribe PAGO_EFECTIVO:[denominacion]
 - Datafono: confirma -> escribe PAGO_DATAFONO
 7. Cliente envia comprobante -> escribe PAGO_CONFIRMADO
+8. Cuando el pedido quede confirmado di siempre exactamente: "Listo! Tu pedido quedó confirmado. Te estaremos informando el estado 🙏" — NUNCA digas que va en camino ni des tiempo estimado en este momento.
 
 PEDIDO CONFIRMADO — escribe oculto (nunca visible al cliente):
 PEDIDO_LISTO:
@@ -444,7 +445,7 @@ DESECHABLES: [numero sin puntos]
 DOMICILIO: [numero sin puntos]
 TOTAL: [numero sin puntos]
 
-CUANDO TENGAS DIRECCION: DIRECCION_LISTA:[direccion]
+CUANDO TENGAS DIRECCION: DIRECCION_LISTA:[direccion completa con calle numero y barrio]
 TELEFONO ADICIONAL: TELEFONO_ADICIONAL:[numero]
 
 REGLAS FINALES:
@@ -845,13 +846,6 @@ app.post("/webhook", async function (req, res) {
 
     if (!userText) return;
 
-    // Guardar mediaId en orderState si es comprobante
-    if (esComprobante && mediaId && orderState[from]) {
-      orderState[from].comprobanteMediaId = mediaId;
-      orderState[from].comprobanteUrl     = "/api/comprobante/" + mediaId;
-      console.log("Comprobante guardado en orderState para:", from);
-    }
-
     var restaurante = await getRestaurante(phoneNumberId);
 
     if (restaurante) {
@@ -889,7 +883,6 @@ app.post("/webhook", async function (req, res) {
       { headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" } }
     );
 
-    // Verificar respuesta válida de Claude
     if (!claudeResponse.data || !claudeResponse.data.content || !claudeResponse.data.content[0]) {
       console.error("Respuesta inválida de Claude:", JSON.stringify(claudeResponse.data));
       await sendWhatsAppMessage(from, "Hola! En este momento tengo un problemita técnico. Escríbeme en un momento 🙏", phoneNumberId);
@@ -900,6 +893,13 @@ app.post("/webhook", async function (req, res) {
     var parsed     = parseReply(rawReply, from);
     var cleanReply = parsed.cleanReply;
     var sideEffect = parsed.sideEffect;
+
+    // ── GUARDAR COMPROBANTE DESPUÉS DE parseReply PERO ANTES DE GUARDAR PEDIDO ──
+    if (esComprobante && mediaId && orderState[from]) {
+      orderState[from].comprobanteMediaId = mediaId;
+      orderState[from].comprobanteUrl     = "/api/comprobante/" + mediaId;
+      console.log("Comprobante guardado:", mediaId);
+    }
 
     conversations[from].push({ role: "assistant", content: rawReply });
 
