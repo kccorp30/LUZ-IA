@@ -278,6 +278,24 @@ HAMBURGUESAS ANGUS (todas con papa rustica, chipotle, tocineta, queso cheddar, c
 - La mela: $29.400 (con cebolla caramelizada)
 - Mexicana: $32.900 (con guacamole, nachos y jalapenos)
 
+HOT DOGS:
+
+- Italiano: $16.900 (salchicha americana, lechuga, ripio, queso fundido, salsas y tocineta)
+- Italo-ranchero: $17.900 (dos salchichas rancheras, lechuga, queso, ripio, salsas y tocineta)
+- Mexicano: $18.400 (lechuga, ripio, salsas, salchicha americana, jalapeños, queso y chimichurri)
+- Perro la Curva: $29.400 (lechuga, salsas, salchicha americana, queso fundido, maiz y tocineta)
+- Chuzo-pan: $19.900 (lechuga, res, pollo, queso premium rallado, ripio y salsa)
+- Chori-perro: $18.900 (lechuga, chorizo santarrosano, salsa mexicana, queso rallado, salsas y ripio)
+- Americano: $19.900 (salchicha americana, batavia, ripio, maduro calado, queso fundido y tocineta)
+- La perra: $18.900 (en vez de salchicha: mucha tocineta, salsas, queso rallado y ripio)
+
+SALCHIPAPAS:
+
+- Sencilla: $17.400 (papa amarilla, salchicha risch, salsas, queso rallado y ripio)
+- Criolla: $22.400 (papa amarilla, salchicha risch, maduro calado, piña en trozos, salsas y queso rallado)
+- Especial: $36.400 (papa amarilla, salchicha risch, res, pollo, salsas, queso rallado, ripio y tocineta)
+- Mega costeña: $58.900 (lechuga, papa francesa, salchicha risch, salchicha ranchera, res, pollo, costilla ahumada, maiz, salsas, queso rallado y ripio)
+
 COMBOS DEL DIA:
 
 - Aplastado especial combo: $22.900 (aplastado + papas + gaseosa)
@@ -424,7 +442,7 @@ METODOS DE PAGO:
 PROMOCIONES SEMANALES:
 
 - Lunes y Jueves: Pague 2 lleve 3 hamburguesas tradicionales
-- Martes: Pague 2 lleve 3 en todos los perros
+- Martes: Pague 2 lleve 3 en todos los hot dogs y perros
 - Jueves: Pague 2 lleve 3 en Angus BBQ King o Celestina
 - Domingos: Pague 2 lleve 3 en asados junior
 
@@ -480,7 +498,7 @@ MODIFICACIONES: acepta "sin queso", "extra salsa", etc.
 QUEJAS POR FALTANTES:
 - Si el cliente dice que le faltó algo, ofrécelo de inmediato sin preguntar.
 
-JERGA: "litro y cuarto" = Coca-Cola 1.5L. "una gaseosa" = pregunta cual.
+JERGA: "litro y cuarto" = Coca-Cola 1.5L. "una gaseosa" = pregunta cual. "perro" o "perrito" = hot dog.
 
 VENTAS:
 - Eres vendedora. Tu objetivo es que el cliente pida más y quede feliz.
@@ -1010,7 +1028,7 @@ app.post("/webhook", async function (req, res) {
       guardarMensajeSupabase(restaurante.id, from, cleanReply, "restaurante").catch(function(){});
     }
 
-    // Persistir orderState en Supabase después de cada mensaje
+    // Persistir orderState en Supabase después de cada mensaje (no si ya se va a borrar)
     if (orderState[from] && sideEffect !== "pago_confirmado") {
       await setOrderState(from, orderState[from]);
     }
