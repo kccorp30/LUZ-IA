@@ -499,8 +499,8 @@ FLUJO:
 - Bancolombia: "Transferi a la llave 0089102980 a nombre de Jose Gregorio Charris y mandame el comprobante"
 - Efectivo: pregunta billete -> escribe PAGO_EFECTIVO:[denominacion]
 - Datafono: confirma -> escribe PAGO_DATAFONO
-7. Cliente envia comprobante -> escribe PAGO_CONFIRMADO
-8. Cuando el pedido quede confirmado di siempre exactamente: "Listo! Tu pedido quedó confirmado. Te estaremos informando el estado 🙏" — NUNCA digas que va en camino ni des tiempo estimado en este momento.
+7. Cliente envia comprobante -> di siempre exactamente: "Listo! Tu pedido quedó confirmado. Te estaremos informando el estado 🙏"
+8. NUNCA digas que va en camino ni des tiempo estimado al confirmar.
 
 MENSAJES DESPUES DE PEDIDO CONFIRMADO:
 - Una vez que el pedido quedo confirmado, el cliente puede enviar mensajes cortos de respuesta como "ok", "gracias", "listo", "perfecto", "en camino", "ya sale", "bueno", "dale", "okis", "👍", "😊" u otras reacciones cortas.
@@ -672,13 +672,10 @@ function parseReply(reply, from) {
 
   if (reply.indexOf("PAGO_CONFIRMADO") !== -1) {
     console.log("✅ PAGO_CONFIRMADO detectado para:", from);
-    console.log("📦 orderState actual:", JSON.stringify(orderState[from]));
     if (orderState[from]) {
       orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
       orderState[from].status        = "confirmado";
       sideEffect = "pago_confirmado";
-    } else {
-      console.error("❌ orderState VACIO para:", from, "— intentando recuperar de Supabase");
     }
     cleanReply = cleanReply.replace("PAGO_CONFIRMADO", "").trim();
   }
@@ -991,10 +988,14 @@ app.post("/webhook", async function (req, res) {
     var cleanReply = parsed.cleanReply;
     var sideEffect = parsed.sideEffect;
 
+    // ✅ FIX CLAVE: Si llega imagen/comprobante y hay pedido activo, confirmar automáticamente
     if (esComprobante && mediaId && orderState[from]) {
       orderState[from].comprobanteMediaId = mediaId;
       orderState[from].comprobanteUrl     = "/api/comprobante/" + mediaId;
-      console.log("Comprobante guardado:", mediaId);
+      orderState[from].paymentMethod      = orderState[from].paymentMethod || "digital";
+      orderState[from].status             = "confirmado";
+      sideEffect = "pago_confirmado";
+      console.log("✅ Comprobante recibido — forzando pago_confirmado para:", from);
     }
 
     conversations[from].push({ role: "assistant", content: rawReply });
@@ -1010,7 +1011,7 @@ app.post("/webhook", async function (req, res) {
     }
 
     // Persistir orderState en Supabase después de cada mensaje
-    if (orderState[from]) {
+    if (orderState[from] && sideEffect !== "pago_confirmado") {
       await setOrderState(from, orderState[from]);
     }
 
