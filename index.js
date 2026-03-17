@@ -149,7 +149,7 @@ async function setOrderState(telefono, estado) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     await axios.post(
-      SUPABASE_URL + "/rest/v1/order_state",
+      SUPABASE_URL + "/rest/v1/order_state?on_conflict=telefono",
       { telefono: telefono, estado: estado, updated_at: new Date().toISOString() },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } }
     );
