@@ -63,7 +63,7 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .desglose-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--muted)}
 .desglose-row.total{font-family:'Archivo Black',sans-serif;font-size:16px;color:var(--green);padding-top:8px;margin-top:4px;border-top:1px solid var(--border)}
 .ebtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.ebtn{flex:1;min-width:100px;padding:12px 8px;border-radius:12px;font-family:'Archivo',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;border:none;display:flex;align-items:center;justify-content:center;gap:5px}
+.ebtn{flex:1;min-width:90px;padding:11px 8px;border-radius:12px;font-family:'Archivo',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;border:none;display:flex;align-items:center;justify-content:center;gap:5px}
 .ebtn:active{transform:scale(0.96)}
 .bp{background:rgba(59,130,246,0.25);color:#60a5fa;border:2px solid rgba(59,130,246,0.4)}
 .bl{background:rgba(245,158,11,0.25);color:#fbbf24;border:2px solid rgba(245,158,11,0.4)}
@@ -102,21 +102,20 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .badd:active{background:var(--orange2);transform:scale(0.98)}
 .notif{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--orange);color:white;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
 .notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
-/* ALERTA MENSAJE NUEVO */
+/* ALERT BANNER — ahora con badge en tab Pedidos */
 .alert-banner{position:fixed;top:66px;left:12px;right:12px;z-index:150;background:linear-gradient(135deg,#0f2a1a,#1a3a2a);border:1px solid rgba(37,211,102,0.4);border-radius:14px;padding:12px 14px;display:none;align-items:center;gap:10px;cursor:pointer;animation:slideDown 0.3s ease;box-shadow:0 4px 20px rgba(0,0,0,0.4)}
 .alert-banner.show{display:flex}
 @keyframes slideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 .alert-dot{width:10px;height:10px;border-radius:50%;background:#25D366;flex-shrink:0;animation:pulse 1.5s infinite}
 .alert-text{flex:1;font-size:13px;font-weight:600;color:#4ade80}
-.alert-close{color:var(--muted);font-size:20px;padding:0 4px;background:none;border:none;cursor:pointer;color:var(--muted)}
+.alert-close{color:var(--muted);font-size:20px;padding:0 4px;background:none;border:none;cursor:pointer}
+/* CHAT OVERLAY */
 .msg-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center}
 .msg-overlay.open{display:flex}
-/* FIX CHAT BOX — flexbox column con altura controlada */
 .msg-box{width:100%;max-width:480px;background:var(--surface);border-top:1px solid var(--border);border-radius:24px 24px 0 0;padding:20px 20px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;height:80vh;max-height:600px}
 .msg-handle{width:36px;height:4px;border-radius:2px;background:var(--card2);margin:0 auto 16px;flex-shrink:0}
 .msg-title{font-family:'Archivo Black',sans-serif;font-size:18px;margin-bottom:4px;flex-shrink:0}
 .msg-cliente{font-size:12px;color:var(--muted);margin-bottom:10px;flex-shrink:0}
-/* FIX SCROLL — flex:1 hace que tome el espacio disponible */
 #chatMensajes{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px;min-height:0}
 .msg-textarea{width:100%;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--white);font-family:'Archivo',sans-serif;font-size:14px;outline:none;resize:none;height:72px;transition:border 0.2s;flex-shrink:0;margin-top:10px}
 .msg-textarea:focus{border-color:var(--orange)}
@@ -124,8 +123,9 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .msg-cancel{flex:1;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--muted);font-family:'Archivo',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
 .msg-send{flex:2;padding:12px;background:#25D366;border:none;border-radius:12px;color:white;font-family:'Archivo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s}
 .msg-send:active{transform:scale(0.97)}
-.btn-msg{background:rgba(37,211,102,0.15);color:#4ade80;border:2px solid rgba(37,211,102,0.3);flex:1;min-width:80px;padding:10px 6px;border-radius:12px;font-family:'Archivo',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:4px}
+.btn-msg{background:rgba(37,211,102,0.15);color:#4ade80;border:2px solid rgba(37,211,102,0.3);flex:0;padding:10px 12px;border-radius:12px;font-family:'Archivo',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center}
 .btn-msg:active{transform:scale(0.96)}
+/* HISTORIAL */
 .hcard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px}
 .hcard-top{display:flex;align-items:center;justify-content:space-between}
 .hnum{font-family:'Archivo Black',sans-serif;font-size:18px;color:var(--orange)}
@@ -135,13 +135,26 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .hbtn{padding:8px 12px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s}
 .hbtn-chat{background:rgba(37,211,102,0.15);color:#4ade80;border:1px solid rgba(37,211,102,0.3)}
 .hbtn-del{background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3)}
+/* CHAT BUBBLES */
 .chat-bubble{max-width:80%;padding:10px 12px;border-radius:14px;font-size:13px;line-height:1.35;word-break:break-word;flex-shrink:0}
 .chat-cliente{align-self:flex-start;background:var(--card);border:1px solid var(--border);color:var(--white)}
 .chat-restaurante{align-self:flex-end;background:#25D366;color:white}
 .chat-time{font-size:10px;opacity:0.75;margin-top:4px}
+/* CHAT UNIVERSAL */
+.chat-univ-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all 0.15s}
+.chat-univ-item:active{background:var(--card2)}
+.chat-univ-top{display:flex;align-items:center;justify-content:space-between}
+.chat-univ-tel{font-weight:700;font-size:14px}
+.chat-univ-preview{font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-univ-badge{background:var(--red);color:white;font-size:9px;font-weight:700;border-radius:10px;padding:2px 6px;min-width:18px;text-align:center}
+.chat-univ-tag{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700}
+.tag-incompleto{background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)}
+.tag-completado{background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3)}
+/* FILTROS */
 .filtros-row{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
 .filtro-btn{padding:8px 16px;border-radius:20px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.15s}
 .filtro-btn.active{background:var(--orange);border-color:var(--orange);color:white}
+/* INFORME */
 .informe-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px}
 .informe-title{font-family:'Archivo Black',sans-serif;font-size:16px;margin-bottom:14px;color:var(--orange)}
 .informe-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px}
@@ -152,6 +165,7 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .btn-imprimir:active{opacity:0.8;transform:scale(0.98)}
 .btn-borrar-hist{width:100%;padding:13px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;color:#f87171;font-family:'Archivo',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.15s;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
 .btn-borrar-hist:active{background:rgba(239,68,68,0.2);transform:scale(0.98)}
+/* PROMO */
 .promo-hero{background:linear-gradient(135deg,rgba(255,107,43,0.15) 0%,rgba(255,107,43,0.05) 100%);border:1px solid rgba(255,107,43,0.25);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center}
 .promo-hero-icon{font-size:40px;margin-bottom:8px}
 .promo-hero-title{font-family:'Archivo Black',sans-serif;font-size:18px;margin-bottom:4px}
@@ -181,6 +195,7 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .promo-result.show{display:block}
 .promo-result-title{font-size:12px;color:var(--muted);margin-bottom:6px}
 .promo-result-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+/* CONFIG */
 .cfg-section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
 .cfg-title{font-family:'Archivo Black',sans-serif;font-size:15px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .cfg-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
@@ -206,10 +221,12 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 .msg-tag-amber{background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)}
 .msg-tag-green{background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3)}
 .msg-tag-orange{background:rgba(255,107,43,0.15);color:var(--orange);border:1px solid rgba(255,107,43,0.3)}
+/* COMPROBANTE */
 .comprobante-box{margin:10px 0;border-radius:12px;overflow:hidden;border:2px solid rgba(37,211,102,0.3);background:rgba(37,211,102,0.05)}
 .comprobante-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(37,211,102,0.1);font-size:12px;font-weight:600;color:#4ade80}
 .comprobante-img{width:100%;max-height:200px;object-fit:contain;cursor:pointer;transition:transform 0.2s}
 .comprobante-img:active{transform:scale(0.98)}
+/* OVERLAYS */
 .img-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.95);align-items:center;justify-content:center}
 .img-overlay.open{display:flex}
 .img-overlay img{max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px}
@@ -278,7 +295,6 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
     <div class="live-badge"><div class="live-dot"></div> En vivo</div>
   </div>
 
-  <!-- ALERTA MENSAJE NUEVO -->
   <div class="alert-banner" id="alertBanner">
     <div class="alert-dot"></div>
     <div class="alert-text" id="alertText">💬 Nuevo mensaje de cliente</div>
@@ -328,6 +344,20 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
       <div id="menuLista"></div>
     </div>
 
+    <!-- CHAT UNIVERSAL -->
+    <div class="page" id="page-chat">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-family:'Archivo Black',sans-serif;font-size:18px">💬 Todos los chats</div>
+        <button class="filtro-btn active" id="chatFiltroBtn" data-modo="todos" style="font-size:11px;padding:6px 12px">Todos</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="filtro-btn active" id="chatFiltroTodos" onclick="filtrarChats('todos')">Todos</button>
+        <button class="filtro-btn" id="chatFiltroIncompletos" onclick="filtrarChats('incompletos')">⚠️ Sin cerrar</button>
+        <button class="filtro-btn" id="chatFiltroHoy" onclick="filtrarChats('hoy')">Hoy</button>
+      </div>
+      <div id="chatUniversalLista"><div class="empty"><div class="ei">💬</div><div class="et">Cargando conversaciones...</div></div></div>
+    </div>
+
     <!-- PROMO -->
     <div class="page" id="page-promo">
       <div class="promo-hero">
@@ -341,11 +371,11 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
       </div>
       <div class="promo-templates">
         <div class="promo-tit">Plantillas rápidas — toca para usar</div>
-        <div class="promo-tpl" data-msg="🔥 ¡Hoy tenemos 2x3 en hamburguesas tradicionales! Pide ahora y aprovecha 🍔"><div class="promo-tpl-label">🍔 2x3 Hamburguesas</div>Hoy 2x3 en hamburguesas. ¡Aprovecha!</div>
-        <div class="promo-tpl" data-msg="🌭 ¡Martes de perros! Pague 2 y lleve 3 en todos los perros italianos 🙌"><div class="promo-tpl-label">🌭 2x3 Perros</div>Martes de perros: pague 2 lleve 3.</div>
-        <div class="promo-tpl" data-msg="🥩 ¡Domingos de asados! 2x3 en asados junior 🍖"><div class="promo-tpl-label">🥩 2x3 Asados Junior</div>Domingos de asados: 2x3 en asados junior.</div>
-        <div class="promo-tpl" data-msg="🍺 ¡Esta noche estamos encendidos! Abrimos desde las 4pm 🔥"><div class="promo-tpl-label">🔥 Recordatorio noche</div>Abrimos esta noche. ¿Qué se te antoja?</div>
-        <div class="promo-tpl" data-msg="🎉 ¡Gracias por ser nuestro cliente! Hoy tienes 10% de descuento con código: GRACIAS10 🙏"><div class="promo-tpl-label">🎁 Descuento especial</div>Regalo para clientes: 10% con código GRACIAS10.</div>
+        <div class="promo-tpl" data-msg="🔥 Hoy tenemos 2x3 en hamburguesas tradicionales! Pide ahora y aprovecha 🍔"><div class="promo-tpl-label">🍔 2x3 Hamburguesas</div>Hoy 2x3 en hamburguesas. ¡Aprovecha!</div>
+        <div class="promo-tpl" data-msg="🌭 Martes de perros! Pague 2 y lleve 3 en todos los perros italianos 🙌"><div class="promo-tpl-label">🌭 2x3 Perros</div>Martes de perros: pague 2 lleve 3.</div>
+        <div class="promo-tpl" data-msg="🥩 Domingos de asados! 2x3 en asados junior 🍖"><div class="promo-tpl-label">🥩 2x3 Asados Junior</div>Domingos de asados: 2x3 en asados junior.</div>
+        <div class="promo-tpl" data-msg="🍺 Esta noche estamos encendidos! Abrimos desde las 4pm 🔥"><div class="promo-tpl-label">🔥 Recordatorio noche</div>Abrimos esta noche. ¿Qué se te antoja?</div>
+        <div class="promo-tpl" data-msg="🎉 Gracias por ser nuestro cliente! Hoy tienes 10% de descuento con codigo: GRACIAS10 🙏"><div class="promo-tpl-label">🎁 Descuento especial</div>Regalo para clientes: 10% con código GRACIAS10.</div>
       </div>
       <div class="ffield">
         <label class="flabel">O escribe tu propio mensaje</label>
@@ -397,10 +427,10 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
       </div>
       <div class="cfg-section">
         <div class="cfg-title">💬 Mensajes automáticos de Luz</div>
-        <div class="ffield"><div class="msg-tag msg-tag-blue">👋 Bienvenida</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Primer mensaje cuando un cliente escribe</div><textarea class="finput" id="cfg-msg-bienvenida" placeholder="¡Hola! Bienvenido. Soy Luz 🍔" style="height:80px;resize:none;"></textarea></div>
-        <div class="ffield" style="margin-top:12px"><div class="msg-tag msg-tag-amber">👨‍🍳 En preparación</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Se envía al marcar como Preparando</div><textarea class="finput" id="cfg-msg-preparacion" placeholder="👨‍🍳 ¡Tu pedido ya está en preparación!" style="height:80px;resize:none;"></textarea></div>
-        <div class="ffield" style="margin-top:12px"><div class="msg-tag msg-tag-green">✅ Listo</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Se envía cuando está listo esperando domiciliario</div><textarea class="finput" id="cfg-msg-listo" placeholder="✅ ¡Tu pedido está listo!" style="height:80px;resize:none;"></textarea></div>
-        <div class="ffield" style="margin-top:12px"><div class="msg-tag msg-tag-orange">🛵 En camino</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Se envía al marcar como En camino</div><textarea class="finput" id="cfg-msg-camino" placeholder="🛵 Tu pedido ya va en camino." style="height:80px;resize:none;"></textarea></div>
+        <div class="ffield"><div class="msg-tag msg-tag-blue">👋 Bienvenida</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Primer mensaje cuando un cliente escribe</div><textarea class="finput" id="cfg-msg-bienvenida" placeholder="Hola! Bienvenido. Soy Luz 🍔" style="height:80px;resize:none;"></textarea></div>
+        <div class="ffield" style="margin-top:12px"><div class="msg-tag msg-tag-amber">👨‍🍳 En preparación</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Se envía al marcar como Preparando</div><textarea class="finput" id="cfg-msg-preparacion" placeholder="Tu pedido ya está en preparación!" style="height:80px;resize:none;"></textarea></div>
+        <div class="ffield" style="margin-top:12px"><div class="msg-tag msg-tag-green">✅ Listo</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Se envía cuando está listo esperando domiciliario</div><textarea class="finput" id="cfg-msg-listo" placeholder="Tu pedido está listo!" style="height:80px;resize:none;"></textarea></div>
+        <div class="ffield" style="margin-top:12px"><div class="msg-tag msg-tag-orange">🛵 En camino</div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">Se envía al marcar como En camino</div><textarea class="finput" id="cfg-msg-camino" placeholder="Tu pedido ya va en camino." style="height:80px;resize:none;"></textarea></div>
       </div>
       <div class="cfg-section">
         <div class="cfg-title">📍 Dirección</div>
@@ -412,14 +442,18 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
   </div>
 
   <div class="bottom-nav">
-    <div class="nav-tab active" id="tab-pedidos"><div class="ti">🛒</div><div class="tl">Pedidos</div></div>
+    <div class="nav-tab active" id="tab-pedidos">
+      <div class="ti">🛒</div><div class="tl">Pedidos</div>
+      <div class="nav-badge" id="pedidosBadge"></div>
+    </div>
     <div class="nav-tab" id="tab-historial"><div class="ti">📊</div><div class="tl">Historial</div></div>
     <div class="nav-tab" id="tab-menu"><div class="ti">📋</div><div class="tl">Menú</div></div>
-    <div class="nav-tab" id="tab-promo"><div class="ti">📣</div><div class="tl">Promo</div></div>
-    <div class="nav-tab" id="tab-config">
-      <div class="ti">⚙️</div><div class="tl">Config</div>
-      <div class="nav-badge" id="chatBadge">!</div>
+    <div class="nav-tab" id="tab-chat">
+      <div class="ti">💬</div><div class="tl">Chats</div>
+      <div class="nav-badge" id="chatBadge"></div>
     </div>
+    <div class="nav-tab" id="tab-promo"><div class="ti">📣</div><div class="tl">Promo</div></div>
+    <div class="nav-tab" id="tab-config"><div class="ti">⚙️</div><div class="tl">Config</div></div>
   </div>
 </div>
 
@@ -438,7 +472,6 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
   </div>
 </div>
 
-<!-- Confirm eliminar pedido -->
 <div class="confirm-overlay" id="confirmEliminar">
   <div class="confirm-box">
     <div class="confirm-icon">🗑️</div>
@@ -451,12 +484,11 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
   </div>
 </div>
 
-<!-- Confirm borrar historial -->
 <div class="confirm-overlay" id="confirmBorrarHist">
   <div class="confirm-box">
     <div class="confirm-icon">⚠️</div>
     <div class="confirm-title">¿Borrar historial?</div>
-    <div class="confirm-sub">Se eliminarán todos los pedidos del período seleccionado. No se puede deshacer.</div>
+    <div class="confirm-sub">Se eliminarán todos los pedidos del período. No se puede deshacer.</div>
     <div class="confirm-btns">
       <button class="confirm-cancel" id="confirmBorrarHistCancel">Cancelar</button>
       <button class="confirm-ok" id="confirmBorrarHistOk">Borrar todo</button>
@@ -464,13 +496,11 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
   </div>
 </div>
 
-<!-- Overlay imagen comprobante -->
 <div class="img-overlay" id="imgOverlay">
   <button class="img-overlay-close" id="imgOverlayClose">✕</button>
   <img id="imgOverlayImg" src="" alt="Comprobante">
 </div>
 
-<!-- Chat overlay -->
 <div class="msg-overlay" id="msgOverlay">
   <div class="msg-box">
     <div class="msg-handle"></div>
@@ -485,7 +515,6 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
   </div>
 </div>
 
-<!-- Editar pedido -->
 <div class="edit-overlay" id="editOverlay">
   <div class="edit-box">
     <div class="msg-handle" style="margin-bottom:16px"></div>
@@ -493,11 +522,8 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
     <div class="ffield"><label class="flabel">Dirección de entrega</label><input class="finput" id="edit-dir" placeholder="Calle, número, barrio"></div>
     <div class="ffield"><label class="flabel">Método de pago</label>
       <select class="finput" id="edit-met">
-        <option value="nequi">Nequi</option>
-        <option value="bancolombia">Bancolombia</option>
-        <option value="efectivo">Efectivo</option>
-        <option value="datafono">Datafono</option>
-        <option value="digital">Digital</option>
+        <option value="nequi">Nequi</option><option value="bancolombia">Bancolombia</option>
+        <option value="efectivo">Efectivo</option><option value="datafono">Datafono</option><option value="digital">Digital</option>
       </select>
     </div>
     <div class="frow">
@@ -505,7 +531,7 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
       <div class="ffield"><label class="flabel">Domicilio</label><input class="finput" id="edit-domi" type="number" placeholder="4000"></div>
     </div>
     <div class="ffield"><label class="flabel">Items (uno por línea)</label>
-      <textarea class="finput" id="edit-items" style="height:90px;resize:none;" placeholder="1x La Especial $18.900&#10;1x Coca-Cola 400ml $5.400"></textarea>
+      <textarea class="finput" id="edit-items" style="height:90px;resize:none;" placeholder="1x La Especial $18.900"></textarea>
     </div>
     <button class="edit-save" id="editGuardar">💾 Guardar cambios</button>
     <button class="edit-cancel-btn" id="editCancelar">Cancelar</button>
@@ -513,19 +539,67 @@ body{background:var(--bg);color:var(--white);font-family:'Archivo',sans-serif;mi
 </div>
 
 <script>
-var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5",rest=null,pin="",known={},timer=null;
+var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
+var rest=null,pin="",known={},timer=null;
 var ESTADOS={confirmado:{l:"Recibido",c:"tr",n:"en_preparacion",bl:"🔵 Preparando",bc:"bp"},en_preparacion:{l:"Preparando",c:"tp",n:"listo",bl:"🟡 Listo",bc:"bl"},listo:{l:"Listo",c:"tl2",n:"en_camino",bl:"🛵 En camino",bc:"bc"},en_camino:{l:"En camino",c:"tc",n:"entregado",bl:"✅ Entregado",bc:"be"},entregado:{l:"Entregado",c:"te",n:null,bl:null,bc:null}};
-var filtroActual="hoy",pedidoAEliminar=null,editPedidoId=null,chatBadgeCount=0;
+var filtroActual="hoy",pedidoAEliminar=null,editPedidoId=null;
+var chatBadgeCount=0,pedidosBadgeCount=0;
 var ultimoMensajeTs={};
+var chatUniversalFiltro="todos";
+var chatUniversalData=[];
+
+// ── SONIDOS ──────────────────────────────────────────────────────────────────
+function playSound(tipo) {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (tipo === "nuevo_pedido") {
+      // Sonido urgente - 3 notas rápidas ascendentes
+      [[880,0,0.4],[1046,0.12,0.4],[1318,0.24,0.5]].forEach(function(n) {
+        var o=ctx.createOscillator(), g=ctx.createGain(), t=ctx.currentTime+n[1];
+        o.type="square"; o.frequency.setValueAtTime(n[0],t);
+        g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(n[2],t+0.01);
+        g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+        o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+0.3);
+      });
+    } else if (tipo === "cambio_estado") {
+      // Ding suave - 2 tonos
+      [[523,0,0.3],[659,0.2,0.3]].forEach(function(n) {
+        var o=ctx.createOscillator(), g=ctx.createGain(), t=ctx.currentTime+n[1];
+        o.type="sine"; o.frequency.setValueAtTime(n[0],t);
+        g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(n[2],t+0.01);
+        g.gain.exponentialRampToValueAtTime(0.001,t+0.6);
+        o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+0.6);
+      });
+    } else if (tipo === "pedido_cerrado") {
+      // Fanfare corto - 4 notas celebración
+      [[523,0,0.3],[659,0.15,0.3],[784,0.3,0.3],[1046,0.45,0.5]].forEach(function(n) {
+        var o=ctx.createOscillator(), g=ctx.createGain(), t=ctx.currentTime+n[1];
+        o.type="triangle"; o.frequency.setValueAtTime(n[0],t);
+        g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(n[2],t+0.02);
+        g.gain.exponentialRampToValueAtTime(0.001,t+0.5);
+        o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+0.5);
+      });
+    } else {
+      // Mensaje nuevo - bip simple
+      [[880,0,0.25],[880,0.15,0.25]].forEach(function(n) {
+        var o=ctx.createOscillator(), g=ctx.createGain(), t=ctx.currentTime+n[1];
+        o.type="sine"; o.frequency.setValueAtTime(n[0],t);
+        g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(n[2],t+0.01);
+        g.gain.exponentialRampToValueAtTime(0.001,t+0.2);
+        o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+0.2);
+      });
+    }
+  } catch(e) {}
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function get(t,f){return fetch(SU+"/rest/v1/"+t+"?"+(f||""),{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json()});}
-function patchPedido(id,estado,tel,num){return fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
-function toggleMenu(id,disp){return fetch("/api/menu-toggle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,disponible:disp})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
-function addMenu(d){return fetch("/api/menu-add",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
+function patchPedido(id,estado,tel,num){return fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json()});}
+function toggleMenu(id,disp){return fetch("/api/menu-toggle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,disponible:disp})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json()});}
+function addMenu(d){return fetch("/api/menu-add",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json()});}
 function notif(m){var e=document.getElementById("notif");e.textContent=m;e.classList.add("show");setTimeout(function(){e.classList.remove("show")},2500);}
 function fmt(n){return"$"+Number(n||0).toLocaleString("es-CO");}
 function ago(d){var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<1?"ahora":diff<60?diff+" min":Math.floor(diff/60)+"h";}
-function bell(){try{var c=new(window.AudioContext||window.webkitAudioContext)();[[523,0],[659,0.18],[784,0.36]].forEach(function(n){var o=c.createOscillator(),g=c.createGain(),t=c.currentTime+n[1];o.type="sine";o.frequency.setValueAtTime(n[0],t);o.frequency.exponentialRampToValueAtTime(n[0]*0.5,t+1.2);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.35,t+0.01);g.gain.exponentialRampToValueAtTime(0.001,t+1.5);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+1.5);});}catch(e){}}
 
 // PIN
 for(var i=0;i<=9;i++){(function(n){var el=document.getElementById("k"+n);if(el)el.addEventListener("click",function(){pinKey(String(n));});})(i);}
@@ -548,7 +622,7 @@ function goApp(){
   setTimeout(checkNuevosMensajes,3000);
 }
 
-// NOTIFICACIÓN MENSAJES NUEVOS
+// NOTIFICACIÓN MENSAJES — badge en tab CHATS (no Config)
 function checkNuevosMensajes(){
   if(!rest)return;
   var hace3=new Date(Date.now()-3*60*1000).toISOString();
@@ -558,32 +632,32 @@ function checkNuevosMensajes(){
     msgs.forEach(function(m){
       var key=m.telefono;
       var tsActual=ultimoMensajeTs[key]||"";
-      if(m.created_at>tsActual){
-        if(tsActual)nuevos++;
-        ultimoMensajeTs[key]=m.created_at;
-      }
+      if(m.created_at>tsActual){if(tsActual)nuevos++;ultimoMensajeTs[key]=m.created_at;}
     });
     if(nuevos>0){
       chatBadgeCount+=nuevos;
       var badge=document.getElementById("chatBadge");
       badge.textContent=chatBadgeCount>9?"9+":String(chatBadgeCount);
       badge.classList.add("show");
-      document.getElementById("alertText").textContent="💬 "+nuevos+" mensaje"+(nuevos>1?"s nuevos de clientes":" nuevo de un cliente");
+      document.getElementById("alertText").textContent="💬 "+nuevos+" mensaje"+(nuevos>1?"s nuevos":"  nuevo de un cliente");
       document.getElementById("alertBanner").classList.add("show");
-      bell();
+      playSound("nuevo_mensaje");
       setTimeout(function(){document.getElementById("alertBanner").classList.remove("show");},6000);
     }
   }).catch(function(){});
 }
+
 document.getElementById("alertClose").addEventListener("click",function(e){e.stopPropagation();document.getElementById("alertBanner").classList.remove("show");});
-document.getElementById("alertBanner").addEventListener("click",function(e){if(e.target!==document.getElementById("alertClose")){showTab("pedidos");}});
+document.getElementById("alertBanner").addEventListener("click",function(e){if(e.target!==document.getElementById("alertClose")){showTab("chat");}});
 
 // TABS
-document.getElementById("tab-pedidos").addEventListener("click",function(){showTab("pedidos");});
+document.getElementById("tab-pedidos").addEventListener("click",function(){showTab("pedidos");pedidosBadgeCount=0;document.getElementById("pedidosBadge").classList.remove("show");});
 document.getElementById("tab-historial").addEventListener("click",function(){showTab("historial");});
 document.getElementById("tab-menu").addEventListener("click",function(){showTab("menu");});
+document.getElementById("tab-chat").addEventListener("click",function(){showTab("chat");chatBadgeCount=0;document.getElementById("chatBadge").classList.remove("show");});
 document.getElementById("tab-promo").addEventListener("click",function(){showTab("promo");});
-document.getElementById("tab-config").addEventListener("click",function(){showTab("config");chatBadgeCount=0;document.getElementById("chatBadge").classList.remove("show");});
+document.getElementById("tab-config").addEventListener("click",function(){showTab("config");});
+
 function showTab(n){
   document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active");});
   document.querySelectorAll(".nav-tab").forEach(function(t){t.classList.remove("active");});
@@ -592,23 +666,34 @@ function showTab(n){
   if(n==="historial")loadHistorial();
   if(n==="menu")loadMenu();
   if(n==="promo")loadPromoCount();
+  if(n==="chat")loadChatUniversal();
 }
 
 // PEDIDOS
 function loadPedidos(){
   if(!rest)return;
   get("pedidos","restaurante_id=eq."+rest.id+"&estado=neq.entregado&order=created_at.desc&limit=20").then(function(pedidos){
-    pedidos.forEach(function(p){if(!known[p.id]&&Object.keys(known).length>0){notif("🛒 Pedido #"+p.numero_pedido);bell();}known[p.id]=true;});
+    var isFirst=Object.keys(known).length===0;
+    pedidos.forEach(function(p){
+      if(!known[p.id]){
+        if(!isFirst){
+          notif("🛒 Pedido #"+p.numero_pedido);
+          playSound("nuevo_pedido");
+          pedidosBadgeCount++;
+          var badge=document.getElementById("pedidosBadge");
+          badge.textContent=pedidosBadgeCount>9?"9+":String(pedidosBadgeCount);
+          badge.classList.add("show");
+        }
+        known[p.id]=true;
+      }
+    });
     var lista=document.getElementById("pedidosLista");
     if(!pedidos.length){lista.innerHTML='<div class="empty"><div class="ei">🍔</div><div class="et">No hay pedidos activos.<br>Los nuevos aparecen aquí.</div></div>';return;}
     var h="";
     pedidos.forEach(function(p){
       var cfg=ESTADOS[p.estado]||ESTADOS.confirmado;
       var items=Array.isArray(p.items)?p.items:[];
-      var subtotal=Number(p.subtotal||0);
-      var desechables=Number(p.desechables||0);
-      var domicilio=Number(p.domicilio||0);
-      var total=Number(p.total||0);
+      var subtotal=Number(p.subtotal||0),desechables=Number(p.desechables||0),domicilio=Number(p.domicilio||0),total=Number(p.total||0);
       var itemsEnc=encodeURIComponent(JSON.stringify(items));
       h+='<div class="pedido-card">';
       h+='<div class="ph"><div><div class="pnum">#'+p.numero_pedido+'</div><div class="ptime">'+ago(p.created_at)+'</div></div><span class="etag '+cfg.c+'">'+cfg.l+'</span></div>';
@@ -619,7 +704,6 @@ function loadPedidos(){
       if(p.cliente_tel)h+='<div class="chip">📱 '+p.cliente_tel+'</div>';
       if(p.metodo_pago)h+='<div class="chip">💳 '+p.metodo_pago+'</div>';
       h+='</div>';
-      // DESGLOSE COMPLETO
       h+='<div class="desglose">';
       h+='<div class="desglose-row"><span>Subtotal</span><span>'+fmt(subtotal)+'</span></div>';
       h+='<div class="desglose-row"><span>Desechables</span><span>'+fmt(desechables)+'</span></div>';
@@ -629,15 +713,19 @@ function loadPedidos(){
       if(p.comprobante_media_id){h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante de pago</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" alt="Comprobante" onerror="this.style.display=\'none\'"></div>';}
       h+='<div class="ebtns">';
       if(cfg.n)h+='<button class="ebtn '+cfg.bc+'" data-id="'+p.id+'" data-e="'+cfg.n+'" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">'+cfg.bl+'</button>';
-      if(p.estado!=="entregado")h+='<button class="ebtn be" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">✅ Entregado</button>';
-      if(p.cliente_tel)h+='<button class="btn-msg" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">💬</button>';
-      h+='<button class="ebtn" style="background:rgba(255,107,43,0.12);color:var(--orange);border:2px solid rgba(255,107,43,0.25);min-width:auto;flex:0;padding:10px 14px;font-size:15px;" data-edit="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"nequi")+'" data-ptot="'+total+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">✏️</button>';
+      if(p.estado!=="entregado")h+='<button class="ebtn be" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">✅ Listo</button>';
+      if(p.cliente_tel)h+='<button class="btn-msg" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'" title="Chat">💬</button>';
+      // BOTÓN IMPRIMIR TICKET
+      h+='<button class="ebtn" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:2px solid rgba(59,130,246,0.3);flex:0;padding:10px 14px;font-size:14px;" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+desechables+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'" title="Imprimir ticket">🖨️</button>';
+      h+='<button class="ebtn" style="background:rgba(255,107,43,0.12);color:var(--orange);border:2px solid rgba(255,107,43,0.25);flex:0;padding:10px 14px;font-size:14px;" data-edit="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"nequi")+'" data-ptot="'+total+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'" title="Editar">✏️</button>';
       h+='</div></div></div>';
     });
     lista.innerHTML=h;
     lista.querySelectorAll(".comprobante-img").forEach(function(img){img.addEventListener("click",function(){document.getElementById("imgOverlayImg").src=this.src;document.getElementById("imgOverlay").classList.add("open");});});
     lista.querySelectorAll(".ebtn[data-e]").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"),this.getAttribute("data-n"));});});
     lista.querySelectorAll(".btn-msg").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();abrirMensaje(this.getAttribute("data-tel"),this.getAttribute("data-num"));});});
+    // IMPRIMIR TICKET
+    lista.querySelectorAll("[data-print='1']").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();imprimirTicket(this);});});
     lista.querySelectorAll("[data-edit='1']").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();
       editPedidoId=this.getAttribute("data-pid");
       document.getElementById("editPedidoNum").textContent="#"+this.getAttribute("data-pnum");
@@ -651,14 +739,49 @@ function loadPedidos(){
   }).catch(function(e){console.error(e);});
 }
 
+// IMPRIMIR TICKET DIRECTO
+function imprimirTicket(btn) {
+  var num=btn.getAttribute("data-pnum");
+  var tel=(btn.getAttribute("data-ptel")||"").replace(/[^0-9]/g,"");
+  var dir=decodeURIComponent(btn.getAttribute("data-pdir")||"");
+  var met=btn.getAttribute("data-pmet")||"";
+  var total=Number(btn.getAttribute("data-ptot")||0);
+  var des=Number(btn.getAttribute("data-pdes")||0);
+  var dom=Number(btn.getAttribute("data-pdom")||0);
+  var subtotal=total-des-dom;
+  var items=[];
+  try{items=JSON.parse(decodeURIComponent(btn.getAttribute("data-pitems")||"[]"));}catch(e){}
+  var ventana=window.open("","_blank","width=400,height=600");
+  var ticket="<html><head><meta charset='UTF-8'><title>Ticket #"+num+"</title><style>body{font-family:monospace;font-size:12px;margin:10px}hr{border:1px dashed #ccc}h3{text-align:center;margin:4px 0}.row{display:flex;justify-content:space-between}.total{font-weight:700;font-size:14px}</style></head><body>";
+  ticket+="<h3>LA CURVA STREET FOOD</h3><h3>Canaveral - Cali</h3><hr>";
+  ticket+="<div class='row'><span>Pedido #"+num+"</span><span>"+tel+"</span></div><hr>";
+  ticket+="<b>PRODUCTOS:</b><br>";
+  items.forEach(function(i){ticket+="• "+i+"<br>";});
+  ticket+="<hr>";
+  ticket+="<div class='row'><span>Subtotal</span><span>"+fmt(subtotal)+"</span></div>";
+  ticket+="<div class='row'><span>Desechables</span><span>"+fmt(des)+"</span></div>";
+  ticket+="<div class='row'><span>Domicilio</span><span>"+fmt(dom)+"</span></div>";
+  ticket+="<hr><div class='row total'><span>TOTAL</span><span>"+fmt(total)+"</span></div><hr>";
+  ticket+="<div>Direcc: "+dir+"</div><div>Pago: "+met+"</div><hr>";
+  ticket+="<h3>GRACIAS POR SU PEDIDO</h3>";
+  ticket+="<script>window.onload=function(){window.print();window.close();}<\/script></body></html>";
+  ventana.document.write(ticket);
+  ventana.document.close();
+}
+
 document.getElementById("imgOverlayClose").addEventListener("click",function(){document.getElementById("imgOverlay").classList.remove("open");});
 document.getElementById("imgOverlay").addEventListener("click",function(e){if(e.target===this)this.classList.remove("open");});
 
 function cambiarEstado(id,estado,tel,num){
   notif("Actualizando...");
   patchPedido(id,estado,tel,num).then(function(){
-    var msgs={en_preparacion:"👨‍🍳 Notificado: preparando",listo:"✅ Notificado: listo",en_camino:"🛵 Notificado: en camino",entregado:"✓ Marcado entregado"};
-    notif(msgs[estado]||"✓ Listo");
+    if(estado==="entregado"){
+      playSound("pedido_cerrado");notif("🎉 Pedido #"+num+" cerrado!");
+    } else {
+      playSound("cambio_estado");
+      var msgs={en_preparacion:"👨‍🍳 Notificado: preparando",listo:"✅ Notificado: listo",en_camino:"🛵 Notificado: en camino"};
+      notif(msgs[estado]||"✓ Listo");
+    }
     loadPedidos();loadStats();
   }).catch(function(e){notif("❌ "+e.message.substring(0,40));});
 }
@@ -680,31 +803,20 @@ document.getElementById("editGuardar").addEventListener("click",function(){
   var itemsRaw=document.getElementById("edit-items").value.trim().split("\n").filter(function(l){return l.trim();});
   var total=Number(document.getElementById("edit-total").value)||0;
   var domicilio=Number(document.getElementById("edit-domi").value)||0;
-  var payload={
-    direccion:document.getElementById("edit-dir").value.trim()||null,
-    metodo_pago:document.getElementById("edit-met").value,
-    total:total,
-    domicilio:domicilio,
-    items:itemsRaw
-  };
+  var payload={direccion:document.getElementById("edit-dir").value.trim()||null,metodo_pago:document.getElementById("edit-met").value,total:total,domicilio:domicilio,items:itemsRaw};
   var btn=this;btn.textContent="Guardando...";btn.disabled=true;
-  fetch(SU+"/rest/v1/pedidos?id=eq."+editPedidoId,{
-    method:"PATCH",
-    headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
-    body:JSON.stringify(payload)
-  }).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t)});return r.text();})
+  fetch(SU+"/rest/v1/pedidos?id=eq."+editPedidoId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
+  .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t)});return r.text();})
   .then(function(){notif("✅ Pedido actualizado");document.getElementById("editOverlay").classList.remove("open");editPedidoId=null;loadPedidos();loadStats();})
   .catch(function(e){notif("❌ "+e.message.substring(0,40));})
   .finally(function(){btn.textContent="💾 Guardar cambios";btn.disabled=false;});
 });
 
 // HISTORIAL
-document.querySelectorAll(".filtro-btn").forEach(function(b){
+document.querySelectorAll(".filtro-btn[data-filtro]").forEach(function(b){
   b.addEventListener("click",function(){
-    document.querySelectorAll(".filtro-btn").forEach(function(x){x.classList.remove("active");});
-    this.classList.add("active");
-    filtroActual=this.getAttribute("data-filtro");
-    loadHistorial();
+    document.querySelectorAll(".filtro-btn[data-filtro]").forEach(function(x){x.classList.remove("active");});
+    this.classList.add("active");filtroActual=this.getAttribute("data-filtro");loadHistorial();
   });
 });
 function getFechaFiltro(){
@@ -720,8 +832,7 @@ function loadHistorial(){
   var filtro="restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=100";
   if(fecha)filtro+="&created_at=gte."+fecha;
   get("pedidos",filtro).then(function(ps){
-    var il=document.getElementById("informeLista");
-    var hl=document.getElementById("historialLista");
+    var il=document.getElementById("informeLista"),hl=document.getElementById("historialLista");
     if(!ps.length){il.innerHTML="";hl.innerHTML='<div class="empty"><div class="ei">📊</div><div class="et">No hay pedidos en este período</div></div>';return;}
     var tot=ps.reduce(function(s,p){return s+Number(p.total)},0);
     var pagos={},productos={};
@@ -730,16 +841,14 @@ function loadHistorial(){
     var topProd=Object.keys(productos).sort(function(a,b){return productos[b]-productos[a]})[0]||"—";
     var promedio=ps.length>0?Math.round(tot/ps.length):0;
     var labelFiltro={hoy:"Hoy",semana:"Últimos 7 días",mes:"Últimos 30 días",todo:"Todo el tiempo"}[filtroActual];
-    il.innerHTML='<div class="informe-card">'+
-      '<div class="informe-title">📈 Informe — '+labelFiltro+'</div>'+
+    il.innerHTML='<div class="informe-card"><div class="informe-title">📈 Informe — '+labelFiltro+'</div>'+
       '<div class="informe-row"><span class="informe-label">Total pedidos</span><span class="informe-val">'+ps.length+'</span></div>'+
       '<div class="informe-row"><span class="informe-label">Total ventas</span><span class="informe-val" style="color:var(--green)">'+fmt(tot)+'</span></div>'+
       '<div class="informe-row"><span class="informe-label">Promedio por pedido</span><span class="informe-val">'+fmt(promedio)+'</span></div>'+
       '<div class="informe-row"><span class="informe-label">Método más usado</span><span class="informe-val">'+topPago+'</span></div>'+
       '<div class="informe-row"><span class="informe-label">Producto más pedido</span><span class="informe-val" style="font-size:11px;max-width:160px;text-align:right">'+topProd+'</span></div>'+
       '<button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir informe</button>'+
-      '<button class="btn-borrar-hist" id="btnBorrarHist">🗑️ Borrar historial del período</button>'+
-      '</div>';
+      '<button class="btn-borrar-hist" id="btnBorrarHist">🗑️ Borrar historial del período</button></div>';
     document.getElementById("btnBorrarHist").addEventListener("click",function(){document.getElementById("confirmBorrarHist").classList.add("open");});
     var h="";
     ps.forEach(function(p){
@@ -749,8 +858,8 @@ function loadHistorial(){
         '<div class="hinfo">'+(p.cliente_tel||"—")+" · "+(p.metodo_pago||"—")+'</div>'+
         '<div class="hinfo">'+new Date(p.created_at).toLocaleString("es-CO",{dateStyle:"short",timeStyle:"short"})+'</div></div>'+
         '<div style="text-align:right"><div class="htot">'+fmt(p.total)+'</div>'+
-        '<span class="etag '+cfg.c+'" style="font-size:10px">'+cfg.l+'</span></div>'+
-        '</div><div class="hcard-btns">'+
+        '<span class="etag '+cfg.c+'" style="font-size:10px">'+cfg.l+'</span></div></div>'+
+        '<div class="hcard-btns">'+
         (p.cliente_tel?'<button class="hbtn hbtn-chat" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">💬 Ver chat</button>':'')+
         '<button class="hbtn hbtn-del" data-id="'+p.id+'">🗑️ Eliminar</button>'+
         '</div></div>';
@@ -761,25 +870,18 @@ function loadHistorial(){
   }).catch(function(){});
 }
 
-// ELIMINAR UN PEDIDO
 document.getElementById("confirmEliminarCancel").addEventListener("click",function(){document.getElementById("confirmEliminar").classList.remove("open");pedidoAEliminar=null;});
 document.getElementById("confirmEliminarOk").addEventListener("click",function(){
   if(!pedidoAEliminar)return;
-  var id=pedidoAEliminar;
-  document.getElementById("confirmEliminar").classList.remove("open");
-  pedidoAEliminar=null;
+  var id=pedidoAEliminar;document.getElementById("confirmEliminar").classList.remove("open");pedidoAEliminar=null;
   fetch("/api/pedido/"+id,{method:"DELETE"}).then(function(r){return r.json();}).then(function(d){if(d.ok){notif("🗑️ Pedido eliminado");loadHistorial();loadStats();}else{notif("❌ Error al eliminar");}}).catch(function(){notif("❌ Error de conexión");});
 });
-
-// BORRAR HISTORIAL COMPLETO
 document.getElementById("confirmBorrarHistCancel").addEventListener("click",function(){document.getElementById("confirmBorrarHist").classList.remove("open");});
 document.getElementById("confirmBorrarHistOk").addEventListener("click",function(){
   if(!rest)return;
-  document.getElementById("confirmBorrarHist").classList.remove("open");
-  notif("Borrando historial...");
+  document.getElementById("confirmBorrarHist").classList.remove("open");notif("Borrando historial...");
   var fecha=getFechaFiltro();
-  var filtro="restaurante_id=eq."+rest.id;
-  if(fecha)filtro+="&created_at=gte."+fecha;
+  var filtro="restaurante_id=eq."+rest.id;if(fecha)filtro+="&created_at=gte."+fecha;
   fetch(SU+"/rest/v1/pedidos?"+filtro,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Prefer":"return=minimal"}})
     .then(function(r){if(r.ok||r.status===204){notif("🗑️ Historial borrado");loadHistorial();loadStats();}else{return r.text().then(function(t){notif("❌ Error: "+t.substring(0,40));});}})
     .catch(function(){notif("❌ Error de conexión");});
@@ -790,8 +892,7 @@ function loadMenu(){
   get("menu_items","restaurante_id=eq."+rest.id+"&order=categoria,orden").then(function(items){
     var l=document.getElementById("menuLista");
     if(!items.length){l.innerHTML='<div class="empty"><div class="ei">📋</div><div class="et">Agrega tu primer producto</div></div>';return;}
-    var g={};
-    items.forEach(function(i){if(!g[i.categoria])g[i.categoria]=[];g[i.categoria].push(i);});
+    var g={};items.forEach(function(i){if(!g[i.categoria])g[i.categoria]=[];g[i.categoria].push(i);});
     var h="";
     Object.keys(g).forEach(function(cat){
       h+='<div class="mcat"><div class="mct">'+cat+'</div>';
@@ -803,12 +904,79 @@ function loadMenu(){
   }).catch(function(){});
 }
 
+// CHAT UNIVERSAL
+function filtrarChats(modo){
+  chatUniversalFiltro=modo;
+  ["todos","incompletos","hoy"].forEach(function(m){
+    var btn=document.getElementById("chatFiltro"+m.charAt(0).toUpperCase()+m.slice(1));
+    if(btn)btn.className="filtro-btn"+(m===modo?" active":"");
+  });
+  renderChatUniversal();
+}
+function loadChatUniversal(){
+  if(!rest)return;
+  var lista=document.getElementById("chatUniversalLista");
+  lista.innerHTML='<div class="empty"><div class="ei">💬</div><div class="et">Cargando...</div></div>';
+  // Cargar últimos mensajes
+  get("mensajes","restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=200").then(function(msgs){
+    // Cargar pedidos para cruzar estado
+    get("pedidos","restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=200&select=cliente_tel,estado,numero_pedido,created_at").then(function(pedidos){
+      var pedidosPorTel={};
+      pedidos.forEach(function(p){
+        if(!pedidosPorTel[p.cliente_tel])pedidosPorTel[p.cliente_tel]=[];
+        pedidosPorTel[p.cliente_tel].push(p);
+      });
+      var convsMap={};
+      msgs.forEach(function(m){
+        var tel=m.telefono;
+        if(!convsMap[tel]){convsMap[tel]={tel:tel,ultimo:m.mensaje,fecha:m.created_at,tipo:m.tipo,totalMsgs:0};}
+        convsMap[tel].totalMsgs++;
+      });
+      chatUniversalData=Object.values(convsMap).map(function(c){
+        var peds=pedidosPorTel[c.tel]||[];
+        var tieneAbiero=peds.some(function(p){return p.estado!=="entregado";});
+        var tienePedido=peds.length>0;
+        c.pedidoAbierto=tieneAbiero;
+        c.tienePedido=tienePedido;
+        c.ultimoPedidoNum=peds.length>0?peds[0].numero_pedido:null;
+        return c;
+      }).sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
+      renderChatUniversal();
+    }).catch(function(){renderChatUniversal();});
+  }).catch(function(){lista.innerHTML='<div class="empty"><div class="ei">💬</div><div class="et">Error cargando chats</div></div>';});
+}
+function renderChatUniversal(){
+  var lista=document.getElementById("chatUniversalLista");
+  var datos=chatUniversalData;
+  if(chatUniversalFiltro==="incompletos"){datos=datos.filter(function(c){return c.pedidoAbierto||!c.tienePedido;});}
+  else if(chatUniversalFiltro==="hoy"){var hoyStr=new Date().toISOString().split("T")[0];datos=datos.filter(function(c){return c.fecha&&c.fecha.startsWith(hoyStr);});}
+  if(!datos.length){lista.innerHTML='<div class="empty"><div class="ei">💬</div><div class="et">No hay conversaciones en este filtro</div></div>';return;}
+  var h="";
+  datos.forEach(function(c){
+    var tagClass=c.pedidoAbierto?"tag-incompleto":"tag-completado";
+    var tagLabel=c.pedidoAbierto?"⚠️ Sin cerrar":"✅ Cerrado";
+    if(!c.tienePedido){tagClass="tag-incompleto";tagLabel="💬 Sin pedido";}
+    var preview=(c.ultimo||"").substring(0,50)+(c.ultimo&&c.ultimo.length>50?"...":"");
+    h+='<div class="chat-univ-item" data-tel="'+c.tel+'" data-num="'+(c.ultimoPedidoNum||"")+'">'+
+      '<div class="chat-univ-top">'+
+      '<div class="chat-univ-tel">📱 '+c.tel+'</div>'+
+      '<span class="chat-univ-tag '+tagClass+'">'+tagLabel+'</span>'+
+      '</div>'+
+      '<div class="chat-univ-preview">'+preview+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-top:4px">'+ago(c.fecha)+(c.ultimoPedidoNum?' · Pedido #'+c.ultimoPedidoNum:'')+'</div>'+
+      '</div>';
+  });
+  lista.innerHTML=h;
+  lista.querySelectorAll(".chat-univ-item").forEach(function(el){
+    el.addEventListener("click",function(){abrirMensaje(this.getAttribute("data-tel"),this.getAttribute("data-num"));});
+  });
+}
+
 // CONFIG
 var modoDiaActual=false;
 function cargarConfig(){
   if(!rest)return;
-  modoDiaActual=rest.modo_dia||false;
-  actualizarToggleModoDia(modoDiaActual);
+  modoDiaActual=rest.modo_dia||false;actualizarToggleModoDia(modoDiaActual);
   document.getElementById("cfg-apertura").value=(rest.hora_apertura||"16:00:00").substring(0,5);
   document.getElementById("cfg-cierre").value=(rest.hora_cierre||"00:00:00").substring(0,5);
   document.getElementById("cfg-menu-dia").value=rest.menu_dia||"";
@@ -830,8 +998,7 @@ document.getElementById("toggleModoDia").addEventListener("click",function(){mod
 document.querySelectorAll(".dia-btn").forEach(function(b){b.addEventListener("click",function(){this.classList.toggle("activo");});});
 document.getElementById("cfgGuardar").addEventListener("click",function(){
   if(!rest){notif("Error: no hay restaurante");return;}
-  var diasSel=[];
-  document.querySelectorAll(".dia-btn.activo").forEach(function(b){diasSel.push(b.getAttribute("data-dia"));});
+  var diasSel=[];document.querySelectorAll(".dia-btn.activo").forEach(function(b){diasSel.push(b.getAttribute("data-dia"));});
   var config={modo_dia:modoDiaActual,hora_apertura:document.getElementById("cfg-apertura").value+":00",hora_cierre:document.getElementById("cfg-cierre").value+":00",menu_dia:document.getElementById("cfg-menu-dia").value.trim(),menu_noche:document.getElementById("cfg-menu-noche").value.trim(),dias_activos:diasSel.join(","),direccion:document.getElementById("cfg-direccion").value.trim(),msg_bienvenida:document.getElementById("cfg-msg-bienvenida").value.trim(),msg_en_preparacion:document.getElementById("cfg-msg-preparacion").value.trim(),msg_listo:document.getElementById("cfg-msg-listo").value.trim(),msg_en_camino:document.getElementById("cfg-msg-camino").value.trim()};
   var btn=this;btn.textContent="Guardando...";btn.disabled=true;
   fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:config})})
@@ -855,8 +1022,7 @@ document.getElementById("promoEnviarBtn").addEventListener("click",function(){va
 document.getElementById("promoConfirmCancel").addEventListener("click",function(){document.getElementById("promoConfirm").classList.remove("open");});
 document.getElementById("promoConfirmOk").addEventListener("click",function(){document.getElementById("promoConfirm").classList.remove("open");enviarPromo();});
 function enviarPromo(){
-  var texto=document.getElementById("promoTexto").value.trim();
-  if(!texto||!rest)return;
+  var texto=document.getElementById("promoTexto").value.trim();if(!texto||!rest)return;
   var btn=document.getElementById("promoEnviarBtn"),label=document.getElementById("promoBtnLabel");
   btn.disabled=true;label.textContent="Enviando...";
   fetch("/api/enviar-promo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,mensaje:texto})})
@@ -866,7 +1032,7 @@ function enviarPromo(){
     .finally(function(){btn.disabled=false;label.textContent="Enviar a todos los clientes";});
 }
 
-// CHAT — FIX SCROLL con requestAnimationFrame
+// CHAT CON CLIENTE — FIX SCROLL + FIX RECARGA TRAS ENVIAR
 var msgTel="",chatTimer=null,chatLastCount=0;
 function formatearHoraChat(f){try{return new Date(f).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}catch(e){return "";}}
 function renderChat(m){
@@ -877,15 +1043,11 @@ function renderChat(m){
   var h="";
   m.forEach(function(x){var cls=x.tipo==="cliente"?"chat-cliente":"chat-restaurante";h+='<div class="chat-bubble '+cls+'"><div>'+(x.mensaje||"")+'</div><div class="chat-time">'+formatearHoraChat(x.created_at)+'</div></div>';});
   box.innerHTML=h;
-  // FIX: requestAnimationFrame garantiza que el DOM se pintó antes de hacer scroll
-  requestAnimationFrame(function(){
-    requestAnimationFrame(function(){
-      box.scrollTop=box.scrollHeight;
-    });
-  });
+  requestAnimationFrame(function(){requestAnimationFrame(function(){box.scrollTop=box.scrollHeight;});});
 }
-function cargarChat(){
+function cargarChat(forzar){
   if(!msgTel||!rest)return;
+  if(forzar)chatLastCount=0;
   fetch("/api/chat/"+encodeURIComponent(msgTel)+"?restaurante_id="+encodeURIComponent(rest.id))
     .then(function(r){return r.json();})
     .then(function(d){if(d.ok)renderChat(d.mensajes||[]);})
@@ -897,21 +1059,27 @@ function abrirMensaje(tel,num){
   document.getElementById("msgTexto").value="";
   document.getElementById("chatMensajes").innerHTML='<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0;">Cargando mensajes...</div>';
   document.getElementById("msgOverlay").classList.add("open");
-  cargarChat();
+  cargarChat(true);
   if(chatTimer)clearInterval(chatTimer);
-  chatTimer=setInterval(cargarChat,5000);
+  chatTimer=setInterval(function(){cargarChat(false);},4000);
   setTimeout(function(){document.getElementById("msgTexto").focus();},400);
 }
 function cerrarChat(){document.getElementById("msgOverlay").classList.remove("open");if(chatTimer){clearInterval(chatTimer);chatTimer=null;}chatLastCount=0;}
 document.getElementById("msgCancelar").addEventListener("click",function(){cerrarChat();});
 document.getElementById("msgOverlay").addEventListener("click",function(e){if(e.target===this)cerrarChat();});
 document.getElementById("msgEnviar").addEventListener("click",function(){
-  var texto=document.getElementById("msgTexto").value.trim();
-  if(!texto){notif("Escribe un mensaje");return;}
+  var texto=document.getElementById("msgTexto").value.trim();if(!texto){notif("Escribe un mensaje");return;}
   var btn=this;btn.textContent="Enviando...";btn.disabled=true;
   fetch("/enviar-mensaje-cliente",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telefono:msgTel,mensaje:texto,restaurante_id:rest?rest.id:null})})
     .then(function(r){return r.json();})
-    .then(function(d){if(d.ok){document.getElementById("msgTexto").value="";notif("✅ Mensaje enviado!");chatLastCount=0;cargarChat();}else{notif("❌ Error: "+(d.error||"").substring(0,30));}})
+    .then(function(d){
+      if(d.ok){
+        document.getElementById("msgTexto").value="";
+        notif("✅ Mensaje enviado!");
+        // FIX: esperar 1.5s para que Supabase registre el mensaje y luego recargar
+        setTimeout(function(){cargarChat(true);},1500);
+      }else{notif("❌ Error: "+(d.error||"").substring(0,30));}
+    })
     .catch(function(){notif("❌ Error de conexión");})
     .finally(function(){btn.textContent="📤 Enviar";btn.disabled=false;});
 });
