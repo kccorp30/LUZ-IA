@@ -130,14 +130,7 @@ body {
 #app{display:none;position:relative;z-index:1}
 
 /* TOPBAR */
-.topbar {
-  position:fixed;top:0;left:0;right:0;z-index:100;
-  height:58px;
-  background:rgba(13,10,26,0.7);
-  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
-  border-bottom:1px solid var(--glass-border);
-  display:flex;align-items:center;padding:0 16px;gap:10px;
-}
+/* topbar-orig removed */
 .topbar-orb {
   width:34px;height:34px;border-radius:11px;flex-shrink:0;
   background:linear-gradient(135deg,#7c3aed,#2563eb);
@@ -146,10 +139,7 @@ body {
   font-family:'JetBrains Mono',monospace;
   box-shadow:0 4px 12px rgba(124,58,237,0.5);
 }
-.topbar-info{flex:1;min-width:0}
-.topbar-brand{font-size:15px;font-weight:800;letter-spacing:-0.01em}
-.topbar-rest{font-size:11px;color:var(--text3);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+
 .live-pill {
   display:flex;align-items:center;gap:5px;
   background:rgba(16,185,129,0.12);
@@ -179,10 +169,7 @@ body {
 .nav-badge.show{display:block}
 
 /* CONTENT */
-.content{
-  padding-top:58px;
-  padding-bottom:calc(72px + env(safe-area-inset-bottom));
-}
+/* content-old removed */
 .page{display:none}
 .page.active{display:block;animation:fadeUp 0.22s ease both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -935,20 +922,7 @@ select.finput{cursor:pointer}
 }
 
 /* ── TOPBAR VIVID ───────────────────────────────────────── */
-.topbar {
-  position:fixed;top:0;left:0;right:0;z-index:200;height:62px;
-  background:linear-gradient(90deg,#0d0820 0%,#130a2a 50%,#0d0820 100%);
-  border-bottom:1px solid rgba(124,58,237,0.3);
-  box-shadow:0 1px 0 rgba(124,58,237,0.15),0 4px 32px rgba(0,0,0,0.6);
-  display:flex;align-items:center;padding:0 14px;justify-content:space-between;overflow:hidden;
-}
-.topbar::before {
-  content:'';position:absolute;top:0;left:-100%;width:200%;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(196,181,253,0.6),rgba(124,58,237,0.8),rgba(196,181,253,0.6),transparent);
-  animation:topbarShimmer 4s ease-in-out infinite;pointer-events:none;
-}
-@keyframes topbarShimmer{0%{left:-100%}100%{left:100%}}
-.topbar-logo-area{display:flex;align-items:center;gap:12px}
+/* topbar-dupe removed */.topbar-logo-area{display:flex;align-items:center;gap:12px}
 .topbar-orb-wrap{position:relative;flex-shrink:0}
 .topbar-orb {
   width:44px;height:44px;border-radius:16px;
@@ -1005,7 +979,7 @@ select.finput{cursor:pointer}
 .chat-item-tag{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;flex-shrink:0}
 
 /* Content padding for new nav */
-.content{padding-top:62px;padding-bottom:calc(110px + env(safe-area-inset-bottom))}
+/* content-62 removed */
 
 
 /* ── MENU TABS ─────────────────────────────────── */
@@ -1078,6 +1052,64 @@ select.finput{cursor:pointer}
   border-radius:12px;color:var(--text3);font-family:'Plus Jakarta Sans',sans-serif;
   font-size:13px;font-weight:600;cursor:pointer;
 }
+
+/* ══════════════════════════════════════
+   DEFINITIVE LAYOUT — single source of truth
+══════════════════════════════════════ */
+
+/* PIN SCREEN */
+#pinScreen {
+  position:fixed;inset:0;z-index:9999;
+  background:#0d0a1a;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;overflow:hidden;
+}
+
+/* APP */
+#app {
+  display:none;
+  min-height:100vh;
+}
+
+/* TOPBAR */
+.topbar {
+  position:fixed;top:0;left:0;right:0;z-index:500;
+  height:60px;
+  background:linear-gradient(90deg,#0d0820 0%,#130a2a 50%,#0d0820 100%);
+  border-bottom:1px solid rgba(124,58,237,0.3);
+  box-shadow:0 1px 0 rgba(124,58,237,0.15),0 4px 32px rgba(0,0,0,0.6);
+  display:flex;align-items:center;padding:0 14px;
+  justify-content:space-between;overflow:hidden;
+}
+.topbar::before {
+  content:'';position:absolute;top:0;left:-100%;width:200%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(196,181,253,0.6),rgba(124,58,237,0.8),rgba(196,181,253,0.6),transparent);
+  animation:topbarShimmer 4s ease-in-out infinite;
+}
+@keyframes topbarShimmer{0%{left:-100%}100%{left:100%}}
+
+/* CONTENT */
+.content {
+  padding-top:60px;
+  padding-bottom:calc(96px + env(safe-area-inset-bottom));
+}
+
+/* FLOAT NAV */
+.float-nav {
+  position:fixed;bottom:12px;left:50%;transform:translateX(-50%);
+  z-index:400;
+  width:calc(100% - 20px);max-width:480px;
+}
+.float-nav-inner {
+  background:rgba(15,10,35,0.94);
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  border:1px solid rgba(124,58,237,0.35);
+  border-radius:28px;
+  display:flex;
+  padding:5px 4px calc(5px + env(safe-area-inset-bottom));
+  box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 40px rgba(124,58,237,0.12);
+}
+
 </style>
 </head>
 <body>
