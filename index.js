@@ -136,22 +136,12 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
       headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
     });
     console.log("Pedido #" + pedidoData.orderNumber + " guardado. ID:", response.data[0]?.id || "?");
-    notificarDashboard(response.data[0]);
-    // Guardar dirección frecuente
     if (pedidoData.address && pedidoData.address !== "Por confirmar") {
       guardarDireccionFrecuente(restauranteId, pedidoData.phone, pedidoData.address);
     }
   } catch (err) {
     console.error("Error guardando pedido:", err.response ? JSON.stringify(err.response.data) : err.message);
   }
-}
-
-function notificarDashboard(pedido) {
-  var url = process.env.DASHBOARD_WEBHOOK_URL;
-  if (!url || !pedido) return;
-  axios.post(url, { evento: "nuevo_pedido", pedido }, { timeout: 4000 })
-    .then(function() { console.log("Dashboard notificado #" + pedido.numero_pedido); })
-    .catch(function(e) { console.error("Error dashboard:", e.message); });
 }
 
 async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo, comprobanteMediaId) {
@@ -184,7 +174,7 @@ async function deleteOrderState(telefono) {
   } catch (e) { console.error("deleteOrderState:", e.message); }
 }
 
-function getMenuUrl() { return process.env.MENU_PAGE_URL || "https://bit.ly/LaCurvaStreetFood"; }
+function getMenuUrl() { return process.env.MENU_PAGE_URL || "https://luz-ia-production-4cff.up.railway.app/menu"; }
 
 async function descargarImagenMeta(mediaId) {
   try {
@@ -241,19 +231,28 @@ function getMensaje(restaurante, clave, fallback) {
 
 const MENU_FALLBACK = `
 HAMBURGUESAS TRADICIONALES:
-- La especial: $18.900 - La sencilla: $16.900 - La curva: $29.900
-- La Mega especial: $37.900 - La doble carne: $24.900 - La super queso: $22.900 - La de pollo: $19.900
+- La Especial: $18.900 - La Sencilla: $16.900 - La Curva: $29.900
+- La Mega Especial: $37.900 - La Doble Carne: $24.900 - La Super Queso: $22.900 - La de Pollo: $19.900
 
 HAMBURGUESAS ANGUS (papa rustica, chipotle, tocineta, queso cheddar, cebolla morada):
 - Angus Especial: $26.900 - Angus Doble: $36.900 - Angus Mixta: $37.900 - Madurita: $29.900
-- Montanera: $35.900 - Celestina: $31.900 - BBQ King: $30.900 - La mela: $29.400 - Mexicana: $32.900
+- Montanera: $35.900 - Celestina: $31.900 - BBQ King: $30.900 - La Mela: $29.400 - Mexicana: $32.900
 
 HOT DOGS:
-- Italiano: $16.900 - Italo-ranchero: $17.900 - Mexicano: $18.400 - Perro la Curva: $29.400
-- Chuzo-pan: $19.900 - Chori-perro: $18.900 - Americano: $19.900 - La perra: $18.900
+- Italiano: $16.900 (salchicha americana, lechuga, ripio, queso fundido, salsas y tocineta)
+- Italo-ranchero: $17.900 (dos salchichas rancheras, lechuga, queso, ripio, salsas y tocineta)
+- Mexicano: $18.400 (lechuga, ripio, salsas, salchicha americana, jalapeños, queso y chimichurri)
+- Perro la Curva: $29.400 (lechuga, salsas, salchicha americana, queso fundido, maiz y tocineta)
+- Chuzo-pan: $19.900 (lechuga, res, pollo, queso premium rallado, ripio y salsa)
+- Chori-perro: $18.900 (lechuga, chorizo santarrosano, salsa mexicana, queso rallado, salsas y ripio)
+- Americano: $19.900 (salchicha americana, batavia, ripio, maduro calado, queso fundido y tocineta)
+- La Perra: $18.900 (mucha tocineta, salsas, queso rallado y ripio)
 
 SALCHIPAPAS:
-- Sencilla: $17.400 - Criolla: $22.400 - Especial: $36.400 - Mega costena: $58.900
+- Sencilla: $17.400 (papa amarilla, salchicha risch, salsas, queso rallado y ripio)
+- Criolla: $22.400 (papa amarilla, salchicha risch, maduro calado, piña en trozos, salsas y queso rallado)
+- Especial: $36.400 (papa amarilla, salchicha risch, res, pollo, salsas, queso rallado, ripio y tocineta)
+- Mega Costeña: $58.900 (lechuga, papa francesa, salchicha risch, salchicha ranchera, res, pollo, costilla ahumada, maiz, salsas, queso rallado y ripio)
 
 COMBOS: Aplastado especial: $22.900 | Hamburguesa: $23.900 | Perro italiano: $21.900 | 3 Angus+Coca: $81.900
 
@@ -307,6 +306,14 @@ METODOS DE PAGO:
 - Pago mixto: acepta parte digital + parte efectivo
 - NUNCA esperes a que el cliente pida los datos. Dalos SIEMPRE primero.
 
+IMPORTANTE - METODO DE PAGO DESDE EL MENU WEB:
+- Si el cliente llega con un mensaje que incluye "Metodo de pago elegido:" al inicio, ya eligio su metodo de pago desde la pagina del menu.
+- En ese caso NO preguntes como quiere pagar. Directamente dale los datos de pago correspondientes o procede segun el metodo indicado.
+- Si dijo Nequi: dale el numero @NEQUIJOS126 y pide comprobante.
+- Si dijo Bancolombia: dale la llave 0089102980 a nombre de Jose Gregorio Charris y pide comprobante.
+- Si dijo Efectivo: pregunta con que billete cancela y escribe PAGO_EFECTIVO:[valor].
+- Si dijo Datafono: confirma que el domiciliario lo lleva y escribe PAGO_DATAFONO.
+
 PROMOCIONES (hoy es DIA_PLACEHOLDER - solo menciona si aplica hoy):
 - Lunes y Jueves: Pague 2 lleve 3 hamburguesas tradicionales
 - Martes: Pague 2 lleve 3 hot dogs y perros
@@ -321,8 +328,10 @@ DESECHABLES: $500 por cada COMIDA. Bebidas y arepas NO cobran desechable.
 
 DOMICILIO:
 - $2.000: Canaveral
-- $4.000: San Judas, La Granja, La Selva, Santo Domingo
-- $6.000: Ciudad Jardin, Pance, Tequendama, Ingenio, Pampalinda, Melendez, Univalle, Lili, Mojica, Poblado, Mario Correa, Valle del Lili, Calipso, Compartir, Capri, Niza, Caney, Santa Barbara, San Joaquin, centro, extremos
+- $3.000: Gratamiras, Los Cañaverales (sectores del 1 al 6)
+- $4.000: La Selva, San Judas, La Granja, Santo Domingo, Ciudad 2000, Primero de Mayo
+- $5.000: Panamericano, El Dorado, Guabal, Capri
+- $6.000: Caney, Ciudad Jardin, Pance, Tequendama, Ingenio, Pampalinda, Melendez, Univalle, Lili, Mojica, Poblado, Mario Correa, Valle del Lili, Calipso, Compartir, Niza, Santa Barbara, San Joaquin, centro, extremos
 - Barrio desconocido: $4.000 y avisa que puede variar $1.000
 
 CALCULO - muestra siempre:
@@ -338,62 +347,63 @@ CUPONES:
 CUPONES_PLACEHOLDER
 
 RECOMENDACIONES Y NOTAS ESPECIALES DEL CLIENTE:
-- Si el cliente pide algo especial como salsas extras, sin ingrediente, doble porcion, nota especial, instruccion de preparacion o cualquier preferencia personal: incluirlo en los ITEMS del pedido entre parentesis. Ejemplo: "La Especial $18.900 (sin cebolla, extra chimichurri)"
-- Esto es MUY importante para que el restaurante vea la nota en el panel.
+- Si el cliente pide algo especial como salsas extras, sin ingrediente, doble porcion, nota especial, instruccion de preparacion o cualquier preferencia personal: incluirlo en los ITEMS del pedido entre parentesis.
+- Ejemplo: "La Especial $18.900 (sin cebolla, extra chimichurri)"
 
 PEDIDO ADICIONAL A ORDEN YA CONFIRMADA:
-- Si el cliente ya tiene un pedido confirmado (status entregado o cerrado) y quiere agregar algo mas, es un PEDIDO ADICIONAL.
+- Si el cliente ya tiene un pedido confirmado y quiere agregar algo mas, es un PEDIDO ADICIONAL.
 - Escribe al final: PEDIDO_ADICIONAL_DE:[numero del pedido original]
-- Ejemplo: si su pedido original fue #104 y quiere agregar algo, escribe PEDIDO_ADICIONAL_DE:104
 
 IMAGENES:
 - Si el cliente envia una imagen Y tiene un pedido activo esperando pago: es probablemente un comprobante. Confirma el pedido.
-- Si el cliente envia una imagen SIN pedido activo o en medio de una conversacion normal: NO asumas que es comprobante. Responde: "Hola! Vi que enviaste una imagen. Puedes contarme que necesitas o que quieres pedir?"
+- Si el cliente envia una imagen SIN pedido activo: responde "Hola! Vi que enviaste una imagen. Puedes contarme que necesitas?"
 - NUNCA confirmes un pedido por una imagen si no hay pedido activo pendiente de pago.
 
 PREGUNTAS SIN RESPUESTA:
-- Si el cliente pregunta algo que no puedes responder con certeza (disponibilidad especial, precio de algo que no esta en el menu, tiempo exacto de entrega, si pueden hacer algo especial, disponibilidad de ingrediente especifico):
-  Responde: "Un momento, ya te confirmo ese detalle."
-  Y escribe al final: ALERTA_PREGUNTA:[la pregunta del cliente]
+- Si no puedes responder con certeza: "Un momento, ya te confirmo ese detalle." y escribe: ALERTA_PREGUNTA:[la pregunta]
 
 FLUJO:
 1. Saludo -> mensaje amable + link menu
 2. Cliente pide -> confirma con precios. Incluye notas especiales en los items.
 3. Pregunta direccion COMPLETA: calle, numero, barrio. Si tiene direccion frecuente, pregunta si es la misma.
 4. Con direccion -> calcula domicilio y muestra desglose
-5. Confirma -> pregunta pago y da datos
+5. Confirma -> si el cliente NO indico metodo de pago desde el menu, pregunta como quiere pagar y da datos
 6. Pago:
    - Nequi: "Transferi a @NEQUIJOS126 y mandame el comprobante"
    - Bancolombia: "Transferi a llave 0089102980 a Jose Gregorio Charris y mandame comprobante"
-   - Efectivo: pregunta valor -> escribe PAGO_EFECTIVO:[valor]
-   - Datafono: escribe PAGO_DATAFONO
-7. Comprobante -> di: "Listo! Tu pedido quedo confirmado. Te informamos el estado."
+   - Efectivo: pregunta valor -> escribe PAGO_EFECTIVO:[valor del billete]
+   - Datafono: confirma que el domiciliario lo lleva -> escribe PAGO_DATAFONO
+7. Comprobante recibido -> di: "Listo! Tu pedido quedo confirmado. Te informamos el estado." -> escribe PAGO_CONFIRMADO
 8. NUNCA digas tiempo estimado al confirmar.
 
 POST-CONFIRMACION: respuestas cortas y calidas. No reinicies flujo a menos que el cliente pida explicitamente otro pedido.
 
-OBLIGATORIO al confirmar productos:
+OBLIGATORIO - escribe estos tags al final de tu respuesta (el cliente NO los ve):
+
+Al confirmar productos:
 PEDIDO_LISTO:
 ITEMS: [producto1 $precio (notas)|producto2 $precio]
-DESECHABLES: [numero]
-DOMICILIO: [numero o 0]
-TOTAL: [numero]
+DESECHABLES: [numero sin puntos ni signos]
+DOMICILIO: [numero sin puntos ni signos, o 0]
+TOTAL: [numero sin puntos ni signos]
 
-CUANDO TENGAS DIRECCION: DIRECCION_LISTA:[direccion completa]
-TELEFONO ADICIONAL: TELEFONO_ADICIONAL:[numero]
-PEDIDO ADICIONAL: PEDIDO_ADICIONAL_DE:[numero pedido original]
-PREGUNTA SIN RESPUESTA: ALERTA_PREGUNTA:[pregunta]
+Al confirmar direccion: DIRECCION_LISTA:[direccion completa]
+Telefono adicional: TELEFONO_ADICIONAL:[numero]
+Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
+Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
 
-CUANDO EL CLIENTE MANDE COMPROBANTE (imagen) O CONFIRME PAGO DIGITAL: escribe PAGO_CONFIRMADO
-CUANDO SEA PAGO EN EFECTIVO (el cliente lo diga): PAGO_EFECTIVO:[valor del billete que trae, ej: 50000]
-CUANDO SEA DATAFONO: PAGO_DATAFONO
+PAGO - escribe el tag correspondiente cuando confirmes el metodo:
+- Cliente manda comprobante (imagen) o confirma pago digital (Nequi/Bancolombia): PAGO_CONFIRMADO
+- Cliente paga en efectivo: PAGO_EFECTIVO:[valor del billete, ej: 50000]
+- Cliente paga con datafono: PAGO_DATAFONO
 
-REGLAS: NUNCA digas que eres IA...
+REGLAS: NUNCA digas que eres IA. Aplica promos del dia. Si no existe el producto, ofrece alternativas.`;
+
 // ── PRINT TICKET ──────────────────────────────────────────────────────────────
 async function printTicket(orderData) {
   var subtotal = Number(orderData.total) - Number(orderData.desechables||0) - Number(orderData.domicilio||0);
   var pagoLabel =
-    orderData.paymentMethod === "efectivo"    ? "Efectivo - cancela con: " + orderData.cashDenomination :
+    orderData.paymentMethod === "efectivo"    ? "Efectivo - cancela con: " + (orderData.cashDenomination || "?") :
     orderData.paymentMethod === "datafono"    ? "Datafono (llevar)" :
     orderData.paymentMethod === "bancolombia" ? "Bancolombia llave: 0089102980" :
     "Nequi @NEQUIJOS126";
@@ -470,7 +480,6 @@ function parseReply(reply, from) {
       var desech = limpiarNumero(desechMatch ? desechMatch[1] : "0");
       var domicilio = limpiarNumero(domMatch ? domMatch[1] : "0");
 
-      // Extraer notas especiales de los items (texto entre parentesis)
       var notasArr = [];
       items.forEach(function(item) {
         var m = item.match(/\(([^)]+)\)/);
@@ -483,7 +492,7 @@ function parseReply(reply, from) {
         items, desechables: desech, domicilio, total,
         notasEspeciales: notasArr.length > 0 ? notasArr.join(" | ") : null
       };
-      console.log("orderState #" + orderState[from].orderNumber + " para:", from);
+      console.log("orderState #" + orderState[from].orderNumber + " creado para:", from);
       sideEffect = "pedido_registrado";
     }
     cleanReply = cleanReply.replace(/PEDIDO_LISTO:[\s\S]*?(?=DIRECCION_LISTA:|TELEFONO_ADICIONAL:|PAGO_|PEDIDO_ADICIONAL_DE:|ALERTA_PREGUNTA:|$)/g, "").trim();
@@ -491,7 +500,11 @@ function parseReply(reply, from) {
 
   if (reply.indexOf("DIRECCION_LISTA:") !== -1) {
     var dirMatch = reply.match(/DIRECCION_LISTA:(.+)/);
-    if (dirMatch && orderState[from]) { orderState[from].address = dirMatch[1].trim(); orderState[from].status = "esperando_pago"; sideEffect = "direccion_registrada"; }
+    if (dirMatch && orderState[from]) {
+      orderState[from].address = dirMatch[1].trim();
+      orderState[from].status = "esperando_pago";
+      sideEffect = "direccion_registrada";
+    }
     cleanReply = cleanReply.replace(/DIRECCION_LISTA:.+/g, "").trim();
   }
 
@@ -519,17 +532,30 @@ function parseReply(reply, from) {
 
   if (reply.indexOf("PAGO_EFECTIVO:") !== -1) {
     var cashMatch = reply.match(/PAGO_EFECTIVO:(.+)/);
-    if (cashMatch && orderState[from]) { orderState[from].paymentMethod = "efectivo"; orderState[from].cashDenomination = cashMatch[1].trim(); orderState[from].status = "confirmado"; sideEffect = "pago_confirmado"; }
+    if (cashMatch && orderState[from]) {
+      orderState[from].paymentMethod = "efectivo";
+      orderState[from].cashDenomination = cashMatch[1].trim();
+      orderState[from].status = "confirmado";
+      sideEffect = "pago_confirmado";
+    }
     cleanReply = cleanReply.replace(/PAGO_EFECTIVO:.+/g, "").trim();
   }
 
   if (reply.indexOf("PAGO_DATAFONO") !== -1) {
-    if (orderState[from]) { orderState[from].paymentMethod = "datafono"; orderState[from].status = "confirmado"; sideEffect = "pago_confirmado"; }
+    if (orderState[from]) {
+      orderState[from].paymentMethod = "datafono";
+      orderState[from].status = "confirmado";
+      sideEffect = "pago_confirmado";
+    }
     cleanReply = cleanReply.replace("PAGO_DATAFONO", "").trim();
   }
 
   if (reply.indexOf("PAGO_CONFIRMADO") !== -1) {
-    if (orderState[from]) { orderState[from].paymentMethod = orderState[from].paymentMethod || "digital"; orderState[from].status = "confirmado"; sideEffect = "pago_confirmado"; }
+    if (orderState[from]) {
+      orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
+      orderState[from].status = "confirmado";
+      sideEffect = "pago_confirmado";
+    }
     cleanReply = cleanReply.replace("PAGO_CONFIRMADO", "").trim();
   }
 
@@ -609,7 +635,6 @@ app.post("/enviar-mensaje-cliente", async function(req, res) {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// ── PEDIDO MANUAL DESDE PANEL ─────────────────────────────────────────────────
 app.post("/api/pedido-manual", async function(req, res) {
   var { restaurante_id, telefono, items, total, desechables, domicilio, direccion, metodo_pago, notas_especiales } = req.body;
   if (!restaurante_id || !telefono || !items || !total) return res.status(400).json({ error: "Faltan datos" });
@@ -693,7 +718,6 @@ app.get("/api/chat/:telefono", async function(req, res) {
   } catch (e) { res.json({ ok: true, mensajes: [] }); }
 });
 
-// API para obtener direccion frecuente del cliente
 app.get("/api/cliente/:telefono", async function(req, res) {
   if (!req.query.restaurante_id) return res.json({ ok: true, cliente: null });
   try {
@@ -712,9 +736,8 @@ app.delete("/api/pedido/:id", async function(req, res) {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-// API para guardar alerta de pregunta sin respuesta
 app.post("/api/alerta-pregunta", async function(req, res) {
-  var { restaurante_id, telefono, pregunta, numero_pedido } = req.body;
+  var { restaurante_id, telefono, pregunta } = req.body;
   if (!restaurante_id || !pregunta) return res.status(400).json({ error: "Faltan datos" });
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
@@ -764,23 +787,20 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       mediaId = msg.image?.id || msg.document?.id || null;
       esImagen = true;
       var caption = msg.image?.caption || msg.document?.caption || "";
-      userText = caption
-        ? caption + " [El cliente envio una imagen]"
-        : "[El cliente envio una imagen]";
+      userText = caption ? caption + " [El cliente envio una imagen]" : "[El cliente envio una imagen]";
     } else if (msgType === "location") {
       var loc = msg.location;
       userText = "Mi ubicacion es: lat " + loc.latitude + ", lng " + loc.longitude + (loc.name ? " (" + loc.name + ")" : "");
     } else if (msgType === "interactive") {
       userText = msg.interactive?.button_reply?.title || msg.interactive?.list_reply?.title || "";
     } else if (msgType === "reaction") {
-      return; // ignorar reacciones
+      return;
     } else {
       console.log("Tipo no soportado: " + msgType); return;
     }
 
     if (!userText) return;
 
-    // Recuperar orderState
     if (!orderState[from]) {
       var saved = await getOrderState(from);
       if (saved) { orderState[from] = saved; console.log("orderState recuperado para:", from); }
@@ -790,7 +810,6 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     if (restaurante) {
       if (restaurante.estado !== "activo") { console.log("Restaurante inactivo"); return; }
       if (!estaEnHorario(restaurante)) { console.log("Fuera de horario"); return; }
-
       var silencio = await estaEnSilencio(restaurante.id, from);
       if (silencio) {
         console.log("SILENCIO para:", from);
@@ -799,23 +818,19 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       }
     }
 
-    // Determinar si imagen es comprobante o no
     var esComprobante = false;
     if (esImagen && mediaId) {
-      // Solo es comprobante si hay pedido activo esperando pago
       var hayPedidoActivo = orderState[from] && (orderState[from].status === "esperando_pago" || orderState[from].status === "confirmado");
       if (hayPedidoActivo) {
         esComprobante = true;
         userText = "[El cliente envio una imagen, posiblemente comprobante de pago]";
       }
-      // Si no hay pedido activo, Luz preguntara que es
     }
 
     if (!conversations[from]) conversations[from] = [];
     conversations[from].push({ role: "user", content: userText });
     if (conversations[from].length > 20) conversations[from] = conversations[from].slice(-20);
 
-    // Obtener menu
     var menuParaPrompt;
     if (restaurante) {
       var menuConfig = getMenuConfig(restaurante);
@@ -829,15 +844,12 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     var horaStr = horaCol.getHours().toString().padStart(2,"0") + ":" + horaCol.getMinutes().toString().padStart(2,"0");
     var diaHoy = getDiaColombiaStr();
 
-    // Obtener direccion frecuente
     var dirFrecuente = null;
     if (restaurante) dirFrecuente = await getDireccionFrecuente(restaurante.id, from);
-
     var dirFrecuenteTexto = dirFrecuente
       ? "Este cliente ya ha pedido antes. Su ultima direccion fue: " + dirFrecuente + ". Si pide de nuevo, preguntale: 'Te lo mando a " + dirFrecuente + " igual que la vez anterior?' Espera confirmacion antes de asumir."
       : "No hay direccion previa registrada para este cliente.";
 
-    // Obtener cupones activos
     var cuponesTexto = "No hay cupones activos en este momento.";
     if (restaurante && restaurante.cupones_activos) {
       try {
@@ -884,12 +896,11 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     }
 
     var rawReply = claudeResponse.data.content[0].text;
-    console.log("RAW:", rawReply.substring(0, 300));
+    console.log("RAW:", rawReply.substring(0, 400));
     var parsed = parseReply(rawReply, from);
     var cleanReply = parsed.cleanReply;
     var sideEffect = parsed.sideEffect;
 
-    // Comprobante confirmado
     if (esComprobante && mediaId && orderState[from]) {
       orderState[from].comprobanteMediaId = mediaId;
       orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
@@ -898,7 +909,6 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       sideEffect = "pago_confirmado";
     }
 
-    // Alerta pregunta sin respuesta
     if (sideEffect === "alerta_pregunta" && restaurante && orderState[from]?.alertaPregunta) {
       guardarMensajeSupabase(restaurante.id, from, "ALERTA_PREGUNTA: " + orderState[from].alertaPregunta, "alerta_pregunta", null).catch(function(){});
     }
@@ -927,8 +937,10 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       await printTicket({
         orderNumber: state.orderNumber, items: state.items,
         desechables: state.desechables, domicilio: state.domicilio, total: state.total,
-        address: state.address || "Por confirmar", paymentMethod: state.paymentMethod || "digital",
-        cashDenomination: state.cashDenomination || null, extraPhone: state.extraPhone || null,
+        address: state.address || "Por confirmar",
+        paymentMethod: state.paymentMethod || "digital",
+        cashDenomination: state.cashDenomination || null,
+        extraPhone: state.extraPhone || null,
         phone: from, timestamp,
         notasEspeciales: state.notasEspeciales || null,
         pedidoAdicionalDe: state.pedidoAdicionalDe || null
@@ -938,7 +950,8 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       if (!restId) {
         try {
           var svcKey2 = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-          var rf = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=id&limit=1", { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2 } });
+          var rf = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=id&limit=1",
+            { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2 } });
           if (rf.data?.length) restId = rf.data[0].id;
         } catch (e) {}
       }
@@ -950,7 +963,8 @@ async function procesarMensaje(msg, from, phoneNumberId) {
           desechables: Number(state.desechables||0), domicilio: Number(state.domicilio||0),
           total: Number(state.total), address: state.address || "Por confirmar",
           paymentMethod: state.paymentMethod || "digital",
-          comprobanteUrl: state.comprobanteUrl || null, comprobanteMediaId: state.comprobanteMediaId || null,
+          comprobanteUrl: state.comprobanteUrl || null,
+          comprobanteMediaId: state.comprobanteMediaId || null,
           notasEspeciales: state.notasEspeciales || null,
           pedidoAdicionalDe: state.pedidoAdicionalDe || null
         });
