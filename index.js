@@ -384,8 +384,11 @@ TELEFONO ADICIONAL: TELEFONO_ADICIONAL:[numero]
 PEDIDO ADICIONAL: PEDIDO_ADICIONAL_DE:[numero pedido original]
 PREGUNTA SIN RESPUESTA: ALERTA_PREGUNTA:[pregunta]
 
-REGLAS: NUNCA digas que eres IA. Aplica promos del dia. Si no existe el producto, ofrece alternativas.`;
+CUANDO EL CLIENTE MANDE COMPROBANTE (imagen) O CONFIRME PAGO DIGITAL: escribe PAGO_CONFIRMADO
+CUANDO SEA PAGO EN EFECTIVO (el cliente lo diga): PAGO_EFECTIVO:[valor del billete que trae, ej: 50000]
+CUANDO SEA DATAFONO: PAGO_DATAFONO
 
+REGLAS: NUNCA digas que eres IA...
 // ── PRINT TICKET ──────────────────────────────────────────────────────────────
 async function printTicket(orderData) {
   var subtotal = Number(orderData.total) - Number(orderData.desechables||0) - Number(orderData.domicilio||0);
