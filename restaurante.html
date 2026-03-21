@@ -1007,6 +1007,77 @@ select.finput{cursor:pointer}
 /* Content padding for new nav */
 .content{padding-top:62px;padding-bottom:calc(110px + env(safe-area-inset-bottom))}
 
+
+/* ── MENU TABS ─────────────────────────────────── */
+.menu-tabs{display:flex;gap:8px;margin:14px 0 12px}
+.menu-tab{
+  flex:1;padding:10px;border-radius:12px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  color:var(--text3);font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;
+}
+.menu-tab.active{
+  background:linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.2));
+  border-color:rgba(124,58,237,0.5);color:#c4b5fd;
+  box-shadow:0 0 16px rgba(124,58,237,0.15);
+}
+.menu-items-list{
+  background:rgba(0,0,0,0.15);border:1px solid rgba(255,255,255,0.07);
+  border-radius:14px;min-height:40px;margin-bottom:8px;overflow:hidden;
+}
+.menu-item-row{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.05);
+  font-size:13px;
+}
+.menu-item-row:last-child{border:none}
+.menu-item-name{flex:1;color:var(--text);font-weight:500}
+.menu-item-price{
+  font-family:'JetBrains Mono',monospace;font-size:12px;
+  color:#6ee7b7;font-weight:700;
+}
+.menu-item-del{
+  width:24px;height:24px;border-radius:8px;border:none;cursor:pointer;
+  background:rgba(239,68,68,0.15);color:#fca5a5;font-size:14px;
+  display:flex;align-items:center;justify-content:center;transition:all 0.12s;flex-shrink:0;
+}
+.menu-item-del:hover{background:rgba(239,68,68,0.3)}
+.menu-add-btn{
+  width:100%;padding:10px;
+  background:rgba(124,58,237,0.1);border:1px dashed rgba(124,58,237,0.4);
+  border-radius:12px;color:#c4b5fd;font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;
+}
+.menu-add-btn:hover{background:rgba(124,58,237,0.2);border-style:solid}
+/* Add item overlay */
+.menu-add-overlay{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;padding:20px;
+}
+.menu-add-overlay.open{display:flex}
+.menu-add-box{
+  background:rgba(20,15,40,0.98);
+  backdrop-filter:blur(32px);border:1px solid rgba(124,58,237,0.4);
+  border-radius:24px;padding:24px;width:100%;max-width:360px;
+  box-shadow:0 8px 40px rgba(0,0,0,0.6),0 0 40px rgba(124,58,237,0.1);
+}
+.menu-add-title{font-size:18px;font-weight:800;margin-bottom:16px;
+  background:linear-gradient(135deg,#c4b5fd,#818cf8);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.menu-add-save{
+  width:100%;padding:13px;
+  background:linear-gradient(135deg,#7c3aed,#4f46e5);
+  border:none;border-radius:13px;color:white;
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;
+  cursor:pointer;margin-top:10px;box-shadow:0 4px 16px rgba(124,58,237,0.4);
+}
+.menu-add-cancel{
+  width:100%;padding:11px;margin-top:8px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  border-radius:12px;color:var(--text3);font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;
+}
 </style>
 </head>
 <body>
@@ -1201,9 +1272,36 @@ select.finput{cursor:pointer}
         </div>
         <div class="cfg-section">
           <div class="cfg-title">Menu activo</div>
-          <div class="cfg-row"><div><div class="cfg-label">Menu de dia</div><div class="cfg-sub">Cambia entre menu dia/noche</div></div><button class="big-toggle off" id="toggleModoDia"></button></div>
-          <div style="margin-top:12px"><label class="flabel">Texto menu de dia</label><textarea class="finput" id="cfg-menu-dia" placeholder="Menu de dia con precios..." style="height:100px;resize:none;margin-top:6px;"></textarea></div>
-          <div style="margin-top:10px"><label class="flabel">Texto menu de noche</label><textarea class="finput" id="cfg-menu-noche" placeholder="Menu de noche con precios..." style="height:100px;resize:none;margin-top:6px;"></textarea></div>
+          <div class="cfg-row">
+            <div>
+              <div class="cfg-label">Modo de menu</div>
+              <div class="cfg-sub">Elige cual menu usa Luz ahora</div>
+            </div>
+            <button class="big-toggle off" id="toggleModoDia"></button>
+          </div>
+          <!-- Tabs dia/noche -->
+          <div class="menu-tabs">
+            <button class="menu-tab active" id="menuTabDia" onclick="switchMenuTab('dia')">☀️ Dia</button>
+            <button class="menu-tab" id="menuTabNoche" onclick="switchMenuTab('noche')">🌙 Noche</button>
+          </div>
+          <!-- Panel dia -->
+          <div id="menuPanelDia">
+            <div class="menu-items-list" id="menuItemsDia"></div>
+            <button class="menu-add-btn" id="btnAgregarItemDia" onclick="agregarItemMenu('dia')">+ Agregar producto al menu de dia</button>
+            <div style="margin-top:10px">
+              <label class="flabel">O pega el menu completo en texto</label>
+              <textarea class="finput" id="cfg-menu-dia" placeholder="Hamburguesas&#10;La Especial $18.900&#10;La Doble $22.900&#10;&#10;Bebidas&#10;Coca-Cola $5.400" style="height:110px;resize:none;margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:12px;"></textarea>
+            </div>
+          </div>
+          <!-- Panel noche -->
+          <div id="menuPanelNoche" style="display:none">
+            <div class="menu-items-list" id="menuItemsNoche"></div>
+            <button class="menu-add-btn" id="btnAgregarItemNoche" onclick="agregarItemMenu('noche')">+ Agregar producto al menu de noche</button>
+            <div style="margin-top:10px">
+              <label class="flabel">O pega el menu completo en texto</label>
+              <textarea class="finput" id="cfg-menu-noche" placeholder="Menu de noche&#10;La Especial $18.900..." style="height:110px;resize:none;margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:12px;"></textarea>
+            </div>
+          </div>
         </div>
         <div class="cfg-section">
           <div class="cfg-title">Horario</div>
@@ -1325,18 +1423,57 @@ select.finput{cursor:pointer}
     </div>
     <div class="constructor-panel" id="constructorPedido">
       <div class="constructor-header">
-        <div class="constructor-title">Armar pedido manual</div>
-        <button id="btnCerrarConstructor" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1">&#10005;</button>
+        <div class="constructor-title">🛒 Armar pedido</div>
+        <button id="btnCerrarConstructor" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1">✕</button>
       </div>
-      <div class="ffield"><label class="flabel">Items (uno por linea)</label><textarea class="finput" id="con-items" style="height:80px;resize:none;" placeholder="1x La Especial $18.900&#10;1x Coca-Cola $5.400"></textarea></div>
-      <div class="frow"><div class="ffield"><label class="flabel">Total $</label><input class="finput" id="con-total" type="number" placeholder="25800"></div><div class="ffield"><label class="flabel">Domicilio $</label><input class="finput" id="con-domi" type="number" placeholder="4000"></div></div>
-      <div class="frow"><div class="ffield"><label class="flabel">Desechables $</label><input class="finput" id="con-desech" type="number" placeholder="500"></div><div class="ffield"><label class="flabel">Pago</label><select class="finput" id="con-pago"><option value="nequi">Nequi</option><option value="bancolombia">Bancolombia</option><option value="efectivo">Efectivo</option><option value="datafono">Datafono</option><option value="digital">Digital</option></select></div></div>
-      <div class="ffield"><label class="flabel">Direccion</label><input class="finput" id="con-dir" placeholder="Calle, numero, barrio"></div>
-      <div class="ffield"><label class="flabel">Notas especiales</label><input class="finput" id="con-notas" placeholder="Sin cebolla, extra chimichurri..."></div>
-      <button id="btnRegistrarPedido" style="width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:14px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin-top:10px;box-shadow:0 4px 20px rgba(124,58,237,0.4)">Registrar pedido</button>
+
+      <!-- BUSCADOR DE PRODUCTOS -->
+      <div class="prod-search-wrap">
+        <input class="prod-search" id="prodBuscar" placeholder="🔍  Buscar producto..." autocomplete="off">
+        <div class="prod-results" id="prodResults"></div>
+      </div>
+
+      <!-- CARRITO -->
+      <div class="prod-cart" id="prodCart">
+        <div class="prod-cart-empty">Toca un producto para agregarlo</div>
+      </div>
+
+      <!-- DATOS DEL PEDIDO -->
+      <div class="frow" style="margin-top:8px">
+        <div class="ffield">
+          <label class="flabel">Domicilio $</label>
+          <input class="finput" id="con-domi" type="number" placeholder="4000" style="font-family:'JetBrains Mono',monospace">
+        </div>
+        <div class="ffield">
+          <label class="flabel">Pago</label>
+          <select class="finput" id="con-pago">
+            <option value="nequi">Nequi</option>
+            <option value="bancolombia">Bancolombia</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="datafono">Datafono</option>
+            <option value="digital">Digital</option>
+          </select>
+        </div>
+      </div>
+      <div class="ffield">
+        <label class="flabel">Direccion</label>
+        <input class="finput" id="con-dir" placeholder="Calle, numero, barrio">
+      </div>
+      <div class="ffield">
+        <label class="flabel">Notas (opcional)</label>
+        <input class="finput" id="con-notas" placeholder="Sin cebolla, extra salsa...">
+      </div>
+
+      <!-- TOTAL -->
+      <div class="prod-total-row">
+        <span>Total estimado</span>
+        <span class="prod-total-val" id="conTotalDisplay">$0</span>
+      </div>
+
+      <button id="btnRegistrarPedido" style="width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:14px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px;box-shadow:0 4px 20px rgba(124,58,237,0.4)">Registrar pedido</button>
     </div>
   </div>
-</div>
+</div></div>
 
 <div class="edit-overlay" id="editOverlay">
   <div class="edit-box">
@@ -1876,35 +2013,8 @@ document.getElementById("btnCerrarConstructor").addEventListener("click",functio
   document.getElementById("constructorPedido").style.display="none";
   document.getElementById("btnConstructor").classList.remove("active");
 });
-document.getElementById("btnRegistrarPedido").addEventListener("click",function(){
-  if(!rest||!msgTel){notif("Error: no hay cliente activo");return;}
-  var itemsRaw=document.getElementById("con-items").value.trim();
-  var total=Number(document.getElementById("con-total").value)||0;
-  if(!itemsRaw||!total){notif("Completa items y total");return;}
-  var itemsArr=itemsRaw.split("\n").filter(function(l){return l.trim();});
-  var btn=this;btn.textContent="Registrando...";btn.disabled=true;
-  fetch("/api/pedido-manual",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-    restaurante_id:rest.id,telefono:msgTel,
-    items:itemsArr,total:total,
-    desechables:Number(document.getElementById("con-desech").value)||0,
-    domicilio:Number(document.getElementById("con-domi").value)||0,
-    direccion:document.getElementById("con-dir").value.trim()||"Por confirmar",
-    metodo_pago:document.getElementById("con-pago").value,
-    notas_especiales:document.getElementById("con-notas").value.trim()||null
-  })})
-  .then(function(r){return r.json();})
-  .then(function(d){
-    if(d.ok){
-      notif("Pedido #"+d.numero_pedido+" registrado!","#22c55e");
-      document.getElementById("constructorPedido").style.display="none";
-      document.getElementById("btnConstructor").classList.remove("active");
-      ["con-items","con-total","con-desech","con-domi","con-notas"].forEach(function(id){document.getElementById(id).value="";});
-      loadPedidos();loadStats();
-    } else {notif("Error: "+(d.error||"").substring(0,40));}
-  })
-  .catch(function(){notif("Error de conexion");})
-  .finally(function(){btn.textContent="&#10003; Registrar pedido";btn.disabled=false;});
-});
+// old handler removed
+;
 
 // PROMO
 function loadPromoCount(){
@@ -2199,6 +2309,139 @@ function registrarPedidoManual(){
 })();
 setTimeout(function(){if(rest)cargarMenuParaConstructor();},3000);
 
+
+// ── MENU DIA/NOCHE INTELIGENTE ─────────────────────────────────────────────
+var menuItemsDia = [];
+var menuItemsNoche = [];
+var menuAddTurnoActual = 'dia';
+
+function switchMenuTab(turno){
+  document.getElementById('menuPanelDia').style.display = turno==='dia' ? 'block' : 'none';
+  document.getElementById('menuPanelNoche').style.display = turno==='noche' ? 'block' : 'none';
+  document.getElementById('menuTabDia').classList.toggle('active', turno==='dia');
+  document.getElementById('menuTabNoche').classList.toggle('active', turno==='noche');
+}
+
+function renderMenuItems(turno){
+  var items = turno==='dia' ? menuItemsDia : menuItemsNoche;
+  var listEl = document.getElementById(turno==='dia' ? 'menuItemsDia' : 'menuItemsNoche');
+  if(!listEl) return;
+  if(!items.length){
+    listEl.innerHTML = '<div style="padding:14px;text-align:center;color:var(--text3);font-size:12px">Sin productos — agrega uno o pega el menu en texto</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(function(item,i){
+    return '<div class="menu-item-row">'
+      + '<div class="menu-item-name">' + item.nombre + '</div>'
+      + '<div class="menu-item-price">$' + Number(item.precio).toLocaleString('es-CO') + '</div>'
+      + '<button class="menu-item-del" data-turno="'+turno+'" data-idx="'+i+'">×</button>'
+      + '</div>';
+  }).join('');
+  listEl.querySelectorAll('.menu-item-del').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var t = this.getAttribute('data-turno');
+      var idx = parseInt(this.getAttribute('data-idx'));
+      if(t==='dia') menuItemsDia.splice(idx,1);
+      else menuItemsNoche.splice(idx,1);
+      renderMenuItems(t);
+      sincronizarTextareaMenu(t);
+    });
+  });
+}
+
+function sincronizarTextareaMenu(turno){
+  var items = turno==='dia' ? menuItemsDia : menuItemsNoche;
+  var ta = document.getElementById(turno==='dia' ? 'cfg-menu-dia' : 'cfg-menu-noche');
+  if(!ta) return;
+  // Group by category
+  var cats = {};
+  items.forEach(function(item){
+    var cat = item.cat || 'General';
+    if(!cats[cat]) cats[cat] = [];
+    cats[cat].push(item);
+  });
+  var text = Object.keys(cats).map(function(cat){
+    return cat + '\n' + cats[cat].map(function(i){return i.nombre + ' $' + Number(i.precio).toLocaleString('es-CO');}).join('\n');
+  }).join('\n\n');
+  ta.value = text;
+}
+
+function agregarItemMenu(turno){
+  menuAddTurnoActual = turno;
+  document.getElementById('menuAddTitle').textContent = (turno==='dia'?'☀️':'🌙') + ' Agregar al menu de ' + turno;
+  document.getElementById('menuAddNombre').value = '';
+  document.getElementById('menuAddPrecio').value = '';
+  document.getElementById('menuAddCat').value = '';
+  document.getElementById('menuAddOverlay').classList.add('open');
+  setTimeout(function(){document.getElementById('menuAddNombre').focus();},200);
+}
+
+(function(){
+  var saveBtn = document.getElementById('menuAddSave');
+  if(!saveBtn) return;
+  saveBtn.addEventListener('click', function(){
+    var nombre = (document.getElementById('menuAddNombre').value||'').trim();
+    var precio = Number(document.getElementById('menuAddPrecio').value)||0;
+    var cat = (document.getElementById('menuAddCat').value||'General').trim();
+    if(!nombre || !precio){ notif('Ingresa nombre y precio'); return; }
+    var item = {nombre:nombre, precio:precio, cat:cat};
+    if(menuAddTurnoActual==='dia') menuItemsDia.push(item);
+    else menuItemsNoche.push(item);
+    renderMenuItems(menuAddTurnoActual);
+    sincronizarTextareaMenu(menuAddTurnoActual);
+    document.getElementById('menuAddOverlay').classList.remove('open');
+    notif('Producto agregado al menu de ' + menuAddTurnoActual);
+  });
+  // Enter key
+  ['menuAddNombre','menuAddPrecio','menuAddCat'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.addEventListener('keydown', function(e){if(e.key==='Enter'){e.preventDefault();saveBtn.click();}});
+  });
+})();
+
+// Parsear textarea a items cuando se escribe manualmente
+function parsearTextareaMenu(turno){
+  var ta = document.getElementById(turno==='dia' ? 'cfg-menu-dia' : 'cfg-menu-noche');
+  if(!ta) return;
+  var lines = ta.value.split('\n').filter(function(l){return l.trim();});
+  var items = [];
+  var catActual = 'General';
+  lines.forEach(function(line){
+    // Check if it's a price line: ends with $XXXXX
+    var m = line.match(/^(.+?)\s+\$?([\d.,]+)\s*$/);
+    if(m){
+      var precio = parseInt(m[2].replace(/[.,]/g,''));
+      if(precio > 0) items.push({nombre:m[1].trim(), precio:precio, cat:catActual});
+    } else if(!line.includes('$') && line.trim().length > 0){
+      catActual = line.trim();
+    }
+  });
+  if(turno==='dia') menuItemsDia = items;
+  else menuItemsNoche = items;
+  renderMenuItems(turno);
+}
+
+(function(){
+  var taDia = document.getElementById('cfg-menu-dia');
+  var taNoche = document.getElementById('cfg-menu-noche');
+  if(taDia) taDia.addEventListener('blur', function(){ parsearTextareaMenu('dia'); });
+  if(taNoche) taNoche.addEventListener('blur', function(){ parsearTextareaMenu('noche'); });
+})();
 </script>
+<!-- MENU ADD ITEM OVERLAY -->
+<div class="menu-add-overlay" id="menuAddOverlay">
+  <div class="menu-add-box">
+    <div class="menu-add-title" id="menuAddTitle">Agregar producto</div>
+    <input type="hidden" id="menuAddTurno" value="dia">
+    <div class="ffield"><label class="flabel">Nombre del producto</label><input class="finput" id="menuAddNombre" placeholder="La Especial"></div>
+    <div class="frow">
+      <div class="ffield"><label class="flabel">Precio</label><input class="finput" id="menuAddPrecio" type="number" placeholder="18900" style="font-family:'JetBrains Mono',monospace"></div>
+      <div class="ffield"><label class="flabel">Categoria</label><input class="finput" id="menuAddCat" placeholder="Hamburguesas"></div>
+    </div>
+    <button class="menu-add-save" id="menuAddSave">Agregar al menu</button>
+    <button class="menu-add-cancel" onclick="document.getElementById('menuAddOverlay').classList.remove('open')">Cancelar</button>
+  </div>
+</div>
+
 </body>
 </html>
