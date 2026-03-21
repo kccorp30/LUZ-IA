@@ -383,7 +383,7 @@ OBLIGATORIO - escribe estos tags al final de tu respuesta (el cliente NO los ve)
 Al confirmar productos:
 PEDIDO_LISTO:
 ITEMS: [producto1 $precio (notas)|producto2 $precio]
-DESECHABLES: [numero sin puntos ni signos]
+DESECHABLES: [valor total en pesos, ej: 500 si hay 1 comida, 1000 si hay 2 comidas, 1500 si hay 3]
 DOMICILIO: [numero sin puntos ni signos, o 0]
 TOTAL: [numero sin puntos ni signos]
 
@@ -477,7 +477,9 @@ function parseReply(reply, from) {
     if (itemsMatch && totalMatch) {
       var items = itemsMatch[1].split("|").map(function(i) { return i.trim(); });
       var total = limpiarNumero(totalMatch[1]);
-      var desech = limpiarNumero(desechMatch ? desechMatch[1] : "0");
+      var desechRaw = limpiarNumero(desechMatch ? desechMatch[1] : "0");
+      // Si Luz escribe cantidad (1,2,3) en vez del valor en pesos, multiplicar x500
+      var desech = Number(desechRaw) < 50 ? String(Number(desechRaw) * 500) : desechRaw;
       var domicilio = limpiarNumero(domMatch ? domMatch[1] : "0");
 
       var notasArr = [];
@@ -486,11 +488,16 @@ function parseReply(reply, from) {
         if (m) notasArr.push(m[1]);
       });
 
+      // Preservar direccion y paymentMethod si ya existian
+      var prevAddress = orderState[from] ? orderState[from].address : null;
+      var prevPayment = orderState[from] ? orderState[from].paymentMethod : null;
       orderState[from] = {
-        status: "esperando_direccion",
+        status: prevAddress ? "esperando_pago" : "esperando_direccion",
         orderNumber: nextOrderNumber(),
         items, desechables: desech, domicilio, total,
-        notasEspeciales: notasArr.length > 0 ? notasArr.join(" | ") : null
+        notasEspeciales: notasArr.length > 0 ? notasArr.join(" | ") : null,
+        address: prevAddress || null,
+        paymentMethod: prevPayment || null
       };
       console.log("orderState #" + orderState[from].orderNumber + " creado para:", from);
       sideEffect = "pedido_registrado";
