@@ -2322,73 +2322,11 @@ function renderCart(){
   if(domiEl)domiEl.addEventListener('input',renderCart);
 })();
 
-// Registrar pedido smart
-(function(){
-  var btn=document.getElementById('btnRegistrarPedido');
-  if(!btn)return;
-  // Remove old listener by cloning
-  var newBtn=btn.cloneNode(true);
-  btn.parentNode.replaceChild(newBtn,btn);
-  newBtn.addEventListener('click',function(){
-    var items=Object.values(cartItems);
-    if(!items.length){notif('Agrega al menos un producto');return;}
-    if(!rest||!msgTel){notif('Error: no hay cliente');return;}
-    var itemsArr=items.map(function(i){return i.qty+'x '+i.nombre+' '+fmtCOP(i.precio);});
-    var subtotal=items.reduce(function(s,i){return s+i.precio*i.qty;},0);
-    var domiEl=document.getElementById('con-domi');
-    var domi=domiEl?Number(domiEl.value)||0:0;
-    var desech=items.reduce(function(s,i){return s+i.qty;},0)*500;
-    var total=subtotal+desech+domi;
-    var dirEl=document.getElementById('con-dir');
-    var pagEl=document.getElementById('con-pago');
-    var notEl=document.getElementById('con-notas');
-    var dir=dirEl?dirEl.value.trim()||'Por confirmar':'Por confirmar';
-    var pago=pagEl?pagEl.value:'nequi';
-    var notas=notEl?notEl.value.trim()||null:null;
-    this.textContent='Registrando...';this.disabled=true;
-    var self=this;
-    fetch('/api/pedido-manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      restaurante_id:rest.id,telefono:msgTel,items:itemsArr,
-      total:total,desechables:desech,domicilio:domi,
-      direccion:dir,metodo_pago:pago,notas_especiales:notas
-    })})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.ok){
-        notif('Pedido #'+d.numero_pedido+' registrado!');
-        var panel=document.getElementById('constructorPedido');
-        if(panel)panel.style.display='none';
-        var bc=document.getElementById('btnConstructor');
-        var bci=document.getElementById('btnConstructorInline');
-        if(bc)bc.classList.remove('active');
-        if(bci)bci.classList.remove('active');
-        cartItems={};renderCart();
-        loadPedidos();loadStats();
-      }else{notif('Error: '+(d.error||'').substring(0,40));}
-    })
-    .catch(function(){notif('Error de conexion');})
-    .finally(function(){self.textContent='Registrar pedido';self.disabled=false;});
-  });
-})();
+// registrar handled below
 
-// Override constructor buttons
-(function(){
-  function toggleConstructor(){
-    var panel=document.getElementById('constructorPedido');
-    if(!panel)return;
-    if(panel.style.display==='block'){
-      panel.style.display='none';
-      var bc=document.getElementById('btnConstructor');
-      var bci=document.getElementById('btnConstructorInline');
-      if(bc)bc.classList.remove('active');
-      if(bci)bci.classList.remove('active');
-    }else{abrirConstructor();}
-  }
-  var bc=document.getElementById('btnConstructor');
-  var bci=document.getElementById('btnConstructorInline');
-  if(bc){var nb=bc.cloneNode(true);bc.parentNode.replaceChild(nb,bc);nb.addEventListener('click',toggleConstructor);}
-  if(bci){var nbci=bci.cloneNode(true);bci.parentNode.replaceChild(nbci,bci);nbci.addEventListener('click',toggleConstructor);}
-})();
+
+// buttons handled below
+
 
 // Cargar menu para constructor cuando haya restaurante
 setTimeout(function(){if(rest)cargarMenuParaConstructor();},3000);
@@ -2446,6 +2384,104 @@ cargarConfig = function() {
     initMenuEditor('btnEditMenuNoche', 'cfg-menu-noche', 'previewMenuNoche');
   }, 200);
 };
+
+// ── PEDIDO MANUAL — handler limpio ──────────────────────────────────────────
+// Se registra via event delegation — no depende de cloneNode ni orden
+document.addEventListener('click', function(e) {
+  // Registrar pedido
+  if (e.target && (e.target.id === 'btnRegistrarPedido' || e.target.closest('#btnRegistrarPedido'))) {
+    e.preventDefault();
+    var items = Object.values(cartItems);
+    if (!items.length) { notif('Agrega al menos un producto'); return; }
+    if (!rest || !rest.id) { notif('Error: inicia sesion primero'); return; }
+    if (!msgTel) { notif('Error: no hay cliente seleccionado'); return; }
+
+    var itemsArr = items.map(function(i){ return i.qty + 'x ' + i.nombre + ' $' + Number(i.precio).toLocaleString('es-CO'); });
+    var subtotal = items.reduce(function(s,i){ return s + i.precio * i.qty; }, 0);
+    var domiEl   = document.getElementById('con-domi');
+    var domi     = domiEl ? Number(domiEl.value) || 0 : 0;
+    var desech   = items.reduce(function(s,i){ return s + i.qty; }, 0) * 500;
+    var total    = subtotal + desech + domi;
+    var dirEl    = document.getElementById('con-dir');
+    var pagEl    = document.getElementById('con-pago');
+    var notEl    = document.getElementById('con-notas');
+    var dir      = dirEl  ? dirEl.value.trim()  || 'Por confirmar' : 'Por confirmar';
+    var pago     = pagEl  ? pagEl.value : 'nequi';
+    var notas    = notEl  ? notEl.value.trim() || null : null;
+
+    var btn = document.getElementById('btnRegistrarPedido');
+    if (btn) { btn.textContent = 'Registrando...'; btn.disabled = true; }
+
+    console.log('Enviando pedido manual:', {restaurante_id: rest.id, telefono: msgTel, items: itemsArr, total: total});
+
+    fetch('/api/pedido-manual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        restaurante_id: rest.id,
+        telefono:       msgTel,
+        items:          itemsArr,
+        total:          total,
+        desechables:    desech,
+        domicilio:      domi,
+        direccion:      dir,
+        metodo_pago:    pago,
+        notas_especiales: notas
+      })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        notif('Pedido #' + d.numero_pedido + ' registrado!');
+        playSound('nuevo_pedido');
+        var panel = document.getElementById('constructorPedido');
+        if (panel) panel.style.display = 'none';
+        var bc  = document.getElementById('btnConstructor');
+        var bci = document.getElementById('btnConstructorInline');
+        if (bc)  bc.classList.remove('active');
+        if (bci) bci.classList.remove('active');
+        cartItems = {};
+        renderCart();
+        loadPedidos();
+        loadStats();
+      } else {
+        console.error('Error pedido manual:', d);
+        notif('Error: ' + (d.error || 'sin respuesta').substring(0, 50));
+      }
+    })
+    .catch(function(err) {
+      console.error('Fetch error:', err);
+      notif('Error de conexion al servidor');
+    })
+    .finally(function() {
+      var btn2 = document.getElementById('btnRegistrarPedido');
+      if (btn2) { btn2.textContent = 'Registrar pedido'; btn2.disabled = false; }
+    });
+  }
+
+  // Toggle constructor
+  if (e.target && (e.target.id === 'btnConstructor' || e.target.id === 'btnConstructorInline')) {
+    var panel = document.getElementById('constructorPedido');
+    if (!panel) return;
+    if (panel.style.display === 'block') {
+      panel.style.display = 'none';
+      e.target.classList.remove('active');
+    } else {
+      abrirConstructor();
+    }
+  }
+
+  // Cerrar constructor
+  if (e.target && e.target.id === 'btnCerrarConstructor') {
+    var panel = document.getElementById('constructorPedido');
+    if (panel) panel.style.display = 'none';
+    var bc  = document.getElementById('btnConstructor');
+    var bci = document.getElementById('btnConstructorInline');
+    if (bc)  bc.classList.remove('active');
+    if (bci) bci.classList.remove('active');
+  }
+});
+
 </script>
 </body
 </body>
