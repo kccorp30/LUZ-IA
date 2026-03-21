@@ -1115,6 +1115,26 @@ select.finput{cursor:pointer}
   border-radius:12px;margin-bottom:8px;font-size:13px;color:var(--text2);font-weight:600;
 }
 .prod-total-val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+.menu-edit-btn {
+  background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);
+  color:#c4b5fd;border-radius:8px;padding:5px 12px;
+  font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.menu-edit-btn:hover{background:rgba(124,58,237,0.28);border-color:rgba(167,139,250,0.5)}
+.menu-edit-btn.active{background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.35);color:#6ee7b7}
+.menu-preview {
+  background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px;padding:10px 14px;
+  font-size:12px;color:var(--text3);line-height:1.6;
+  max-height:80px;overflow:hidden;
+  font-family:'JetBrains Mono',monospace;
+  white-space:pre;text-overflow:ellipsis;
+  cursor:pointer;transition:border-color 0.15s;
+}
+.menu-preview:hover{border-color:rgba(124,58,237,0.3)}
+.menu-preview.has-content{color:var(--text2)}
 </style>
 </head>
 <body>
@@ -1993,35 +2013,7 @@ document.getElementById("btnCerrarConstructor").addEventListener("click",functio
   document.getElementById("constructorPedido").style.display="none";
   document.getElementById("btnConstructor").classList.remove("active");
 });
-document.getElementById("btnRegistrarPedido").addEventListener("click",function(){
-  if(!rest||!msgTel){notif("Error: no hay cliente activo");return;}
-  var itemsRaw=document.getElementById("con-items").value.trim();
-  var total=Number(document.getElementById("con-total").value)||0;
-  if(!itemsRaw||!total){notif("Completa items y total");return;}
-  var itemsArr=itemsRaw.split("\n").filter(function(l){return l.trim();});
-  var btn=this;btn.textContent="Registrando...";btn.disabled=true;
-  fetch("/api/pedido-manual",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-    restaurante_id:rest.id,telefono:msgTel,
-    items:itemsArr,total:total,
-    desechables:Number(document.getElementById("con-desech").value)||0,
-    domicilio:Number(document.getElementById("con-domi").value)||0,
-    direccion:document.getElementById("con-dir").value.trim()||"Por confirmar",
-    metodo_pago:document.getElementById("con-pago").value,
-    notas_especiales:document.getElementById("con-notas").value.trim()||null
-  })})
-  .then(function(r){return r.json();})
-  .then(function(d){
-    if(d.ok){
-      notif("Pedido #"+d.numero_pedido+" registrado!","#22c55e");
-      document.getElementById("constructorPedido").style.display="none";
-      document.getElementById("btnConstructor").classList.remove("active");
-      ["con-items","con-total","con-desech","con-domi","con-notas"].forEach(function(id){document.getElementById(id).value="";});
-      loadPedidos();loadStats();
-    } else {notif("Error: "+(d.error||"").substring(0,40));}
-  })
-  .catch(function(){notif("Error de conexion");})
-  .finally(function(){btn.textContent="✓ Registrar pedido";btn.disabled=false;});
-});
+// old handler removed
 
 // PROMO
 function loadPromoCount(){
@@ -2401,6 +2393,59 @@ function renderCart(){
 // Cargar menu para constructor cuando haya restaurante
 setTimeout(function(){if(rest)cargarMenuParaConstructor();},3000);
 
+
+// ── MENU EDITOR ───────────────────────────────────────────────────────────────
+function initMenuEditor(btnId, textareaId, previewId) {
+  var btn = document.getElementById(btnId);
+  var ta  = document.getElementById(textareaId);
+  var pre = document.getElementById(previewId);
+  if(!btn||!ta||!pre) return;
+
+  function updatePreview() {
+    var val = ta.value.trim();
+    if(!val) { pre.textContent='Sin menu configurado'; pre.classList.remove('has-content'); return; }
+    var lines = val.split('\n').filter(function(l){return l.trim();});
+    pre.textContent = lines.slice(0,4).join('\n') + (lines.length>4?' ...':'');
+    pre.classList.add('has-content');
+  }
+  updatePreview();
+
+  function toggle() {
+    var isOpen = ta.style.display !== 'none';
+    if(isOpen) {
+      ta.style.display = 'none';
+      btn.textContent = '✏️ Editar';
+      btn.classList.remove('active');
+      updatePreview();
+    } else {
+      ta.style.display = 'block';
+      btn.textContent = '✓ Listo';
+      btn.classList.add('active');
+      pre.style.display = 'none';
+      setTimeout(function(){ ta.focus(); }, 100);
+    }
+  }
+
+  btn.addEventListener('click', toggle);
+  pre.addEventListener('click', toggle);
+  ta.addEventListener('input', function() {
+    // live char count
+    var lines = ta.value.split('\n').length;
+    btn.textContent = btn.classList.contains('active') ? '✓ Listo ('+lines+' lineas)' : '✏️ Editar';
+  });
+  ta.addEventListener('blur', updatePreview);
+}
+
+// Init after goApp loads config
+var _origCargarConfig = cargarConfig;
+cargarConfig = function() {
+  _origCargarConfig();
+  // Small delay to let values populate
+  setTimeout(function(){
+    initMenuEditor('btnEditMenuDia', 'cfg-menu-dia', 'previewMenuDia');
+    initMenuEditor('btnEditMenuNoche', 'cfg-menu-noche', 'previewMenuNoche');
+  }, 200);
+};
 </script>
 </body
 </body>
