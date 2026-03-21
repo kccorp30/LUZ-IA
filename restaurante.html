@@ -875,7 +875,7 @@ function loadPedidos(){
       if(p.metodo_pago)h+='<div class="chip">&#128179; '+p.metodo_pago+'</div>';
       h+='</div>';
       h+='<div class="desglose"><div class="desglose-row"><span>Subtotal</span><span>'+fmt(subtotal)+'</span></div><div class="desglose-row"><span>Desechables</span><span>'+fmt(desechables)+'</span></div><div class="desglose-row"><span>Domicilio</span><span>'+fmt(domicilio)+'</span></div><div class="desglose-row total"><span>TOTAL</span><span>'+fmt(total)+'</span></div></div>';
-      if(p.comprobante_media_id)h+='<div class="comprobante-box"><div class="comprobante-header">&#129534; Comprobante</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" onerror="this.style.display='none'"></div>';
+      if(p.comprobante_media_id)h+='<div class="comprobante-box"><div class="comprobante-header">&#129534; Comprobante</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" onerror="this.style.display=\'none\'"></div>';
       h+='<div class="ebtns">';
       if(cfg.n)h+='<button class="ebtn '+cfg.bc+'" data-id="'+p.id+'" data-e="'+cfg.n+'" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">'+cfg.bl+'</button>';
       if(p.estado==="listo"||p.estado==="en_camino")h+='<button class="ebtn bcerrar" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">&#128308; Cerrar orden</button>';
@@ -1333,7 +1333,7 @@ function renderChat(msgs){
   msgs.forEach(function(m){
     var txt=m.mensaje||"";
     if(m.tipo==="cliente"&&m.comprobante_media_id){
-      h+='<div class="chat-comprobante"><div class="chat-comprobante-label">&#129534; Comprobante</div><img src="/api/comprobante/'+m.comprobante_media_id+'" onerror="this.style.display='none'" style="width:100%;border-radius:8px;cursor:pointer;max-height:150px;object-fit:contain" onclick="document.getElementById('imgOverlayImg').src=this.src;document.getElementById('imgOverlay').classList.add('open')"><div class="chat-time" style="padding:4px 0">'+formatearHoraChat(m.created_at)+'</div></div>';
+      h+='<div class="chat-comprobante"><div class="chat-comprobante-label">&#129534; Comprobante</div><img src="/api/comprobante/'+m.comprobante_media_id+'" onerror="this.style.display=\'none\'" style="width:100%;border-radius:8px;cursor:pointer;max-height:150px;object-fit:contain" onclick="document.getElementById(\'imgOverlayImg\').src=this.src;document.getElementById(\'imgOverlay\').classList.add(\'open\')"><div class="chat-time" style="padding:4px 0">'+formatearHoraChat(m.created_at)+'</div></div>';
     } else if(m.tipo==="estado_luz"){
       h+='<div class="chat-bubble chat-luz-estado"><div class="chat-label">Luz (automatico)</div><div>'+txt+'</div><div class="chat-time">'+formatearHoraChat(m.created_at)+'</div></div>';
     } else {
