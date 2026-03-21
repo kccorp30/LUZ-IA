@@ -2004,11 +2004,7 @@ document.getElementById("msgTexto").addEventListener("input",function(){
 });
 
 // CONSTRUCTOR PEDIDO MANUAL
-document.getElementById("btnConstructor").addEventListener("click",function(){
-  var panel=document.getElementById("constructorPedido");
-  panel.style.display=panel.style.display==="none"?"block":"none";
-  this.classList.toggle("active",panel.style.display==="block");
-});
+// btnConstructor: handled by delegation
 document.getElementById("btnCerrarConstructor").addEventListener("click",function(){
   document.getElementById("constructorPedido").style.display="none";
   document.getElementById("btnConstructor").classList.remove("active");
@@ -2188,29 +2184,7 @@ document.getElementById("btnAdd").addEventListener("click",function(){
 // tema removed
 
 // Inline constructor btn
-var _cib=document.getElementById('btnConstructorInline');
-if(_cib){_cib.addEventListener('click',function(){
-  var p=document.getElementById('constructorPedido');
-  p.style.display=p.style.display==='block'?'none':'block';
-  document.getElementById('btnConstructor').classList.toggle('active',p.style.display==='block');
-  this.classList.toggle('active',p.style.display==='block');
-});}
-
-
-// ── SMART PRODUCT CONSTRUCTOR ─────────────────────────────────────────────────
-var cartItems = {};
-var MENU_PRODUCTOS = [];
-
-function fmtCOP(n){return '$'+Number(n||0).toLocaleString('es-CO');}
-
-function cargarMenuParaConstructor(){
-  if(!rest||!rest.id)return;
-  fetch('https://vbxuwzcfzfjwhllkppkg.supabase.co/rest/v1/menu_items?restaurante_id=eq.'+rest.id+'&disponible=eq.true&select=*',
-    {headers:{'apikey':'sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5','Authorization':'Bearer sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5'}})
-    .then(function(r){return r.json();})
-    .then(function(d){MENU_PRODUCTOS=d||[];console.log('Menu cargado:',MENU_PRODUCTOS.length,'items');})
-    .catch(function(e){console.error('Error cargando menu:',e);});
-}
+// btnConstructorInline: handled by delegation
 
 function abrirConstructor(){
   cartItems={};
