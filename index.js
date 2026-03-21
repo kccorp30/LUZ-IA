@@ -927,7 +927,8 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     console.log("Luz: " + cleanReply.substring(0, 100));
 
     if (restaurante) {
-      guardarMensajeSupabase(restaurante.id, from, userText, "cliente", esImagen && !esComprobante ? mediaId : null).catch(function(){});
+      // Guardar mensaje cliente - si es comprobante guardarlo con el mediaId para verlo en el chat
+      guardarMensajeSupabase(restaurante.id, from, esComprobante ? "📎 Comprobante de pago" : userText, "cliente", esImagen ? mediaId : null).catch(function(){});
       guardarMensajeSupabase(restaurante.id, from, cleanReply, "restaurante", null).catch(function(){});
     }
 
