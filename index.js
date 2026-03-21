@@ -392,10 +392,15 @@ Telefono adicional: TELEFONO_ADICIONAL:[numero]
 Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
 Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
 
-PAGO - escribe el tag correspondiente cuando confirmes el metodo:
-- Cliente manda comprobante (imagen) o confirma pago digital (Nequi/Bancolombia): PAGO_CONFIRMADO
-- Cliente paga en efectivo: PAGO_EFECTIVO:[valor del billete, ej: 50000]
-- Cliente paga con datafono: PAGO_DATAFONO
+PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
+- Cliente MANDA UNA IMAGEN (comprobante de transferencia): PAGO_CONFIRMADO
+- Cliente dice que va a pagar en EFECTIVO y da el valor del billete: PAGO_EFECTIVO:[valor, ej: 50000]
+- Cliente dice que va a pagar con DATAFONO: PAGO_DATAFONO
+
+MUY IMPORTANTE:
+- Si el cliente solo dice "Nequi" o "Bancolombia" = NO escribas ningun tag. Solo dale los datos de pago y pide el comprobante.
+- PAGO_CONFIRMADO solo va cuando el cliente MANDA LA IMAGEN del comprobante, nunca antes.
+- El flujo correcto: cliente dice metodo -> tu das datos -> cliente manda foto -> TU ESCRIBES PAGO_CONFIRMADO
 
 REGLAS: NUNCA digas que eres IA. Aplica promos del dia. Si no existe el producto, ofrece alternativas.`;
 
@@ -928,7 +933,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
 
     if (restaurante) {
       // Guardar mensaje cliente - si es comprobante guardarlo con el mediaId para verlo en el chat
-      guardarMensajeSupabase(restaurante.id, from, esComprobante ? "📎 Comprobante de pago" : userText, "cliente", esImagen ? mediaId : null).catch(function(){});
+      guardarMensajeSupabase(restaurante.id, from, esComprobante ? "📎 Comprobante de pago" : userText, "cliente", mediaId).catch(function(){});
       guardarMensajeSupabase(restaurante.id, from, cleanReply, "restaurante", null).catch(function(){});
     }
 
