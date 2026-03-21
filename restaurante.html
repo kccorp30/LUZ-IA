@@ -1511,7 +1511,7 @@ function playSound(tipo){
 
 function get(t,f){return fetch(SU+"/rest/v1/"+t+"?"+(f||""),{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json()});}
 function patchPedido(id,estado,tel,num){return fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json()});}
-function notif(m,color){var e=document.getElementById("notif");e.textContent=m;e.style.background=color||"var(--orange)";e.classList.add("show");setTimeout(function(){e.classList.remove("show")},2800);}
+function notif(m,color){var e=document.getElementById("notif");e.textContent=m;e.style.background=color||"rgba(124,58,237,0.95)";e.classList.add("show");setTimeout(function(){e.classList.remove("show")},2800);}
 function fmt(n){return"$"+Number(n||0).toLocaleString("es-CO");}
 function getHoraColombia(){var a=new Date();return new Date(a.getTime()+a.getTimezoneOffset()*60000-(5*60*60*1000));}
 function ago(d){var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<1?"ahora":diff<60?diff+" min":Math.floor(diff/60)+"h";}
@@ -1519,7 +1519,7 @@ function fmtHora(f){try{return new Date(f).toLocaleTimeString("es-CO",{hour:"2-d
 
 // PIN
 for(var i=0;i<=9;i++){(function(n){var el=document.getElementById("k"+n);if(el)el.addEventListener("click",function(){pinKey(String(n));});})(i);}
-document.getElementById("kdel").addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
+var _kdel=document.getElementById("kdel");if(_kdel)_kdel.addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
 function pinKey(k){if(pin.length>=4)return;pin+=k;dots();if(pin.length===4)setTimeout(chkPin,150);}
 function dots(){for(var i=0;i<4;i++){var d=document.getElementById("d"+i);i<pin.length?d.classList.add("filled"):d.classList.remove("filled");}}
 function chkPin(){
@@ -1552,10 +1552,10 @@ function mostrarAlerta(tipo,texto,tel){
   var el=document.getElementById(id);
   if(el)el.addEventListener("click",function(e){e.stopPropagation();this.closest(".alert-banner").classList.remove("show");});
 });
-document.getElementById("alertBanner").addEventListener("click",function(e){if(e.target.id!=="alertClose"){showTab("chat");}});
-document.getElementById("alertHumano").addEventListener("click",function(e){if(e.target.id!=="alertHumanoClose"){var tel=this.getAttribute("data-tel");if(tel)abrirChat(tel,"","");showTab("chat");}});
-document.getElementById("alertRecoger").addEventListener("click",function(e){if(e.target.id!=="alertRecogerClose"){showTab("pedidos");}});
-document.getElementById("alertPregunta").addEventListener("click",function(e){if(e.target.id!=="alertPreguntaClose"){var tel=this.getAttribute("data-tel");if(tel)abrirChat(tel,"","");showTab("chat");}});
+var _ab=document.getElementById("alertBanner");if(_ab)_ab.addEventListener("click",function(e){if(e.target.id!=="alertClose"){showTab("chat");}});
+var _ah=document.getElementById("alertHumano");if(_ah)_ah.addEventListener("click",function(e){if(e.target.id!=="alertHumanoClose"){var tel=this.getAttribute("data-tel");if(tel)abrirChat(tel,"","");showTab("chat");}});
+var _ar=document.getElementById("alertRecoger");if(_ar)_ar.addEventListener("click",function(e){if(e.target.id!=="alertRecogerClose"){showTab("pedidos");}});
+var _ap=document.getElementById("alertPregunta");if(_ap)_ap.addEventListener("click",function(e){if(e.target.id!=="alertPreguntaClose"){var tel=this.getAttribute("data-tel");if(tel)abrirChat(tel,"","");showTab("chat");}});
 
 function checkNuevosMensajes(){
   if(!rest)return;
