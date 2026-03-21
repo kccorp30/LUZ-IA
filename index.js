@@ -844,7 +844,12 @@ async function procesarMensaje(msg, from, phoneNumberId) {
 
     var esComprobante = false;
     if (esImagen && mediaId) {
-      var hayPedidoActivo = orderState[from] && (orderState[from].status === "esperando_pago" || orderState[from].status === "confirmado");
+      // Es comprobante si hay pedido activo en cualquier status de pago
+      var hayPedidoActivo = orderState[from] && (
+        orderState[from].status === "esperando_pago" || 
+        orderState[from].status === "confirmado" ||
+        orderState[from].status === "esperando_direccion"
+      );
       if (hayPedidoActivo) {
         esComprobante = true;
         userText = "[El cliente envio una imagen, posiblemente comprobante de pago]";
@@ -945,7 +950,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
 
     if (restaurante) {
       // Guardar mensaje cliente - si es comprobante guardarlo con el mediaId para verlo en el chat
-      guardarMensajeSupabase(restaurante.id, from, esComprobante ? "📎 Comprobante de pago" : userText, "cliente", mediaId).catch(function(){});
+      guardarMensajeSupabase(restaurante.id, from, esComprobante ? "📎 Comprobante de pago" : userText, "cliente", esImagen ? mediaId : null).catch(function(){});
       guardarMensajeSupabase(restaurante.id, from, cleanReply, "restaurante", null).catch(function(){});
     }
 
