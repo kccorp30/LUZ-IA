@@ -38,68 +38,70 @@ function limpiarNumero(str) {
   return s.replace(/[^0-9]/g, "") || "0";
 }
 
-// ── HORA COLOMBIA (UTC-5, sin DST) ────────────────────────────────────────────
+// ── HORA COLOMBIA UTC-5 ───────────────────────────────────────────────────────
 function getHoraColombia() {
   var ahora = new Date();
-  var utc   = ahora.getTime() + (ahora.getTimezoneOffset() * 60000);
-  return new Date(utc - (5 * 60 * 60 * 1000));
+  return new Date(ahora.getTime() + ahora.getTimezoneOffset() * 60000 - 5 * 60 * 60 * 1000);
 }
 function getDiaColombiaStr() {
-  var dias = ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
-  return dias[getHoraColombia().getDay()];
+  return ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"][getHoraColombia().getDay()];
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://vbxuwzcfzfjwhllkppkg.supabase.co";
 const SUPABASE_KEY = process.env.SUPABASE_KEY || "sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 
-function sbHeaders(useService) {
-  var key = useService ? (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY) : SUPABASE_KEY;
-  return { "apikey": key, "Authorization": "Bearer " + key };
+function sbH(svc) {
+  var k = svc ? (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY) : SUPABASE_KEY;
+  return { "apikey": k, "Authorization": "Bearer " + k };
 }
 
+// ── RESTAURANTE ───────────────────────────────────────────────────────────────
 async function getRestaurante(phoneNumberId) {
   try {
     if (phoneNumberId) {
-      var res = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?whatsapp_phone_id=eq." + phoneNumberId + "&select=*",
-        { headers: sbHeaders(false) });
-      if (res.data && res.data.length > 0) return res.data[0];
+      var r = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?whatsapp_phone_id=eq." + phoneNumberId + "&select=*", { headers: sbH(false) });
+      if (r.data && r.data.length > 0) return r.data[0];
     }
-    var fb = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=*&limit=1",
-      { headers: sbHeaders(false) });
+    var fb = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=*&limit=1", { headers: sbH(false) });
     return fb.data && fb.data.length > 0 ? fb.data[0] : null;
-  } catch (err) { console.error("Error Supabase getRestaurante:", err.message); return null; }
+  } catch (e) { console.error("getRestaurante:", e.message); return null; }
 }
 
 // ── SILENCIO ──────────────────────────────────────────────────────────────────
 async function estaEnSilencio(restauranteId, telefono) {
   try {
-    var res = await axios.get(
-      SUPABASE_URL + "/rest/v1/silencio_conversacion?restaurante_id=eq." + restauranteId +
-        "&telefono=eq." + encodeURIComponent(telefono) + "&activo=eq.true&select=id",
-      { headers: sbHeaders(true) }
-    );
-    return res.data && res.data.length > 0;
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/silencio_conversacion?restaurante_id=eq." + restauranteId + "&telefono=eq." + encodeURIComponent(telefono) + "&activo=eq.true&select=id", { headers: sbH(true) });
+    return r.data && r.data.length > 0;
   } catch (e) { return false; }
 }
 
-// ── MENÚ DINÁMICO DESDE SUPABASE ─────────────────────────────────────────────
-async function getMenuActivo(restauranteId) {
+// ── DIRECCIÓN FRECUENTE ───────────────────────────────────────────────────────
+async function getDireccionFrecuente(restauranteId, telefono) {
   try {
-    var res = await axios.get(
-      SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restauranteId +
-        "&disponible=eq.true&order=categoria,orden&select=*",
-      { headers: sbHeaders(false) }
-    );
-    var items = res.data || [];
-    if (!items.length) return MENU_TEXT_FALLBACK;
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restauranteId + "&telefono=eq." + encodeURIComponent(telefono) + "&select=ultima_direccion", { headers: sbH(true) });
+    if (r.data && r.data.length > 0 && r.data[0].ultima_direccion) return r.data[0].ultima_direccion;
+    return null;
+  } catch (e) { return null; }
+}
 
+async function guardarDireccionFrecuente(restauranteId, telefono, direccion) {
+  if (!direccion || direccion === "Por confirmar") return;
+  try {
+    await axios.post(SUPABASE_URL + "/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",
+      { restaurante_id: restauranteId, telefono, ultima_direccion: direccion, updated_at: new Date().toISOString() },
+      { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } });
+  } catch (e) { console.error("guardarDireccion:", e.message); }
+}
+
+// ── MENÚ DINÁMICO ─────────────────────────────────────────────────────────────
+async function getMenuDinamico(restauranteId) {
+  try {
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restauranteId + "&disponible=eq.true&order=categoria,orden&select=*", { headers: sbH(false) });
+    var items = r.data || [];
+    if (!items.length) return MENU_FALLBACK;
     var grupos = {};
-    items.forEach(function(i) {
-      if (!grupos[i.categoria]) grupos[i.categoria] = [];
-      grupos[i.categoria].push(i);
-    });
-
-    var lines = ["\nMENU ACTIVO (solo estos productos están disponibles ahora):\n"];
+    items.forEach(function(i) { if (!grupos[i.categoria]) grupos[i.categoria] = []; grupos[i.categoria].push(i); });
+    var lines = ["\nMENU ACTIVO (solo estos productos disponibles hoy):\n"];
     Object.keys(grupos).forEach(function(cat) {
       lines.push("\n" + cat.toUpperCase() + ":");
       grupos[cat].forEach(function(i) {
@@ -109,14 +111,12 @@ async function getMenuActivo(restauranteId) {
         lines.push("- " + i.nombre + ": " + precio + desc + tipo);
       });
     });
-    lines.push("\nIMPORTANTE: Si el cliente pide un producto que NO aparece en esta lista, dile amablemente que no está disponible hoy y ofrece alternativas de lo que SÍ está disponible.\n");
+    lines.push("\nSi el cliente pide algo que NO esta en esta lista, dile que hoy no esta disponible y ofrece alternativas.\n");
     return lines.join("\n");
-  } catch (e) {
-    console.error("Error cargando menu desde Supabase:", e.message);
-    return MENU_TEXT_FALLBACK;
-  }
+  } catch (e) { console.error("getMenuDinamico:", e.message); return MENU_FALLBACK; }
 }
 
+// ── GUARDAR PEDIDO ────────────────────────────────────────────────────────────
 async function guardarPedidoSupabase(restauranteId, pedidoData) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
@@ -124,20 +124,23 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
     var payload = {
       restaurante_id: restauranteId, numero_pedido: pedidoData.orderNumber,
       cliente_tel: pedidoData.phone, items: pedidoData.items,
-      subtotal: subtotal, desechables: pedidoData.desechables,
-      domicilio: pedidoData.domicilio, total: pedidoData.total,
-      direccion: pedidoData.address, metodo_pago: pedidoData.paymentMethod,
-      estado: "confirmado",
+      subtotal, desechables: pedidoData.desechables, domicilio: pedidoData.domicilio,
+      total: pedidoData.total, direccion: pedidoData.address,
+      metodo_pago: pedidoData.paymentMethod, estado: "confirmado",
+      notas_especiales: pedidoData.notasEspeciales || null,
+      pedido_adicional_de: pedidoData.pedidoAdicionalDe || null,
       comprobante_url: pedidoData.comprobanteUrl || null,
       comprobante_media_id: pedidoData.comprobanteMediaId || null
     };
-    console.log("Guardando pedido:", JSON.stringify(payload));
     var response = await axios.post(SUPABASE_URL + "/rest/v1/pedidos", payload, {
-      headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey,
-        "Content-Type": "application/json", "Prefer": "return=representation" }
+      headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
     });
     console.log("Pedido #" + pedidoData.orderNumber + " guardado. ID:", response.data[0]?.id || "?");
     notificarDashboard(response.data[0]);
+    // Guardar dirección frecuente
+    if (pedidoData.address && pedidoData.address !== "Por confirmar") {
+      guardarDireccionFrecuente(restauranteId, pedidoData.phone, pedidoData.address);
+    }
   } catch (err) {
     console.error("Error guardando pedido:", err.response ? JSON.stringify(err.response.data) : err.message);
   }
@@ -148,46 +151,37 @@ function notificarDashboard(pedido) {
   if (!url || !pedido) return;
   axios.post(url, { evento: "nuevo_pedido", pedido }, { timeout: 4000 })
     .then(function() { console.log("Dashboard notificado #" + pedido.numero_pedido); })
-    .catch(function(err) { console.error("Error notificando dashboard:", err.message); });
+    .catch(function(e) { console.error("Error dashboard:", e.message); });
 }
 
 async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo, comprobanteMediaId) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     await axios.post(SUPABASE_URL + "/rest/v1/mensajes",
-      { restaurante_id: restauranteId, telefono, mensaje, tipo,
-        comprobante_media_id: comprobanteMediaId || null },
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey,
-        "Content-Type": "application/json", "Prefer": "return=minimal" } });
-  } catch (e) { console.error("Error guardando mensaje:", e.message); }
+      { restaurante_id: restauranteId, telefono, mensaje, tipo, comprobante_media_id: comprobanteMediaId || null },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+  } catch (e) { console.error("guardarMensaje:", e.message); }
 }
 
 async function getOrderState(telefono) {
   try {
-    var res = await axios.get(
-      SUPABASE_URL + "/rest/v1/order_state?telefono=eq." + encodeURIComponent(telefono) + "&select=*",
-      { headers: sbHeaders(true) });
-    return res.data && res.data.length > 0 ? res.data[0].estado : null;
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/order_state?telefono=eq." + encodeURIComponent(telefono) + "&select=*", { headers: sbH(true) });
+    return r.data && r.data.length > 0 ? r.data[0].estado : null;
   } catch (e) { return null; }
 }
-
 async function setOrderState(telefono, estado) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     await axios.post(SUPABASE_URL + "/rest/v1/order_state?on_conflict=telefono",
       { telefono, estado, updated_at: new Date().toISOString() },
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey,
-        "Content-Type": "application/json",
-        "Prefer": "resolution=merge-duplicates,return=minimal" } });
-  } catch (e) { console.error("Error setOrderState:", e.message); }
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } });
+  } catch (e) { console.error("setOrderState:", e.message); }
 }
-
 async function deleteOrderState(telefono) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-    await axios.delete(SUPABASE_URL + "/rest/v1/order_state?telefono=eq." + encodeURIComponent(telefono),
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
-  } catch (e) { console.error("Error deleteOrderState:", e.message); }
+    await axios.delete(SUPABASE_URL + "/rest/v1/order_state?telefono=eq." + encodeURIComponent(telefono), { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+  } catch (e) { console.error("deleteOrderState:", e.message); }
 }
 
 function getMenuUrl() { return process.env.MENU_PAGE_URL || "https://bit.ly/LaCurvaStreetFood"; }
@@ -196,54 +190,45 @@ async function descargarImagenMeta(mediaId) {
   try {
     var token = process.env.WHATSAPP_TOKEN;
     if (!token) return null;
-    var urlRes = await axios.get("https://graph.facebook.com/v19.0/" + mediaId,
-      { headers: { "Authorization": "Bearer " + token } });
+    var urlRes = await axios.get("https://graph.facebook.com/v19.0/" + mediaId, { headers: { "Authorization": "Bearer " + token } });
     var mediaUrl = urlRes.data?.url;
     if (!mediaUrl) return null;
-    var imgRes = await axios.get(mediaUrl,
-      { headers: { "Authorization": "Bearer " + token }, responseType: "arraybuffer" });
-    var base64   = Buffer.from(imgRes.data).toString("base64");
-    var mimeType = imgRes.headers["content-type"] || "image/jpeg";
-    return "data:" + mimeType + ";base64," + base64;
-  } catch (e) { console.error("Error descargando imagen Meta:", e.message); return null; }
+    var imgRes = await axios.get(mediaUrl, { headers: { "Authorization": "Bearer " + token }, responseType: "arraybuffer" });
+    return "data:" + (imgRes.headers["content-type"] || "image/jpeg") + ";base64," + Buffer.from(imgRes.data).toString("base64");
+  } catch (e) { console.error("descargarImagen:", e.message); return null; }
 }
 
 async function sendWhatsAppMessage(to, message, phoneNumberId) {
   var token = process.env.WHATSAPP_TOKEN;
   var pid   = phoneNumberId || process.env.WHATSAPP_PHONE_ID;
-  if (!token || !pid) { console.error("Faltan WHATSAPP_TOKEN o WHATSAPP_PHONE_ID"); return; }
+  if (!token || !pid) { console.error("Faltan WHATSAPP_TOKEN o PHONE_ID"); return; }
   var toNum = to.replace(/[^0-9]/g, "");
   if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
   try {
     await axios.post("https://graph.facebook.com/v19.0/" + pid + "/messages",
       { messaging_product: "whatsapp", to: toNum, type: "text", text: { body: message } },
       { headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } });
-    console.log("Mensaje enviado a " + toNum);
-  } catch (err) {
-    console.error("Error enviando WhatsApp:", err.response ? JSON.stringify(err.response.data) : err.message);
-  }
+    console.log("Enviado a " + toNum);
+  } catch (e) { console.error("sendWA:", e.response ? JSON.stringify(e.response.data) : e.message); }
 }
 
 function estaEnHorario(restaurante) {
   try {
-    var col        = getHoraColombia();
-    var horaActual = col.getHours() * 60 + col.getMinutes();
-    var apertura   = restaurante.hora_apertura || "16:00:00";
-    var cierre     = restaurante.hora_cierre   || "00:00:00";
-    var partsA     = apertura.split(":").map(Number);
-    var partsC     = cierre.split(":").map(Number);
-    var minApertura = partsA[0] * 60 + partsA[1];
-    var minCierre   = partsC[0] * 60 + partsC[1];
-    var dias    = ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
-    var diaHoy  = dias[col.getDay()];
+    var col = getHoraColombia();
+    var hora = col.getHours() * 60 + col.getMinutes();
+    var ap = (restaurante.hora_apertura || "16:00:00").split(":").map(Number);
+    var ci = (restaurante.hora_cierre   || "00:00:00").split(":").map(Number);
+    var minAp = ap[0] * 60 + ap[1], minCi = ci[0] * 60 + ci[1];
+    var dias = ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
+    var diaHoy = dias[col.getDay()];
     var diasAct = (restaurante.dias_activos || "lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
     if (!diasAct.includes(diaHoy)) return false;
-    if (minCierre <= minApertura) return horaActual >= minApertura || horaActual <= minCierre;
-    return horaActual >= minApertura && horaActual <= minCierre;
+    if (minCi <= minAp) return hora >= minAp || hora <= minCi;
+    return hora >= minAp && hora <= minCi;
   } catch (e) { return true; }
 }
 
-function getMenuActivo_config(restaurante) {
+function getMenuConfig(restaurante) {
   var modoDia = restaurante.modo_dia || false;
   if (modoDia && restaurante.menu_dia && restaurante.menu_dia.trim().length > 10) return restaurante.menu_dia;
   if (!modoDia && restaurante.menu_noche && restaurante.menu_noche.trim().length > 10) return restaurante.menu_noche;
@@ -251,162 +236,66 @@ function getMenuActivo_config(restaurante) {
 }
 
 function getMensaje(restaurante, clave, fallback) {
-  return (restaurante && restaurante[clave] && restaurante[clave].trim())
-    ? restaurante[clave].trim() : fallback;
+  return (restaurante && restaurante[clave] && restaurante[clave].trim()) ? restaurante[clave].trim() : fallback;
 }
 
-const MENU_TEXT_FALLBACK = `
+const MENU_FALLBACK = `
 HAMBURGUESAS TRADICIONALES:
-- La especial: $18.900 (carne artesanal, pan brioche, ripio, queso, tocineta, jamon, lechuga)
-- La sencilla: $16.900
-- La curva: $29.900
-- La Mega especial: $37.900
-- La doble carne: $24.900
-- La super queso: $22.900
-- La de pollo: $19.900
+- La especial: $18.900 - La sencilla: $16.900 - La curva: $29.900
+- La Mega especial: $37.900 - La doble carne: $24.900 - La super queso: $22.900 - La de pollo: $19.900
 
-HAMBURGUESAS ANGUS:
-- Angus Especial: $26.900
-- Angus Doble: $36.900
-- Angus Mixta: $37.900
-- Madurita: $29.900
-- Montanera: $35.900
-- Celestina: $31.900
-- BBQ King: $30.900
-- La mela: $29.400
-- Mexicana: $32.900
+HAMBURGUESAS ANGUS (papa rustica, chipotle, tocineta, queso cheddar, cebolla morada):
+- Angus Especial: $26.900 - Angus Doble: $36.900 - Angus Mixta: $37.900 - Madurita: $29.900
+- Montanera: $35.900 - Celestina: $31.900 - BBQ King: $30.900 - La mela: $29.400 - Mexicana: $32.900
 
 HOT DOGS:
-- Italiano: $16.900
-- Italo-ranchero: $17.900
-- Mexicano: $18.400
-- Perro la Curva: $29.400
-- Chuzo-pan: $19.900
-- Chori-perro: $18.900
-- Americano: $19.900
-- La perra: $18.900
+- Italiano: $16.900 - Italo-ranchero: $17.900 - Mexicano: $18.400 - Perro la Curva: $29.400
+- Chuzo-pan: $19.900 - Chori-perro: $18.900 - Americano: $19.900 - La perra: $18.900
 
 SALCHIPAPAS:
-- Sencilla: $17.400
-- Criolla: $22.400
-- Especial: $36.400
-- Mega costena: $58.900
+- Sencilla: $17.400 - Criolla: $22.400 - Especial: $36.400 - Mega costena: $58.900
 
-COMBOS DEL DIA:
-- Aplastado especial combo: $22.900
-- Hamburguesa tradicional combo: $23.900
-- Perro italiano combo: $21.900
-- Tres Angus + Coca 1.5L: $81.900
+COMBOS: Aplastado especial: $22.900 | Hamburguesa: $23.900 | Perro italiano: $21.900 | 3 Angus+Coca: $81.900
 
-DESGRANADOS Y MAICITOS:
-- Gratinados: $18.900
-- Rancheros: $22.900
-- Especial pollo y tocineta: $26.400
-- Hawaiano: $16.900
-- Mixto carne y pollo: $34.900
-- Mega desgranado: $39.900
+DESGRANADOS: Gratinados $18.900 | Rancheros $22.900 | Especial pollo/tocineta $26.400 | Hawaiano $16.900 | Mixto $34.900 | Mega $39.900
 
-CHUZOS (con papa amarilla y ensalada):
-- De lomo viche: $29.400
-- De pollo: $22.400
-- Mixto: $24.900
-- De costilla ahumada: $20.900
+CHUZOS (papa amarilla y ensalada): Lomo viche $29.400 | Pollo $22.400 | Mixto $24.900 | Costilla $20.900
 
-ALITAS:
-- x6: $21.900
-- x12: $39.900
-- x18: $55.900
-- x24 + limonada: $68.900
+ALITAS: x6 $21.900 | x12 $39.900 | x18 $55.900 | x24+limonada $68.900
 
-ASADOS (con papa amarilla y ensalada):
-- Caracho 380gr: $39.900
-- Punta de anca 380gr: $39.900
-- Lomo de cerdo 350gr: $34.900
-- Filete de pollo 350gr: $32.900
-- Tabla curva: $41.900
-- Costilla San Luis BBQ 500gr: $42.900
+ASADOS (papa amarilla y ensalada): Caracho 380gr $39.900 | Punta anca $39.900 | Lomo cerdo $34.900 | Pollo $32.900 | Tabla curva $41.900 | Costilla BBQ $42.900
+ASADOS JUNIOR: Caracho $24.900 | Punta anca $25.900 | Lomo cerdo $20.900 | Pollo $19.900
 
-ASADOS JUNIOR (250gr):
-- Caracho: $24.900
-- Punta de anca: $25.900
-- Lomo de cerdo: $20.900
-- Filete de pollo: $19.900
+PICADAS: 3 personas $46.400 | 5 personas $79.900
 
-PICADAS:
-- Para 3 personas: $46.400
-- Para 5 personas: $79.900
+AREPAS: Con todo $18.900 | Jamon/queso $7.900 | Solo queso $5.900 | Burguer $17.900 | Sola $3.500
 
-AREPAS:
-- Con todo: $18.900
-- Jamon y queso: $7.900
-- Solo queso: $5.900
-- Arepa burguer: $17.900
-- Arepa sola: $3.500
+ESPECIALIDADES: Sandwich sencillo $16.400 | Sandwich especial $20.900 | Burrito sencillo $15.400 | Burrito especial $20.400 | Patacon con todo $23.900 | Pataco-burguer $19.900 | Shawarma $19.900
 
-ESPECIALIDADES:
-- Sandwich Sencillo: $16.400
-- Sandwich Especial: $20.900
-- Burrito Sencillo: $15.400
-- Burrito Especial: $20.400
-- Patacon con todo: $23.900
-- Pataco-burguer: $19.900
-- Shawarma a la curva: $19.900
+APLASTADOS: Sencillo $10.900 | Hawaiano $14.900 | Especial $17.900 | Shawarma $19.900
 
-APLASTADOS:
-- Sencillo: $10.900
-- Hawaiano: $14.900
-- Especial: $17.900
-- Shawarma: $19.900
+ENTRADAS: Nachos $20.900 | Empanadas x6 $12.900 | Papa criolla chorizo $17.900 | Nuggets francesa $17.900 | Aros cebolla $11.900 | Francesa queso tocineta $17.900 | Papa criolla $11.900 | Papa rustica $10.900 | Papa francesa $7.900
 
-ENTRADAS:
-- Nachos: $20.900
-- Empanadas x6: $12.900
-- Papa criolla con chorizo: $17.900
-- Nuggets con francesa: $17.900
-- Aros de cebolla: $11.900
-- Papa francesa con queso y tocineta: $17.900
-- Papa criolla: $11.900
-- Papa rustica: $10.900
-- Papa francesa: $7.900
+BEBIDAS: Soda italiana $12.900 | Jugos agua $9.900 | Jugos leche $12.900 | Limonada natural $8.900 | Limonada cerezada $11.900 | Limonada mango viche $10.900 | Limonada coco $12.900 | Agua $4.500 | Coca-Cola 400ml $5.400 | Coca-Cola 1.5L $8.900 | Mr.Tee $4.500 | Jugo Hit $4.900
 
-BEBIDAS:
-- Soda italiana (vaso): $12.900
-- Jugos en agua (vaso): $9.900
-- Jugos en leche (vaso): $12.900
-- Limonada natural (vaso): $8.900
-- Limonada cerezada (vaso): $11.900
-- Limonada mango viche (vaso): $10.900
-- Limonada de coco (vaso): $12.900
-- Agua: $4.500
-- Coca-Cola 400ml: $5.400
-- Coca-Cola 1.5L: $8.900 (litro y cuarto)
-- Mr. Tee: $4.500
-- Jugo Hit: $4.900
-
-MENU KIDS:
-- Nuggets con francesa: $22.900
-- Burguer con francesa: $25.900
-- Salchipapa con ranchera: $21.400
-- Perro con francesa: $21.400
+MENU KIDS (jugo Hit + sorpresa): Nuggets $22.900 | Burguer $25.900 | Salchipapa $21.400 | Perro $21.400
 `;
 
-const SYSTEM_PROMPT = `Eres Luz, la encargada de atencion al cliente de La Curva Street Food, restaurante de comida callejera en Canaveral, Cali. Direccion: UBICACION_PLACEHOLDER.
+// ── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `Eres Luz, la encargada de atencion al cliente de La Curva Street Food en Canaveral, Cali. Direccion: UBICACION_PLACEHOLDER.
 
 PERSONALIDAD:
-- Eres una persona real, calenya, calida y cercana. Nunca admitas ser IA.
-- Tu nombre es Luz. Solo presentate LA PRIMERA VEZ. Si ya hubo mensajes antes, NO te presentes.
-- Hablas natural. Usas: con gusto, a listo, claro que si, digame, ya le confirmo. Ocasionalmente Dama o Caballero.
-- SIEMPRE responde en UN SOLO mensaje.
-- Respuestas cortas y al grano.
-- NUNCA mandes el link del menu dos veces. Solo la primera vez.
-- Nunca seas fria ni cortante. Siempre calida y cercana.
+- Eres una persona real, calenya, calida y cercana. NUNCA admitas ser IA.
+- Solo presentate LA PRIMERA VEZ. Si ya hubo mensajes, NO te presentes de nuevo.
+- Hablas natural: con gusto, a listo, claro que si, digame, ya le confirmo. Ocasionalmente: Dama, Caballero.
+- SIEMPRE un solo mensaje. Corto y al grano.
+- NUNCA mandes el link del menu dos veces.
 
-MENSAJES DE VOZ: responde: Hola! Por favor escribeme tu pedido, no puedo escuchar audios por aca. Con gusto te atiendo.
+MENSAJES DE VOZ: responde "Hola! Por favor escribeme tu pedido, no puedo escuchar audios. Con gusto te atiendo."
 
 INFORMACION:
 - Ubicacion: UBICACION_PLACEHOLDER
-- Domicilio: sur de Cali y parte del centro
-- Tiempo estimado: 25 a 45 minutos
+- Domicilio: sur de Cali y parte del centro. Tiempo: 25 a 45 minutos.
 
 HORARIO_PLACEHOLDER
 
@@ -415,89 +304,89 @@ METODOS DE PAGO:
 - Bancolombia llave: 0089102980 (Jose Gregorio Charris)
 - Efectivo: domiciliario lleva cambio (pregunta con que valor cancela)
 - Datafono: domiciliario lo lleva
-- Pago mixto: acepta parte digital + parte efectivo.
-- NUNCA esperes a que el cliente pida los datos de pago. Delos siempre tu primero.
+- Pago mixto: acepta parte digital + parte efectivo
+- NUNCA esperes a que el cliente pida los datos. Dalos SIEMPRE primero.
 
-PROMOCIONES SEMANALES (aplica segun el dia de hoy — DIA_PLACEHOLDER):
+PROMOCIONES (hoy es DIA_PLACEHOLDER - solo menciona si aplica hoy):
 - Lunes y Jueves: Pague 2 lleve 3 hamburguesas tradicionales
-- Martes: Pague 2 lleve 3 en todos los hot dogs y perros
-- Jueves: Pague 2 lleve 3 en Angus BBQ King o Celestina
-- Domingos: Pague 2 lleve 3 en asados junior
-IMPORTANTE: Solo menciona la promocion si corresponde al dia de hoy (DIA_PLACEHOLDER). Si hoy no hay promocion para lo que pide el cliente, NO menciones otras promociones.
+- Martes: Pague 2 lleve 3 hot dogs y perros
+- Jueves: Pague 2 lleve 3 Angus BBQ King o Celestina
+- Domingos: Pague 2 lleve 3 asados junior
 
 MENU_PLACEHOLDER
 
-PAGINA VISUAL DEL MENU:
-Cuando un cliente pida el menu o diga que quiere pedir, ofrece:
-Te comparto nuestro menu completo MENU_URL_PLACEHOLDER - ahi armas tu pedido y me lo mandas. O me dices aqui mismo con gusto.
+MENU VISUAL: cuando pidan menu di: "Te comparto el menu MENU_URL_PLACEHOLDER - ahi armas y me lo mandas. O dime aqui con gusto."
 
-DESECHABLES - REGLA CRITICA:
-- $500 por cada producto de COMIDA.
-- BEBIDAS NO cobran desechable.
-- AREPAS tampoco cobran desechable.
+DESECHABLES: $500 por cada COMIDA. Bebidas y arepas NO cobran desechable.
 
-DOMICILIO - pregunta siempre la direccion completa:
+DOMICILIO:
 - $2.000: Canaveral
 - $4.000: San Judas, La Granja, La Selva, Santo Domingo
-- $6.000: Ciudad Jardin, Pance, Tequendama, El Ingenio, Pampalinda, Melendez, Univalle, Lili, Mojica, Poblado, Mario Correa, Valle del Lili, Calipso, Compartir, Capri, Niza, Caney, Santa Barbara, San Joaquin, centro, extremos norte, extremos sur
-- Si no reconoces el barrio: $4.000 y avisa que puede variar $1.000.
+- $6.000: Ciudad Jardin, Pance, Tequendama, Ingenio, Pampalinda, Melendez, Univalle, Lili, Mojica, Poblado, Mario Correa, Valle del Lili, Calipso, Compartir, Capri, Niza, Caney, Santa Barbara, San Joaquin, centro, extremos
+- Barrio desconocido: $4.000 y avisa que puede variar $1.000
 
-CALCULO - SIEMPRE muestra este desglose:
+CALCULO - muestra siempre:
 Productos:    $XX.XXX
 Desechables:  $XXX
 Domicilio:    $X.XXX
 TOTAL:        $XX.XXX
 
-REGLA ANTI-DUPLICADOS: Si el cliente corrige, toma SOLO la version corregida.
+DIRECCION FRECUENTE:
+DIRECCION_FRECUENTE_PLACEHOLDER
 
-REGLA DE ORO: Si el cliente ya dio producto + direccion + pago en el mismo mensaje, confirma TODO de una vez.
+CUPONES:
+CUPONES_PLACEHOLDER
 
-PEDIDO DESDE PAGINA DE MENU: Si el mensaje ya incluye productos con precios, escribe INMEDIATAMENTE PEDIDO_LISTO con esos productos.
+RECOMENDACIONES Y NOTAS ESPECIALES DEL CLIENTE:
+- Si el cliente pide algo especial como salsas extras, sin ingrediente, doble porcion, nota especial, instruccion de preparacion o cualquier preferencia personal: incluirlo en los ITEMS del pedido entre parentesis. Ejemplo: "La Especial $18.900 (sin cebolla, extra chimichurri)"
+- Esto es MUY importante para que el restaurante vea la nota en el panel.
 
-MODIFICAR PEDIDO EN CURSO: Si agrega algo, escribe PEDIDO_LISTO completo con TODOS los productos anteriores MAS el nuevo.
+PEDIDO ADICIONAL A ORDEN YA CONFIRMADA:
+- Si el cliente ya tiene un pedido confirmado (status entregado o cerrado) y quiere agregar algo mas, es un PEDIDO ADICIONAL.
+- Escribe al final: PEDIDO_ADICIONAL_DE:[numero del pedido original]
+- Ejemplo: si su pedido original fue #104 y quiere agregar algo, escribe PEDIDO_ADICIONAL_DE:104
 
-MODIFICACIONES: acepta sin queso, extra salsa, etc.
-QUEJAS POR FALTANTES: ofrecelo de inmediato sin preguntar.
-JERGA: litro y cuarto = Coca-Cola 1.5L. perro o perrito = hot dog.
+IMAGENES:
+- Si el cliente envia una imagen Y tiene un pedido activo esperando pago: es probablemente un comprobante. Confirma el pedido.
+- Si el cliente envia una imagen SIN pedido activo o en medio de una conversacion normal: NO asumas que es comprobante. Responde: "Hola! Vi que enviaste una imagen. Puedes contarme que necesitas o que quieres pedir?"
+- NUNCA confirmes un pedido por una imagen si no hay pedido activo pendiente de pago.
 
-VENTAS:
-- Cuando el cliente confirme su pedido, SIEMPRE ofrece algo adicional de forma natural.
-- Solo ofrece UNA cosa adicional.
-- Menciona la promocion del dia si aplica HOY (DIA_PLACEHOLDER).
+PREGUNTAS SIN RESPUESTA:
+- Si el cliente pregunta algo que no puedes responder con certeza (disponibilidad especial, precio de algo que no esta en el menu, tiempo exacto de entrega, si pueden hacer algo especial, disponibilidad de ingrediente especifico):
+  Responde: "Un momento, ya te confirmo ese detalle."
+  Y escribe al final: ALERTA_PREGUNTA:[la pregunta del cliente]
 
 FLUJO:
-1. Saludo -> UN mensaje amable + ofrece link del menu
-2. Cliente pide -> confirma productos con precios
-3. Pide la direccion completa: calle, numero, barrio
-4. Con direccion -> calcula domicilio y muestra desglose completo
-5. Cliente confirma -> pregunta pago Y da datos de inmediato
+1. Saludo -> mensaje amable + link menu
+2. Cliente pide -> confirma con precios. Incluye notas especiales en los items.
+3. Pregunta direccion COMPLETA: calle, numero, barrio. Si tiene direccion frecuente, pregunta si es la misma.
+4. Con direccion -> calcula domicilio y muestra desglose
+5. Confirma -> pregunta pago y da datos
 6. Pago:
-- Nequi: Transferi a @NEQUIJOS126 y mandame el comprobante
-- Bancolombia: Transferi a la llave 0089102980 a nombre de Jose Gregorio Charris y mandame el comprobante
-- Efectivo: pregunta con que valor cancela -> escribe PAGO_EFECTIVO:[valor]
-- Datafono: confirma -> escribe PAGO_DATAFONO
-7. Cliente envia comprobante -> di: Listo! Tu pedido quedo confirmado. Te estaremos informando el estado
-8. NUNCA digas que va en camino ni des tiempo estimado al confirmar.
+   - Nequi: "Transferi a @NEQUIJOS126 y mandame el comprobante"
+   - Bancolombia: "Transferi a llave 0089102980 a Jose Gregorio Charris y mandame comprobante"
+   - Efectivo: pregunta valor -> escribe PAGO_EFECTIVO:[valor]
+   - Datafono: escribe PAGO_DATAFONO
+7. Comprobante -> di: "Listo! Tu pedido quedo confirmado. Te informamos el estado."
+8. NUNCA digas tiempo estimado al confirmar.
 
-MENSAJES POST-CONFIRMACION:
-- Para mensajes cortos post-confirmacion (ok, gracias, emojis) responde SOLO con algo breve y calido.
-- SOLO inicia nuevo flujo si el cliente dice explicitamente que quiere otro pedido.
+POST-CONFIRMACION: respuestas cortas y calidas. No reinicies flujo a menos que el cliente pida explicitamente otro pedido.
 
-OBLIGATORIO - escribe SIEMPRE al confirmar productos:
+OBLIGATORIO al confirmar productos:
 PEDIDO_LISTO:
-ITEMS: [producto1 $precio|producto2 $precio]
-DESECHABLES: [numero sin puntos ni $]
-DOMICILIO: [numero sin puntos ni $ - si no sabes escribe 0]
-TOTAL: [numero sin puntos ni $]
+ITEMS: [producto1 $precio (notas)|producto2 $precio]
+DESECHABLES: [numero]
+DOMICILIO: [numero o 0]
+TOTAL: [numero]
 
 CUANDO TENGAS DIRECCION: DIRECCION_LISTA:[direccion completa]
 TELEFONO ADICIONAL: TELEFONO_ADICIONAL:[numero]
+PEDIDO ADICIONAL: PEDIDO_ADICIONAL_DE:[numero pedido original]
+PREGUNTA SIN RESPUESTA: ALERTA_PREGUNTA:[pregunta]
 
-REGLAS FINALES:
-- NUNCA digas que eres IA.
-- Si piden algo que no esta en el MENU ACTIVO, dile amablemente que hoy no esta disponible y ofrece alternativas del menu actual.
-- Si piden hablar con una persona real, asesor o encargado, di: Un momento, ya te comunico con un encargado.`;
+REGLAS: NUNCA digas que eres IA. Aplica promos del dia. Si no existe el producto, ofrece alternativas.`;
 
+// ── PRINT TICKET ──────────────────────────────────────────────────────────────
 async function printTicket(orderData) {
   var subtotal = Number(orderData.total) - Number(orderData.desechables||0) - Number(orderData.domicilio||0);
   var pagoLabel =
@@ -511,22 +400,29 @@ async function printTicket(orderData) {
     "     LA CURVA STREET FOOD      ",
     "    Canaveral - Cali, Col.     ",
     "================================",
-    "Pedido #" + orderData.orderNumber,
+    "Pedido #" + orderData.orderNumber + (orderData.pedidoAdicionalDe ? " [ADICIONAL a #"+orderData.pedidoAdicionalDe+"]" : ""),
     "Hora: " + orderData.timestamp,
     "Tel: " + orderData.phone.replace(/[^0-9]/g, ""),
     orderData.extraPhone ? "Tel adicional: " + orderData.extraPhone : null,
-    "----------------",
-    "PRODUCTOS:",
+    "--------------------------------",
+    "PRODUCTOS:"
   ].filter(Boolean);
+
   orderData.items.forEach(function(i) { lines.push("  " + i); });
+
+  if (orderData.notasEspeciales) {
+    lines.push("--------------------------------");
+    lines.push("NOTAS: " + orderData.notasEspeciales);
+  }
+
   lines = lines.concat([
-    "----------------",
+    "--------------------------------",
     "Subtotal:    $" + subtotal.toLocaleString("es-CO"),
     "Desechables: $" + Number(orderData.desechables||0).toLocaleString("es-CO"),
     "Domicilio:   $" + Number(orderData.domicilio||0).toLocaleString("es-CO"),
-    "----------------",
+    "--------------------------------",
     "TOTAL:       $" + Number(orderData.total).toLocaleString("es-CO"),
-    "----------------",
+    "--------------------------------",
     "Direccion: " + orderData.address,
     "Pago: " + pagoLabel,
     "================================",
@@ -535,23 +431,26 @@ async function printTicket(orderData) {
   ]);
 
   var ticketText = lines.join("\n");
-  console.log("\nTICKET PARA COCINA:\n" + ticketText);
+  console.log("\nTICKET:\n" + ticketText);
 
-  var PRINT_SERVER = process.env.PRINT_SERVER_URL || "http://localhost:3001/print";
-  var PRINT_SECRET = process.env.PRINT_SECRET     || "lacurva2024";
-  axios.post(PRINT_SERVER, {
-    secret: PRINT_SECRET, orderNumber: orderData.orderNumber, timestamp: orderData.timestamp,
+  axios.post(process.env.PRINT_SERVER_URL || "http://localhost:3001/print", {
+    secret: process.env.PRINT_SECRET || "lacurva2024",
+    orderNumber: orderData.orderNumber, timestamp: orderData.timestamp,
     phone: orderData.phone.replace(/[^0-9]/g, ""), extraPhone: orderData.extraPhone || null,
     items: orderData.items, subtotal,
     desechables: Number(orderData.desechables||0), domicilio: Number(orderData.domicilio||0),
     total: Number(orderData.total), address: orderData.address,
-    paymentMethod: orderData.paymentMethod, cashDenomination: orderData.cashDenomination || null
+    paymentMethod: orderData.paymentMethod, cashDenomination: orderData.cashDenomination || null,
+    notasEspeciales: orderData.notasEspeciales || null,
+    pedidoAdicionalDe: orderData.pedidoAdicionalDe || null
   }, { timeout: 6000 })
     .then(function() { console.log("Ticket #" + orderData.orderNumber + " enviado a impresora"); })
-    .catch(function(err) { console.error("Error impresora:", err.message); });
+    .catch(function(e) { console.error("Error impresora:", e.message); });
+
   return ticketText;
 }
 
+// ── PARSE REPLY ───────────────────────────────────────────────────────────────
 function parseReply(reply, from) {
   var cleanReply = reply;
   var sideEffect = null;
@@ -561,16 +460,30 @@ function parseReply(reply, from) {
     var totalMatch  = reply.match(/TOTAL:\s*([^\n]+)/);
     var desechMatch = reply.match(/DESECHABLES:\s*([^\n]+)/);
     var domMatch    = reply.match(/DOMICILIO:\s*([^\n]+)/);
+
     if (itemsMatch && totalMatch) {
-      var items   = itemsMatch[1].split("|").map(function(i) { return i.trim(); });
-      var total   = limpiarNumero(totalMatch[1]);
-      var desech  = limpiarNumero(desechMatch ? desechMatch[1] : "0");
+      var items = itemsMatch[1].split("|").map(function(i) { return i.trim(); });
+      var total = limpiarNumero(totalMatch[1]);
+      var desech = limpiarNumero(desechMatch ? desechMatch[1] : "0");
       var domicilio = limpiarNumero(domMatch ? domMatch[1] : "0");
-      orderState[from] = { status: "esperando_direccion", orderNumber: nextOrderNumber(), items, desechables: desech, domicilio, total };
-      console.log("orderState creado para:", from, "#" + orderState[from].orderNumber);
+
+      // Extraer notas especiales de los items (texto entre parentesis)
+      var notasArr = [];
+      items.forEach(function(item) {
+        var m = item.match(/\(([^)]+)\)/);
+        if (m) notasArr.push(m[1]);
+      });
+
+      orderState[from] = {
+        status: "esperando_direccion",
+        orderNumber: nextOrderNumber(),
+        items, desechables: desech, domicilio, total,
+        notasEspeciales: notasArr.length > 0 ? notasArr.join(" | ") : null
+      };
+      console.log("orderState #" + orderState[from].orderNumber + " para:", from);
       sideEffect = "pedido_registrado";
     }
-    cleanReply = cleanReply.replace(/PEDIDO_LISTO:[\s\S]*?(?=DIRECCION_LISTA:|TELEFONO_ADICIONAL:|PAGO_|$)/g, "").trim();
+    cleanReply = cleanReply.replace(/PEDIDO_LISTO:[\s\S]*?(?=DIRECCION_LISTA:|TELEFONO_ADICIONAL:|PAGO_|PEDIDO_ADICIONAL_DE:|ALERTA_PREGUNTA:|$)/g, "").trim();
   }
 
   if (reply.indexOf("DIRECCION_LISTA:") !== -1) {
@@ -583,6 +496,22 @@ function parseReply(reply, from) {
     var telMatch = reply.match(/TELEFONO_ADICIONAL:(.+)/);
     if (telMatch && orderState[from]) orderState[from].extraPhone = telMatch[1].trim();
     cleanReply = cleanReply.replace(/TELEFONO_ADICIONAL:.+/g, "").trim();
+  }
+
+  if (reply.indexOf("PEDIDO_ADICIONAL_DE:") !== -1) {
+    var addMatch = reply.match(/PEDIDO_ADICIONAL_DE:(.+)/);
+    if (addMatch && orderState[from]) orderState[from].pedidoAdicionalDe = addMatch[1].trim();
+    cleanReply = cleanReply.replace(/PEDIDO_ADICIONAL_DE:.+/g, "").trim();
+  }
+
+  if (reply.indexOf("ALERTA_PREGUNTA:") !== -1) {
+    var pregMatch = reply.match(/ALERTA_PREGUNTA:(.+)/);
+    if (pregMatch) {
+      sideEffect = "alerta_pregunta";
+      if (orderState[from]) orderState[from].alertaPregunta = pregMatch[1].trim();
+      else orderState[from] = { alertaPregunta: pregMatch[1].trim() };
+    }
+    cleanReply = cleanReply.replace(/ALERTA_PREGUNTA:.+/g, "").trim();
   }
 
   if (reply.indexOf("PAGO_EFECTIVO:") !== -1) {
@@ -619,11 +548,7 @@ app.post("/api/pedido-estado", async function(req, res) {
     if (telefono_cliente) {
       var restaurante = null;
       if (restaurante_id) {
-        try {
-          var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=*",
-            { headers: sbHeaders(false) });
-          if (rr.data && rr.data.length > 0) restaurante = rr.data[0];
-        } catch(e) {}
+        try { var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=*", { headers: sbH(false) }); if (rr.data?.length) restaurante = rr.data[0]; } catch(e) {}
       }
       var numStr = numero_pedido ? " #" + numero_pedido : "";
       var pid = process.env.WHATSAPP_PHONE_ID;
@@ -633,7 +558,7 @@ app.post("/api/pedido-estado", async function(req, res) {
         if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
       }
       if (estado === "listo") {
-        var msg = getMensaje(restaurante, "msg_listo", "Tu pedido" + numStr + " esta listo y esperando al domiciliario! Pronto va en camino");
+        var msg = getMensaje(restaurante, "msg_listo", "Tu pedido" + numStr + " esta listo y esperando al domiciliario!");
         await sendWhatsAppMessage(telefono_cliente, msg, pid);
         if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
       }
@@ -651,48 +576,66 @@ app.post("/api/menu-toggle", async function(req, res) {
   if (!req.body.id) return res.status(400).json({ error: "Falta id" });
   try {
     await axios.patch(SUPABASE_URL + "/rest/v1/menu_items?id=eq." + req.body.id, { disponible: req.body.disponible },
-      { headers: { ...sbHeaders(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+      { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
     res.json({ ok: true });
-  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.post("/api/menu-add", async function(req, res) {
   try {
-    await axios.post(SUPABASE_URL + "/rest/v1/menu_items", req.body,
-      { headers: { ...sbHeaders(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    await axios.post(SUPABASE_URL + "/rest/v1/menu_items", req.body, { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
     res.json({ ok: true });
-  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.post("/api/restaurante-config", async function(req, res) {
   if (!req.body.restaurante_id || !req.body.config) return res.status(400).json({ error: "Faltan datos" });
   try {
     await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id, req.body.config,
-      { headers: { ...sbHeaders(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+      { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
     res.json({ ok: true });
-  } catch (err) { res.status(500).json({ ok: false, error: err.response ? JSON.stringify(err.response.data) : err.message }); }
+  } catch (e) { res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message }); }
 });
 
 app.post("/enviar-mensaje-cliente", async function(req, res) {
   if (!req.body.telefono || !req.body.mensaje) return res.status(400).json({ error: "Faltan datos" });
   try {
     await sendWhatsAppMessage(req.body.telefono, req.body.mensaje, process.env.WHATSAPP_PHONE_ID);
-    // Guardar mensaje del panel en Supabase para que aparezca en el chat
-    if (req.body.restaurante_id) {
-      guardarMensajeSupabase(req.body.restaurante_id, req.body.telefono, req.body.mensaje, "restaurante", null);
-    }
+    if (req.body.restaurante_id) guardarMensajeSupabase(req.body.restaurante_id, req.body.telefono, req.body.mensaje, "restaurante", null);
     res.json({ ok: true });
-  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── PEDIDO MANUAL DESDE PANEL ─────────────────────────────────────────────────
+app.post("/api/pedido-manual", async function(req, res) {
+  var { restaurante_id, telefono, items, total, desechables, domicilio, direccion, metodo_pago, notas_especiales } = req.body;
+  if (!restaurante_id || !telefono || !items || !total) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var num = ++orderCounter;
+    var subtotal = Number(total) - Number(desechables||0) - Number(domicilio||0);
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var payload = {
+      restaurante_id, numero_pedido: num,
+      cliente_tel: telefono,
+      items: Array.isArray(items) ? items : items.split("\n").filter(function(l){return l.trim();}),
+      subtotal, desechables: Number(desechables||0), domicilio: Number(domicilio||0),
+      total: Number(total), direccion: direccion || "Por confirmar",
+      metodo_pago: metodo_pago || "digital", estado: "confirmado",
+      notas_especiales: notas_especiales || null
+    };
+    var response = await axios.post(SUPABASE_URL + "/rest/v1/pedidos", payload, {
+      headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
+    });
+    if (direccion) guardarDireccionFrecuente(restaurante_id, telefono, direccion);
+    res.json({ ok: true, numero_pedido: num, id: response.data[0]?.id });
+  } catch (e) { res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message }); }
 });
 
 app.post("/notificar-cliente", async function(req, res) {
   if (!req.body.telefono) return res.status(400).json({ error: "Telefono requerido" });
   var restaurante = null;
   if (req.body.restaurante_id) {
-    try {
-      var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id + "&select=*", { headers: sbHeaders(false) });
-      if (rr.data && rr.data.length > 0) restaurante = rr.data[0];
-    } catch(e) {}
+    try { var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id + "&select=*", { headers: sbH(false) }); if (rr.data?.length) restaurante = rr.data[0]; } catch(e) {}
   }
   var numStr = req.body.numero_pedido ? " #" + req.body.numero_pedido : "";
   try {
@@ -700,7 +643,7 @@ app.post("/notificar-cliente", async function(req, res) {
     await sendWhatsAppMessage(req.body.telefono, msg, process.env.WHATSAPP_PHONE_ID);
     if (req.body.restaurante_id) guardarMensajeSupabase(req.body.restaurante_id, req.body.telefono, msg, "estado_luz", null);
     res.json({ ok: true });
-  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.post("/api/enviar-promo", async function(req, res) {
@@ -721,13 +664,13 @@ app.post("/api/enviar-promo", async function(req, res) {
       if (i < telefonos.length - 1) await new Promise(function(r) { setTimeout(r, 300); });
     }
     res.json({ ok: true, enviados, fallidos, total: telefonos.length });
-  } catch (err) { res.status(500).json({ ok: false, error: err.response ? JSON.stringify(err.response.data) : err.message }); }
+  } catch (e) { res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message }); }
 });
 
 app.get("/api/comprobante/:mediaId", async function(req, res) {
   try {
     var imgData = await descargarImagenMeta(req.params.mediaId);
-    if (!imgData) return res.status(404).json({ error: "No se pudo obtener la imagen" });
+    if (!imgData) return res.status(404).json({ error: "No se pudo obtener imagen" });
     var matches = imgData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches) return res.status(500).json({ error: "Formato invalido" });
     res.setHeader("Content-Type", matches[1]);
@@ -741,20 +684,42 @@ app.get("/api/chat/:telefono", async function(req, res) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var r = await axios.get(
-      SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + req.query.restaurante_id +
-        "&telefono=eq." + encodeURIComponent(req.params.telefono) + "&order=created_at.asc&limit=150",
+      SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + req.query.restaurante_id + "&telefono=eq." + encodeURIComponent(req.params.telefono) + "&order=created_at.asc&limit=150",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
     res.json({ ok: true, mensajes: r.data || [] });
   } catch (e) { res.json({ ok: true, mensajes: [] }); }
 });
 
+// API para obtener direccion frecuente del cliente
+app.get("/api/cliente/:telefono", async function(req, res) {
+  if (!req.query.restaurante_id) return res.json({ ok: true, cliente: null });
+  try {
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + req.query.restaurante_id + "&telefono=eq." + encodeURIComponent(req.params.telefono) + "&select=*",
+      { headers: sbH(true) });
+    res.json({ ok: true, cliente: r.data && r.data.length > 0 ? r.data[0] : null });
+  } catch (e) { res.json({ ok: true, cliente: null }); }
+});
+
 app.delete("/api/pedido/:id", async function(req, res) {
   var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
   try {
-    await axios.delete(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + req.params.id,
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    await axios.delete(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + req.params.id, { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
     res.json({ ok: true });
-  } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// API para guardar alerta de pregunta sin respuesta
+app.post("/api/alerta-pregunta", async function(req, res) {
+  var { restaurante_id, telefono, pregunta, numero_pedido } = req.body;
+  if (!restaurante_id || !pregunta) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(SUPABASE_URL + "/rest/v1/mensajes",
+      { restaurante_id, telefono, mensaje: "ALERTA_PREGUNTA: " + pregunta, tipo: "alerta_pregunta" },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.get("/webhook", function(req, res) {
@@ -776,7 +741,7 @@ app.post("/webhook", function(req, res) {
     var from = msg.from;
     var phoneNumberId = value.metadata?.phone_number_id;
     procesarEnCola(from, function() { return procesarMensaje(msg, from, phoneNumberId); });
-  } catch (err) { console.error("Error parseando webhook:", err.message); }
+  } catch (e) { console.error("Error webhook:", e.message); }
 });
 
 async function procesarMensaje(msg, from, phoneNumberId) {
@@ -784,31 +749,35 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     var msgType = msg.type;
 
     if (msgType === "audio") {
-      await sendWhatsAppMessage(from, "Hola! Por favor escribeme tu pedido, no puedo escuchar audios por aca. Con gusto te atiendo.", phoneNumberId);
+      await sendWhatsAppMessage(from, "Hola! Por favor escribeme tu pedido, no puedo escuchar audios. Con gusto te atiendo.", phoneNumberId);
       return;
     }
 
-    var userText = "", mediaId = null, esComprobante = false;
+    var userText = "", mediaId = null, esImagen = false;
 
     if (msgType === "text") {
       userText = msg.text?.body?.trim() || "";
     } else if (msgType === "image" || msgType === "document" || msgType === "sticker") {
       mediaId = msg.image?.id || msg.document?.id || null;
-      esComprobante = true;
+      esImagen = true;
       var caption = msg.image?.caption || msg.document?.caption || "";
       userText = caption
-        ? caption + " [El cliente envio una imagen, posiblemente comprobante de pago]"
-        : "[El cliente envio una imagen, posiblemente comprobante de pago de Nequi o Bancolombia]";
+        ? caption + " [El cliente envio una imagen]"
+        : "[El cliente envio una imagen]";
     } else if (msgType === "location") {
       var loc = msg.location;
       userText = "Mi ubicacion es: lat " + loc.latitude + ", lng " + loc.longitude + (loc.name ? " (" + loc.name + ")" : "");
     } else if (msgType === "interactive") {
       userText = msg.interactive?.button_reply?.title || msg.interactive?.list_reply?.title || "";
-    } else { console.log("Tipo no soportado: " + msgType); return; }
+    } else if (msgType === "reaction") {
+      return; // ignorar reacciones
+    } else {
+      console.log("Tipo no soportado: " + msgType); return;
+    }
 
     if (!userText) return;
 
-    // Recuperar orderState de Supabase si no está en memoria
+    // Recuperar orderState
     if (!orderState[from]) {
       var saved = await getOrderState(from);
       if (saved) { orderState[from] = saved; console.log("orderState recuperado para:", from); }
@@ -819,44 +788,66 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       if (restaurante.estado !== "activo") { console.log("Restaurante inactivo"); return; }
       if (!estaEnHorario(restaurante)) { console.log("Fuera de horario"); return; }
 
-      // ── MODO SILENCIO: si el restaurante intervino, Luz no responde ──────
       var silencio = await estaEnSilencio(restaurante.id, from);
       if (silencio) {
-        console.log("SILENCIO activo para:", from, "— Luz no responde");
-        // Guardar mensaje del cliente en Supabase aunque Luz no responda
-        guardarMensajeSupabase(restaurante.id, from, userText, "cliente", esComprobante ? mediaId : null);
+        console.log("SILENCIO para:", from);
+        guardarMensajeSupabase(restaurante.id, from, userText, "cliente", esImagen ? mediaId : null).catch(function(){});
         return;
       }
+    }
+
+    // Determinar si imagen es comprobante o no
+    var esComprobante = false;
+    if (esImagen && mediaId) {
+      // Solo es comprobante si hay pedido activo esperando pago
+      var hayPedidoActivo = orderState[from] && (orderState[from].status === "esperando_pago" || orderState[from].status === "confirmado");
+      if (hayPedidoActivo) {
+        esComprobante = true;
+        userText = "[El cliente envio una imagen, posiblemente comprobante de pago]";
+      }
+      // Si no hay pedido activo, Luz preguntara que es
     }
 
     if (!conversations[from]) conversations[from] = [];
     conversations[from].push({ role: "user", content: userText });
     if (conversations[from].length > 20) conversations[from] = conversations[from].slice(-20);
 
-    // ── MENÚ DINÁMICO — cargar desde Supabase ─────────────────────────────
+    // Obtener menu
     var menuParaPrompt;
     if (restaurante) {
-      // Primero intentar menú día/noche configurado en texto
-      var menuConfig = getMenuActivo_config(restaurante);
-      if (menuConfig) {
-        menuParaPrompt = menuConfig;
-      } else {
-        // Cargar desde menu_items con disponible=true
-        menuParaPrompt = await getMenuActivo(restaurante.id);
-      }
+      var menuConfig = getMenuConfig(restaurante);
+      menuParaPrompt = menuConfig || await getMenuDinamico(restaurante.id);
     } else {
-      menuParaPrompt = MENU_TEXT_FALLBACK;
+      menuParaPrompt = MENU_FALLBACK;
     }
 
-    var ubicacion   = (restaurante?.direccion) || "Cl. 16 #56-40, Canaveral, Cali";
-    var horarioInfo = restaurante
-      ? "Atiendes de " + (restaurante.hora_apertura||"16:00").substring(0,5) + " a " + (restaurante.hora_cierre||"00:00").substring(0,5) + ". Estas en horario activo ahora."
-      : "Atiendes de 4:00pm a 12:00am.";
-
-    // FIX: inyectar día real de Colombia en el prompt
-    var diaHoy = getDiaColombiaStr();
+    var ubicacion = restaurante?.direccion || "Cl. 16 #56-40, Canaveral, Cali";
     var horaCol = getHoraColombia();
     var horaStr = horaCol.getHours().toString().padStart(2,"0") + ":" + horaCol.getMinutes().toString().padStart(2,"0");
+    var diaHoy = getDiaColombiaStr();
+
+    // Obtener direccion frecuente
+    var dirFrecuente = null;
+    if (restaurante) dirFrecuente = await getDireccionFrecuente(restaurante.id, from);
+
+    var dirFrecuenteTexto = dirFrecuente
+      ? "Este cliente ya ha pedido antes. Su ultima direccion fue: " + dirFrecuente + ". Si pide de nuevo, preguntale: 'Te lo mando a " + dirFrecuente + " igual que la vez anterior?' Espera confirmacion antes de asumir."
+      : "No hay direccion previa registrada para este cliente.";
+
+    // Obtener cupones activos
+    var cuponesTexto = "No hay cupones activos en este momento.";
+    if (restaurante && restaurante.cupones_activos) {
+      try {
+        var cupones = JSON.parse(restaurante.cupones_activos);
+        if (cupones && cupones.length > 0) {
+          cuponesTexto = "Cupones activos:\n" + cupones.map(function(c) {
+            var desc = c.tipo === "porcentaje" ? c.valor + "% de descuento" : "$" + Number(c.valor).toLocaleString("es-CO") + " de descuento";
+            return "- Codigo: " + c.codigo + " -> " + desc + (c.descripcion ? " (" + c.descripcion + ")" : "");
+          }).join("\n");
+          cuponesTexto += "\nSi el cliente menciona un codigo valido, aplica el descuento al total y mencionalo en los items del PEDIDO_LISTO.";
+        }
+      } catch(e) {}
+    }
 
     var bienvenidaExtra = "";
     var msgBienvenida = getMensaje(restaurante, "msg_bienvenida", "");
@@ -864,14 +855,18 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       bienvenidaExtra = "\n\nMENSAJE DE BIENVENIDA PERSONALIZADO:\n" + msgBienvenida;
     }
 
-    var menuSeccion = "MENU ACTIVO:\n" + menuParaPrompt;
+    var horarioInfo = restaurante
+      ? "Atiendes de " + (restaurante.hora_apertura||"16:00").substring(0,5) + " a " + (restaurante.hora_cierre||"00:00").substring(0,5) + ". Hora actual en Colombia: " + horaStr + ". Estas en horario activo ahora."
+      : "Atiendes de 4:00pm a 12:00am. Hora actual: " + horaStr;
 
     var systemFinal = SYSTEM_PROMPT
       .replace(/MENU_URL_PLACEHOLDER/g, getMenuUrl())
-      .replace(/MENU_PLACEHOLDER/g, menuSeccion)
+      .replace(/MENU_PLACEHOLDER/g, "MENU ACTIVO:\n" + menuParaPrompt)
       .replace(/UBICACION_PLACEHOLDER/g, ubicacion)
-      .replace(/HORARIO_PLACEHOLDER/g, "HORARIO: " + horarioInfo + " Son las " + horaStr + " en Colombia.")
+      .replace(/HORARIO_PLACEHOLDER/g, "HORARIO: " + horarioInfo)
       .replace(/DIA_PLACEHOLDER/g, diaHoy)
+      .replace(/DIRECCION_FRECUENTE_PLACEHOLDER/g, dirFrecuenteTexto)
+      .replace(/CUPONES_PLACEHOLDER/g, cuponesTexto)
       + bienvenidaExtra;
 
     var claudeResponse = await axios.post(
@@ -881,24 +876,28 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     );
 
     if (!claudeResponse.data?.content?.[0]) {
-      await sendWhatsAppMessage(from, "Hola! En este momento tengo un problemita tecnico. Escribeme en un momento.", phoneNumberId);
+      await sendWhatsAppMessage(from, "Hola! Tengo un problemita tecnico. Escribeme en un momento.", phoneNumberId);
       return;
     }
 
-    var rawReply   = claudeResponse.data.content[0].text;
+    var rawReply = claudeResponse.data.content[0].text;
     console.log("RAW:", rawReply.substring(0, 300));
-    var parsed     = parseReply(rawReply, from);
+    var parsed = parseReply(rawReply, from);
     var cleanReply = parsed.cleanReply;
     var sideEffect = parsed.sideEffect;
 
-    // Comprobante recibido
+    // Comprobante confirmado
     if (esComprobante && mediaId && orderState[from]) {
       orderState[from].comprobanteMediaId = mediaId;
-      orderState[from].comprobanteUrl     = "/api/comprobante/" + mediaId;
-      orderState[from].paymentMethod      = orderState[from].paymentMethod || "digital";
-      orderState[from].status             = "confirmado";
+      orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
+      orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
+      orderState[from].status = "confirmado";
       sideEffect = "pago_confirmado";
-      console.log("Comprobante recibido — forzando pago_confirmado para:", from);
+    }
+
+    // Alerta pregunta sin respuesta
+    if (sideEffect === "alerta_pregunta" && restaurante && orderState[from]?.alertaPregunta) {
+      guardarMensajeSupabase(restaurante.id, from, "ALERTA_PREGUNTA: " + orderState[from].alertaPregunta, "alerta_pregunta", null).catch(function(){});
     }
 
     conversations[from].push({ role: "assistant", content: rawReply });
@@ -908,7 +907,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     console.log("Luz: " + cleanReply.substring(0, 100));
 
     if (restaurante) {
-      guardarMensajeSupabase(restaurante.id, from, userText, "cliente", esComprobante ? mediaId : null).catch(function(){});
+      guardarMensajeSupabase(restaurante.id, from, userText, "cliente", esImagen && !esComprobante ? mediaId : null).catch(function(){});
       guardarMensajeSupabase(restaurante.id, from, cleanReply, "restaurante", null).catch(function(){});
     }
 
@@ -927,14 +926,16 @@ async function procesarMensaje(msg, from, phoneNumberId) {
         desechables: state.desechables, domicilio: state.domicilio, total: state.total,
         address: state.address || "Por confirmar", paymentMethod: state.paymentMethod || "digital",
         cashDenomination: state.cashDenomination || null, extraPhone: state.extraPhone || null,
-        phone: from, timestamp
+        phone: from, timestamp,
+        notasEspeciales: state.notasEspeciales || null,
+        pedidoAdicionalDe: state.pedidoAdicionalDe || null
       });
 
       var restId = restaurante?.id || null;
       if (!restId) {
         try {
-          var rf = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=id&limit=1",
-            { headers: sbHeaders(true) });
+          var svcKey2 = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+          var rf = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=id&limit=1", { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2 } });
           if (rf.data?.length) restId = rf.data[0].id;
         } catch (e) {}
       }
@@ -946,8 +947,9 @@ async function procesarMensaje(msg, from, phoneNumberId) {
           desechables: Number(state.desechables||0), domicilio: Number(state.domicilio||0),
           total: Number(state.total), address: state.address || "Por confirmar",
           paymentMethod: state.paymentMethod || "digital",
-          comprobanteUrl: state.comprobanteUrl || null,
-          comprobanteMediaId: state.comprobanteMediaId || null
+          comprobanteUrl: state.comprobanteUrl || null, comprobanteMediaId: state.comprobanteMediaId || null,
+          notasEspeciales: state.notasEspeciales || null,
+          pedidoAdicionalDe: state.pedidoAdicionalDe || null
         });
       }
 
@@ -956,7 +958,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     }
 
   } catch (err) {
-    console.error("Error procesando mensaje de " + from + ":", err.response ? JSON.stringify(err.response.data) : err.message);
+    console.error("Error procesando " + from + ":", err.response ? JSON.stringify(err.response.data) : err.message);
   }
 }
 
@@ -966,18 +968,17 @@ app.get("/pedidos", function(req, res) {
 
 app.get("/", function(req, res) {
   res.json({
-    status: "La Curva Bot activo - WhatsApp Cloud API (Meta)",
-    menu_url: getMenuUrl(), hora_colombia: getHoraColombia().toLocaleString("es-CO"),
+    status: "La Curva Bot activo",
+    hora_colombia: getHoraColombia().toLocaleString("es-CO"),
     dia_colombia: getDiaColombiaStr(),
-    conversaciones_activas: Object.keys(conversations).length,
+    conversaciones: Object.keys(conversations).length,
     pedidos_activos: Object.keys(orderState).length,
-    colas_activas: colasPorCliente.size
+    colas: colasPorCliente.size
   });
 });
 
 var PORT = process.env.PORT || 3000;
 app.listen(PORT, function() {
-  console.log("La Curva Street Food - LUZ corriendo en puerto " + PORT);
-  console.log("WhatsApp Cloud API (Meta) — Menu dinamico + Silencio + Cola paralela");
+  console.log("LUZ corriendo en puerto " + PORT);
   console.log("Dia Colombia:", getDiaColombiaStr(), "| Hora:", getHoraColombia().toLocaleTimeString("es-CO"));
 });
