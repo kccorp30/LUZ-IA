@@ -351,8 +351,12 @@ RECOMENDACIONES Y NOTAS ESPECIALES DEL CLIENTE:
 - Ejemplo: "La Especial $18.900 (sin cebolla, extra chimichurri)"
 
 PEDIDO ADICIONAL A ORDEN YA CONFIRMADA:
-- Si el cliente ya tiene un pedido confirmado y quiere agregar algo mas, es un PEDIDO ADICIONAL.
-- Escribe al final: PEDIDO_ADICIONAL_DE:[numero del pedido original]
+- Si el cliente ya tiene un pedido confirmado (cerrado) y quiere agregar algo mas, es un PEDIDO ADICIONAL.
+- Toma el nuevo pedido normalmente con precios.
+- Escribe PEDIDO_LISTO: con los nuevos items.
+- Escribe PEDIDO_ADICIONAL_DE:[numero del pedido original] para vincularlo.
+- El sistema lo registrara como un pedido nuevo vinculado al original.
+- Si el cliente dice "agrega algo a mi pedido" o "se me olvido pedir", es un adicional.
 
 IMAGENES:
 - Si el cliente envia una imagen Y tiene un pedido activo esperando pago: es probablemente un comprobante. Confirma el pedido.
@@ -528,7 +532,15 @@ function parseReply(reply, from) {
 
   if (reply.indexOf("PEDIDO_ADICIONAL_DE:") !== -1) {
     var addMatch = reply.match(/PEDIDO_ADICIONAL_DE:(.+)/);
-    if (addMatch && orderState[from]) orderState[from].pedidoAdicionalDe = addMatch[1].trim();
+    if (addMatch) {
+      var numAdicional = addMatch[1].trim();
+      if (orderState[from]) {
+        orderState[from].pedidoAdicionalDe = numAdicional;
+      } else {
+        // Crear orderState para pedido adicional si no existe
+        orderState[from] = { pedidoAdicionalDe: numAdicional, status: "esperando_direccion" };
+      }
+    }
     cleanReply = cleanReply.replace(/PEDIDO_ADICIONAL_DE:.+/g, "").trim();
   }
 
