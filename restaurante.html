@@ -132,23 +132,34 @@ body {
 /* TOPBAR */
 .topbar {
   position:fixed;top:0;left:0;right:0;z-index:100;
-  height:58px;
-  background:rgba(13,10,26,0.7);
+  height:62px;
+  background:linear-gradient(90deg,rgba(20,10,40,0.95),rgba(15,10,35,0.9));
   backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
-  border-bottom:1px solid var(--glass-border);
-  display:flex;align-items:center;padding:0 16px;gap:10px;
+  border-bottom:1px solid rgba(124,58,237,0.25);
+  box-shadow:0 1px 0 rgba(124,58,237,0.15),0 4px 24px rgba(0,0,0,0.5);
+  display:flex;align-items:center;padding:0 16px;gap:12px;
 }
 .topbar-orb {
-  width:34px;height:34px;border-radius:11px;flex-shrink:0;
-  background:linear-gradient(135deg,#7c3aed,#2563eb);
+  width:40px;height:40px;border-radius:14px;flex-shrink:0;
+  background:linear-gradient(135deg,#7c3aed,#4f46e5,#2563eb);
   display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:800;color:white;
+  font-size:13px;font-weight:900;color:white;
   font-family:'JetBrains Mono',monospace;
-  box-shadow:0 4px 12px rgba(124,58,237,0.5);
+  box-shadow:0 0 0 2px rgba(124,58,237,0.3),0 0 20px rgba(124,58,237,0.5),0 4px 12px rgba(0,0,0,0.4);
+  animation:orbPulse 3s ease-in-out infinite;
+  letter-spacing:-0.02em;
+}
+@keyframes orbPulse{
+  0%,100%{box-shadow:0 0 0 2px rgba(124,58,237,0.3),0 0 20px rgba(124,58,237,0.5),0 4px 12px rgba(0,0,0,0.4)}
+  50%{box-shadow:0 0 0 4px rgba(124,58,237,0.15),0 0 40px rgba(124,58,237,0.7),0 4px 16px rgba(0,0,0,0.4)}
 }
 .topbar-info{flex:1;min-width:0}
-.topbar-brand{font-size:15px;font-weight:800;letter-spacing:-0.01em}
-.topbar-rest{font-size:11px;color:var(--text3);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-brand{
+  font-size:17px;font-weight:900;letter-spacing:-0.02em;
+  background:linear-gradient(135deg,#fff 40%,rgba(196,181,253,0.8));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.topbar-rest{font-size:12px;color:rgba(196,181,253,0.6);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .live-pill {
   display:flex;align-items:center;gap:5px;
@@ -168,28 +179,7 @@ body {
 .topbar-btn:hover{background:var(--glass-bg2);color:var(--text)}
 
 /* BOTTOM NAV */
-.bottom-nav {
-  position:fixed;bottom:0;left:0;right:0;z-index:100;
-  background:rgba(13,10,26,0.85);
-  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
-  border-top:1px solid var(--glass-border);
-  display:flex;
-  padding:6px 6px calc(6px + env(safe-area-inset-bottom));
-}
-.nav-tab {
-  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
-  cursor:pointer;padding:7px 4px 5px;transition:all 0.15s;
-  border-radius:14px;margin:2px;position:relative;
-}
-.nav-tab .ti{font-size:20px;line-height:1;transition:transform 0.15s}
-.nav-tab .tl{font-size:9px;color:var(--text3);font-weight:600;letter-spacing:0.02em}
-.nav-tab.active{background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.25)}
-.nav-tab.active .ti{transform:scale(1.12)}
-.nav-tab.active .tl{
-  background:linear-gradient(135deg,#a78bfa,#60a5fa);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  font-weight:700;
-}
+/* old nav removed */
 .nav-badge {
   position:absolute;top:3px;right:7px;
   background:var(--r1);color:white;font-size:9px;font-weight:700;
@@ -953,6 +943,58 @@ select.finput{cursor:pointer}
   .hcard,.informe-card{border:1px solid #ccc;background:white;break-inside:avoid}
   .hcard-btns,.btn-imprimir,.btn-borrar-hist,.filtros-row{display:none!important}
 }
+
+/* ── FLOATING NAV ──────────────────────────────────── */
+.float-nav {
+  position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+  z-index:200;
+  width:calc(100% - 24px);max-width:480px;
+  padding:0 4px;
+}
+.float-nav-inner {
+  background:rgba(15,10,35,0.92);
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  border:1px solid rgba(124,58,237,0.35);
+  border-radius:28px;
+  display:flex;
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 0 1px rgba(124,58,237,0.1),0 0 40px rgba(124,58,237,0.15);
+}
+.fnav-tab {
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  cursor:pointer;padding:7px 2px 4px;transition:all 0.2s;
+  border-radius:20px;margin:2px;position:relative;
+}
+.fnav-icon{font-size:20px;line-height:1;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1)}
+.fnav-label{font-size:9px;color:rgba(255,255,255,0.3);font-weight:600;letter-spacing:0.03em;transition:color 0.2s}
+.fnav-tab.active{background:rgba(124,58,237,0.25);border:1px solid rgba(124,58,237,0.4)}
+.fnav-tab.active .fnav-icon{transform:scale(1.2);filter:drop-shadow(0 0 8px rgba(196,181,253,0.8))}
+.fnav-tab.active .fnav-label{
+  background:linear-gradient(135deg,#c4b5fd,#818cf8);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  font-weight:700;
+}
+/* Center chat button — elevated */
+.fnav-center{margin-top:-18px}
+.fnav-center-ring {
+  width:52px;height:52px;border-radius:50%;
+  background:linear-gradient(135deg,#7c3aed,#4f46e5);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 0 3px rgba(124,58,237,0.25),0 0 24px rgba(124,58,237,0.6),0 6px 16px rgba(0,0,0,0.5);
+  animation:chatRingPulse 2.5s ease-in-out infinite;
+  transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+.fnav-center.active .fnav-center-ring{
+  background:linear-gradient(135deg,#a855f7,#7c3aed);
+  transform:scale(1.1);
+}
+@keyframes chatRingPulse{
+  0%,100%{box-shadow:0 0 0 3px rgba(124,58,237,0.25),0 0 24px rgba(124,58,237,0.6),0 6px 16px rgba(0,0,0,0.5)}
+  50%{box-shadow:0 0 0 6px rgba(124,58,237,0.1),0 0 40px rgba(124,58,237,0.8),0 6px 20px rgba(0,0,0,0.5)}
+}
+.fnav-center .fnav-label{margin-top:6px}
+/* Content padding for floating nav */
+.content{padding-top:62px;padding-bottom:calc(100px + env(safe-area-inset-bottom))}
 </style>
 </head>
 <body>
@@ -1130,7 +1172,7 @@ select.finput{cursor:pointer}
       <div style="padding:16px 12px 4px"><div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Configuracion</div><div style="font-size:13px;color:var(--text3);margin-top:2px">Ajusta el comportamiento de Luz</div></div>
       <div class="cfg-pad">
         <div class="modo-banner modo-noche" id="modoBanner">
-          <span style="font-size:22px" id="modoIcon">&#127769;</span>
+          <span style="font-size:22px" id="modoIcon">🌙</span>
           <div><div id="modoLabel" style="font-weight:700;font-size:14px">Modo noche activo</div><div id="modoSubLabel" style="font-size:11px;margin-top:2px;opacity:0.7">Luz usa el menu de noche</div></div>
         </div>
         <div class="cfg-section">
@@ -1175,14 +1217,42 @@ select.finput{cursor:pointer}
 
   </div>
 
-  <div class="bottom-nav">
-    <div class="nav-tab active" id="tab-pedidos"><div class="ti">&#128722;</div><div class="tl">Pedidos</div><div class="nav-badge" id="pedidosBadge"></div></div>
-    <div class="nav-tab" id="tab-historial"><div class="ti">&#128202;</div><div class="tl">Historial</div></div>
-    <div class="nav-tab" id="tab-menu"><div class="ti">&#128203;</div><div class="tl">Menu</div></div>
-    <div class="nav-tab" id="tab-chat"><div class="ti">&#128172;</div><div class="tl">Chats</div><div class="nav-badge" id="chatBadge"></div></div>
-    <div class="nav-tab" id="tab-promo"><div class="ti">&#128226;</div><div class="tl">Promos</div></div>
-    <div class="nav-tab" id="tab-cupones"><div class="ti">&#127987;</div><div class="tl">Cupones</div></div>
-    <div class="nav-tab" id="tab-config"><div class="ti">&#9881;</div><div class="tl">Config</div></div>
+  <!-- FLOATING NAV PILL -->
+  <div class="float-nav">
+    <div class="float-nav-inner">
+      <div class="fnav-tab active" id="tab-pedidos">
+        <div class="fnav-icon">🛒</div>
+        <div class="fnav-label">Pedidos</div>
+        <div class="nav-badge" id="pedidosBadge"></div>
+      </div>
+      <div class="fnav-tab" id="tab-historial">
+        <div class="fnav-icon">📊</div>
+        <div class="fnav-label">Historial</div>
+      </div>
+      <div class="fnav-tab" id="tab-menu">
+        <div class="fnav-icon">📋</div>
+        <div class="fnav-label">Menu</div>
+      </div>
+      <div class="fnav-tab fnav-center" id="tab-chat">
+        <div class="fnav-center-ring">
+          <div class="fnav-icon" style="font-size:24px">💬</div>
+        </div>
+        <div class="fnav-label">Chats</div>
+        <div class="nav-badge" id="chatBadge"></div>
+      </div>
+      <div class="fnav-tab" id="tab-promo">
+        <div class="fnav-icon">📣</div>
+        <div class="fnav-label">Promos</div>
+      </div>
+      <div class="fnav-tab" id="tab-cupones">
+        <div class="fnav-icon">🏷️</div>
+        <div class="fnav-label">Cupones</div>
+      </div>
+      <div class="fnav-tab" id="tab-config">
+        <div class="fnav-icon">⚙️</div>
+        <div class="fnav-label">Config</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1382,7 +1452,7 @@ function checkNuevosMensajes(){
 });
 function showTab(n){
   document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active");});
-  document.querySelectorAll(".nav-tab").forEach(function(t){t.classList.remove("active");});
+  document.querySelectorAll(".fnav-tab").forEach(function(t){t.classList.remove("active");});
   var pg=document.getElementById("page-"+n),tab=document.getElementById("tab-"+n);
   if(pg)pg.classList.add("active");if(tab)tab.classList.add("active");
   if(n==="historial")loadHistorial();if(n==="menu")loadMenu();
@@ -1645,16 +1715,29 @@ function renderChatUniversal(){
   else if(chatUniversalFiltro==="humano")datos=datos.filter(function(c){return c.pidioHumano;});
   else if(chatUniversalFiltro==="preguntas")datos=datos.filter(function(c){return c.tienePregunta;});
   else if(chatUniversalFiltro==="hoy"){var hoy=new Date().toISOString().split("T")[0];datos=datos.filter(function(c){return c.fecha&&c.fecha.startsWith(hoy);});}
-  if(!datos.length){lista.innerHTML='<div class="empty"><div class="et">No hay conversaciones aqui</div></div>';return;}
+  if(!datos.length){lista.innerHTML='<div class="empty" style="padding:40px 20px"><div class="ei" style="font-size:44px;margin-bottom:12px">💬</div><div class="et">No hay conversaciones aqui</div></div>';return;}
   var h="";
   datos.forEach(function(c){
     var tagClass=c.tienePregunta?"tag-incompleto":(c.pidioHumano?"tag-humano":(c.pedidoAbierto?"tag-incompleto":"tag-completado"));
-    var tagLabel=c.tienePregunta?"&#10067; Pregunta":(c.pidioHumano?"Pide persona":(c.pedidoAbierto?"Sin cerrar":"Cerrado"));
+    var tagLabel=c.tienePregunta?"❓ Pregunta":(c.pidioHumano?"Pide persona":(c.pedidoAbierto?"Sin cerrar":"Cerrado"));
     if(!c.tienePedido){tagClass="tag-incompleto";tagLabel="Sin pedido";}
-    h+='<div class="chat-univ-item" data-tel="'+c.tel+'" data-num="'+(c.ultimoPedidoNum||"")+'">'+
-      '<div class="chat-univ-top"><div class="chat-univ-tel">&#128241; '+c.tel+(c.silenciado?' <span style="font-size:10px;color:#a855f7">&#129323;</span>':"")+'</div><span class="chat-univ-tag '+tagClass+'">'+tagLabel+'</span></div>'+
-      '<div class="chat-univ-preview">'+(c.tipo==="alerta_pregunta"?"&#10067; ":"")+(c.ultimo||"").replace("ALERTA_PREGUNTA: ","").substring(0,55)+'</div>'+
-      '<div style="font-size:10px;color:var(--muted);margin-top:4px">'+ago(c.fecha)+(c.ultimoPedidoNum?" &middot; Pedido #"+c.ultimoPedidoNum:"")+'</div></div>';
+    var initials=(c.tel||"??").slice(-4,-2)||"??";
+    var preview=(c.tipo==="alerta_pregunta"?"❓ ":"")+(c.ultimo||"").replace("ALERTA_PREGUNTA: ","").substring(0,55);
+    var numLabel=c.ultimoPedidoNum?'<span style="font-size:11px;color:#c4b5fd;font-weight:600">Pedido #'+c.ultimoPedidoNum+'</span>':"";
+    h+='<div class="chat-item" data-tel="'+c.tel+'" data-num="'+(c.ultimoPedidoNum||"")+'">'
+      +'<div class="chat-avatar">'+initials+'</div>'
+      +'<div class="chat-item-body">'
+        +'<div class="chat-item-top">'
+          +'<div class="chat-item-tel">'+c.tel+(c.silenciado?' 🤫':"")+'</div>'
+          +'<div class="chat-item-time">'+ago(c.fecha)+'</div>'
+        +'</div>'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-top:3px">'
+          +'<div class="chat-item-preview" style="flex:1">'+preview+'</div>'
+          +'<span class="chat-item-tag '+tagClass+'">'+tagLabel+'</span>'
+        +'</div>'
+        +(c.ultimoPedidoNum?'<div style="font-size:11px;color:#c4b5fd;margin-top:4px;font-weight:600">📦 Pedido #'+c.ultimoPedidoNum+'</div>':'')+
+      '</div>'
+      +'</div>';
   });
   lista.innerHTML=h;
   lista.querySelectorAll(".chat-item").forEach(function(el){el.addEventListener("click",function(){abrirChat(this.getAttribute("data-tel"),this.getAttribute("data-num"),"");});});
@@ -1952,8 +2035,8 @@ function cargarConfig(){
 }
 function actualizarToggleModoDia(activo){
   var btn=document.getElementById("toggleModoDia"),banner=document.getElementById("modoBanner"),label=document.getElementById("modoLabel"),sub=document.getElementById("modoSubLabel"),icon=document.getElementById("modoIcon");
-  if(activo){btn.className="big-toggle on";banner.className="modo-banner modo-dia";icon.textContent="&#127749;";label.textContent="Modo dia activo";sub.textContent="Luz usa el menu de dia";}
-  else{btn.className="big-toggle off";banner.className="modo-banner modo-noche";icon.textContent="&#127769;";label.textContent="Modo noche activo";sub.textContent="Luz usa el menu de noche";}
+  if(activo){btn.className="big-toggle on";banner.className="modo-banner modo-dia";icon.textContent="🌅";label.textContent="Modo dia activo";sub.textContent="Luz usa el menu de dia";}
+  else{btn.className="big-toggle off";banner.className="modo-banner modo-noche";icon.textContent="🌙";label.textContent="Modo noche activo";sub.textContent="Luz usa el menu de noche";}
 }
 document.getElementById("toggleModoDia").addEventListener("click",function(){modoDiaActual=!modoDiaActual;actualizarToggleModoDia(modoDiaActual);});
 document.querySelectorAll(".dia-btn").forEach(function(b){b.addEventListener("click",function(){this.classList.toggle("activo");});});
