@@ -1406,7 +1406,7 @@ select.finput{cursor:pointer}
         <div class="msg-pedido-info" id="msgPedidoInfo"></div>
       </div>
       <div class="msg-header-actions">
-        <button class="msg-action-btn" id="btnConstructor">&#128722;</button>
+        <button class="msg-action-btn" id="btnConstructor" onclick="toggleConstructorPanel()">&#128722;</button>
         <button class="msg-action-btn" id="btnCerrarChat">&#10005;</button>
       </div>
     </div>
@@ -1417,7 +1417,7 @@ select.finput{cursor:pointer}
     <div id="chatArea"></div>
     <div class="chat-input-area">
       <div class="chat-tools-row">
-        <button class="chat-tool-btn" id="btnConstructorInline">&#128722; Armar pedido</button>
+        <button class="chat-tool-btn" id="btnConstructorInline" onclick="toggleConstructorPanel()">&#128722; Armar pedido</button>
         <button class="chat-tool-btn" onclick="cerrarChat()">&#10005; Cerrar</button>
       </div>
       <div class="chat-input-row">
@@ -1428,7 +1428,7 @@ select.finput{cursor:pointer}
     <div class="constructor-panel" id="constructorPedido">
       <div class="constructor-header">
         <div class="constructor-title">🛒 Armar pedido</div>
-        <button id="btnCerrarConstructor" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1">✕</button>
+        <button id="btnCerrarConstructor" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1" onclick="cerrarConstructorPanel()" onclick="cerrarConstructorPanel()">✕</button>
       </div>
 
       <!-- BUSCADOR DE PRODUCTOS -->
@@ -1464,7 +1464,7 @@ select.finput{cursor:pointer}
         <span class="prod-total-val" id="conTotalDisplay">$0</span>
       </div>
 
-      <button id="btnRegistrarPedido" style="width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:14px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin-top:10px;box-shadow:0 4px 20px rgba(124,58,237,0.4)">Registrar pedido</button>
+      <button id="btnRegistrarPedido" style="width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:14px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin-top:10px;box-shadow:0 4px 20px rgba(124,58,237,0.4)" onclick="registrarPedidoManual()" onclick="registrarPedidoManual()">Registrar pedido</button>
     </div>
   </div>
 </div>
@@ -1690,773 +1690,273 @@ function imprimirTicket(btn){
   t+="<script>window.onload=function(){window.print();window.close();}<\/script></body></html>";
   v.document.write(t);v.document.close();
 }
-
-document.getElementById("imgOverlayClose").addEventListener("click",function(){document.getElementById("imgOverlay").classList.remove("open");});
-document.getElementById("imgOverlay").addEventListener("click",function(e){if(e.target===this)this.classList.remove("open");});
-
-function cambiarEstado(id,estado,tel,num){
-  notif("Actualizando...");
-  patchPedido(id,estado,tel,num).then(function(){
-    if(estado==="entregado"){playSound("pedido_cerrado");notif("Pedido #"+num+" cerrado!","#22c55e");}
-    else{playSound("cambio_estado");notif({en_preparacion:"Preparando #"+num,listo:"Listo #"+num,en_camino:"En camino #"+num}[estado]||"OK");}
-    loadPedidos();loadStats();
-  }).catch(function(e){notif("Error: "+e.message.substring(0,40));});
-}
-
-function loadStats(){
-  if(!rest)return;
-  var col=getHoraColombia();
-  var desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
-  get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+desde+"&select=total").then(function(p){
-    document.getElementById("countHoy").textContent=p.length;
-    document.getElementById("ventasHoy").textContent=fmt(p.reduce(function(s,x){return s+Number(x.total)},0));
-  }).catch(function(){});
-}
-
-document.getElementById("editCancelar").addEventListener("click",function(){document.getElementById("editOverlay").classList.remove("open");editPedidoId=null;});
-document.getElementById("editOverlay").addEventListener("click",function(e){if(e.target===this){this.classList.remove("open");editPedidoId=null;}});
-document.getElementById("editGuardar").addEventListener("click",function(){
-  if(!editPedidoId)return;
-  var itemsRaw=document.getElementById("edit-items").value.trim().split("\n").filter(function(l){return l.trim();});
-  var payload={direccion:document.getElementById("edit-dir").value.trim()||null,metodo_pago:document.getElementById("edit-met").value,total:Number(document.getElementById("edit-total").value)||0,domicilio:Number(document.getElementById("edit-domi").value)||0,items:itemsRaw};
-  var btn=this;btn.textContent="Guardando...";btn.disabled=true;
-  fetch(SU+"/rest/v1/pedidos?id=eq."+editPedidoId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
-  .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t)});return r.text();})
-  .then(function(){notif("Pedido actualizado");document.getElementById("editOverlay").classList.remove("open");editPedidoId=null;loadPedidos();loadStats();})
-  .catch(function(e){notif("Error: "+e.message.substring(0,40));})
-  .finally(function(){btn.textContent="Guardar cambios";btn.disabled=false;});
-});
-
-// HISTORIAL
-document.querySelectorAll(".filtro-btn[data-filtro]").forEach(function(b){
-  b.addEventListener("click",function(){document.querySelectorAll(".filtro-btn[data-filtro]").forEach(function(x){x.classList.remove("active");});this.classList.add("active");filtroActual=this.getAttribute("data-filtro");loadHistorial();});
-});
-function getFechaFiltro(){
-  var col=getHoraColombia();
-  if(filtroActual==="hoy")return new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
-  if(filtroActual==="semana"){var d=new Date(col);d.setDate(d.getDate()-7);return new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),5,0,0)).toISOString();}
-  if(filtroActual==="mes"){var d=new Date(col);d.setDate(d.getDate()-30);return new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),5,0,0)).toISOString();}
-  return null;
-}
-function loadHistorial(){
-  if(!rest)return;
-  var fecha=getFechaFiltro(),filtro="restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=100";
-  if(fecha)filtro+="&created_at=gte."+fecha;
-  get("pedidos",filtro).then(function(ps){
-    var il=document.getElementById("informeLista"),hl=document.getElementById("historialLista");
-    if(!ps.length){il.innerHTML="";hl.innerHTML='<div class="empty"><div class="et">No hay pedidos en este periodo</div></div>';return;}
-    var tot=ps.reduce(function(s,p){return s+Number(p.total)},0);
-    var pagos={},productos={};
-    ps.forEach(function(p){var met=p.metodo_pago||"otro";pagos[met]=(pagos[met]||0)+1;if(Array.isArray(p.items))p.items.forEach(function(it){var n=it.split("$")[0].trim().replace("&bull;","").replace("•","").trim();productos[n]=(productos[n]||0)+1;});});
-    var topPago=Object.keys(pagos).sort(function(a,b){return pagos[b]-pagos[a]})[0]||"—";
-    var topProd=Object.keys(productos).sort(function(a,b){return productos[b]-productos[a]})[0]||"—";
-    var labels={hoy:"Hoy",semana:"7 dias",mes:"30 dias",todo:"Todo"};
-    il.innerHTML='<div class="informe-card"><div class="informe-title">Informe - '+labels[filtroActual]+'</div>'+
-      '<div class="informe-row"><span class="informe-label">Pedidos</span><span class="informe-val">'+ps.length+'</span></div>'+
-      '<div class="informe-row"><span class="informe-label">Ventas</span><span class="informe-val" style="color:var(--green)">'+fmt(tot)+'</span></div>'+
-      '<div class="informe-row"><span class="informe-label">Promedio</span><span class="informe-val">'+fmt(Math.round(tot/ps.length))+'</span></div>'+
-      '<div class="informe-row"><span class="informe-label">Pago mas usado</span><span class="informe-val">'+topPago+'</span></div>'+
-      '<div class="informe-row"><span class="informe-label">Producto top</span><span class="informe-val" style="font-size:11px">'+topProd+'</span></div>'+
-      '<button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir</button>'+
-      '<button class="btn-borrar-hist" id="btnBorrarHist">🗑️ Borrar periodo</button></div>';
-    document.getElementById("btnBorrarHist").addEventListener("click",function(){document.getElementById("confirmBorrarHist").classList.add("open");});
-    var h="";
-    ps.forEach(function(p){
-      var cfg=ESTADOS[p.estado]||ESTADOS.confirmado;
-      var total=Number(p.total||0),des=Number(p.desechables||0),dom=Number(p.domicilio||0);
-      var items=Array.isArray(p.items)?p.items:[];
-      var itemsEnc=encodeURIComponent(JSON.stringify(items));
-      var esAdicional=!!p.pedido_adicional_de;
-      h+='<div class="hcard">';
-      if(esAdicional)h+='<div style="margin-bottom:8px"><span class="adicional-badge">➕ ADICIONAL al #'+p.pedido_adicional_de+'</span></div>';
-      h+='<div class="hcard-top"><div><div class="hnum">#'+p.numero_pedido+'</div>'+
-        '<div class="hinfo">'+(p.cliente_tel||"—")+" &middot; "+(p.metodo_pago||"—")+'</div>'+
-        '<div class="hinfo">'+new Date(p.created_at).toLocaleString("es-CO",{dateStyle:"short",timeStyle:"short"})+'</div></div>'+
-        '<div style="text-align:right"><div class="htot">'+fmt(total)+'</div>'+
-        '<span class="etag '+cfg.c+'" style="font-size:10px">'+cfg.l+'</span></div></div>';
-      if(p.notas_especiales)h+='<div class="notas-especiales" style="margin:8px 0"><span class="notas-icon">📝</span><div>'+p.notas_especiales+'</div></div>';
-      h+='<div class="hcard-btns">'+
-        (p.cliente_tel?'<button class="hbtn hbtn-chat" data-tel="'+p.cliente_tel+'" data-num="'+p.numero_pedido+'">💬 Chat</button>':'')+
-        '<button class="hbtn hbtn-print" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+des+'" data-pdom="'+dom+'" data-pitems="'+itemsEnc+'">🖨️ Imprimir</button>'+
-        '<button class="hbtn hbtn-del" data-id="'+p.id+'">🗑️ Eliminar</button>'+
-        '</div></div>';
-    });
-    hl.innerHTML=h;
-    hl.querySelectorAll(".hbtn-chat").forEach(function(b){b.addEventListener("click",function(){abrirChat(this.getAttribute("data-tel"),this.getAttribute("data-num"),"");});});
-    hl.querySelectorAll(".hbtn-print").forEach(function(b){b.addEventListener("click",function(){imprimirTicket(this);});});
-    hl.querySelectorAll(".hbtn-del").forEach(function(b){b.addEventListener("click",function(){pedidoAEliminar=this.getAttribute("data-id");document.getElementById("confirmEliminar").classList.add("open");});});
-  }).catch(function(){});
-}
-
-document.getElementById("confirmEliminarCancel").addEventListener("click",function(){document.getElementById("confirmEliminar").classList.remove("open");pedidoAEliminar=null;});
-document.getElementById("confirmEliminarOk").addEventListener("click",function(){
-  if(!pedidoAEliminar)return;
-  var id=pedidoAEliminar;document.getElementById("confirmEliminar").classList.remove("open");pedidoAEliminar=null;
-  fetch("/api/pedido/"+id,{method:"DELETE"}).then(function(r){return r.json();}).then(function(d){if(d.ok){notif("Pedido eliminado");loadHistorial();loadStats();}}).catch(function(){notif("Error de conexion");});
-});
-document.getElementById("confirmBorrarHistCancel").addEventListener("click",function(){document.getElementById("confirmBorrarHist").classList.remove("open");});
-document.getElementById("confirmBorrarHistOk").addEventListener("click",function(){
-  if(!rest)return;
-  document.getElementById("confirmBorrarHist").classList.remove("open");notif("Borrando...");
-  var fecha=getFechaFiltro(),filtro="restaurante_id=eq."+rest.id;if(fecha)filtro+="&created_at=gte."+fecha;
-  fetch(SU+"/rest/v1/pedidos?"+filtro,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Prefer":"return=minimal"}})
-    .then(function(r){if(r.ok||r.status===204){notif("Historial borrado");loadHistorial();loadStats();}})
-    .catch(function(){notif("Error");});
-});
-
-function loadMenu(){
-  if(!rest)return;
-  get("menu_items","restaurante_id=eq."+rest.id+"&order=categoria,orden").then(function(items){
-    var l=document.getElementById("menuLista");
-    if(!items.length){l.innerHTML='<div class="empty"><div class="et">Agrega tu primer producto</div></div>';return;}
-    var g={};items.forEach(function(i){if(!g[i.categoria])g[i.categoria]=[];g[i.categoria].push(i);});
-    var h="";
-    Object.keys(g).forEach(function(cat){
-      h+='<div class="mcat"><div class="mct">'+cat+'</div>';
-      g[cat].forEach(function(i){h+='<div class="mitem"><div style="flex:1"><div class="mname">'+i.nombre+'</div><div class="mdesc">'+(i.descripcion||"")+'</div></div><div class="mprice">'+fmt(i.precio)+'</div><button class="tog '+(i.disponible?"on":"off")+'" data-iid="'+i.id+'" data-d="'+i.disponible+'"></button></div>';});
-      h+='</div>';
-    });
-    l.innerHTML=h;
-    l.querySelectorAll(".tog").forEach(function(b){b.addEventListener("click",function(){
-      fetch("/api/menu-toggle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:this.getAttribute("data-iid"),disponible:this.getAttribute("data-d")==="true"?false:true})})
-      .then(function(r){return r.json();}).then(function(){loadMenu();notif("Actualizado");}).catch(function(e){notif("Error: "+e.message.substring(0,30));});
-    });});
-  }).catch(function(){});
-}
-
-// CHAT UNIVERSAL
-function filtrarChats(modo){
-  chatUniversalFiltro=modo;
-  ["todos","incompletos","humano","preguntas","hoy"].forEach(function(m){
-    var btn=document.getElementById("chatFiltro"+m.charAt(0).toUpperCase()+m.slice(1));
-    if(btn)btn.className="filtro-btn"+(m===modo?" active":"");
-  });
-  renderChatUniversal();
-}
-function loadChatUniversal(){
-  if(!rest)return;
-  document.getElementById("chatUniversalLista").innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
-  get("mensajes","restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=300").then(function(msgs){
-    get("pedidos","restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=300&select=cliente_tel,estado,numero_pedido,created_at").then(function(pedidos){
-      var pedidosPorTel={};
-      pedidos.forEach(function(p){if(!pedidosPorTel[p.cliente_tel])pedidosPorTel[p.cliente_tel]=[];pedidosPorTel[p.cliente_tel].push(p);});
-      var convsMap={};
-      msgs.forEach(function(m){
-        var tel=m.telefono;
-        if(!convsMap[tel])convsMap[tel]={tel:tel,ultimo:m.mensaje,fecha:m.created_at,tipo:m.tipo,totalMsgs:0,pidioHumano:false,tienePregunta:false};
-        convsMap[tel].totalMsgs++;
-        if(m.tipo==="cliente"){var txt=(m.mensaje||"").toLowerCase();if(["hablar con","persona real","asesor","humano","encargado"].some(function(p){return txt.indexOf(p)!==-1;}))convsMap[tel].pidioHumano=true;}
-        if(m.tipo==="alerta_pregunta")convsMap[tel].tienePregunta=true;
-      });
-      chatUniversalData=Object.values(convsMap).map(function(c){
-        var peds=pedidosPorTel[c.tel]||[];
-        c.pedidoAbierto=peds.some(function(p){return p.estado!=="entregado";});
-        c.tienePedido=peds.length>0;c.ultimoPedidoNum=peds.length>0?peds[0].numero_pedido:null;
-        c.silenciado=silencioPorTel[c.tel]||false;
-        return c;
-      }).sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
-      renderChatUniversal();
-    }).catch(function(){renderChatUniversal();});
-  }).catch(function(){document.getElementById("chatUniversalLista").innerHTML='<div class="empty"><div class="et">Error</div></div>';});
-}
-function renderChatUniversal(){
-  var lista=document.getElementById("chatUniversalLista"),datos=chatUniversalData;
-  if(chatUniversalFiltro==="incompletos")datos=datos.filter(function(c){return c.pedidoAbierto||!c.tienePedido;});
-  else if(chatUniversalFiltro==="humano")datos=datos.filter(function(c){return c.pidioHumano;});
-  else if(chatUniversalFiltro==="preguntas")datos=datos.filter(function(c){return c.tienePregunta;});
-  else if(chatUniversalFiltro==="hoy"){var hoy=new Date().toISOString().split("T")[0];datos=datos.filter(function(c){return c.fecha&&c.fecha.startsWith(hoy);});}
-  if(!datos.length){lista.innerHTML='<div class="empty" style="padding:40px 20px"><div class="ei" style="font-size:44px;margin-bottom:12px">💬</div><div class="et">No hay conversaciones aqui</div></div>';return;}
-  var h="";
-  datos.forEach(function(c){
-    var tagClass=c.tienePregunta?"tag-incompleto":(c.pidioHumano?"tag-humano":(c.pedidoAbierto?"tag-incompleto":"tag-completado"));
-    var tagLabel=c.tienePregunta?"❓ Pregunta":(c.pidioHumano?"Pide persona":(c.pedidoAbierto?"Sin cerrar":"Cerrado"));
-    if(!c.tienePedido){tagClass="tag-incompleto";tagLabel="Sin pedido";}
-    var initials=(c.tel||"??").slice(-4,-2)||"??";
-    var preview=(c.tipo==="alerta_pregunta"?"❓ ":"")+(c.ultimo||"").replace("ALERTA_PREGUNTA: ","").substring(0,55);
-    var numLabel=c.ultimoPedidoNum?'<span style="font-size:11px;color:#c4b5fd;font-weight:600">Pedido #'+c.ultimoPedidoNum+'</span>':"";
-    h+='<div class="chat-item" data-tel="'+c.tel+'" data-num="'+(c.ultimoPedidoNum||"")+'">'
-      +'<div class="chat-avatar">'+initials+'</div>'
-      +'<div class="chat-item-body">'
-        +'<div class="chat-item-top">'
-          +'<div class="chat-item-tel">'+c.tel+(c.silenciado?' 🤫':"")+'</div>'
-          +'<div class="chat-item-time">'+ago(c.fecha)+'</div>'
-        +'</div>'
-        +'<div style="display:flex;align-items:center;gap:8px;margin-top:3px">'
-          +'<div class="chat-item-preview" style="flex:1">'+preview+'</div>'
-          +'<span class="chat-item-tag '+tagClass+'">'+tagLabel+'</span>'
-        +'</div>'
-        +(c.ultimoPedidoNum?'<div style="font-size:11px;color:#c4b5fd;margin-top:4px;font-weight:600">📦 Pedido #'+c.ultimoPedidoNum+'</div>':'')+
-      '</div>'
-      +'</div>';
-  });
-  lista.innerHTML=h;
-  lista.querySelectorAll(".chat-item").forEach(function(el){el.addEventListener("click",function(){abrirChat(this.getAttribute("data-tel"),this.getAttribute("data-num"),"");});});
-}
-
-// CHAT WHATSAPP - nuevo diseño
-function abrirChat(tel,num,comp){
-  msgTel=tel;msgNum=num;chatLastTs="";
-  // Avatar con inicial
-  var inicial=(tel||"?").slice(-2);
-  document.getElementById("msgAvatar").textContent=inicial;
-  document.getElementById("msgClienteInfo").textContent="📱 "+tel;
-  document.getElementById("msgTelInfo").textContent=tel;
-  document.getElementById("msgPedidoInfo").textContent=num?"Pedido #"+num:"";
-  document.getElementById("msgTexto").value="";
-  document.getElementById("chatArea").innerHTML='<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0;">Cargando mensajes...</div>';
-  document.getElementById("constructorPedido").style.display="none";
-  // Cargar direccion frecuente del cliente para el constructor
-  if(rest){
-    fetch("/api/cliente/"+encodeURIComponent(tel)+"?restaurante_id="+rest.id)
-      .then(function(r){return r.json();})
-      .then(function(d){if(d.ok&&d.cliente&&d.cliente.ultima_direccion){document.getElementById("con-dir").value=d.cliente.ultima_direccion;}})
-      .catch(function(){});
+// ── CONSTRUCTOR FUNCTIONS ────────────────────────────────────────────────────
+function toggleConstructorPanel() {
+  var panel = document.getElementById('constructorPedido');
+  if (!panel) return;
+  if (panel.style.display === 'block') {
+    cerrarConstructorPanel();
+  } else {
+    abrirConstructor();
   }
-  var togSil=document.getElementById("toggleSilencio");
-  togSil.className="big-toggle "+(silencioPorTel[tel]?"on":"off");
-  togSil.setAttribute("data-tel",tel);
-  document.getElementById("msgOverlay").classList.add("open");
-  cargarMensajesChat(true);
-  if(chatTimer)clearInterval(chatTimer);
-  chatTimer=setInterval(function(){cargarMensajesChat(false);},3000);
-  setTimeout(function(){document.getElementById("msgTexto").focus();},400);
 }
 
-function cargarMensajesChat(forzar){
-  if(!msgTel||!rest)return;
-  fetch("/api/chat/"+encodeURIComponent(msgTel)+"?restaurante_id="+encodeURIComponent(rest.id))
+function cerrarConstructorPanel() {
+  var panel = document.getElementById('constructorPedido');
+  if (panel) panel.style.display = 'none';
+  var bc = document.getElementById('btnConstructor');
+  var bci = document.getElementById('btnConstructorInline');
+  if (bc) bc.classList.remove('active');
+  if (bci) bci.classList.remove('active');
+}
+
+function registrarPedidoManual() {
+  var items = Object.values(cartItems);
+  if (!items.length) { notif('Agrega al menos un producto'); return; }
+  if (!rest || !rest.id) { notif('Error: inicia sesion'); return; }
+  if (!msgTel) { notif('Error: abre un chat primero'); return; }
+
+  var itemsArr = items.map(function(i) {
+    return i.qty + 'x ' + i.nombre + ' $' + Number(i.precio).toLocaleString('es-CO');
+  });
+  var subtotal = items.reduce(function(s,i){ return s + i.precio*i.qty; }, 0);
+  var domi  = Number((document.getElementById('con-domi')||{}).value)||0;
+  var desech = items.reduce(function(s,i){ return s+i.qty; },0)*500;
+  var total = subtotal+desech+domi;
+  var dir   = ((document.getElementById('con-dir')||{}).value||'').trim()||'Por confirmar';
+  var pago  = (document.getElementById('con-pago')||{}).value||'nequi';
+  var notas = ((document.getElementById('con-notas')||{}).value||'').trim()||null;
+
+  var btn = document.getElementById('btnRegistrarPedido');
+  if (btn) { btn.textContent='Registrando...'; btn.disabled=true; }
+
+  fetch('/api/pedido-manual', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      restaurante_id: rest.id,
+      telefono: msgTel,
+      items: itemsArr,
+      total: total,
+      desechables: desech,
+      domicilio: domi,
+      direccion: dir,
+      metodo_pago: pago,
+      notas_especiales: notas
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.ok) {
+      notif('Pedido #'+d.numero_pedido+' registrado!');
+      playSound('nuevo_pedido');
+      cerrarConstructorPanel();
+      cartItems={};
+      renderCart();
+      loadPedidos();
+      loadStats();
+    } else {
+      notif('Error: '+(d.error||'').substring(0,50));
+    }
+  })
+  .catch(function(){ notif('Error de conexion'); })
+  .finally(function(){
+    var b=document.getElementById('btnRegistrarPedido');
+    if(b){ b.textContent='Registrar pedido'; b.disabled=false; }
+  });
+}
+
+
+// ── SMART CONSTRUCTOR — variables ────────────────────────────────────────────
+var cartItems = {};
+var MENU_PRODUCTOS = [];
+
+function fmtCOP(n){ return '$'+Number(n||0).toLocaleString('es-CO'); }
+
+function cargarMenuParaConstructor(){
+  if(!rest||!rest.id) return;
+  fetch('https://vbxuwzcfzfjwhllkppkg.supabase.co/rest/v1/menu_items?restaurante_id=eq.'+rest.id+'&disponible=eq.true&select=*',
+    {headers:{'apikey':'sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5','Authorization':'Bearer sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5'}})
     .then(function(r){return r.json();})
-    .then(function(d){if(d.ok)renderMensajesChat(d.mensajes||[],forzar);})
+    .then(function(d){MENU_PRODUCTOS=d||[];})
     .catch(function(){});
 }
 
-function renderMensajesChat(msgs,forzar){
-  if(!msgs.length){document.getElementById("chatArea").innerHTML='<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px 0;">No hay mensajes aun.</div>';return;}
-  var ultimoTs=msgs[msgs.length-1].created_at;
-  if(!forzar&&ultimoTs===chatLastTs)return;
-  chatLastTs=ultimoTs;
-  var h="";var lastDay="";
-  msgs.forEach(function(m){
-    var txt=m.mensaje||"";
-    var horaStr=fmtHora(m.created_at);
-    var dia=m.created_at?m.created_at.split("T")[0]:"";
-    if(dia!==lastDay){
-      var diaLabel=dia===new Date().toISOString().split("T")[0]?"Hoy":new Date(dia+"T12:00:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short"});
-      h+='<div class="chat-day-divider"><span class="chat-day-label">'+diaLabel+'</span></div>';
-      lastDay=dia;
-    }
-    if(m.tipo==="cliente"&&m.comprobante_media_id){
-      h+='<div class="chat-comp-bubble" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+m.comprobante_media_id+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')"><div class="chat-comp-label"><span>✅</span> Comprobante de pago</div><img src="/api/comprobante/'+m.comprobante_media_id+'" onerror="this.style.display=\'none\'"><div class="chat-comp-time">'+horaStr+'</div></div>';
-    } else if(m.tipo==="cliente"&&m.comprobante_media_id===null&&txt.indexOf("[El cliente envio una imagen]")!==-1&&m.media_id){
-      // imagen no comprobante
-      h+='<div class="chat-img-bubble" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+m.media_id+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')"><img src="/api/comprobante/'+m.media_id+'" onerror="this.style.display=\'none\'"><div class="chat-img-caption">Imagen del cliente</div><div class="chat-img-time">'+horaStr+'</div></div>';
-    } else if(m.tipo==="estado_luz"){
-      h+='<div class="chat-bubble chat-luz-estado"><div class="chat-label">🤖 Luz (auto)</div><div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';
-    } else if(m.tipo==="alerta_pregunta"){
-      h+='<div class="chat-bubble chat-alerta-pregunta"><div class="chat-label">❓ Pregunta sin respuesta</div><div>'+txt.replace("ALERTA_PREGUNTA: ","")+'</div><div class="chat-time">'+horaStr+'</div></div>';
-    } else if(m.tipo==="restaurante"){
-      h+='<div class="chat-bubble chat-restaurante"><div class="chat-label">👤 Panel</div><div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';
-    } else {
-      h+='<div class="chat-bubble chat-cliente"><div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';
-    }
-  });
-  var box=document.getElementById("chatArea");
-  box.innerHTML=h;
-  requestAnimationFrame(function(){requestAnimationFrame(function(){box.scrollTop=box.scrollHeight;});});
-}
-
-function cerrarChat(){
-  document.getElementById("msgOverlay").classList.remove("open");
-  document.getElementById("constructorPedido").style.display="none";
-  if(chatTimer){clearInterval(chatTimer);chatTimer=null;}
-  chatLastTs="";
-}
-
-document.getElementById("btnCerrarChat").addEventListener("click",function(){cerrarChat();});
-document.getElementById("msgOverlay").addEventListener("click",function(e){if(e.target===this)cerrarChat();});
-
-// Silencio
-document.getElementById("toggleSilencio").addEventListener("click",function(){
-  var tel=this.getAttribute("data-tel")||msgTel;
-  silencioPorTel[tel]=!silencioPorTel[tel];
-  this.className="big-toggle "+(silencioPorTel[tel]?"on":"off");
-  notif(silencioPorTel[tel]?"Luz en silencio":"Luz reactivada",silencioPorTel[tel]?"#a855f7":"#22c55e");
-  if(rest){fetch(SU+"/rest/v1/silencio_conversacion?on_conflict=restaurante_id,telefono",{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({restaurante_id:rest.id,telefono:tel,activo:silencioPorTel[tel],updated_at:new Date().toISOString()})}).catch(function(){});}
-});
-
-// Enviar mensaje
-document.getElementById("msgEnviar").addEventListener("click",enviarMensaje);
-document.getElementById("msgTexto").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();enviarMensaje();}});
-function enviarMensaje(){
-  var texto=document.getElementById("msgTexto").value.trim();if(!texto){return;}
-  var btn=document.getElementById("msgEnviar");btn.disabled=true;
-  fetch("/enviar-mensaje-cliente",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telefono:msgTel,mensaje:texto,restaurante_id:rest?rest.id:null})})
-    .then(function(r){return r.json();})
-    .then(function(d){if(d.ok){document.getElementById("msgTexto").value="";setTimeout(function(){cargarMensajesChat(true);},1200);}else{notif("Error: "+(d.error||"").substring(0,30));}})
-    .catch(function(){notif("Error de conexion");})
-    .finally(function(){btn.disabled=false;});
-}
-
-// Auto-resize textarea
-document.getElementById("msgTexto").addEventListener("input",function(){
-  this.style.height="46px";
-  this.style.height=Math.min(this.scrollHeight,120)+"px";
-});
-
-// CONSTRUCTOR PEDIDO MANUAL
-// btnConstructor: handled by delegation
-document.getElementById("btnCerrarConstructor").addEventListener("click",function(){
-  document.getElementById("constructorPedido").style.display="none";
-  document.getElementById("btnConstructor").classList.remove("active");
-});
-// old handler removed
-
-// PROMO
-function loadPromoCount(){
-  if(!rest)return;
-  var hace30=new Date(Date.now()-30*24*60*60*1000).toISOString();
-  get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+hace30+"&select=cliente_tel").then(function(ps){
-    var u={};ps.forEach(function(p){if(p.cliente_tel)u[p.cliente_tel]=true;});
-    document.getElementById("promoCount").textContent=Object.keys(u).length;
-  }).catch(function(){document.getElementById("promoCount").textContent="?";});
-}
-document.querySelectorAll(".promo-tpl").forEach(function(el){el.addEventListener("click",function(){document.querySelectorAll(".promo-tpl").forEach(function(e){e.classList.remove("sel");});this.classList.add("sel");document.getElementById("promoTexto").value=this.getAttribute("data-msg");});});
-document.getElementById("promoEnviarBtn").addEventListener("click",function(){
-  var texto=document.getElementById("promoTexto").value.trim();if(!texto){notif("Escribe o elige un mensaje");return;}
-  document.getElementById("confirmCount").textContent=document.getElementById("promoCount").textContent;
-  document.getElementById("confirmPreview").textContent=texto;
-  document.getElementById("promoConfirm").classList.add("open");
-});
-document.getElementById("promoConfirmCancel").addEventListener("click",function(){document.getElementById("promoConfirm").classList.remove("open");});
-document.getElementById("promoConfirmOk").addEventListener("click",function(){document.getElementById("promoConfirm").classList.remove("open");enviarPromo();});
-function enviarPromo(){
-  var texto=document.getElementById("promoTexto").value.trim();if(!texto||!rest)return;
-  var btn=document.getElementById("promoEnviarBtn"),label=document.getElementById("promoBtnLabel");
-  btn.disabled=true;label.textContent="Enviando...";
-  fetch("/api/enviar-promo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,mensaje:texto})})
-    .then(function(r){return r.json();})
-    .then(function(d){if(d.ok){notif("Enviado a "+d.enviados+" clientes!","#22c55e");document.getElementById("resOk").textContent=d.enviados||0;document.getElementById("resFail").textContent=d.fallidos||0;document.getElementById("resTotal").textContent=d.total||0;document.getElementById("promoResult").classList.add("show");document.getElementById("promoTexto").value="";document.querySelectorAll(".promo-tpl").forEach(function(e){e.classList.remove("sel");});}else{notif("Error: "+(d.error||"").substring(0,40));}})
-    .catch(function(){notif("Error de conexion");})
-    .finally(function(){btn.disabled=false;label.textContent="Enviar ahora a todos";});
-}
-
-// PROMOS PROGRAMADAS
-function getProgs(){try{return JSON.parse(localStorage.getItem("luzProgs")||"[]");}catch(e){return[];}}
-function saveProgs(p){localStorage.setItem("luzProgs",JSON.stringify(p));}
-document.getElementById("btnAgregarProg").addEventListener("click",function(){
-  var dia=document.getElementById("prog-dia").value,hora=document.getElementById("prog-hora").value,msg=document.getElementById("prog-msg").value.trim();
-  if(!msg){notif("Escribe el mensaje");return;}
-  var progs=getProgs();progs.push({id:Date.now(),dia:dia,hora:hora,mensaje:msg,activa:true,ultimoEnvio:null});
-  saveProgs(progs);document.getElementById("prog-msg").value="";notif("Promo programada!");renderProgs();
-});
-function renderProgs(){
-  var progs=getProgs(),lista=document.getElementById("progsLista");
-  if(!progs.length){lista.innerHTML='<div class="empty" style="padding:20px"><div class="et">No hay promos programadas</div></div>';return;}
-  var diasL={lunes:"Lun",martes:"Mar",miercoles:"Mie",jueves:"Jue",viernes:"Vie",sabado:"Sab",domingo:"Dom",todos:"Todos"};
-  var h="";
-  progs.forEach(function(p){
-    h+='<div class="prog-card"><div style="font-size:20px;flex-shrink:0">🕐</div>'+
-      '<div class="prog-card-info"><div class="prog-card-title">'+p.mensaje.substring(0,50)+(p.mensaje.length>50?"...":"")+'<span class="prog-status '+(p.activa?"activa":"inactiva")+'">'+( p.activa?"Activa":"Inactiva")+'</span></div>'+
-      '<div class="prog-card-meta">'+(diasL[p.dia]||p.dia)+' a las '+p.hora+'</div></div>'+
-      '<div class="prog-card-btns">'+
-      '<button class="prog-btn prog-btn-toggle'+(p.activa?"":" off")+'" data-pid="'+p.id+'">'+( p.activa?"ON":"OFF")+'</button>'+
-      '<button class="prog-btn prog-btn-del" data-pid="'+p.id+'">🗑️</button>'+
-      '</div></div>';
-  });
-  lista.innerHTML=h;
-  lista.querySelectorAll(".prog-btn-toggle").forEach(function(b){b.addEventListener("click",function(){var progs=getProgs(),pid=Number(this.getAttribute("data-pid")),idx=progs.findIndex(function(p){return p.id===pid;});if(idx>=0){progs[idx].activa=!progs[idx].activa;saveProgs(progs);renderProgs();}});});
-  lista.querySelectorAll(".prog-btn-del").forEach(function(b){b.addEventListener("click",function(){var progs=getProgs(),pid=Number(this.getAttribute("data-pid"));saveProgs(progs.filter(function(p){return p.id!==pid;}));renderProgs();notif("Promo eliminada");});});
-}
-function getDiaCol(){return["domingo","lunes","martes","miercoles","jueves","viernes","sabado"][getHoraColombia().getDay()];}
-var progsEnviadas={};
-function checkProgsAutomaticas(){
-  if(!rest)return;
-  var progs=getProgs().filter(function(p){return p.activa;});if(!progs.length)return;
-  var col=getHoraColombia();
-  var diaActual=getDiaCol();
-  var horaActual=col.getHours().toString().padStart(2,"0")+":"+col.getMinutes().toString().padStart(2,"0");
-  var hoyStr=col.toISOString().split("T")[0];
-  progs.forEach(function(p){
-    if((p.dia==="todos"||p.dia===diaActual)&&p.hora===horaActual&&!progsEnviadas[p.id+"_"+hoyStr]){
-      progsEnviadas[p.id+"_"+hoyStr]=true;
-      fetch("/api/enviar-promo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,mensaje:p.mensaje})})
-        .then(function(r){return r.json();})
-        .then(function(d){if(d.ok){notif("Promo automatica: "+d.enviados+" enviados","#a855f7");var all=getProgs();var idx=all.findIndex(function(x){return x.id===p.id;});if(idx>=0){all[idx].ultimoEnvio=new Date().toISOString();saveProgs(all);}renderProgs();}})
-        .catch(function(){});
-    }
-  });
-}
-
-// CUPONES
-function getCupones(){try{return JSON.parse(localStorage.getItem("luzCupones_"+(rest?rest.id:""))||"[]");}catch(e){return[];}}
-function saveCupones(c){localStorage.setItem("luzCupones_"+(rest?rest.id:""),JSON.stringify(c));}
-document.getElementById("cup-codigo").addEventListener("input",function(){this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,"");});
-document.getElementById("btnCrearCupon").addEventListener("click",function(){
-  var codigo=document.getElementById("cup-codigo").value.trim().toUpperCase();
-  var valor=Number(document.getElementById("cup-valor").value);
-  if(!codigo||!valor){notif("Completa codigo y valor");return;}
-  var cupones=getCupones();
-  if(cupones.find(function(c){return c.codigo===codigo;})){notif("Ese codigo ya existe");return;}
-  cupones.push({id:Date.now(),codigo:codigo,tipo:document.getElementById("cup-tipo").value,valor:valor,usosMax:document.getElementById("cup-usos").value?Number(document.getElementById("cup-usos").value):null,usosActuales:0,descripcion:document.getElementById("cup-desc").value.trim(),activo:true,creadoEn:new Date().toISOString()});
-  saveCupones(cupones);
-  ["cup-codigo","cup-valor","cup-usos","cup-desc"].forEach(function(id){document.getElementById(id).value="";});
-  notif("Cupon "+codigo+" creado!");renderCupones();actualizarCuponesEnLuz();
-});
-function renderCupones(){
-  var cupones=getCupones(),lista=document.getElementById("cuponesLista");if(!lista)return;
-  if(!cupones.length){lista.innerHTML='<div class="empty" style="padding:20px"><div class="et">No hay cupones creados</div></div>';return;}
-  var h="";
-  cupones.forEach(function(c){
-    var agotado=c.usosMax&&c.usosActuales>=c.usosMax;
-    var bClass=!c.activo?"inactivo":(agotado?"agotado":"activo");
-    var bLabel=!c.activo?"Inactivo":(agotado?"Agotado":"Activo");
-    var desc=c.tipo==="porcentaje"?c.valor+"% descuento":"$"+Number(c.valor).toLocaleString("es-CO")+" descuento";
-    h+='<div class="cupon-card"><div class="cupon-top"><div class="cupon-codigo">'+c.codigo+'</div><span class="cupon-badge '+bClass+'">'+bLabel+'</span></div>'+
-      '<div class="cupon-desc">'+desc+(c.descripcion?" &middot; "+c.descripcion:"")+'</div>'+
-      '<div class="cupon-stats"><span>Usos: <span class="cupon-stat-val">'+c.usosActuales+(c.usosMax?"/"+c.usosMax:"")+'</span></span><span>Creado: <span class="cupon-stat-val">'+new Date(c.creadoEn).toLocaleDateString("es-CO")+'</span></span></div>'+
-      '<div class="cupon-btns">'+
-      '<button class="cupon-btn cupon-btn-copy" data-cod="'+c.codigo+'">📋 Copiar</button>'+
-      '<button class="cupon-btn cupon-btn-toggle" data-cid="'+c.id+'">'+( c.activo?"Desactivar":"Activar")+'</button>'+
-      '<button class="cupon-btn cupon-btn-del" data-cid="'+c.id+'">🗑️</button>'+
-      '</div></div>';
-  });
-  lista.innerHTML=h;
-  lista.querySelectorAll(".cupon-btn-copy").forEach(function(b){b.addEventListener("click",function(){var cod=this.getAttribute("data-cod");navigator.clipboard&&navigator.clipboard.writeText(cod).then(function(){notif("Copiado: "+cod);}).catch(function(){notif("Codigo: "+cod);});});});
-  lista.querySelectorAll(".cupon-btn-toggle").forEach(function(b){b.addEventListener("click",function(){var cups=getCupones(),cid=Number(this.getAttribute("data-cid")),idx=cups.findIndex(function(c){return c.id===cid;});if(idx>=0){cups[idx].activo=!cups[idx].activo;saveCupones(cups);renderCupones();actualizarCuponesEnLuz();}});});
-  lista.querySelectorAll(".cupon-btn-del").forEach(function(b){b.addEventListener("click",function(){var cups=getCupones(),cid=Number(this.getAttribute("data-cid"));saveCupones(cups.filter(function(c){return c.id!==cid;}));renderCupones();notif("Cupon eliminado");actualizarCuponesEnLuz();});});
-}
-function actualizarCuponesEnLuz(){
-  if(!rest)return;
-  var activos=getCupones().filter(function(c){return c.activo&&(!c.usosMax||c.usosActuales<c.usosMax);});
-  fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:{cupones_activos:JSON.stringify(activos)}})}).catch(function(){});
-}
-
-// CONFIG
-var modoDiaActual=false;
-function cargarConfig(){
-  if(!rest)return;
-  modoDiaActual=rest.modo_dia||false;actualizarToggleModoDia(modoDiaActual);
-  document.getElementById("cfg-apertura").value=(rest.hora_apertura||"16:00:00").substring(0,5);
-  document.getElementById("cfg-cierre").value=(rest.hora_cierre||"00:00:00").substring(0,5);
-  document.getElementById("cfg-menu-dia").value=rest.menu_dia||"";
-  document.getElementById("cfg-menu-noche").value=rest.menu_noche||"";
-  document.getElementById("cfg-direccion").value=rest.direccion||"";
-  document.getElementById("cfg-msg-bienvenida").value=rest.msg_bienvenida||"";
-  document.getElementById("cfg-msg-preparacion").value=rest.msg_en_preparacion||"";
-  document.getElementById("cfg-msg-listo").value=rest.msg_listo||"";
-  document.getElementById("cfg-msg-camino").value=rest.msg_en_camino||"";
-  var diasActivos=(rest.dias_activos||"lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
-  document.querySelectorAll(".dia-btn").forEach(function(b){diasActivos.includes(b.getAttribute("data-dia"))?b.classList.add("activo"):b.classList.remove("activo");});
-  var t=localStorage.getItem("luzTema")||"dark";
-  document.getElementById("tema-dark").classList.toggle("selected",t==="dark");
-  document.getElementById("tema-light").classList.toggle("selected",t==="light");
-}
-function actualizarToggleModoDia(activo){
-  var btn=document.getElementById("toggleModoDia"),banner=document.getElementById("modoBanner"),label=document.getElementById("modoLabel"),sub=document.getElementById("modoSubLabel"),icon=document.getElementById("modoIcon");
-  if(activo){btn.className="big-toggle on";banner.className="modo-banner modo-dia";icon.textContent="🌅";label.textContent="Modo dia activo";sub.textContent="Luz usa el menu de dia";}
-  else{btn.className="big-toggle off";banner.className="modo-banner modo-noche";icon.textContent="🌙";label.textContent="Modo noche activo";sub.textContent="Luz usa el menu de noche";}
-}
-document.getElementById("toggleModoDia").addEventListener("click",function(){modoDiaActual=!modoDiaActual;actualizarToggleModoDia(modoDiaActual);});
-document.querySelectorAll(".dia-btn").forEach(function(b){b.addEventListener("click",function(){this.classList.toggle("activo");});});
-document.getElementById("cfgGuardar").addEventListener("click",function(){
-  if(!rest){notif("Error: sin restaurante");return;}
-  var diasSel=[];document.querySelectorAll(".dia-btn.activo").forEach(function(b){diasSel.push(b.getAttribute("data-dia"));});
-  var config={modo_dia:modoDiaActual,hora_apertura:document.getElementById("cfg-apertura").value+":00",hora_cierre:document.getElementById("cfg-cierre").value+":00",menu_dia:document.getElementById("cfg-menu-dia").value.trim(),menu_noche:document.getElementById("cfg-menu-noche").value.trim(),dias_activos:diasSel.join(","),direccion:document.getElementById("cfg-direccion").value.trim(),msg_bienvenida:document.getElementById("cfg-msg-bienvenida").value.trim(),msg_en_preparacion:document.getElementById("cfg-msg-preparacion").value.trim(),msg_listo:document.getElementById("cfg-msg-listo").value.trim(),msg_en_camino:document.getElementById("cfg-msg-camino").value.trim()};
-  var btn=this;btn.textContent="Guardando...";btn.disabled=true;
-  fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:config})})
-    .then(function(r){return r.json();})
-    .then(function(d){if(d.ok){Object.keys(config).forEach(function(k){rest[k]=config[k];});notif("Configuracion guardada!");actualizarToggleModoDia(modoDiaActual);}else{notif("Error: "+(d.error||"").substring(0,40));}})
-    .catch(function(){notif("Error de conexion");})
-    .finally(function(){btn.textContent="Guardar configuracion";btn.disabled=false;});
-});
-
-// AGREGAR PRODUCTO
-document.getElementById("btnAdd").addEventListener("click",function(){
-  if(!rest)return;
-  var n=document.getElementById("mi-nombre").value.trim(),p=parseInt(document.getElementById("mi-precio").value);
-  if(!n||!p){notif("Completa nombre y precio");return;}
-  var t=document.getElementById("mi-tipo").value;
-  fetch("/api/menu-add",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,categoria:document.getElementById("mi-cat").value||"General",nombre:n,precio:p,descripcion:document.getElementById("mi-desc").value||null,es_bebida:t==="bebida",es_arepa:t==="arepa",disponible:true})})
-    .then(function(r){return r.json();}).then(function(){["mi-cat","mi-nombre","mi-desc","mi-precio"].forEach(function(id){document.getElementById(id).value="";});loadMenu();notif("Producto agregado");})
-    .catch(function(e){notif("Error: "+e.message.substring(0,30));});
-});
-
-// tema removed
-
-// Inline constructor btn
-// btnConstructorInline: handled by delegation
-
 function abrirConstructor(){
   cartItems={};
-  var dEl=document.getElementById('con-domi');
-  var dirEl=document.getElementById('con-dir');
-  var notEl=document.getElementById('con-notas');
+  ['con-domi','con-dir','con-notas'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
   var busEl=document.getElementById('prodBuscar');
-  if(dEl)dEl.value='';
-  if(dirEl)dirEl.value='';
-  if(notEl)notEl.value='';
-  if(busEl)busEl.value='';
+  if(busEl) busEl.value='';
   var res=document.getElementById('prodResults');
-  if(res)res.classList.remove('show');
-  if(MENU_PRODUCTOS.length===0)cargarMenuParaConstructor();
+  if(res) res.classList.remove('show');
+  if(MENU_PRODUCTOS.length===0) cargarMenuParaConstructor();
   if(rest&&msgTel){
     fetch('/api/cliente/'+encodeURIComponent(msgTel)+'?restaurante_id='+rest.id)
       .then(function(r){return r.json();})
-      .then(function(d){if(d.ok&&d.cliente&&d.cliente.ultima_direccion&&dirEl)dirEl.value=d.cliente.ultima_direccion;})
-      .catch(function(){});
+      .then(function(d){
+        if(d.ok&&d.cliente&&d.cliente.ultima_direccion){
+          var el=document.getElementById('con-dir');
+          if(el) el.value=d.cliente.ultima_direccion;
+        }
+      }).catch(function(){});
   }
   renderCart();
   var panel=document.getElementById('constructorPedido');
-  if(panel){panel.style.display='block';}
+  if(panel){ panel.style.display='block'; }
   var bc=document.getElementById('btnConstructor');
   var bci=document.getElementById('btnConstructorInline');
-  if(bc)bc.classList.add('active');
-  if(bci)bci.classList.add('active');
-  setTimeout(function(){if(busEl)busEl.focus();},200);
+  if(bc) bc.classList.add('active');
+  if(bci) bci.classList.add('active');
+  setTimeout(function(){ var b=document.getElementById('prodBuscar'); if(b) b.focus(); },200);
 }
 
 function renderCart(){
   var cart=document.getElementById('prodCart');
   var totalEl=document.getElementById('conTotalDisplay');
-  if(!cart)return;
+  if(!cart) return;
   var items=Object.values(cartItems);
   if(!items.length){
     cart.innerHTML='<div class="prod-cart-empty">Toca un producto para agregarlo</div>';
-    if(totalEl)totalEl.textContent='$0';
+    if(totalEl) totalEl.textContent='$0';
     return;
   }
   var subtotal=0;
   cart.innerHTML=items.map(function(item){
     subtotal+=item.precio*item.qty;
     return '<div class="cart-item">'
-      +'<button class="cart-qty-btn" data-action="dec" data-cid="'+item.id+'">−</button>'
+      +'<button class="cart-qty-btn" onclick="cambiarQtyCart(''+item.id+'','dec')">−</button>'
       +'<span class="cart-qty">'+item.qty+'</span>'
-      +'<button class="cart-qty-btn" data-action="inc" data-cid="'+item.id+'">+</button>'
+      +'<button class="cart-qty-btn" onclick="cambiarQtyCart(''+item.id+'','inc')">+</button>'
       +'<div class="cart-item-name">'+item.nombre+'</div>'
       +'<div class="cart-item-price">'+fmtCOP(item.precio*item.qty)+'</div>'
       +'</div>';
   }).join('');
-  cart.querySelectorAll('.cart-qty-btn').forEach(function(btn){
-    btn.addEventListener('click',function(){
-      var cid=this.getAttribute('data-cid');
-      var action=this.getAttribute('data-action');
-      if(!cartItems[cid])return;
-      if(action==='inc')cartItems[cid].qty++;
-      else{cartItems[cid].qty--;if(cartItems[cid].qty<=0)delete cartItems[cid];}
-      renderCart();
-    });
-  });
-  var domi=Number(document.getElementById('con-domi')?document.getElementById('con-domi').value:0)||0;
+  var domi=Number((document.getElementById('con-domi')||{}).value)||0;
   var desech=items.reduce(function(s,i){return s+i.qty;},0)*500;
-  if(totalEl)totalEl.textContent=fmtCOP(subtotal+desech+domi);
+  if(totalEl) totalEl.textContent=fmtCOP(subtotal+desech+domi);
 }
 
-// Buscador
+function cambiarQtyCart(id, action){
+  if(!cartItems[id]) return;
+  if(action==='inc') cartItems[id].qty++;
+  else { cartItems[id].qty--; if(cartItems[id].qty<=0) delete cartItems[id]; }
+  renderCart();
+}
+
+// Buscador en tiempo real
 (function(){
   var busEl=document.getElementById('prodBuscar');
-  if(!busEl)return;
+  if(!busEl) return;
   busEl.addEventListener('input',function(){
     var q=this.value.trim().toLowerCase();
     var results=document.getElementById('prodResults');
-    if(!q){results.classList.remove('show');return;}
-    var matches=(MENU_PRODUCTOS.length?MENU_PRODUCTOS:[]).filter(function(p){
-      return p.nombre.toLowerCase().includes(q)||((p.categoria||'').toLowerCase().includes(q));
+    if(!results) return;
+    if(!q){ results.classList.remove('show'); return; }
+    var matches=MENU_PRODUCTOS.filter(function(p){
+      return p.nombre.toLowerCase().indexOf(q)!==-1||(p.categoria||'').toLowerCase().indexOf(q)!==-1;
     }).slice(0,8);
     if(!matches.length){
-      results.innerHTML='<div class="prod-result-item"><div style="color:var(--text3);font-size:12px;padding:4px">Sin resultados para "'+q+'"</div></div>';
-      results.classList.add('show');return;
+      results.innerHTML='<div class="prod-result-item"><div style="color:var(--text3);font-size:12px;padding:4px">Sin resultados</div></div>';
+      results.classList.add('show'); return;
     }
     results.innerHTML=matches.map(function(p){
-      return '<div class="prod-result-item" data-id="'+p.id+'" data-nombre="'+encodeURIComponent(p.nombre)+'" data-precio="'+p.precio+'" data-cat="'+encodeURIComponent(p.categoria||'')+'">'
-        +'<div><div class="prod-result-name">'+p.nombre+'</div><div class="prod-result-cat">'+(p.categoria||'')+'</div></div>'
-        +'<div class="prod-result-price">'+fmtCOP(p.precio)+'</div>'
-        +'</div>';
+      return '<div class="prod-result-item" onclick="agregarAlCart(''+p.id+'',''+encodeURIComponent(p.nombre)+'','+p.precio+',''+encodeURIComponent(p.categoria||'')+'')">'+
+        '<div><div class="prod-result-name">'+p.nombre+'</div><div class="prod-result-cat">'+(p.categoria||'')+'</div></div>'+
+        '<div class="prod-result-price">'+fmtCOP(p.precio)+'</div>'+
+        '</div>';
     }).join('');
     results.classList.add('show');
-    results.querySelectorAll('.prod-result-item[data-id]').forEach(function(el){
-      el.addEventListener('mousedown',function(e){
-        e.preventDefault();
-        var id=this.getAttribute('data-id');
-        var nombre=decodeURIComponent(this.getAttribute('data-nombre'));
-        var precio=Number(this.getAttribute('data-precio'));
-        var cat=decodeURIComponent(this.getAttribute('data-cat'));
-        if(cartItems[id])cartItems[id].qty++;
-        else cartItems[id]={id:id,nombre:nombre,precio:precio,cat:cat,qty:1};
-        renderCart();
-        busEl.value='';
-        results.classList.remove('show');
-      });
-    });
   });
   document.addEventListener('click',function(e){
-    var res=document.getElementById('prodResults');
-    if(res&&!e.target.closest('.prod-search-wrap'))res.classList.remove('show');
+    if(!e.target.closest('.prod-search-wrap')){
+      var r=document.getElementById('prodResults');
+      if(r) r.classList.remove('show');
+    }
   });
-  var domiEl=document.getElementById('con-domi');
-  if(domiEl)domiEl.addEventListener('input',renderCart);
+  document.getElementById('con-domi')&&document.getElementById('con-domi').addEventListener('input',renderCart);
 })();
 
-// registrar handled below
-
-
-// buttons handled below
-
-
-// Cargar menu para constructor cuando haya restaurante
-setTimeout(function(){if(rest)cargarMenuParaConstructor();},3000);
-
-
-// ── MENU EDITOR ───────────────────────────────────────────────────────────────
-function initMenuEditor(btnId, textareaId, previewId) {
-  var btn = document.getElementById(btnId);
-  var ta  = document.getElementById(textareaId);
-  var pre = document.getElementById(previewId);
-  if(!btn||!ta||!pre) return;
-
-  function updatePreview() {
-    var val = ta.value.trim();
-    if(!val) { pre.textContent='Sin menu configurado'; pre.classList.remove('has-content'); return; }
-    var lines = val.split('\n').filter(function(l){return l.trim();});
-    pre.textContent = lines.slice(0,4).join('\n') + (lines.length>4?' ...':'');
-    pre.classList.add('has-content');
-  }
-  updatePreview();
-
-  function toggle() {
-    var isOpen = ta.style.display !== 'none';
-    if(isOpen) {
-      ta.style.display = 'none';
-      btn.textContent = '✏️ Editar';
-      btn.classList.remove('active');
-      updatePreview();
-    } else {
-      ta.style.display = 'block';
-      btn.textContent = '✓ Listo';
-      btn.classList.add('active');
-      pre.style.display = 'none';
-      setTimeout(function(){ ta.focus(); }, 100);
-    }
-  }
-
-  btn.addEventListener('click', toggle);
-  pre.addEventListener('click', toggle);
-  ta.addEventListener('input', function() {
-    // live char count
-    var lines = ta.value.split('\n').length;
-    btn.textContent = btn.classList.contains('active') ? '✓ Listo ('+lines+' lineas)' : '✏️ Editar';
-  });
-  ta.addEventListener('blur', updatePreview);
+function agregarAlCart(id, nombre, precio, cat){
+  nombre=decodeURIComponent(nombre);
+  cat=decodeURIComponent(cat);
+  if(cartItems[id]) cartItems[id].qty++;
+  else cartItems[id]={id:id,nombre:nombre,precio:precio,cat:cat,qty:1};
+  renderCart();
+  var busEl=document.getElementById('prodBuscar');
+  var res=document.getElementById('prodResults');
+  if(busEl) busEl.value='';
+  if(res) res.classList.remove('show');
 }
 
-// Init after goApp loads config
-var _origCargarConfig = cargarConfig;
-cargarConfig = function() {
-  _origCargarConfig();
-  // Small delay to let values populate
-  setTimeout(function(){
-    initMenuEditor('btnEditMenuDia', 'cfg-menu-dia', 'previewMenuDia');
-    initMenuEditor('btnEditMenuNoche', 'cfg-menu-noche', 'previewMenuNoche');
-  }, 200);
-};
+// ── CONSTRUCTOR ENTRY POINTS ─────────────────────────────────────────────────
+function toggleConstructorPanel(){
+  var panel=document.getElementById('constructorPedido');
+  if(!panel) return;
+  if(panel.style.display==='block') cerrarConstructorPanel();
+  else abrirConstructor();
+}
 
-// ── PEDIDO MANUAL — handler limpio ──────────────────────────────────────────
-// Se registra via event delegation — no depende de cloneNode ni orden
-document.addEventListener('click', function(e) {
-  // Registrar pedido
-  if (e.target && (e.target.id === 'btnRegistrarPedido' || e.target.closest('#btnRegistrarPedido'))) {
-    e.preventDefault();
-    var items = Object.values(cartItems);
-    if (!items.length) { notif('Agrega al menos un producto'); return; }
-    if (!rest || !rest.id) { notif('Error: inicia sesion primero'); return; }
-    if (!msgTel) { notif('Error: no hay cliente seleccionado'); return; }
+function cerrarConstructorPanel(){
+  var panel=document.getElementById('constructorPedido');
+  if(panel) panel.style.display='none';
+  var bc=document.getElementById('btnConstructor');
+  var bci=document.getElementById('btnConstructorInline');
+  if(bc) bc.classList.remove('active');
+  if(bci) bci.classList.remove('active');
+}
 
-    var itemsArr = items.map(function(i){ return i.qty + 'x ' + i.nombre + ' $' + Number(i.precio).toLocaleString('es-CO'); });
-    var subtotal = items.reduce(function(s,i){ return s + i.precio * i.qty; }, 0);
-    var domiEl   = document.getElementById('con-domi');
-    var domi     = domiEl ? Number(domiEl.value) || 0 : 0;
-    var desech   = items.reduce(function(s,i){ return s + i.qty; }, 0) * 500;
-    var total    = subtotal + desech + domi;
-    var dirEl    = document.getElementById('con-dir');
-    var pagEl    = document.getElementById('con-pago');
-    var notEl    = document.getElementById('con-notas');
-    var dir      = dirEl  ? dirEl.value.trim()  || 'Por confirmar' : 'Por confirmar';
-    var pago     = pagEl  ? pagEl.value : 'nequi';
-    var notas    = notEl  ? notEl.value.trim() || null : null;
+function registrarPedidoManual(){
+  var items=Object.values(cartItems);
+  if(!items.length){ notif('Agrega al menos un producto'); return; }
+  if(!rest||!rest.id){ notif('Error: inicia sesion'); return; }
+  if(!msgTel){ notif('Error: abre un chat primero'); return; }
 
-    var btn = document.getElementById('btnRegistrarPedido');
-    if (btn) { btn.textContent = 'Registrando...'; btn.disabled = true; }
+  var itemsArr=items.map(function(i){
+    return i.qty+'x '+i.nombre+' $'+Number(i.precio).toLocaleString('es-CO');
+  });
+  var subtotal=items.reduce(function(s,i){return s+i.precio*i.qty;},0);
+  var domi=Number((document.getElementById('con-domi')||{}).value)||0;
+  var desech=items.reduce(function(s,i){return s+i.qty;},0)*500;
+  var total=subtotal+desech+domi;
+  var dir=((document.getElementById('con-dir')||{}).value||'').trim()||'Por confirmar';
+  var pago=(document.getElementById('con-pago')||{}).value||'nequi';
+  var notas=((document.getElementById('con-notas')||{}).value||'').trim()||null;
 
-    console.log('Enviando pedido manual:', {restaurante_id: rest.id, telefono: msgTel, items: itemsArr, total: total});
+  var btn=document.getElementById('btnRegistrarPedido');
+  if(btn){ btn.textContent='Registrando...'; btn.disabled=true; }
 
-    fetch('/api/pedido-manual', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        restaurante_id: rest.id,
-        telefono:       msgTel,
-        items:          itemsArr,
-        total:          total,
-        desechables:    desech,
-        domicilio:      domi,
-        direccion:      dir,
-        metodo_pago:    pago,
-        notas_especiales: notas
-      })
+  fetch('/api/pedido-manual',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      restaurante_id:rest.id, telefono:msgTel, items:itemsArr,
+      total:total, desechables:desech, domicilio:domi,
+      direccion:dir, metodo_pago:pago, notas_especiales:notas
     })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (d.ok) {
-        notif('Pedido #' + d.numero_pedido + ' registrado!');
-        playSound('nuevo_pedido');
-        var panel = document.getElementById('constructorPedido');
-        if (panel) panel.style.display = 'none';
-        var bc  = document.getElementById('btnConstructor');
-        var bci = document.getElementById('btnConstructorInline');
-        if (bc)  bc.classList.remove('active');
-        if (bci) bci.classList.remove('active');
-        cartItems = {};
-        renderCart();
-        loadPedidos();
-        loadStats();
-      } else {
-        console.error('Error pedido manual:', d);
-        notif('Error: ' + (d.error || 'sin respuesta').substring(0, 50));
-      }
-    })
-    .catch(function(err) {
-      console.error('Fetch error:', err);
-      notif('Error de conexion al servidor');
-    })
-    .finally(function() {
-      var btn2 = document.getElementById('btnRegistrarPedido');
-      if (btn2) { btn2.textContent = 'Registrar pedido'; btn2.disabled = false; }
-    });
-  }
-
-  // Toggle constructor
-  if (e.target && (e.target.id === 'btnConstructor' || e.target.id === 'btnConstructorInline')) {
-    var panel = document.getElementById('constructorPedido');
-    if (!panel) return;
-    if (panel.style.display === 'block') {
-      panel.style.display = 'none';
-      e.target.classList.remove('active');
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.ok){
+      notif('Pedido #'+d.numero_pedido+' registrado!');
+      playSound('nuevo_pedido');
+      cerrarConstructorPanel();
+      cartItems={};
+      renderCart();
+      loadPedidos();
+      loadStats();
     } else {
-      abrirConstructor();
+      notif('Error: '+(d.error||'').substring(0,50));
     }
-  }
+  })
+  .catch(function(){ notif('Error de conexion'); })
+  .finally(function(){
+    var b=document.getElementById('btnRegistrarPedido');
+    if(b){ b.textContent='Registrar pedido'; b.disabled=false; }
+  });
+}
 
-  // Cerrar constructor
-  if (e.target && e.target.id === 'btnCerrarConstructor') {
-    var panel = document.getElementById('constructorPedido');
-    if (panel) panel.style.display = 'none';
-    var bc  = document.getElementById('btnConstructor');
-    var bci = document.getElementById('btnConstructorInline');
-    if (bc)  bc.classList.remove('active');
-    if (bci) bci.classList.remove('active');
-  }
-});
-
-</script>
-</body
-</body>
-</html>
+// Cargar menu al entrar
+setTimeout(function(){ if(rest) cargarMenuParaConstructor(); },3000);
+>
