@@ -299,7 +299,7 @@ INFORMACION:
 HORARIO_PLACEHOLDER
 
 METODOS DE PAGO:
-- Nequi: @NEQUIJOS126
+- Nequi: 3138908577 (tambien conocido como 3138908577)
 - Bancolombia llave: 0089102980 (Jose Gregorio Charris)
 - Efectivo: domiciliario lleva cambio (pregunta con que valor cancela)
 - Datafono: domiciliario lo lleva
@@ -309,7 +309,7 @@ METODOS DE PAGO:
 IMPORTANTE - METODO DE PAGO DESDE EL MENU WEB:
 - Si el cliente llega con un mensaje que incluye "Metodo de pago elegido:" al inicio, ya eligio su metodo de pago desde la pagina del menu.
 - En ese caso NO preguntes como quiere pagar. Directamente dale los datos de pago correspondientes o procede segun el metodo indicado.
-- Si dijo Nequi: dale el numero @NEQUIJOS126 y pide comprobante.
+- Si dijo Nequi: dale el numero 3138908577 y pide comprobante.
 - Si dijo Bancolombia: dale la llave 0089102980 a nombre de Jose Gregorio Charris y pide comprobante.
 - Si dijo Efectivo: pregunta con que billete cancela y escribe PAGO_EFECTIVO:[valor].
 - Si dijo Datafono: confirma que el domiciliario lo lleva y escribe PAGO_DATAFONO.
@@ -373,14 +373,24 @@ FLUJO:
 4. Con direccion -> calcula domicilio y muestra desglose
 5. Confirma -> si el cliente NO indico metodo de pago desde el menu, pregunta como quiere pagar y da datos
 6. Pago:
-   - Nequi: "Transferi a @NEQUIJOS126 y mandame el comprobante"
-   - Bancolombia: "Transferi a llave 0089102980 a Jose Gregorio Charris y mandame comprobante"
+   - Nequi o Bancolombia: da los datos. Luego espera que el cliente diga cuando va a pagar.
+     * Si el cliente dice que paga AHORA (manda comprobante): escribe PAGO_CONFIRMADO
+     * Si el cliente dice "cuando llegue el pedido", "al recibirlo", "cuando llegue", "a la entrega": 
+       Responde "No hay problema! El numero de Nequi es 3138908577, cuando llegue el domiciliario le transfieres y listo!" y escribe PAGO_DATAFONO para despachar el pedido.
+     * NUNCA insistas en pedir el comprobante si el cliente ya dijo que paga al recibir.
    - Efectivo: pregunta valor -> escribe PAGO_EFECTIVO:[valor del billete]
    - Datafono: confirma que el domiciliario lo lleva -> escribe PAGO_DATAFONO
-7. Comprobante recibido -> di: "Listo! Tu pedido quedo confirmado. Te informamos el estado." -> escribe PAGO_CONFIRMADO
+7. Comprobante recibido -> di algo corto y calido -> escribe PAGO_CONFIRMADO
 8. NUNCA digas tiempo estimado al confirmar.
 
 POST-CONFIRMACION: respuestas cortas y calidas. No reinicies flujo a menos que el cliente pida explicitamente otro pedido.
+
+PAGO DIGITAL AL RECIBIR:
+- Algunos clientes prefieren pagar por Nequi o Bancolombia cuando el domiciliario llega.
+- Si el cliente dice "Nequi" o "Bancolombia" simplemente dale los datos y confirma el pedido normalmente.
+- Dile algo como: "Perfecto! El numero de Nequi es 3138908577. Cuando el domiciliario llegue transferes y nos mandas el comprobante. Tu pedido ya queda en camino!"
+- NO esperes el comprobante para confirmar. El pedido sigue su flujo normal.
+- PAGO_CONFIRMADO solo cuando el cliente mande la imagen del comprobante.
 
 OBLIGATORIO - escribe estos tags al final de tu respuesta (el cliente NO los ve):
 
@@ -415,7 +425,7 @@ async function printTicket(orderData) {
     orderData.paymentMethod === "efectivo"    ? "Efectivo - cancela con: " + (orderData.cashDenomination || "?") :
     orderData.paymentMethod === "datafono"    ? "Datafono (llevar)" :
     orderData.paymentMethod === "bancolombia" ? "Bancolombia llave: 0089102980" :
-    "Nequi @NEQUIJOS126";
+    "Nequi 3138908577";
 
   var lines = [
     "================================",
