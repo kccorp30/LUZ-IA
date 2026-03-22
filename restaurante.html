@@ -1775,7 +1775,7 @@ function renderMensajesChat(msgs,forzar){
       h+='<div class="chat-day-divider"><span class="chat-day-label">'+diaLabel+'</span></div>';
       lastDay=dia;
     }
-    var mediaIdComp=mediaIdComp||(m.media_id&&(txt.indexOf("imagen")!==-1||txt.indexOf("comprobante")!==-1)?m.media_id:null);
+    var mediaIdComp=m.comprobante_media_id||(m.media_id&&(txt.indexOf("imagen")!==-1||txt.indexOf("comprobante")!==-1)?m.media_id:null);
     if(m.tipo==="cliente"&&mediaIdComp){
       h+='<div class="chat-comp-bubble" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+mediaIdComp+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')"><div class="chat-comp-label"><span>&#9989;</span> Comprobante de pago</div><img src="/api/comprobante/'+mediaIdComp+'" onerror="this.style.display=\'none\'"><div class="chat-comp-time">'+horaStr+'</div></div>';
     } else if(m.tipo==="cliente"&&!mediaIdComp&&txt.indexOf("[El cliente envio una imagen]")!==-1&&m.media_id){
