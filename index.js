@@ -487,6 +487,13 @@ function parseReply(reply, from) {
   var cleanReply = reply;
   var sideEffect = null;
 
+  // Pre-parse DIRECCION_LISTA so it's available when PEDIDO_LISTO creates orderState
+  var preParsedDir = null;
+  if (reply.indexOf("DIRECCION_LISTA:") !== -1) {
+    var preDir = reply.match(/DIRECCION_LISTA:(.+)/);
+    if (preDir) preParsedDir = preDir[1].trim();
+  }
+
   if (reply.indexOf("PEDIDO_LISTO:") !== -1) {
     var itemsMatch  = reply.match(/ITEMS:\s*(.+)/);
     var totalMatch  = reply.match(/TOTAL:\s*([^\n]+)/);
@@ -507,8 +514,8 @@ function parseReply(reply, from) {
         if (m) notasArr.push(m[1]);
       });
 
-      // Preservar direccion y paymentMethod si ya existian
-      var prevAddress = orderState[from] ? orderState[from].address : null;
+      // Preservar direccion y paymentMethod si ya existian (o si vino en el mismo mensaje)
+      var prevAddress = (orderState[from] ? orderState[from].address : null) || preParsedDir;
       var prevPayment = orderState[from] ? orderState[from].paymentMethod : null;
       orderState[from] = {
         status: prevAddress ? "esperando_pago" : "esperando_direccion",
