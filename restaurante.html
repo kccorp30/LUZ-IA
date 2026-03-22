@@ -266,6 +266,8 @@ body {
   transition:transform 0.15s,border-color 0.15s;
 }
 .pedido-card:hover{transform:translateY(-1px);border-color:rgba(124,58,237,0.35)}
+.pedido-card.pedido-recoger{border:2px solid rgba(245,158,11,0.6);box-shadow:0 0 20px rgba(245,158,11,0.15)}
+.pedido-card.pedido-recoger .ph{background:linear-gradient(90deg,rgba(245,158,11,0.2),rgba(168,85,247,0.1))}
 .ph {
   display:flex;align-items:center;justify-content:space-between;
   padding:12px 16px;
@@ -1214,14 +1216,6 @@ select.finput{cursor:pointer}
           <div class="ffield" style="margin-top:12px"><div class="msg-tag msg-tag-orange">En camino</div><textarea class="finput" id="cfg-msg-camino" placeholder="Tu pedido va en camino." style="height:70px;resize:none;margin-top:6px;"></textarea></div>
         </div>
         <div class="cfg-section"><div class="cfg-title">Direccion del local</div><input class="finput" id="cfg-direccion" placeholder="Cl. 16 #56-40, Canaveral, Cali"></div>
-              <div class="tema-name">Oscuro</div><div class="tema-desc">Glass purple</div>
-            </div>
-            <div class="tema-card" id="tema-light" onclick="setTema('light')">
-              <div class="tema-preview tema-light"><div class="tema-dot" style="background:#7c3aed"></div><div class="tema-dot" style="background:#10b981"></div><div class="tema-dot" style="background:#2563eb"></div></div>
-              <div class="tema-name">Claro</div><div class="tema-desc">Fondo claro</div>
-            </div>
-          </div>
-        </div>
         <button class="cfg-save" id="cfgGuardar">Guardar configuracion</button>
       </div>
     </div>
@@ -1465,9 +1459,9 @@ function loadPedidos(){
       var itemsEnc=encodeURIComponent(JSON.stringify(items));
       var esRecoger=(p.direccion||"").toLowerCase().indexOf("recoger")!==-1;
       var esAdicional=!!p.pedido_adicional_de;
-      h+='<div class="pedido-card">';
+      h+='<div class="pedido-card'+(esRecoger?' pedido-recoger':'')+'">'; 
       if(esAdicional)h+='<div style="padding:8px 16px"><span class="adicional-badge">&#10133; ADICIONAL al pedido #'+p.pedido_adicional_de+'</span></div>';
-      if(esRecoger)h+='<div style="background:linear-gradient(90deg,rgba(168,85,247,0.2),rgba(245,158,11,0.1));padding:8px 16px;font-size:12px;font-weight:700;color:#c084fc;">&#127978; PEDIDO PARA RECOGER EN TIENDA</div>';
+      if(esRecoger)h+='<div style="background:linear-gradient(90deg,rgba(245,158,11,0.25),rgba(245,158,11,0.1));padding:10px 16px;font-size:13px;font-weight:800;color:#fcd34d;letter-spacing:0.03em;display:flex;align-items:center;gap:8px;"><span style="font-size:18px">&#127978;</span> PEDIDO PARA RECOGER EN TIENDA — cliente va a buscar el pedido</div>';
       h+='<div class="ph"><div><div class="pnum">#'+p.numero_pedido+'</div><div class="ptime">'+ago(p.created_at)+'</div></div><span class="etag '+cfg.c+'">'+cfg.l+'</span></div>';
       h+='<div class="pbody">';
       // Items con notas especiales resaltadas
