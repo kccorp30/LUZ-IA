@@ -1705,7 +1705,7 @@ function renderChatUniversal(){
     var tagClass=c.tienePregunta?"tag-incompleto":(c.pidioHumano?"tag-humano":(c.pedidoAbierto?"tag-incompleto":"tag-completado"));
     var tagLabel=c.tienePregunta?"❓ Pregunta":(c.pidioHumano?"Pide persona":(c.pedidoAbierto?"Sin cerrar":"Cerrado"));
     if(!c.tienePedido){tagClass="tag-incompleto";tagLabel="Sin pedido";}
-    h+='<div class="chat-univ-item" data-tel="'+c.tel+'" data-num="'+(c.ultimoPedidoNum||"")+'">'+
+    h+='<div class="chat-item" data-tel="'+c.tel+'" data-num="'+(c.ultimoPedidoNum||"")+'">'+
       '<div class="chat-univ-top"><div class="chat-univ-tel">📱 '+c.tel+(c.silenciado?' <span style="font-size:10px;color:#a855f7">&#129323;</span>':"")+'</div><span class="chat-univ-tag '+tagClass+'">'+tagLabel+'</span></div>'+
       '<div class="chat-univ-preview">'+(c.tipo==="alerta_pregunta"?"❓ ":"")+(c.ultimo||"").replace("ALERTA_PREGUNTA: ","").substring(0,55)+'</div>'+
       '<div style="font-size:10px;color:var(--muted);margin-top:4px">'+ago(c.fecha)+(c.ultimoPedidoNum?" &middot; Pedido #"+c.ultimoPedidoNum:"")+'</div></div>';
