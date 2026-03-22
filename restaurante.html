@@ -266,8 +266,23 @@ body {
   transition:transform 0.15s,border-color 0.15s;
 }
 .pedido-card:hover{transform:translateY(-1px);border-color:rgba(124,58,237,0.35)}
-.pedido-card.pedido-recoger{border:2px solid rgba(245,158,11,0.6);box-shadow:0 0 20px rgba(245,158,11,0.15)}
-.pedido-card.pedido-recoger .ph{background:linear-gradient(90deg,rgba(245,158,11,0.2),rgba(168,85,247,0.1))}
+.pedido-card.pedido-recoger{
+  border:2px solid #f59e0b!important;
+  background:rgba(245,158,11,0.12)!important;
+  box-shadow:0 0 32px rgba(245,158,11,0.35)!important;
+}
+.pedido-card.pedido-recoger .ph{
+  background:linear-gradient(90deg,rgba(245,158,11,0.35),rgba(245,158,11,0.15))!important;
+  border-bottom:1px solid rgba(245,158,11,0.3)!important;
+}
+.pedido-card.pedido-recoger .pnum{
+  background:linear-gradient(135deg,#fcd34d,#f59e0b)!important;
+  -webkit-background-clip:text!important;-webkit-text-fill-color:transparent!important;background-clip:text!important;
+}
+.pedido-card.pedido-recoger .desglose{
+  background:rgba(245,158,11,0.08)!important;
+  border:1px solid rgba(245,158,11,0.2)!important;
+}
 .ph {
   display:flex;align-items:center;justify-content:space-between;
   padding:12px 16px;
@@ -1457,7 +1472,7 @@ function loadPedidos(){
       var items=Array.isArray(p.items)?p.items:[];
       var subtotal=Number(p.subtotal||0),desechables=Number(p.desechables||0),domicilio=Number(p.domicilio||0),total=Number(p.total||0);
       var itemsEnc=encodeURIComponent(JSON.stringify(items));
-      var esRecoger=(p.direccion||"").toLowerCase().indexOf("recoger")!==-1;
+      var recogerTexto=(p.direccion||"")+" "+(JSON.stringify(p.items||[]))+" "+(p.notas_especiales||"");var esRecoger=recogerTexto.toLowerCase().indexOf("recoger")!==-1;
       var esAdicional=!!p.pedido_adicional_de;
       h+='<div class="pedido-card'+(esRecoger?' pedido-recoger':'')+'">'; 
       if(esAdicional)h+='<div style="padding:8px 16px"><span class="adicional-badge">&#10133; ADICIONAL al pedido #'+p.pedido_adicional_de+'</span></div>';
