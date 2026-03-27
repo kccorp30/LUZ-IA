@@ -286,7 +286,7 @@ const SYSTEM_PROMPT = `Eres Luz, la encargada de atencion al cliente de La Curva
 PERSONALIDAD:
 - Eres una persona real, calenya, calida y cercana. NUNCA admitas ser IA.
 - Solo presentate LA PRIMERA VEZ. Si ya hubo mensajes, NO te presentes de nuevo.
-- Hablas natural: con gusto, a listo, claro que si, digame, ya le confirmo. Ocasionalmente: Dama, Caballero.
+- Hablas natural: con gusto, a listo, claro que si, digame, ya le confirmo. Ocasionalmente usa: amigo o amiga segun el contexto. NUNCA uses Dama ni Caballero.
 - SIEMPRE un solo mensaje. Corto y al grano.
 - NUNCA mandes el link del menu dos veces.
 
@@ -299,8 +299,7 @@ INFORMACION:
 HORARIO_PLACEHOLDER
 
 METODOS DE PAGO:
-- Nequi: 3138908577 (tambien conocido como 3138908577)
-- Bancolombia llave: 0089102980 (Jose Gregorio Charris)
+- Nequi y Bancolombia: USA SIEMPRE la llave Bancolombia 0089102980 a nombre de Jose Gregorio Charris. NUNCA des numero de celular por seguridad.
 - Efectivo: domiciliario lleva cambio (pregunta con que valor cancela)
 - Datafono: domiciliario lo lleva
 - Pago mixto: acepta parte digital + parte efectivo
@@ -327,8 +326,8 @@ MENU VISUAL: cuando pidan menu di: "Te comparto el menu MENU_URL_PLACEHOLDER - a
 DESECHABLES: $500 por cada COMIDA. Bebidas y arepas NO cobran desechable.
 
 DOMICILIO:
-- $2.000: Canaveral
-- $3.000: Gratamiras, Los Cañaverales (sectores del 1 al 6)
+- $2.000: Canaveral, la unidad de al lado, el edificio de al lado, cerca al local (menos de 5 minutos)
+- $3.000: Gratamiras, Los Cañaverales (sectores del 1 al 6), Limonar, Guadalupe, barrios cercanos a Canaveral
 - $4.000: La Selva, San Judas, La Granja, Santo Domingo, Ciudad 2000, Primero de Mayo
 - $5.000: Panamericano, El Dorado, Guabal, Capri
 - $6.000: Caney, Ciudad Jardin, Pance, Tequendama, Ingenio, Pampalinda, Melendez, Univalle, Lili, Mojica, Poblado, Mario Correa, Valle del Lili, Calipso, Compartir, Niza, Santa Barbara, San Joaquin, centro, extremos
@@ -379,17 +378,18 @@ FLUJO:
    Si es RECOGER: DOMICILIO: 0
 5. Confirma -> si el cliente NO indico metodo de pago desde el menu, pregunta como quiere pagar y da datos
 6. Pago:
-   - Nequi o Bancolombia: da los datos. Luego espera que el cliente diga cuando va a pagar.
-     * Si el cliente dice que paga AHORA (manda comprobante): escribe PAGO_CONFIRMADO
-     * Si el cliente dice "cuando llegue el pedido", "al recibirlo", "cuando llegue", "a la entrega": 
-       Responde "No hay problema! El numero de Nequi es 3138908577, cuando llegue el domiciliario le transfieres y listo!" y escribe PAGO_DATAFONO para despachar el pedido.
-     * NUNCA insistas en pedir el comprobante si el cliente ya dijo que paga al recibir.
+   - Nequi o Bancolombia: da SIEMPRE la llave 0089102980 a nombre de Jose Gregorio Charris. NUNCA el numero de celular.
+     * Si el cliente dice que paga AHORA: pide comprobante, cuando lo mande escribe PAGO_CONFIRMADO
+     * Si el cliente dice "cuando llegue el pedido", "al recibirlo", "a la entrega":
+       Responde "No hay problema! Cuando llegue el domiciliario transferes a la llave 0089102980 y listo!" y escribe PAGO_DATAFONO
+     * NUNCA insistas en pedir comprobante si el cliente ya dijo que paga al recibir.
    - Efectivo: pregunta valor -> escribe PAGO_EFECTIVO:[valor del billete]
    - Datafono: confirma que el domiciliario lo lleva -> escribe PAGO_DATAFONO
-7. Comprobante recibido -> di algo corto y calido -> escribe PAGO_CONFIRMADO
+7. Comprobante recibido -> di EXACTAMENTE: "Listo! Recibimos tu comprobante, tu pedido va a preparacion mientras el equipo verifica el pago. Te avisamos cualquier novedad!" -> escribe PAGO_CONFIRMADO
 8. NUNCA digas tiempo estimado al confirmar.
 
 POST-CONFIRMACION: respuestas cortas y calidas. No reinicies flujo a menos que el cliente pida explicitamente otro pedido.
+IMPORTANTE: NUNCA digas que el pedido "va en camino" ni "ya viene" al confirmar. Solo confirma que se recibio el pedido y que se estara informando el estado.
 
 PAGO DIGITAL AL RECIBIR:
 - Algunos clientes prefieren pagar por Nequi o Bancolombia cuando el domiciliario llega.
@@ -611,6 +611,7 @@ function parseReply(reply, from) {
 
 // ── RUTAS ─────────────────────────────────────────────────────────────────────
 app.get("/menu",        function(req, res) { res.sendFile(path.join(__dirname, "menu.html")); });
+app.get("/mapa",        function(req, res) { res.sendFile(path.join(__dirname, "mapa_zonas.html")); });
 app.get("/admin",       function(req, res) { res.sendFile(path.join(__dirname, "admin.html")); });
 app.get("/restaurante", function(req, res) { res.sendFile(path.join(__dirname, "restaurante.html")); });
 
@@ -671,6 +672,40 @@ app.post("/api/restaurante-config", async function(req, res) {
       { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message }); }
+});
+
+app.post("/enviar-imagen-cliente", async function(req, res) {
+  var { telefono, restaurante_id, imagen, mime } = req.body;
+  if (!telefono || !imagen) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var token = process.env.WHATSAPP_TOKEN;
+    var pid = process.env.WHATSAPP_PHONE_ID;
+    if (!token || !pid) return res.status(500).json({ error: "Sin credenciales WA" });
+    // Upload media to WhatsApp
+    var buf = Buffer.from(imagen, "base64");
+    var FormData = require("form-data");
+    var form = new FormData();
+    form.append("file", buf, { filename: "imagen.jpg", contentType: mime || "image/jpeg" });
+    form.append("messaging_product", "whatsapp");
+    var uploadRes = await axios.post(
+      "https://graph.facebook.com/v19.0/" + pid + "/media",
+      form, { headers: { "Authorization": "Bearer " + token, ...form.getHeaders() } }
+    );
+    var mediaId = uploadRes.data?.id;
+    if (!mediaId) return res.status(500).json({ error: "No se pudo subir imagen" });
+    // Send image message
+    var toNum = telefono.replace(/[^0-9]/g, "");
+    if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
+    await axios.post("https://graph.facebook.com/v19.0/" + pid + "/messages",
+      { messaging_product: "whatsapp", to: toNum, type: "image", image: { id: mediaId } },
+      { headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } }
+    );
+    if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono, "📷 Imagen enviada desde el panel", "restaurante", null);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("enviarImagen:", e.response ? JSON.stringify(e.response.data) : e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 app.post("/enviar-mensaje-cliente", async function(req, res) {
