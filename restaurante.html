@@ -1255,21 +1255,36 @@ select.finput{cursor:pointer}
     <!-- MAPA -->
     <div class="page" id="page-mapa">
       <div style="padding:16px 12px 4px"><div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Mapa</div><div style="font-size:13px;color:var(--text3);margin-top:2px">Zonas de domicilio y pedidos activos</div></div>
-      <div style="padding:0 12px 8px;display:flex;gap:8px">
-        <button class="filtro-btn active" id="mapa-tab-zonas" onclick="switchMapaTab('zonas')">🏘️ Zonas</button>
-        <button class="filtro-btn" id="mapa-tab-pedidos" onclick="switchMapaTab('pedidos')">📦 Pedidos</button>
-        <button class="filtro-btn" id="mapa-tab-draw" onclick="toggleMapaDraw()" style="margin-left:auto">✏️ Dibujar zona</button>
-      </div>
-      <div style="padding:0 12px 8px">
+      <!-- Buscador de restaurante -->
+      <div style="padding:0 12px 6px">
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px">📍 Ubicación del restaurante</div>
         <div style="position:relative">
-          <input class="finput" id="mapaSearch" placeholder="🔍 Buscar dirección en Cali..." autocomplete="off" style="padding-right:40px">
-          <div id="mapaSearchResults" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;background:rgba(15,10,35,0.98);border:1px solid rgba(124,58,237,0.4);border-radius:12px;overflow:hidden;max-height:180px;overflow-y:auto;display:none"></div>
+          <input class="finput" id="mapaRestSearch" placeholder="Buscar dirección del restaurante..." autocomplete="off" style="font-size:13px">
+          <div id="mapaRestResults" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:25;background:rgba(15,10,35,0.98);border:1px solid rgba(124,58,237,0.4);border-radius:12px;overflow:hidden;max-height:150px;overflow-y:auto;display:none"></div>
         </div>
       </div>
-      <div id="mapaInstruccion" style="display:none;margin:0 12px 8px;padding:8px 12px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:10px;font-size:12px;color:#fcd34d;font-weight:600">
-        ✏️ Toca el mapa para agregar puntos. Toca "Cerrar zona" cuando termines.
-        <button onclick="finalizarMapaDraw()" style="margin-left:10px;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);color:#6ee7b7;border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">✅ Cerrar zona</button>
-        <button onclick="cancelarMapaDraw()" style="margin-left:6px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;border-radius:8px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer">✕ Cancelar</button>
+      <div style="padding:0 12px 8px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="filtro-btn active" id="mapa-tab-zonas" onclick="switchMapaTab('zonas')">🏘️ Zonas</button>
+        <button class="filtro-btn" id="mapa-tab-pedidos" onclick="switchMapaTab('pedidos')">📦 Pedidos</button>
+        <button class="filtro-btn" id="mapa-tab-buscar" onclick="switchMapaTab('buscar')">🔍 Buscar barrio</button>
+        <button class="filtro-btn" id="mapa-tab-draw" onclick="toggleMapaDraw()" style="margin-left:auto">✏️ Dibujar</button>
+      </div>
+      <div id="mapaInstruccion" style="display:none;margin:0 12px 8px;padding:8px 12px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:10px;font-size:12px;color:#fcd34d;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span>✏️ Toca el mapa para agregar puntos · Doble toque para cerrar</span>
+        <button onclick="finalizarMapaDraw()" style="background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);color:#6ee7b7;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✅ Cerrar zona</button>
+        <button onclick="cancelarMapaDraw()" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✕ Cancelar</button>
+      </div>
+      <!-- Panel buscar barrio -->
+      <div id="mapaBuscarPanel" style="display:none;padding:0 12px 8px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Busca un barrio para ver dónde queda y crear una zona alrededor</div>
+        <div style="position:relative">
+          <input class="finput" id="mapaBarrioSearch" placeholder="🔍 Buscar barrio en Cali..." autocomplete="off" style="font-size:13px">
+          <div id="mapaBarrioResults" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;background:rgba(15,10,35,0.98);border:1px solid rgba(124,58,237,0.4);border-radius:12px;overflow:hidden;max-height:160px;overflow-y:auto;display:none"></div>
+        </div>
+        <div id="mapaBarrioPreview" style="display:none;margin-top:8px;padding:10px 12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px">
+          <div id="mapaBarrioNombre" style="font-size:13px;font-weight:600;margin-bottom:6px"></div>
+          <button onclick="crearZonaDesdeBarrio()" style="width:100%;padding:9px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-size:13px;font-weight:700;cursor:pointer">+ Crear zona aquí</button>
+        </div>
       </div>
       <div id="mapaContainer" style="margin:0 12px;border-radius:18px;overflow:hidden;border:1px solid var(--glass-border);height:340px"></div>
       <div id="mapaLeyenda" style="padding:10px 12px;display:flex;flex-wrap:wrap;gap:7px"></div>
@@ -2176,18 +2191,13 @@ setTimeout(function(){if(typeof rest!=="undefined"&&rest)cargarProd();},3000);
 
 // ── MAPA DE ZONAS ─────────────────────────────────────────────────────────────
 var mapaMap=null,mapaZonas=[],mapaZonaLayers={},mapaPedidoMarkers=[];
-var mapaDibujando=false,mapaPuntos=[],mapaPuntoMarkers=[],mapaLineaTemp=null;
+var mapaDibujando=false,mapaPuntos=[],mapaPuntoMarkers=[],mapaLineaTemp=null,mapaRestMarker=null;
 var mapaSelColor='#7c3aed',mapaEditId=null,mapaSearchTO=null;
 var mapaTabActual='zonas',mapaInicializado=false;
 
 var MAPA_COLORES=['#7c3aed','#2563eb','#10b981','#f59e0b','#ef4444','#ec4899','#8b5cf6','#06b6d4'];
-var MAPA_ZONAS_DEFAULT=[
-  {id:'mz1',nombre:'Canaveral cercano',precio:2000,color:'#10b981',barrios:'Canaveral, edificio/unidad al lado',coords:[[3.3650,-76.5430],[3.3665,-76.5400],[3.3650,-76.5375],[3.3628,-76.5385],[3.3622,-76.5418]]},
-  {id:'mz2',nombre:'Limonar / Guadalupe',precio:3000,color:'#2563eb',barrios:'Limonar, Guadalupe, Cañaverales 1-6, Gratamiras',coords:[[3.3700,-76.5455],[3.3728,-76.5415],[3.3718,-76.5372],[3.3688,-76.5362],[3.3668,-76.5395],[3.3678,-76.5445]]},
-  {id:'mz3',nombre:'La Selva / San Judas',precio:4000,color:'#f59e0b',barrios:'La Selva, San Judas, La Granja, Santo Domingo, Ciudad 2000',coords:[[3.3585,-76.5485],[3.3622,-76.5452],[3.3612,-76.5402],[3.3578,-76.5398],[3.3558,-76.5435]]},
-  {id:'mz4',nombre:'Panamericano / Guabal',precio:5000,color:'#ec4899',barrios:'Panamericano, El Dorado, Guabal, Capri',coords:[[3.3525,-76.5515],[3.3562,-76.5482],[3.3552,-76.5442],[3.3512,-76.5432],[3.3498,-76.5472]]},
-  {id:'mz5',nombre:'Zona lejana',precio:6000,color:'#ef4444',barrios:'Caney, Ciudad Jardín, Pance, Melendez, Univalle, centro',coords:[[3.3455,-76.5555],[3.3505,-76.5515],[3.3492,-76.5462],[3.3442,-76.5452],[3.3425,-76.5505]]}
-];
+var MAPA_ZONAS_DEFAULT=[];
+var MAPA_REST_LAT=3.3892, MAPA_REST_LNG=-76.5322; // Se actualiza al buscar restaurante
 
 function initMapa(){
   if(!mapaInicializado){
@@ -2197,9 +2207,9 @@ function initMapa(){
   setTimeout(function(){
     if(typeof L==='undefined'){setTimeout(function(){initMapa();},200);return;}
     if(!mapaInicializado){
-      mapaMap=L.map('mapaContainer',{center:[3.3640,-76.5420],zoom:13,zoomControl:true});
+      mapaMap=L.map('mapaContainer',{center:[MAPA_REST_LAT,MAPA_REST_LNG],zoom:14,zoomControl:true});
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OSM'}).addTo(mapaMap);
-      L.marker([3.3640,-76.5420],{icon:L.divIcon({html:'<div style="background:#7c3aed;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 4px 12px rgba(124,58,237,0.6);border:2px solid white">🍔</div>',className:'',iconSize:[30,30],iconAnchor:[15,15]})}).addTo(mapaMap).bindPopup('<b>La Curva</b><br>Canaveral');
+      mapaRestMarker=L.marker([MAPA_REST_LAT,MAPA_REST_LNG],{icon:L.divIcon({html:'<div style="background:#7c3aed;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 4px 12px rgba(124,58,237,0.6);border:2px solid white">🍔</div>',className:'',iconSize:[30,30],iconAnchor:[15,15]})}).addTo(mapaMap).bindPopup('<b>La Curva</b>');
       mapaMap.on('click',function(e){
         if(!mapaDibujando) return;
         mapaPuntos.push([e.latlng.lat,e.latlng.lng]);
@@ -2224,8 +2234,142 @@ function initMapa(){
       mapaInicializado=true;
     }
     mapaRenderZonas();
+    initMapaRestSearch();
     setTimeout(function(){mapaMap.invalidateSize();},100);
   },50);
+}
+
+// Buscar restaurante
+function initMapaRestSearch(){
+  var inp=document.getElementById('mapaRestSearch');
+  if(!inp||inp._init) return;
+  inp._init=true;
+  var restTO=null;
+  inp.addEventListener('input',function(){
+    var q=this.value.trim();
+    if(restTO) clearTimeout(restTO);
+    if(q.length<3){document.getElementById('mapaRestResults').style.display='none';return;}
+    restTO=setTimeout(function(){mapaSearchRest(q);},450);
+  });
+  document.addEventListener('click',function(e){
+    if(!e.target.closest('#mapaRestSearch')&&!e.target.closest('#mapaRestResults'))
+      document.getElementById('mapaRestResults').style.display='none';
+  });
+  // Load saved restaurant position
+  var saved=localStorage.getItem('lacurva_rest_pos');
+  if(saved){var pos=JSON.parse(saved);MAPA_REST_LAT=pos.lat;MAPA_REST_LNG=pos.lng;inp.value=pos.nombre||'';}
+}
+
+function mapaSearchRest(q){
+  fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(q+', Cali, Colombia')+'&limit=5&countrycodes=co')
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var res=document.getElementById('mapaRestResults');
+    if(!data.length){res.innerHTML='<div style="padding:9px 14px;font-size:12px;color:rgba(241,240,255,0.35)">Sin resultados</div>';res.style.display='block';return;}
+    res.innerHTML='';
+    data.forEach(function(d){
+      var div=document.createElement('div');
+      div.style.cssText='padding:9px 14px;cursor:pointer;font-size:12px;color:rgba(241,240,255,0.7);border-bottom:1px solid rgba(255,255,255,0.05)';
+      div.textContent=d.display_name.substring(0,65);
+      div.addEventListener('mouseenter',function(){this.style.background='rgba(124,58,237,0.15)';});
+      div.addEventListener('mouseleave',function(){this.style.background='';});
+      div.addEventListener('click',function(){
+        var lat=parseFloat(d.lat),lng=parseFloat(d.lon),nombre=d.display_name.substring(0,60);
+        MAPA_REST_LAT=lat;MAPA_REST_LNG=lng;
+        document.getElementById('mapaRestSearch').value=nombre;
+        document.getElementById('mapaRestResults').style.display='none';
+        localStorage.setItem('lacurva_rest_pos',JSON.stringify({lat:lat,lng:lng,nombre:nombre}));
+        if(mapaRestMarker) mapaMap.removeLayer(mapaRestMarker);
+        mapaRestMarker=L.marker([lat,lng],{icon:L.divIcon({html:'<div style="background:#7c3aed;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 4px 12px rgba(124,58,237,0.6);border:2px solid white">🍔</div>',className:'',iconSize:[30,30],iconAnchor:[15,15]})}).addTo(mapaMap).bindPopup('<b>La Curva</b>');
+        mapaMap.setView([lat,lng],15);
+        notif('📍 Restaurante ubicado correctamente');
+      });
+      res.appendChild(div);
+    });
+    res.style.display='block';
+  }).catch(function(){});
+}
+
+// Buscar barrio y crear zona
+var mapaBarrioLat=null,mapaBarrioLng=null,mapaBarrioNombreVal='';
+function initMapaBarrioSearch(){
+  var inp=document.getElementById('mapaBarrioSearch');
+  if(!inp||inp._init) return;
+  inp._init=true;
+  var bTO=null;
+  inp.addEventListener('input',function(){
+    var q=this.value.trim();
+    if(bTO) clearTimeout(bTO);
+    if(q.length<3){document.getElementById('mapaBarrioResults').style.display='none';return;}
+    bTO=setTimeout(function(){mapaSearchBarrio(q);},450);
+  });
+}
+
+function mapaSearchBarrio(q){
+  fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(q+', Cali, Colombia')+'&limit=6&countrycodes=co')
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var res=document.getElementById('mapaBarrioResults');
+    if(!data.length){res.innerHTML='<div style="padding:9px 14px;font-size:12px;color:rgba(241,240,255,0.35)">Sin resultados</div>';res.style.display='block';return;}
+    res.innerHTML='';
+    data.forEach(function(d){
+      var div=document.createElement('div');
+      div.style.cssText='padding:9px 14px;cursor:pointer;font-size:12px;color:rgba(241,240,255,0.7);border-bottom:1px solid rgba(255,255,255,0.05)';
+      div.textContent=d.display_name.substring(0,65);
+      div.addEventListener('mouseenter',function(){this.style.background='rgba(124,58,237,0.15)';});
+      div.addEventListener('mouseleave',function(){this.style.background='';});
+      div.addEventListener('click',function(){
+        mapaBarrioLat=parseFloat(d.lat);mapaBarrioLng=parseFloat(d.lon);
+        mapaBarrioNombreVal=d.display_name.split(',')[0];
+        document.getElementById('mapaBarrioSearch').value=mapaBarrioNombreVal;
+        document.getElementById('mapaBarrioResults').style.display='none';
+        document.getElementById('mapaBarrioNombre').textContent='📍 '+mapaBarrioNombreVal;
+        document.getElementById('mapaBarrioPreview').style.display='block';
+        mapaMap.setView([mapaBarrioLat,mapaBarrioLng],15);
+        // Show a temp marker
+        if(mapaSearchMarker) mapaMap.removeLayer(mapaSearchMarker);
+        mapaSearchMarker=L.marker([mapaBarrioLat,mapaBarrioLng],{icon:L.divIcon({
+          html:'<div style="background:#f59e0b;padding:5px 10px;border-radius:9px;color:white;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 4px 10px rgba(0,0,0,0.4);border:2px solid white">'+mapaBarrioNombreVal+'</div>',
+          className:'',iconAnchor:[60,36]
+        })}).addTo(mapaMap);
+      });
+      res.appendChild(div);
+    });
+    res.style.display='block';
+  }).catch(function(){});
+}
+
+function crearZonaDesdeBarrio(){
+  if(!mapaBarrioLat) return;
+  // Create a circle-ish polygon around the barrio point
+  var lat=mapaBarrioLat,lng=mapaBarrioLng;
+  var r=0.008; // ~800m radius
+  var coords=[];
+  for(var i=0;i<8;i++){
+    var angle=(i/8)*2*Math.PI;
+    coords.push([lat+r*Math.cos(angle), lng+r*1.5*Math.sin(angle)]);
+  }
+  // Pre-fill modal with barrio name
+  mapaPuntos=coords;
+  mapaEditId=null;
+  abrirMapaModal(null);
+  // Pre-fill nombre with barrio
+  setTimeout(function(){
+    var inp=document.getElementById('mzNombre');
+    if(inp) inp.value=mapaBarrioNombreVal;
+  },100);
+}
+
+function switchMapaTab(t){
+  mapaTabActual=t;
+  ['zonas','pedidos','buscar'].forEach(function(tab){
+    var btn=document.getElementById('mapa-tab-'+tab);
+    if(btn) btn.classList.toggle('active',tab===t);
+  });
+  document.getElementById('mapaBuscarPanel').style.display=t==='buscar'?'block':'none';
+  if(t==='pedidos') mapaCargarPedidos();
+  else if(t==='zonas') mapaRenderZonas();
+  if(t==='buscar') initMapaBarrioSearch();
 }
 
 function mapaSearch(q){
