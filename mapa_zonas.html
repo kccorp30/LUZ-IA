@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zonas de Domicilio — La Curva</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0d0a1a;color:#f1f0ff;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:rgba(13,10,26,0.95);border-bottom:1px solid rgba(124,58,237,0.3);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:1000}
+.brand{font-size:15px;font-weight:800;background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.tabs{display:flex;gap:6px}
+.tab{padding:6px 14px;border-radius:20px;border:1px solid rgba(124,58,237,0.3);background:transparent;color:rgba(241,240,255,0.5);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s}
+.tab.active{background:rgba(124,58,237,0.25);border-color:rgba(124,58,237,0.5);color:#c4b5fd}
+.main{flex:1;display:flex;overflow:hidden}
+#map{flex:1;z-index:1}
+.sidebar{width:280px;flex-shrink:0;background:#0d0a1a;border-left:1px solid rgba(124,58,237,0.2);display:flex;flex-direction:column;overflow:hidden}
+.sb-head{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:11px;font-weight:700;color:#c4b5fd;text-transform:uppercase;letter-spacing:0.1em}
+.sb-body{flex:1;overflow-y:auto;padding:10px}
+.sb-body::-webkit-scrollbar{width:3px}
+.sb-body::-webkit-scrollbar-thumb{background:rgba(124,58,237,0.3);border-radius:2px}
+.sb-foot{padding:10px;border-top:1px solid rgba(255,255,255,0.06)}
+.zona-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:12px;padding:10px 12px;margin-bottom:7px;cursor:pointer;transition:all 0.15s}
+.zona-card:hover{border-color:rgba(124,58,237,0.4)}
+.zona-card.sel{border-color:rgba(124,58,237,0.6);background:rgba(124,58,237,0.1)}
+.zc-top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.zc-dot{width:12px;height:12px;border-radius:4px;flex-shrink:0}
+.zc-name{font-size:13px;font-weight:600;flex:1}
+.zc-price{font-size:13px;font-weight:700;color:#6ee7b7;font-family:monospace}
+.zc-barrios{font-size:10px;color:rgba(241,240,255,0.35);line-height:1.4}
+.zc-btns{display:flex;gap:5px;margin-top:7px}
+.zcbtn{flex:1;padding:4px 8px;border-radius:7px;border:none;font-size:11px;font-weight:600;cursor:pointer}
+.zcbtn-e{background:rgba(124,58,237,0.15);color:#c4b5fd}
+.zcbtn-d{background:rgba(239,68,68,0.1);color:#fca5a5}
+.btn{width:100%;padding:10px;border:none;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;margin-bottom:6px}
+.btn-primary{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white}
+.btn-primary:hover{opacity:0.9}
+.btn-success{background:linear-gradient(135deg,#10b981,#059669);color:white}
+.btn-draw{background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);color:#fcd34d}
+.btn-draw.drawing{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#fca5a5}
+.search-wrap{position:absolute;top:12px;left:12px;z-index:400;width:calc(100% - 292px - 24px)}
+.search-input{width:100%;padding:9px 14px;background:rgba(13,10,26,0.95);border:1px solid rgba(124,58,237,0.4);border-radius:11px;color:#f1f0ff;font-size:13px;outline:none;backdrop-filter:blur(12px)}
+.search-input::placeholder{color:rgba(241,240,255,0.3)}
+.search-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:rgba(13,10,26,0.98);border:1px solid rgba(124,58,237,0.4);border-radius:11px;overflow:hidden;max-height:180px;overflow-y:auto;display:none;z-index:500}
+.search-results.show{display:block}
+.sr-item{padding:9px 14px;cursor:pointer;font-size:12px;color:rgba(241,240,255,0.7);border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.1s}
+.sr-item:hover{background:rgba(124,58,237,0.15);color:#f1f0ff}
+.instruccion{position:absolute;top:54px;left:12px;z-index:400;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:9px;padding:7px 12px;font-size:12px;color:#fcd34d;font-weight:600;display:none}
+.instruccion.show{display:block}
+.legend{position:absolute;bottom:16px;left:12px;z-index:400;background:rgba(13,10,26,0.92);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:10px 14px;backdrop-filter:blur(12px);max-width:220px}
+.leg-title{font-size:10px;font-weight:700;color:rgba(241,240,255,0.4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:7px}
+.leg-row{display:flex;align-items:center;gap:7px;margin-bottom:4px;font-size:11px;color:rgba(241,240,255,0.65)}
+.leg-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.modal{display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.modal.open{display:flex}
+.modal-box{background:rgba(18,12,38,0.99);border:1px solid rgba(124,58,237,0.4);border-radius:18px;padding:22px;width:320px;box-shadow:0 20px 60px rgba(0,0,0,0.6)}
+.modal-title{font-size:17px;font-weight:800;margin-bottom:16px;background:linear-gradient(135deg,#c4b5fd,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.field{margin-bottom:12px}
+.flabel{font-size:10px;color:rgba(241,240,255,0.4);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:5px}
+.finput{width:100%;padding:9px 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#f1f0ff;font-size:13px;outline:none;font-family:inherit}
+.finput:focus{border-color:rgba(124,58,237,0.6)}
+.colors{display:flex;gap:7px;flex-wrap:wrap}
+.col-opt{width:26px;height:26px;border-radius:7px;cursor:pointer;border:2px solid transparent;transition:all 0.15s}
+.col-opt.sel{border-color:white;transform:scale(1.2)}
+.modal-btns{display:flex;gap:8px;margin-top:16px}
+.mbtn{flex:1;padding:11px;border-radius:11px;border:none;font-size:13px;font-weight:700;cursor:pointer}
+.mbtn-cancel{background:rgba(255,255,255,0.07);color:rgba(241,240,255,0.5)}
+.mbtn-save{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white}
+.empty{text-align:center;padding:30px 16px;color:rgba(241,240,255,0.25);font-size:13px}
+.pli{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:11px;padding:9px 11px;margin-bottom:6px;cursor:pointer;transition:all 0.15s}
+.pli:hover{border-color:rgba(124,58,237,0.3)}
+.pli-num{font-size:14px;font-weight:700;color:#c4b5fd;font-family:monospace}
+.pli-dir{font-size:11px;color:rgba(241,240,255,0.4);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pli-total{font-size:11px;color:#6ee7b7;margin-top:3px;font-weight:600}
+.notif{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(13,10,26,0.96);border:1px solid rgba(124,58,237,0.5);color:#f1f0ff;padding:9px 18px;border-radius:18px;font-size:12px;font-weight:600;z-index:5000;box-shadow:0 8px 24px rgba(0,0,0,0.5);backdrop-filter:blur(12px);white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.2s}
+.notif.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">🗺️ Zonas & Pedidos — La Curva</div>
+  <div class="tabs">
+    <button class="tab active" id="tab-zonas" onclick="switchTab('zonas')">🏘️ Zonas</button>
+    <button class="tab" id="tab-pedidos" onclick="switchTab('pedidos')">📦 Pedidos</button>
+  </div>
+</div>
+
+<div class="main">
+  <div style="position:relative;flex:1;overflow:hidden">
+    <div id="map" style="width:100%;height:100%"></div>
+    <div class="search-wrap">
+      <input class="search-input" id="searchInput" placeholder="🔍 Buscar dirección en Cali...">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+    <div class="instruccion" id="instruccion">✏️ Haz clic en el mapa para agregar puntos. Doble clic para cerrar la zona.</div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="sidebar" id="sb-zonas">
+    <div class="sb-head">Zonas de domicilio</div>
+    <div class="sb-body" id="zonasList"></div>
+    <div class="sb-foot">
+      <button class="btn btn-draw" id="btnDraw" onclick="toggleDraw()">✏️ Dibujar nueva zona</button>
+      <button class="btn btn-primary" onclick="abrirModal(null)">+ Zona sin dibujar</button>
+      <button class="btn btn-success" onclick="guardarZonas()">💾 Guardar zonas</button>
+    </div>
+  </div>
+
+  <div class="sidebar" id="sb-pedidos" style="display:none">
+    <div class="sb-head">Pedidos activos</div>
+    <div class="sb-body" id="pedidosList"></div>
+    <div class="sb-foot">
+      <button class="btn btn-primary" onclick="cargarPedidos()">🔄 Actualizar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">Nueva zona</div>
+    <div class="field"><label class="flabel">Nombre</label><input class="finput" id="zNombre" placeholder="Zona Centro"></div>
+    <div class="field"><label class="flabel">Precio domicilio ($)</label><input class="finput" id="zPrecio" type="number" placeholder="4000"></div>
+    <div class="field"><label class="flabel">Barrios</label><input class="finput" id="zBarrios" placeholder="La Selva, San Judas..."></div>
+    <div class="field"><label class="flabel">Color</label><div class="colors" id="colores"></div></div>
+    <div class="modal-btns">
+      <button class="mbtn mbtn-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="mbtn mbtn-save" onclick="guardarZona()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+window.onload = function() {
+  if (typeof L === 'undefined') {
+    setTimeout(function() { window.onload(); }, 100);
+    return;
+  }
+var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co";
+var SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
+var REST_ID="2cc8adc0-068b-4cc5-b880-5239346539ef";
+var COLORES=["#7c3aed","#2563eb","#10b981","#f59e0b","#ef4444","#ec4899","#8b5cf6","#06b6d4","#84cc16","#f97316"];
+var ESTADOS_COLOR={confirmado:"#c4b5fd",en_preparacion:"#fcd34d",listo:"#fb923c",en_camino:"#34d399",entregado:"#6b7280"};
+
+var zonas=[], zonaLayers={}, pedidoMarkers=[], map;
+var editandoId=null, selColor=COLORES[0];
+var dibujando=false, puntosActuales=[], puntoMarkers=[], lineaTemp=null;
+var searchTO=null;
+
+var ZONAS_DEFAULT=[
+  {id:"z1",nombre:"Canaveral cercano",precio:2000,color:"#10b981",barrios:"Canaveral, unidad/edificio al lado",coords:[[3.3650,-76.5430],[3.3665,-76.5400],[3.3650,-76.5375],[3.3628,-76.5385],[3.3622,-76.5418]]},
+  {id:"z2",nombre:"Limonar / Guadalupe",precio:3000,color:"#2563eb",barrios:"Limonar, Guadalupe, Cañaverales 1-6, Gratamiras",coords:[[3.3700,-76.5455],[3.3728,-76.5415],[3.3718,-76.5372],[3.3688,-76.5362],[3.3668,-76.5395],[3.3678,-76.5445]]},
+  {id:"z3",nombre:"La Selva / San Judas",precio:4000,color:"#f59e0b",barrios:"La Selva, San Judas, La Granja, Santo Domingo, Ciudad 2000",coords:[[3.3585,-76.5485],[3.3622,-76.5452],[3.3612,-76.5402],[3.3578,-76.5398],[3.3558,-76.5435]]},
+  {id:"z4",nombre:"Panamericano / Guabal",precio:5000,color:"#ec4899",barrios:"Panamericano, El Dorado, Guabal, Capri",coords:[[3.3525,-76.5515],[3.3562,-76.5482],[3.3552,-76.5442],[3.3512,-76.5432],[3.3498,-76.5472]]},
+  {id:"z5",nombre:"Zona lejana",precio:6000,color:"#ef4444",barrios:"Caney, Ciudad Jardín, Pance, Melendez, Univalle, centro",coords:[[3.3455,-76.5555],[3.3505,-76.5515],[3.3492,-76.5462],[3.3442,-76.5452],[3.3425,-76.5505]]}
+];
+
+// ── MAP ───────────────────────────────────────────────────────────────────────
+map = L.map('map',{center:[3.3640,-76.5420],zoom:14});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+
+// Marcador restaurante
+L.marker([3.3640,-76.5420],{icon:L.divIcon({html:'<div style="background:#7c3aed;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 4px 14px rgba(124,58,237,0.6);border:2px solid white">🍔</div>',className:'',iconSize:[34,34],iconAnchor:[17,17]})}).addTo(map).bindPopup('<b>La Curva Street Food</b><br>Canaveral, Cali');
+
+// Click en mapa para dibujar
+map.on('click',function(e){
+  if(!dibujando) return;
+  puntosActuales.push([e.latlng.lat,e.latlng.lng]);
+  var m=L.circleMarker(e.latlng,{radius:5,color:'#f59e0b',fillColor:'#f59e0b',fillOpacity:1,weight:2}).addTo(map);
+  puntoMarkers.push(m);
+  if(lineaTemp){map.removeLayer(lineaTemp);}
+  if(puntosActuales.length>1){
+    lineaTemp=L.polyline(puntosActuales,{color:'#f59e0b',weight:2,dashArray:'5,5'}).addTo(map);
+  }
+});
+
+map.on('dblclick',function(e){
+  if(!dibujando||puntosActuales.length<3) return;
+  L.DomEvent.stop(e);
+  finalizarDibujo();
+});
+
+function toggleDraw(){
+  dibujando=!dibujando;
+  var btn=document.getElementById('btnDraw');
+  if(dibujando){
+    puntosActuales=[];
+    puntoMarkers.forEach(function(m){map.removeLayer(m);});
+    puntoMarkers=[];
+    if(lineaTemp){map.removeLayer(lineaTemp);lineaTemp=null;}
+    btn.textContent='✅ Doble clic para cerrar';
+    btn.classList.add('drawing');
+    document.getElementById('instruccion').classList.add('show');
+    map.getContainer().style.cursor='crosshair';
+  } else {
+    cancelarDibujo();
+  }
+}
+
+function finalizarDibujo(){
+  dibujando=false;
+  document.getElementById('btnDraw').textContent='✏️ Dibujar nueva zona';
+  document.getElementById('btnDraw').classList.remove('drawing');
+  document.getElementById('instruccion').classList.remove('show');
+  map.getContainer().style.cursor='';
+  abrirModal(null);
+}
+
+function cancelarDibujo(){
+  dibujando=false;
+  puntosActuales=[];
+  puntoMarkers.forEach(function(m){map.removeLayer(m);});
+  puntoMarkers=[];
+  if(lineaTemp){map.removeLayer(lineaTemp);lineaTemp=null;}
+  document.getElementById('btnDraw').textContent='✏️ Dibujar nueva zona';
+  document.getElementById('btnDraw').classList.remove('drawing');
+  document.getElementById('instruccion').classList.remove('show');
+  map.getContainer().style.cursor='';
+}
+
+// ── ZONAS ─────────────────────────────────────────────────────────────────────
+function cargarZonas(){
+  var saved=localStorage.getItem('lacurva_zonas');
+  zonas=saved?JSON.parse(saved):[...ZONAS_DEFAULT];
+  renderZonas();
+}
+
+function renderZonas(){
+  Object.values(zonaLayers).forEach(function(l){map.removeLayer(l);});
+  zonaLayers={};
+  zonas.forEach(function(z){
+    if(!z.coords||z.coords.length<3) return;
+    var poly=L.polygon(z.coords,{color:z.color,fillColor:z.color,fillOpacity:0.2,weight:2}).addTo(map);
+    poly.bindPopup('<b>'+z.nombre+'</b><br>'+z.barrios+'<br><b style="color:#6ee7b7">$'+Number(z.precio).toLocaleString('es-CO')+'</b>');
+    poly.on('click',function(){selZona(z.id);});
+    zonaLayers[z.id]=poly;
+  });
+  var lista=document.getElementById('zonasList');
+  if(!zonas.length){lista.innerHTML='<div class="empty">Sin zonas. Dibuja la primera.</div>';renderLeyenda();return;}
+  lista.innerHTML=zonas.map(function(z){
+    return '<div class="zona-card" id="zc-'+z.id+'" onclick="selZona(\''+z.id+'\')">'
+      +'<div class="zc-top"><div class="zc-dot" style="background:'+z.color+'"></div><div class="zc-name">'+z.nombre+'</div><div class="zc-price">$'+Number(z.precio).toLocaleString('es-CO')+'</div></div>'
+      +'<div class="zc-barrios">'+z.barrios+'</div>'
+      +'<div class="zc-btns"><button class="zcbtn zcbtn-e" onclick="event.stopPropagation();abrirModal(\''+z.id+'\')">✏️ Editar</button><button class="zcbtn zcbtn-d" onclick="event.stopPropagation();eliminarZona(\''+z.id+'\')">🗑️</button></div>'
+      +'</div>';
+  }).join('');
+  renderLeyenda();
+}
+
+function selZona(id){
+  document.querySelectorAll('.zona-card').forEach(function(el){el.classList.remove('sel');});
+  var card=document.getElementById('zc-'+id);
+  if(card){card.classList.add('sel');card.scrollIntoView({behavior:'smooth',block:'nearest'});}
+  var layer=zonaLayers[id];
+  if(layer){map.fitBounds(layer.getBounds(),{padding:[30,30]});layer.openPopup();}
+}
+
+function eliminarZona(id){
+  if(!confirm('¿Eliminar esta zona?')) return;
+  zonas=zonas.filter(function(z){return z.id!==id;});
+  if(zonaLayers[id]){map.removeLayer(zonaLayers[id]);delete zonaLayers[id];}
+  renderZonas();
+}
+
+function renderLeyenda(){
+  document.getElementById('legend').innerHTML='<div class="leg-title">Precios domicilio</div>'
+    +zonas.map(function(z){return '<div class="leg-row"><div class="leg-dot" style="background:'+z.color+'"></div>'+z.nombre+' — $'+Number(z.precio).toLocaleString('es-CO')+'</div>';}).join('');
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+function abrirModal(id){
+  editandoId=id;
+  var z=id?zonas.find(function(x){return x.id===id;}):null;
+  document.getElementById('modalTitle').textContent=z?'Editar zona':'Nueva zona';
+  document.getElementById('zNombre').value=z?z.nombre:'';
+  document.getElementById('zPrecio').value=z?z.precio:'';
+  document.getElementById('zBarrios').value=z?z.barrios:'';
+  selColor=z?z.color:COLORES[0];
+  document.getElementById('colores').innerHTML=COLORES.map(function(c){
+    return '<div class="col-opt'+(c===selColor?' sel':'')+'" style="background:'+c+'" onclick="pickColor(\''+c+'\')"></div>';
+  }).join('');
+  document.getElementById('modal').classList.add('open');
+}
+
+function cerrarModal(){
+  document.getElementById('modal').classList.remove('open');
+  if(!editandoId) cancelarDibujo();
+}
+
+function pickColor(c){
+  selColor=c;
+  document.querySelectorAll('.col-opt').forEach(function(el){
+    el.classList.toggle('sel',el.style.background===c||el.style.backgroundColor===c);
+  });
+}
+
+function guardarZona(){
+  var nombre=document.getElementById('zNombre').value.trim();
+  var precio=Number(document.getElementById('zPrecio').value);
+  var barrios=document.getElementById('zBarrios').value.trim();
+  if(!nombre||!precio){alert('Completa nombre y precio');return;}
+  if(editandoId){
+    var z=zonas.find(function(x){return x.id===editandoId;});
+    if(z){z.nombre=nombre;z.precio=precio;z.barrios=barrios;z.color=selColor;}
+  } else {
+    zonas.push({id:'z'+Date.now(),nombre:nombre,precio:precio,barrios:barrios,color:selColor,coords:[...puntosActuales]});
+    puntosActuales=[];
+    puntoMarkers.forEach(function(m){map.removeLayer(m);});
+    puntoMarkers=[];
+    if(lineaTemp){map.removeLayer(lineaTemp);lineaTemp=null;}
+  }
+  cerrarModal();
+  editandoId=null;
+  renderZonas();
+}
+
+function guardarZonas(){
+  localStorage.setItem('lacurva_zonas',JSON.stringify(zonas));
+  fetch('https://luz-ia-production-4cff.up.railway.app/api/restaurante-config',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({restaurante_id:REST_ID,config:{zonas_domicilio:JSON.stringify(zonas)}})
+  }).then(function(r){return r.json();})
+  .then(function(d){notif(d.ok?'✅ Guardado en la nube':'💾 Guardado localmente');})
+  .catch(function(){notif('💾 Guardado localmente');});
+}
+
+// ── BÚSQUEDA ──────────────────────────────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('input',function(){
+  var q=this.value.trim();
+  if(searchTO) clearTimeout(searchTO);
+  if(q.length<3){document.getElementById('searchResults').classList.remove('show');return;}
+  searchTO=setTimeout(function(){buscar(q);},450);
+});
+document.addEventListener('click',function(e){if(!e.target.closest('.search-wrap'))document.getElementById('searchResults').classList.remove('show');});
+
+function buscar(q){
+  fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(q+', Cali, Colombia')+'&limit=5&countrycodes=co')
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var res=document.getElementById('searchResults');
+    if(!data.length){res.innerHTML='<div class="sr-item" style="opacity:0.4">Sin resultados</div>';res.classList.add('show');return;}
+    res.innerHTML=data.map(function(d){
+      return '<div class="sr-item" onclick="irA('+d.lat+','+d.lon+',\''+d.display_name.replace(/'/g,"\\'").substring(0,60)+'\')">'+d.display_name.substring(0,70)+'</div>';
+    }).join('');
+    res.classList.add('show');
+  }).catch(function(){});
+}
+
+var searchMarker=null;
+function irA(lat,lon,nombre){
+  map.setView([lat,lon],17);
+  document.getElementById('searchResults').classList.remove('show');
+  document.getElementById('searchInput').value=nombre;
+  if(searchMarker) map.removeLayer(searchMarker);
+  var punto=L.latLng(lat,lon);
+  var zonaFound=null;
+  zonas.forEach(function(z){
+    if(!z.coords||z.coords.length<3) return;
+    if(dentroDePoligono(punto,z.coords)) zonaFound=z;
+  });
+  searchMarker=L.marker([lat,lon],{icon:L.divIcon({
+    html:'<div style="background:'+(zonaFound?zonaFound.color:'#6b7280')+';padding:5px 10px;border-radius:9px;color:white;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.4);border:2px solid white">'
+      +(zonaFound?'📍 $'+Number(zonaFound.precio).toLocaleString('es-CO'):'📍 Sin zona')+'</div>',
+    className:'',iconAnchor:[50,38]
+  })}).addTo(map);
+  notif(zonaFound?'📍 '+zonaFound.nombre+' — $'+Number(zonaFound.precio).toLocaleString('es-CO'):'⚠️ Fuera de zona de domicilio');
+}
+
+function dentroDePoligono(punto,coords){
+  var x=punto.lat,y=punto.lng,inside=false;
+  for(var i=0,j=coords.length-1;i<coords.length;j=i++){
+    var xi=coords[i][0],yi=coords[i][1],xj=coords[j][0],yj=coords[j][1];
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside;
+  }
+  return inside;
+}
+
+// ── PEDIDOS ───────────────────────────────────────────────────────────────────
+function cargarPedidos(){
+  pedidoMarkers.forEach(function(m){map.removeLayer(m);});
+  pedidoMarkers=[];
+  document.getElementById('pedidosList').innerHTML='<div class="empty">Cargando...</div>';
+  fetch(SU+'/rest/v1/pedidos?restaurante_id=eq.'+REST_ID+'&estado=neq.entregado&order=created_at.desc&limit=20&select=*',
+    {headers:{'apikey':SK,'Authorization':'Bearer '+SK}})
+  .then(function(r){return r.json();})
+  .then(function(pedidos){
+    var lista=document.getElementById('pedidosList');
+    if(!pedidos.length){lista.innerHTML='<div class="empty">No hay pedidos activos</div>';return;}
+    lista.innerHTML=pedidos.map(function(p){
+      return '<div class="pli" onclick="geocodificar('+JSON.stringify(p)+')">'
+        +'<div class="pli-num">#'+p.numero_pedido+'</div>'
+        +'<div class="pli-dir">📍 '+(p.direccion||'Sin dirección')+'</div>'
+        +'<div class="pli-total">$'+Number(p.total||0).toLocaleString('es-CO')+' · '+(p.estado||'')+'</div>'
+        +'</div>';
+    }).join('');
+    var count=0;
+    pedidos.forEach(function(p){
+      if(count>=8) return;
+      if(p.direccion&&p.direccion!=='Por confirmar'){
+        count++;
+        setTimeout(function(){geocodificar(p);},count*600);
+      }
+    });
+  }).catch(function(){document.getElementById('pedidosList').innerHTML='<div class="empty">Error cargando</div>';});
+}
+
+function geocodificar(p){
+  if(!p.direccion||p.direccion==='Por confirmar') return;
+  if(p.direccion==='RECOGER EN TIENDA'){addPedidoPin(p,3.3640,-76.5420);return;}
+  fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(p.direccion+', Cali, Colombia')+'&limit=1&countrycodes=co')
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.length) addPedidoPin(p,parseFloat(d[0].lat),parseFloat(d[0].lon));})
+  .catch(function(){});
+}
+
+function addPedidoPin(p,lat,lon){
+  var color=ESTADOS_COLOR[p.estado]||'#c4b5fd';
+  var esR=p.direccion==='RECOGER EN TIENDA';
+  var m=L.marker([lat,lon],{icon:L.divIcon({
+    html:'<div style="background:'+color+';width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#0d0a1a;box-shadow:0 4px 10px rgba(0,0,0,0.4);border:2px solid white">'+(esR?'🏪':'#'+p.numero_pedido)+'</div>',
+    className:'',iconSize:[30,30],iconAnchor:[15,15]
+  })}).addTo(map);
+  var items=(Array.isArray(p.items)?p.items.slice(0,2):['Sin items']).join('<br>');
+  m.bindPopup('<b>#'+p.numero_pedido+'</b>'+(esR?' 🏪 RECOGER':' 📍')+'<br>'+items+'<br><b style="color:#6ee7b7">$'+Number(p.total||0).toLocaleString('es-CO')+'</b><br><small>'+p.estado+'</small>');
+  pedidoMarkers.push(m);
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(t){
+  document.getElementById('tab-zonas').classList.toggle('active',t==='zonas');
+  document.getElementById('tab-pedidos').classList.toggle('active',t==='pedidos');
+  document.getElementById('sb-zonas').style.display=t==='zonas'?'flex':'none';
+  document.getElementById('sb-pedidos').style.display=t==='pedidos'?'flex':'none';
+  if(t==='pedidos') cargarPedidos();
+}
+
+// ── NOTIF ─────────────────────────────────────────────────────────────────────
+var notifTO=null;
+function notif(msg){
+  var el=document.getElementById('notif');
+  el.textContent=msg;el.classList.add('show');
+  if(notifTO) clearTimeout(notifTO);
+  notifTO=setTimeout(function(){el.classList.remove('show');},3000);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+cargarZonas();
+}; // end window.onload
+</script>
+</body>
+</html>
