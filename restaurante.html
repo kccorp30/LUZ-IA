@@ -1397,28 +1397,89 @@ setTimeout(function(){if(typeof rest!=="undefined"&&rest)cargarProd();},3000);
 // MAPA
 var mapaInstance=null,mapaZonas=[],mapaDrawing=false,mapaPolyline=null,mapaPoints=[];
 var mapaTabActual="zonas",mapaBarrioMarker=null;
+var NOMINATIM_HEADERS={"Accept":"application/json","Accept-Language":"es","User-Agent":"LuzIA-Panel/1.0"};
+
+function geoSearch(q,callback){
+  // Intenta con Nominatim primero, fallback a Photon
+  var url="https://nominatim.openstreetmap.org/search?format=json&q="+encodeURIComponent(q)+"&limit=6&countrycodes=co&accept-language=es";
+  fetch(url,{headers:NOMINATIM_HEADERS})
+    .then(function(r){if(!r.ok)throw new Error("nominatim fail");return r.json();})
+    .then(function(results){
+      if(results&&results.length)return callback(results.map(function(r){return{lat:parseFloat(r.lat),lng:parseFloat(r.lon),label:r.display_name.split(",").slice(0,3).join(", ")};}));
+      // Fallback: Photon (sin restriccion de rate)
+      return fetch("https://photon.komoot.io/api/?q="+encodeURIComponent(q+" Cali")+"&limit=5&lang=es")
+        .then(function(r){return r.json();})
+        .then(function(d){
+          callback((d.features||[]).map(function(f){
+            var p=f.properties,c=f.geometry.coordinates;
+            return{lat:c[1],lng:c[0],label:[p.name,p.city,p.country].filter(Boolean).join(", ")};
+          }));
+        });
+    })
+    .catch(function(){
+      // Solo Photon como fallback total
+      fetch("https://photon.komoot.io/api/?q="+encodeURIComponent(q+" Cali")+"&limit=5&lang=es")
+        .then(function(r){return r.json();})
+        .then(function(d){
+          callback((d.features||[]).map(function(f){
+            var p=f.properties,c=f.geometry.coordinates;
+            return{lat:c[1],lng:c[0],label:[p.name,p.city,p.country].filter(Boolean).join(", ")};
+          }));
+        })
+        .catch(function(){callback([]);});
+    });
+}
+
+function renderGeoResults(results,divId,onSelect){
+  var div=document.getElementById(divId);if(!div)return;
+  if(!results||!results.length){div.innerHTML='<div style="padding:10px 12px;font-size:12px;color:var(--text3)">Sin resultados. Intenta con otro nombre.</div>';div.style.display="block";return;}
+  div.innerHTML=results.map(function(r,i){return'<div data-idx="'+i+'" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;color:var(--text);transition:background 0.1s">&#128205; '+r.label+'</div>';}).join("");
+  div.style.display="block";
+  div.querySelectorAll("[data-idx]").forEach(function(el){
+    el.addEventListener("mousedown",function(e){e.preventDefault();
+      var idx=parseInt(this.getAttribute("data-idx"));onSelect(results[idx]);div.style.display="none";
+    });
+  });
+}
+
 function initMapa(){
-  if(mapaInstance)return;
+  if(mapaInstance){setTimeout(function(){mapaInstance.invalidateSize();},200);return;}
   var container=document.getElementById("mapaContainer");if(!container)return;
+  // Forzar altura antes de inicializar para evitar mapa negro
+  container.style.height="340px";container.style.minHeight="340px";
   var lat=3.4516,lng=-76.5320;
-  if(rest&&rest.lat)lat=rest.lat;if(rest&&rest.lng)lng=rest.lng;
-  mapaInstance=L.map("mapaContainer",{center:[lat,lng],zoom:13,zoomControl:true});
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:19}).addTo(mapaInstance);
+  if(rest&&rest.lat&&!isNaN(Number(rest.lat)))lat=Number(rest.lat);
+  if(rest&&rest.lng&&!isNaN(Number(rest.lng)))lng=Number(rest.lng);
+  try{
+    mapaInstance=L.map("mapaContainer",{center:[lat,lng],zoom:13,zoomControl:true,preferCanvas:true});
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:19,attribution:""}).addTo(mapaInstance);
+    // Forzar redibujado tras 300ms para evitar gris/negro
+    setTimeout(function(){mapaInstance.invalidateSize();},300);
+    setTimeout(function(){mapaInstance.invalidateSize();},800);
+  }catch(e){console.error("Error Leaflet:",e);return;}
   mapaInstance.on("click",function(e){if(mapaDrawing){mapaPoints.push([e.latlng.lat,e.latlng.lng]);actualizarLineaDraw();}});
   mapaInstance.on("dblclick",function(e){if(mapaDrawing){e.originalEvent.preventDefault();finalizarMapaDraw();}});
   cargarZonasDB();loadPedidosEnMapa();
+
+  // Búsqueda de ubicación del restaurante
   var restSearch=document.getElementById("mapaRestSearch");
   if(restSearch){
+    var restTimer=null;
     restSearch.addEventListener("input",function(){
-      var q=this.value.trim();if(q.length<3){document.getElementById("mapaRestResults").style.display="none";return;}
-      fetch("https://nominatim.openstreetmap.org/search?format=json&q="+encodeURIComponent(q+" Cali Colombia")+"&limit=5").then(function(r){return r.json();}).then(function(results){
-        var div=document.getElementById("mapaRestResults");
-        if(!results.length){div.style.display="none";return;}
-        div.innerHTML=results.map(function(r){return'<div data-lat="'+r.lat+'" data-lng="'+r.lon+'" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;color:var(--text);transition:background 0.1s" onmouseover="this.style.background=\'rgba(124,58,237,0.2)\'" onmouseout="this.style.background=\'\'">&#128205; '+r.display_name.split(",").slice(0,3).join(", ")+'</div>';}).join("");
-        div.style.display="block";
-        div.querySelectorAll("[data-lat]").forEach(function(el){el.addEventListener("click",function(){var lat=parseFloat(this.getAttribute("data-lat")),lng2=parseFloat(this.getAttribute("data-lng"));mapaInstance.setView([lat,lng2],16);restSearch.value=this.textContent.trim().replace("📍 ","");div.style.display="none";if(rest)fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:{lat:lat,lng:lng2}})}).catch(function(){});});});
-      }).catch(function(){});
+      var q=this.value.trim();
+      if(q.length<3){document.getElementById("mapaRestResults").style.display="none";return;}
+      clearTimeout(restTimer);
+      restTimer=setTimeout(function(){
+        geoSearch(q+" Cali",function(results){
+          renderGeoResults(results,"mapaRestResults",function(r){
+            mapaInstance.setView([r.lat,r.lng],16);
+            restSearch.value=r.label;
+            if(rest)fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:{lat:r.lat,lng:r.lng}})}).catch(function(){});
+          });
+        });
+      },500);
     });
+    document.addEventListener("click",function(e){if(!e.target.closest("#mapaRestSearch")&&!e.target.closest("#mapaRestResults"))document.getElementById("mapaRestResults").style.display="none";});
   }
 }
 function switchMapaTab(tab){
@@ -1465,14 +1526,26 @@ function dibujarZona(z){
 }
 function cargarZonasDB(){
   if(!rest)return;
-  get("zonas_domicilio","restaurante_id=eq."+rest.id).then(function(zs){
-    if(zs&&zs.length){mapaZonas=zs.map(function(z){return{id:z.id,nombre:z.nombre,precio:z.precio_domicilio,color:z.color||"#7c3aed",puntos:z.puntos};});mapaZonas.forEach(dibujarZona);renderZonasList();}
-  }).catch(function(){});
+  get("zonas_domicilio","restaurante_id=eq."+rest.id+"&order=created_at.asc").then(function(zs){
+    if(!zs||!zs.length){renderZonasList();return;}
+    mapaZonas=zs.map(function(z){
+      var puntos=z.puntos;
+      // puntos puede venir como string JSON o como array directo
+      if(typeof puntos==="string"){try{puntos=JSON.parse(puntos);}catch(e){puntos=[];}}
+      if(!Array.isArray(puntos))puntos=[];
+      return{id:z.id,nombre:z.nombre,precio:Number(z.precio_domicilio||0),color:z.color||"#7c3aed",puntos:puntos};
+    }).filter(function(z){return z.puntos.length>=3;});
+    mapaZonas.forEach(dibujarZona);
+    renderZonasList();
+  }).catch(function(e){console.error("cargarZonasDB:",e);});
 }
 function guardarZonasDB(){
   if(!rest)return;
   var ultima=mapaZonas[mapaZonas.length-1];if(!ultima)return;
-  fetch(SU+"/rest/v1/zonas_domicilio",{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({restaurante_id:rest.id,nombre:ultima.nombre,precio_domicilio:ultima.precio,color:ultima.color,puntos:ultima.puntos})}).catch(function(){});
+  fetch(SU+"/rest/v1/zonas_domicilio",{method:"POST",
+    headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=representation"},
+    body:JSON.stringify({restaurante_id:rest.id,nombre:ultima.nombre,precio_domicilio:ultima.precio,color:ultima.color,puntos:JSON.stringify(ultima.puntos)})
+  }).then(function(r){return r.json();}).then(function(d){if(d&&d.length&&d[0].id)mapaZonas[mapaZonas.length-1].id=d[0].id;}).catch(function(e){console.error("guardarZona:",e);});
 }
 function renderZonasList(){
   var lista=document.getElementById("mapaZonasList"),leyenda=document.getElementById("mapaLeyenda");
@@ -1497,16 +1570,26 @@ function loadPedidosEnMapa(){
 }
 (function(){
   var bs=document.getElementById("mapaBarrioSearch");if(!bs)return;
+  var bsTimer=null;
   bs.addEventListener("input",function(){
-    var q=this.value.trim();if(q.length<3){document.getElementById("mapaBarrioResults").style.display="none";return;}
-    fetch("https://nominatim.openstreetmap.org/search?format=json&q="+encodeURIComponent(q+" Cali")+"&limit=5").then(function(r){return r.json();}).then(function(results){
-      var div=document.getElementById("mapaBarrioResults");
-      if(!results.length){div.style.display="none";return;}
-      div.innerHTML=results.map(function(r){return'<div data-lat="'+r.lat+'" data-lng="'+r.lon+'" data-name="'+encodeURIComponent(r.display_name.split(",")[0])+'" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;color:var(--text)" onmouseover="this.style.background=\'rgba(124,58,237,0.2)\'" onmouseout="this.style.background=\'\'">&#128205; '+r.display_name.split(",").slice(0,2).join(", ")+'</div>';}).join("");
-      div.style.display="block";
-      div.querySelectorAll("[data-lat]").forEach(function(el){el.addEventListener("click",function(){var lat=parseFloat(this.getAttribute("data-lat")),lng2=parseFloat(this.getAttribute("data-lng")),name=decodeURIComponent(this.getAttribute("data-name"));if(mapaBarrioMarker)mapaInstance.removeLayer(mapaBarrioMarker);mapaBarrioMarker=L.marker([lat,lng2]).addTo(mapaInstance).bindPopup(name).openPopup();mapaInstance.setView([lat,lng2],16);document.getElementById("mapaBarrioNombre").textContent=name;document.getElementById("mapaBarrioPreview").style.display="block";div.style.display="none";bs.value=name;});});
-    }).catch(function(){});
+    var q=this.value.trim();
+    if(q.length<3){document.getElementById("mapaBarrioResults").style.display="none";return;}
+    clearTimeout(bsTimer);
+    bsTimer=setTimeout(function(){
+      geoSearch(q+" Cali",function(results){
+        renderGeoResults(results,"mapaBarrioResults",function(r){
+          if(mapaBarrioMarker)mapaInstance.removeLayer(mapaBarrioMarker);
+          mapaBarrioMarker=L.marker([r.lat,r.lng]).addTo(mapaInstance).bindPopup(r.label).openPopup();
+          mapaInstance.setView([r.lat,r.lng],16);
+          document.getElementById("mapaBarrioNombre").textContent=r.label.split(",")[0];
+          document.getElementById("mapaBarrioPreview").style.display="block";
+          bs.value=r.label.split(",")[0];
+          document.getElementById("mapaBarrioResults").style.display="none";
+        });
+      });
+    },500);
   });
+  document.addEventListener("click",function(e){if(!e.target.closest("#mapaBarrioSearch")&&!e.target.closest("#mapaBarrioResults"))document.getElementById("mapaBarrioResults").style.display="none";});
 }());
 var barrioCenterLat=null,barrioCenterLng=null;
 function crearZonaDesdeBarrio(){
