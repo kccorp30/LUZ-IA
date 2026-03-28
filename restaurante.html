@@ -570,47 +570,49 @@ select.finput{cursor:pointer}
 
     <!-- MAPA -->
     <div class="page" id="page-mapa">
-      <div style="padding:16px 12px 4px"><div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Mapa</div><div style="font-size:13px;color:var(--text3);margin-top:2px">Zonas de domicilio y pedidos activos</div></div>
-      <div style="padding:0 12px 6px">
-        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px">&#128205; Ubicacion del restaurante</div>
-        <div style="position:relative">
-          <input class="finput" id="mapaRestSearch" placeholder="Buscar direccion del restaurante..." autocomplete="off" style="font-size:13px">
-          <div id="mapaRestResults" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:25;background:rgba(15,10,35,0.98);border:1px solid rgba(124,58,237,0.4);border-radius:12px;overflow:hidden;max-height:150px;overflow-y:auto;display:none"></div>
+      <div style="padding:16px 12px 8px">
+        <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Zonas de domicilio</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:2px">Define barrios por zona y el mapa los muestra automaticamente</div>
+      </div>
+
+      <!-- FORMULARIO AGREGAR ZONA -->
+      <div style="padding:0 12px 8px">
+        <div class="aform">
+          <div class="aft">&#43; Nueva zona</div>
+          <div class="frow">
+            <div class="ffield">
+              <label class="flabel">Nombre de la zona</label>
+              <input class="finput" id="zona-nombre" placeholder="Ej: Centro, Norte...">
+            </div>
+            <div class="ffield">
+              <label class="flabel">Precio domicilio</label>
+              <input class="finput" id="zona-precio" type="number" placeholder="4000">
+            </div>
+          </div>
+          <div class="ffield">
+            <label class="flabel">Barrios (separados por coma)</label>
+            <textarea class="finput" id="zona-barrios" rows="2" placeholder="Canaveral, Granada, Santa Monica, El Peñon..."></textarea>
+          </div>
+          <button class="badd" id="btnAgregarZona">Guardar zona</button>
         </div>
       </div>
-      <div style="padding:0 12px 8px;display:flex;gap:8px;flex-wrap:wrap">
-        <button class="filtro-btn active" id="mapa-tab-zonas" onclick="switchMapaTab('zonas')">&#127960;&#65039; Zonas</button>
-        <button class="filtro-btn" id="mapa-tab-pedidos" onclick="switchMapaTab('pedidos')">&#128230; Pedidos</button>
-        <button class="filtro-btn" id="mapa-tab-buscar" onclick="switchMapaTab('buscar')">&#128269; Buscar barrio</button>
-        <button class="filtro-btn" id="mapa-tab-draw" onclick="toggleMapaDraw()" style="margin-left:auto">&#9999;&#65039; Dibujar</button>
-      </div>
-      <div id="mapaInstruccion" style="display:none;margin:0 12px 8px;padding:8px 12px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:10px;font-size:12px;color:#fcd34d;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span>&#9999;&#65039; Toca el mapa para agregar puntos · Doble toque para cerrar</span>
-        <button onclick="finalizarMapaDraw()" style="background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);color:#6ee7b7;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">&#9989; Cerrar zona</button>
-        <button onclick="cancelarMapaDraw()" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">&#10005; Cancelar</button>
-      </div>
-      <div id="mapaBuscarPanel" style="display:none;padding:0 12px 8px">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Busca un barrio para ver donde queda y crear una zona alrededor</div>
-        <div style="position:relative">
-          <input class="finput" id="mapaBarrioSearch" placeholder="&#128269; Buscar barrio en Cali..." autocomplete="off" style="font-size:13px">
-          <div id="mapaBarrioResults" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;background:rgba(15,10,35,0.98);border:1px solid rgba(124,58,237,0.4);border-radius:12px;overflow:hidden;max-height:160px;overflow-y:auto;display:none"></div>
+
+      <!-- TABLA DE ZONAS -->
+      <div style="padding:0 12px 8px" id="zonasTabla"></div>
+
+      <!-- MAPA SOLO VISUAL -->
+      <div style="padding:0 12px 8px">
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">&#128506;&#65039; Mapa visual</div>
+        <div id="mapaWrapper" style="border-radius:18px;overflow:hidden;border:1px solid var(--glass-border);position:relative;background:#1a1520;">
+          <div id="mapaContainer" style="width:100%;height:360px;"></div>
+          <div id="mapaLoading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1a1520;gap:10px;">
+            <div style="font-size:32px">&#128506;&#65039;</div>
+            <div style="font-size:13px;color:var(--text3)">Cargando mapa...</div>
+          </div>
         </div>
-        <div id="mapaBarrioPreview" style="display:none;margin-top:8px;padding:10px 12px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px">
-          <div id="mapaBarrioNombre" style="font-size:13px;font-weight:600;margin-bottom:6px"></div>
-          <button onclick="crearZonaDesdeBarrio()" style="width:100%;padding:9px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-size:13px;font-weight:700;cursor:pointer">+ Crear zona aqui</button>
-        </div>
+        <div id="mapaLeyenda" style="padding:10px 0;display:flex;flex-wrap:wrap;gap:7px"></div>
       </div>
-      <div id="mapaWrapper" style="margin:0 12px;border-radius:18px;overflow:hidden;border:1px solid var(--glass-border);background:#1a1520;position:relative;">
-        <div id="mapaContainer" style="width:100%;height:340px;" class="mapa-leaflet-dark"></div>
-        <div id="mapaLoading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1a1520;gap:10px;pointer-events:none;">
-          <div style="font-size:32px">&#x1F5FA;&#xFE0F;</div>
-          <div style="font-size:13px;color:var(--text3)">Cargando mapa...</div>
-        </div>
-      </div>
-      <div id="mapaLeyenda" style="padding:10px 12px;display:flex;flex-wrap:wrap;gap:7px"></div>
-      <div id="mapaZonasList" style="padding:0 12px 8px"></div>
     </div>
-  </div>
 
   <div class="float-nav">
     <div class="float-nav-inner">
@@ -805,7 +807,7 @@ function showTab(n){
   if(n==="historial")loadHistorial();if(n==="menu")loadMenu();
   if(n==="promo"){loadPromoCount();renderProgs();}
   if(n==="chat")loadChatUniversal();if(n==="cupones")renderCupones();
-  if(n==="mapa"){setTimeout(initMapa,80);}if(n==="config")cargarDomiciliarios();
+  if(n==="mapa"){setTimeout(function(){cargarZonas();initMapa();},80);}if(n==="config")cargarDomiciliarios();
 }
 
 // DOMICILIARIOS
@@ -1403,252 +1405,231 @@ function abrirConstructor(){
 }());
 setTimeout(function(){if(typeof rest!=="undefined"&&rest)cargarProd();},3000);
 // MAPA
-var mapaInstance=null,mapaZonas=[],mapaDrawing=false,mapaPolyline=null,mapaPoints=[];
-var mapaTabActual="zonas",mapaBarrioMarker=null;
-var NOMINATIM_HEADERS={"Accept":"application/json","Accept-Language":"es","User-Agent":"LuzIA-Panel/1.0"};
+var mapaInstance=null, mapaZonas=[], mapaLayersZonas=[], mapaDomisMarkers=[];
+var ZONA_COLORES=["#7c3aed","#2563eb","#10b981","#f97316","#ef4444","#f59e0b","#8b5cf6","#06b6d4","#ec4899","#84cc16"];
+var CALI_CENTER=[3.4516,-76.5320];
 
-function geoSearch(q,callback){
-  // Intenta con Nominatim primero, fallback a Photon
-  var url="https://nominatim.openstreetmap.org/search?format=json&q="+encodeURIComponent(q)+"&limit=6&countrycodes=co&accept-language=es";
-  fetch(url,{headers:NOMINATIM_HEADERS})
-    .then(function(r){if(!r.ok)throw new Error("nominatim fail");return r.json();})
-    .then(function(results){
-      if(results&&results.length)return callback(results.map(function(r){return{lat:parseFloat(r.lat),lng:parseFloat(r.lon),label:r.display_name.split(",").slice(0,3).join(", ")};}));
-      // Fallback: Photon (sin restriccion de rate)
-      return fetch("https://photon.komoot.io/api/?q="+encodeURIComponent(q+" Cali")+"&limit=5&lang=es")
-        .then(function(r){return r.json();})
-        .then(function(d){
-          callback((d.features||[]).map(function(f){
-            var p=f.properties,c=f.geometry.coordinates;
-            return{lat:c[1],lng:c[0],label:[p.name,p.city,p.country].filter(Boolean).join(", ")};
-          }));
-        });
-    })
-    .catch(function(){
-      // Solo Photon como fallback total
-      fetch("https://photon.komoot.io/api/?q="+encodeURIComponent(q+" Cali")+"&limit=5&lang=es")
-        .then(function(r){return r.json();})
-        .then(function(d){
-          callback((d.features||[]).map(function(f){
-            var p=f.properties,c=f.geometry.coordinates;
-            return{lat:c[1],lng:c[0],label:[p.name,p.city,p.country].filter(Boolean).join(", ")};
-          }));
-        })
-        .catch(function(){callback([]);});
-    });
+// ── ZONAS ────────────────────────────────────────────────────────────────────
+function cargarZonas(){
+  if(!rest)return;
+  fetch(SU+"/rest/v1/zonas_domicilio?restaurante_id=eq."+rest.id+"&order=created_at.asc",{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+    .then(function(r){return r.json();})
+    .then(function(zs){
+      mapaZonas=(zs||[]).map(function(z){
+        return{id:z.id,nombre:z.nombre,precio:Number(z.precio_domicilio||0),color:z.color||"#7c3aed",barrios:z.barrios||""};
+      });
+      renderZonasTabla();
+      if(mapaInstance)dibujarTodasZonas();
+    }).catch(function(){});
 }
 
-function renderGeoResults(results,divId,onSelect){
-  var div=document.getElementById(divId);if(!div)return;
-  if(!results||!results.length){div.innerHTML='<div style="padding:10px 12px;font-size:12px;color:var(--text3)">Sin resultados. Intenta con otro nombre.</div>';div.style.display="block";return;}
-  div.innerHTML=results.map(function(r,i){return'<div data-idx="'+i+'" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;color:var(--text);transition:background 0.1s">&#128205; '+r.label+'</div>';}).join("");
-  div.style.display="block";
-  div.querySelectorAll("[data-idx]").forEach(function(el){
-    el.addEventListener("mousedown",function(e){e.preventDefault();
-      var idx=parseInt(this.getAttribute("data-idx"));onSelect(results[idx]);div.style.display="none";
+function renderZonasTabla(){
+  var el=document.getElementById("zonasTabla");if(!el)return;
+  if(!mapaZonas.length){
+    el.innerHTML='<div class="empty" style="padding:16px 0"><div class="et">No hay zonas creadas aun.<br>Agrega la primera arriba.</div></div>';
+    return;
+  }
+  var h='<div style="display:flex;flex-direction:column;gap:8px">';
+  mapaZonas.forEach(function(z){
+    h+='<div style="background:var(--glass-bg);border:1px solid var(--glass-border);border-left:4px solid '+z.color+';border-radius:16px;padding:14px 16px;">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+    h+='<div style="display:flex;align-items:center;gap:8px">';
+    h+='<div style="width:12px;height:12px;border-radius:3px;background:'+z.color+';flex-shrink:0"></div>';
+    h+='<span style="font-size:15px;font-weight:700">'+z.nombre+'</span>';
+    h+='</div>';
+    h+='<span style="font-family:\'JetBrains Mono\',monospace;font-size:15px;font-weight:800;background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">$'+Number(z.precio).toLocaleString("es-CO")+'</span>';
+    h+='</div>';
+    if(z.barrios){
+      var bs=z.barrios.split(",").map(function(b){return b.trim();}).filter(Boolean);
+      h+='<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">';
+      bs.forEach(function(b){h+='<span style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--text2)">'+b+'</span>';});
+      h+='</div>';
+    }
+    h+='<div style="display:flex;gap:7px">';
+    h+='<button class="ebtn be" style="flex:1;padding:8px" data-zid="'+z.id+'" data-zedit="1">&#9998; Editar</button>';
+    h+='<button class="ebtn bcerrar" style="flex:0;padding:8px 12px" data-zid="'+z.id+'" data-zdel="1">&#128465;</button>';
+    h+='</div></div>';
+  });
+  h+='</div>';
+  el.innerHTML=h;
+  el.querySelectorAll("[data-zdel]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var id=this.getAttribute("data-zid");
+      if(!confirm("Eliminar esta zona?"))return;
+      fetch(SU+"/rest/v1/zonas_domicilio?id=eq."+id,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+        .then(function(){cargarZonas();notif("Zona eliminada");})
+        .catch(function(){notif("Error");});
+    });
+  });
+  el.querySelectorAll("[data-zedit]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var id=this.getAttribute("data-zid");
+      var z=mapaZonas.find(function(x){return String(x.id)===String(id);});
+      if(!z)return;
+      document.getElementById("zona-nombre").value=z.nombre;
+      document.getElementById("zona-precio").value=z.precio;
+      document.getElementById("zona-barrios").value=z.barrios||"";
+      document.getElementById("btnAgregarZona").textContent="Actualizar zona";
+      document.getElementById("btnAgregarZona").setAttribute("data-edit-id",id);
+      window.scrollTo({top:0,behavior:"smooth"});
     });
   });
 }
 
+document.getElementById("btnAgregarZona").addEventListener("click",function(){
+  if(!rest)return;
+  var nombre=document.getElementById("zona-nombre").value.trim();
+  var precio=parseInt(document.getElementById("zona-precio").value)||0;
+  var barrios=document.getElementById("zona-barrios").value.trim();
+  if(!nombre||!precio){notif("Completa nombre y precio");return;}
+  var editId=this.getAttribute("data-edit-id");
+  var color=ZONA_COLORES[mapaZonas.length%ZONA_COLORES.length];
+  var btn=this;btn.textContent="Guardando...";btn.disabled=true;
+  var payload={restaurante_id:rest.id,nombre:nombre,precio_domicilio:precio,barrios:barrios,color:color};
+  var url=SU+"/rest/v1/zonas_domicilio";
+  var method="POST";
+  if(editId){url+="?id=eq."+editId;method="PATCH";delete payload.restaurante_id;}
+  fetch(url,{method:method,headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
+    .then(function(r){
+      if(r.ok||r.status===201||r.status===204){
+        notif(editId?"Zona actualizada":"Zona creada!");
+        ["zona-nombre","zona-precio","zona-barrios"].forEach(function(id){document.getElementById(id).value="";});
+        btn.removeAttribute("data-edit-id");btn.textContent="Guardar zona";
+        cargarZonas();
+        // Actualizar zonas_domicilio en system prompt
+        actualizarZonasEnPrompt();
+      } else {notif("Error al guardar");}
+    })
+    .catch(function(){notif("Error de conexion");})
+    .finally(function(){btn.disabled=false;if(!btn.getAttribute("data-edit-id"))btn.textContent="Guardar zona";});
+});
+
+function actualizarZonasEnPrompt(){
+  if(!rest||!mapaZonas.length)return;
+  var texto=mapaZonas.map(function(z){
+    var barrios=z.barrios?"\n  Barrios: "+z.barrios:"";
+    return"- $"+Number(z.precio).toLocaleString("es-CO")+": "+z.nombre+barrios;
+  }).join("\n");
+  fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({restaurante_id:rest.id,config:{zonas_domicilio:texto}})
+  }).catch(function(){});
+}
+
+// ── MAPA SOLO VISUAL ─────────────────────────────────────────────────────────
 function initMapa(){
-  // Si ya existe, solo redibuja
   if(mapaInstance){
-    setTimeout(function(){mapaInstance.invalidateSize();},100);
-    setTimeout(function(){mapaInstance.invalidateSize();},400);
+    setTimeout(function(){mapaInstance.invalidateSize();dibujarTodasZonas();},150);
     return;
   }
-  // Esperar a que el contenedor sea visible y tenga dimensiones reales
   var container=document.getElementById("mapaContainer");
   if(!container)return;
   function doInit(){
     var rect=container.getBoundingClientRect();
-    if(rect.width<10){
-      // Contenedor aun no visible, reintentar
-      setTimeout(doInit,150);
-      return;
-    }
-    var lat=3.4516,lng=-76.5320;
-    if(rest&&rest.lat&&!isNaN(Number(rest.lat)))lat=Number(rest.lat);
-    if(rest&&rest.lng&&!isNaN(Number(rest.lng)))lng=Number(rest.lng);
+    if(rect.width<10){setTimeout(doInit,200);return;}
     try{
-      mapaInstance=L.map("mapaContainer",{
-        center:[lat,lng],zoom:13,zoomControl:true,
-        preferCanvas:true,
-        tapTolerance:15
-      });
-      // OSM con filtro CSS oscuro - mas confiable que CartoDB
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
-        maxZoom:19, attribution:""
+      mapaInstance=L.map("mapaContainer",{center:CALI_CENTER,zoom:13,zoomControl:true,preferCanvas:false});
+      // Tiles: OSM con filtro CSS oscuro - el mas confiable
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+        maxZoom:19,attribution:""
       }).addTo(mapaInstance);
-      // Ocultar loading overlay cuando el mapa cargue
-      mapaInstance.on("load",function(){
-        var loading=document.getElementById("mapaLoading");
-        if(loading)loading.style.display="none";
-      });
-      // Tambien ocultar tras timeout por si el evento no dispara
+      // Filtro oscuro via CSS en el tile pane
+      var style=document.createElement("style");
+      style.textContent="#mapaContainer .leaflet-tile-pane{filter:invert(1) hue-rotate(200deg) brightness(0.75) saturate(0.5) contrast(0.9);}";
+      document.head.appendChild(style);
+      var loading=document.getElementById("mapaLoading");
       setTimeout(function(){
-        var loading=document.getElementById("mapaLoading");
         if(loading)loading.style.display="none";
         mapaInstance.invalidateSize();
-      },1500);
-    }catch(e){console.error("Leaflet init error:",e);return;}
-    mapaInstance.on("click",function(e){
-      if(mapaDrawing){mapaPoints.push([e.latlng.lat,e.latlng.lng]);actualizarLineaDraw();}
-    });
-    mapaInstance.on("dblclick",function(e){
-      if(mapaDrawing){e.originalEvent.preventDefault();finalizarMapaDraw();}
-    });
-    cargarZonasDB();
-    loadPedidosEnMapa();
-    // Busqueda de ubicacion del restaurante
-    var restSearch=document.getElementById("mapaRestSearch");
-    if(restSearch){
-      var restTimer=null;
-      restSearch.addEventListener("input",function(){
-        var q=this.value.trim();
-        if(q.length<3){document.getElementById("mapaRestResults").style.display="none";return;}
-        clearTimeout(restTimer);
-        restTimer=setTimeout(function(){
-          geoSearch(q+" Cali",function(results){
-            renderGeoResults(results,"mapaRestResults",function(r){
-              mapaInstance.setView([r.lat,r.lng],16);
-              restSearch.value=r.label;
-              if(rest)fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:{lat:r.lat,lng:r.lng}})}).catch(function(){});
-            });
-          });
-        },500);
-      });
-      document.addEventListener("click",function(e){
-        if(!e.target.closest("#mapaRestSearch")&&!e.target.closest("#mapaRestResults"))
-          document.getElementById("mapaRestResults").style.display="none";
-      });
-    }
+        dibujarTodasZonas();
+        cargarDomisEnMapa();
+      },1200);
+    }catch(e){console.error("Mapa error:",e);}
   }
   doInit();
 }
-function switchMapaTab(tab){
-  mapaTabActual=tab;
-  ["zonas","pedidos","buscar"].forEach(function(t){var btn=document.getElementById("mapa-tab-"+t);if(btn)btn.className="filtro-btn"+(t===tab?" active":"");});
-  document.getElementById("mapaBuscarPanel").style.display=tab==="buscar"?"block":"none";
-  if(tab==="pedidos")loadPedidosEnMapa();else if(tab==="zonas")renderZonasList();
-}
-function toggleMapaDraw(){
-  mapaDrawing=!mapaDrawing;mapaPoints=[];
-  var instr=document.getElementById("mapaInstruccion");
-  if(mapaDrawing){instr.style.display="flex";if(mapaPolyline){mapaInstance.removeLayer(mapaPolyline);mapaPolyline=null;}}
-  else{instr.style.display="none";}
-  var btn=document.getElementById("mapa-tab-draw");if(btn)btn.className="filtro-btn"+(mapaDrawing?" active":"");
-}
-function actualizarLineaDraw(){
-  if(mapaPolyline)mapaInstance.removeLayer(mapaPolyline);
-  if(mapaPoints.length>1)mapaPolyline=L.polyline(mapaPoints,{color:"#7c3aed",weight:2,dashArray:"5,5"}).addTo(mapaInstance);
-}
-function finalizarMapaDraw(){
-  if(mapaPoints.length<3){notif("Agrega al menos 3 puntos");return;}
-  var nombre=prompt("Nombre de la zona (ej: Centro):");if(!nombre)return;
-  var precio=prompt("Precio de domicilio (ej: 4000):");if(!precio||isNaN(Number(precio)))return;
-  var colores=["#7c3aed","#2563eb","#10b981","#f97316","#ef4444","#f59e0b","#8b5cf6","#06b6d4"];
-  var color=colores[mapaZonas.length%colores.length];
-  var zona={id:Date.now(),nombre:nombre,precio:Number(precio),color:color,puntos:mapaPoints.slice()};
-  mapaZonas.push(zona);guardarZonasDB();dibujarZona(zona);renderZonasList();
-  if(mapaPolyline){mapaInstance.removeLayer(mapaPolyline);mapaPolyline=null;}
-  mapaPoints=[];mapaDrawing=false;
-  document.getElementById("mapaInstruccion").style.display="none";
-  var btn=document.getElementById("mapa-tab-draw");if(btn)btn.className="filtro-btn";
-  notif("Zona '"+nombre+"' creada!");
-}
-function cancelarMapaDraw(){
-  mapaPoints=[];mapaDrawing=false;
-  if(mapaPolyline){mapaInstance.removeLayer(mapaPolyline);mapaPolyline=null;}
-  document.getElementById("mapaInstruccion").style.display="none";
-  var btn=document.getElementById("mapa-tab-draw");if(btn)btn.className="filtro-btn";
-}
-function dibujarZona(z){
+
+function dibujarTodasZonas(){
   if(!mapaInstance)return;
-  L.polygon(z.puntos,{color:z.color,fillColor:z.color,fillOpacity:0.2,weight:2}).addTo(mapaInstance)
-    .bindPopup('<strong>'+z.nombre+'</strong><br>Domicilio: $'+Number(z.precio).toLocaleString("es-CO"));
-}
-function cargarZonasDB(){
-  if(!rest)return;
-  get("zonas_domicilio","restaurante_id=eq."+rest.id+"&order=created_at.asc").then(function(zs){
-    if(!zs||!zs.length){renderZonasList();return;}
-    mapaZonas=zs.map(function(z){
-      var puntos=z.puntos;
-      // puntos puede venir como string JSON o como array directo
-      if(typeof puntos==="string"){try{puntos=JSON.parse(puntos);}catch(e){puntos=[];}}
-      if(!Array.isArray(puntos))puntos=[];
-      return{id:z.id,nombre:z.nombre,precio:Number(z.precio_domicilio||0),color:z.color||"#7c3aed",puntos:puntos};
-    }).filter(function(z){return z.puntos.length>=3;});
-    mapaZonas.forEach(dibujarZona);
-    renderZonasList();
-  }).catch(function(e){console.error("cargarZonasDB:",e);});
-}
-function guardarZonasDB(){
-  if(!rest)return;
-  var ultima=mapaZonas[mapaZonas.length-1];if(!ultima)return;
-  fetch(SU+"/rest/v1/zonas_domicilio",{method:"POST",
-    headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=representation"},
-    body:JSON.stringify({restaurante_id:rest.id,nombre:ultima.nombre,precio_domicilio:ultima.precio,color:ultima.color,puntos:JSON.stringify(ultima.puntos)})
-  }).then(function(r){return r.json();}).then(function(d){if(d&&d.length&&d[0].id)mapaZonas[mapaZonas.length-1].id=d[0].id;}).catch(function(e){console.error("guardarZona:",e);});
-}
-function renderZonasList(){
-  var lista=document.getElementById("mapaZonasList"),leyenda=document.getElementById("mapaLeyenda");
-  if(!lista||!leyenda)return;
-  if(!mapaZonas.length){lista.innerHTML='<div style="padding:10px 0;text-align:center;color:var(--text3);font-size:12px">Toca ✏️ Dibujar para crear zonas</div>';leyenda.innerHTML="";return;}
-  leyenda.innerHTML=mapaZonas.map(function(z){return'<div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.05);border-radius:8px;padding:4px 9px;font-size:11px"><div style="width:10px;height:10px;border-radius:2px;background:'+z.color+'"></div>'+z.nombre+' $'+Number(z.precio).toLocaleString("es-CO")+'</div>';}).join("");
-  lista.innerHTML=mapaZonas.map(function(z){return'<div class="mapa-zona-card"><div style="width:10px;height:36px;border-radius:4px;background:'+z.color+';flex-shrink:0"></div><div style="flex:1"><div class="mapa-zona-name">'+z.nombre+'</div></div><div class="mapa-zona-price">$'+Number(z.precio).toLocaleString("es-CO")+'</div><button style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;border-radius:8px;padding:4px 9px;font-size:11px;cursor:pointer;" data-zid="'+z.id+'">&#128465;</button></div>';}).join("");
-  lista.querySelectorAll("[data-zid]").forEach(function(b){b.addEventListener("click",function(){var id=this.getAttribute("data-zid");mapaZonas=mapaZonas.filter(function(z){return String(z.id)!==String(id);});if(rest){fetch(SU+"/rest/v1/zonas_domicilio?id=eq."+id,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).catch(function(){});}if(mapaInstance){mapaInstance.eachLayer(function(l){if(l instanceof L.Polygon){try{mapaInstance.removeLayer(l);}catch(e){};}});}mapaZonas.forEach(dibujarZona);renderZonasList();notif("Zona eliminada");});});
-}
-function loadPedidosEnMapa(){
-  if(!rest||!mapaInstance)return;
-  get("pedidos","restaurante_id=eq."+rest.id+"&estado=neq.entregado&select=numero_pedido,cliente_tel,direccion,estado").then(function(ps){
-    ps.forEach(function(p){
-      if(p.direccion&&p.direccion!=="Por confirmar"&&p.direccion!=="RECOGER EN TIENDA"){
-        fetch("https://nominatim.openstreetmap.org/search?format=json&q="+encodeURIComponent(p.direccion+" Cali Colombia")+"&limit=1")
-          .then(function(r){return r.json();})
-          .then(function(r){if(r.length){L.marker([r[0].lat,r[0].lon]).addTo(mapaInstance).bindPopup("#"+p.numero_pedido+"<br>"+p.cliente_tel+"<br>"+p.estado);}})
-          .catch(function(){});
-      }
-    });
-  }).catch(function(){});
-}
-(function(){
-  var bs=document.getElementById("mapaBarrioSearch");if(!bs)return;
-  var bsTimer=null;
-  bs.addEventListener("input",function(){
-    var q=this.value.trim();
-    if(q.length<3){document.getElementById("mapaBarrioResults").style.display="none";return;}
-    clearTimeout(bsTimer);
-    bsTimer=setTimeout(function(){
-      geoSearch(q+" Cali",function(results){
-        renderGeoResults(results,"mapaBarrioResults",function(r){
-          if(mapaBarrioMarker)mapaInstance.removeLayer(mapaBarrioMarker);
-          mapaBarrioMarker=L.marker([r.lat,r.lng]).addTo(mapaInstance).bindPopup(r.label).openPopup();
-          mapaInstance.setView([r.lat,r.lng],16);
-          document.getElementById("mapaBarrioNombre").textContent=r.label.split(",")[0];
-          document.getElementById("mapaBarrioPreview").style.display="block";
-          bs.value=r.label.split(",")[0];
-          document.getElementById("mapaBarrioResults").style.display="none";
-        });
+  // Limpiar capas previas
+  mapaLayersZonas.forEach(function(l){try{mapaInstance.removeLayer(l);}catch(e){}});
+  mapaLayersZonas=[];
+  var leyenda=document.getElementById("mapaLeyenda");
+  if(leyenda)leyenda.innerHTML="";
+  if(!mapaZonas.length)return;
+  // Para cada zona, geocodificar los barrios y dibujar circulos
+  mapaZonas.forEach(function(z){
+    var bs=(z.barrios||"").split(",").map(function(b){return b.trim();}).filter(Boolean);
+    if(!bs.length){
+      // Sin barrios: dibujar circulo generico en Cali
+      var circle=L.circle(CALI_CENTER,{radius:2000,color:z.color,fillColor:z.color,fillOpacity:0.15,weight:2}).addTo(mapaInstance);
+      circle.bindPopup('<strong>'+z.nombre+'</strong><br>$'+Number(z.precio).toLocaleString("es-CO"));
+      mapaLayersZonas.push(circle);
+    } else {
+      // Geocodificar primer barrio para ubicar la zona
+      geocodificarBarrio(bs[0]+" Cali",function(lat,lng){
+        if(!lat)return;
+        var circle=L.circle([lat,lng],{radius:1500,color:z.color,fillColor:z.color,fillOpacity:0.2,weight:2}).addTo(mapaInstance);
+        circle.bindPopup('<strong style="color:'+z.color+'">'+z.nombre+'</strong><br><span style="font-size:12px">$'+Number(z.precio).toLocaleString("es-CO")+'</span><br><span style="font-size:11px;opacity:0.7">'+bs.slice(0,3).join(", ")+(bs.length>3?" +"+String(bs.length-3)+" mas":"")+'</span>');
+        mapaLayersZonas.push(circle);
+        // Marcador de texto con precio
+        var icon=L.divIcon({html:'<div style="background:'+z.color+';color:white;padding:3px 8px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.5)">$'+Math.round(z.precio/1000)+'k</div>',className:"",iconAnchor:[20,10]});
+        var marker=L.marker([lat,lng],{icon:icon}).addTo(mapaInstance);
+        mapaLayersZonas.push(marker);
       });
-    },500);
+    }
+    // Agregar a leyenda
+    if(leyenda){
+      var chip=document.createElement("div");
+      chip.style.cssText="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer";
+      chip.innerHTML='<div style="width:10px;height:10px;border-radius:2px;background:'+z.color+'"></div>'+z.nombre+' <span style="font-family:monospace;font-weight:700;color:'+z.color+'">$'+Math.round(z.precio/1000)+'k</span>';
+      leyenda.appendChild(chip);
+    }
   });
-  document.addEventListener("click",function(e){if(!e.target.closest("#mapaBarrioSearch")&&!e.target.closest("#mapaBarrioResults"))document.getElementById("mapaBarrioResults").style.display="none";});
-}());
-var barrioCenterLat=null,barrioCenterLng=null;
-function crearZonaDesdeBarrio(){
-  if(!mapaBarrioMarker)return;
-  var ll=mapaBarrioMarker.getLatLng();barrioCenterLat=ll.lat;barrioCenterLng=ll.lng;
-  var r=0.008;
-  mapaPoints=[[ll.lat+r,ll.lng-r],[ll.lat+r,ll.lng+r],[ll.lat-r,ll.lng+r],[ll.lat-r,ll.lng-r]];
-  var nombre=document.getElementById("mapaBarrioNombre").textContent||"Zona nueva";
-  var precio=prompt("Precio de domicilio para "+nombre+" (ej: 4000):");if(!precio||isNaN(Number(precio)))return;
-  var colores=["#7c3aed","#2563eb","#10b981","#f97316","#ef4444","#f59e0b","#8b5cf6","#06b6d4"];
-  var color=colores[mapaZonas.length%colores.length];
-  var zona={id:Date.now(),nombre:nombre,precio:Number(precio),color:color,puntos:mapaPoints.slice()};
-  mapaZonas.push(zona);guardarZonasDB();dibujarZona(zona);renderZonasList();mapaPoints=[];
-  document.getElementById("mapaBarrioPreview").style.display="none";
-  notif("Zona '"+nombre+"' creada!");
+}
+
+var geocacheMap={};
+function geocodificarBarrio(query,cb){
+  if(geocacheMap[query]){cb(geocacheMap[query][0],geocacheMap[query][1]);return;}
+  fetch("https://nominatim.openstreetmap.org/search?format=json&q="+encodeURIComponent(query)+"&limit=1&countrycodes=co",{headers:{"User-Agent":"LuzIA/1.0"}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d&&d.length){
+        var lat=parseFloat(d[0].lat),lng=parseFloat(d[0].lon);
+        geocacheMap[query]=[lat,lng];cb(lat,lng);
+      } else {
+        // Fallback: Photon
+        fetch("https://photon.komoot.io/api/?q="+encodeURIComponent(query)+"&limit=1")
+          .then(function(r){return r.json();})
+          .then(function(ph){
+            if(ph.features&&ph.features.length){
+              var c=ph.features[0].geometry.coordinates;
+              geocacheMap[query]=[c[1],c[0]];cb(c[1],c[0]);
+            } else {cb(null,null);}
+          }).catch(function(){cb(null,null);});
+      }
+    }).catch(function(){cb(null,null);});
+}
+
+function cargarDomisEnMapa(){
+  if(!rest||!mapaInstance)return;
+  fetch(SU+"/rest/v1/domiciliarios?restaurante_id=eq."+rest.id+"&activo=eq.true",{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+    .then(function(r){return r.json();})
+    .then(function(ds){
+      mapaDomisMarkers.forEach(function(m){try{mapaInstance.removeLayer(m);}catch(e){}});
+      mapaDomisMarkers=[];
+      (ds||[]).forEach(function(d,i){
+        // Poner domis en posicion aleatoria cerca del centro de Cali
+        var offset=[(Math.random()-0.5)*0.04,(Math.random()-0.5)*0.04];
+        var icon=L.divIcon({
+          html:'<div style="background:#10b981;color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;border:2px solid white;box-shadow:0 0 10px rgba(16,185,129,0.6)">'+d.nombre.charAt(0).toUpperCase()+'</div>',
+          className:"",iconAnchor:[16,16]
+        });
+        var m=L.marker([CALI_CENTER[0]+offset[0],CALI_CENTER[1]+offset[1]],{icon:icon})
+          .addTo(mapaInstance)
+          .bindPopup('<strong>'+d.nombre+'</strong><br><span style="color:#10b981;font-size:11px">&#128667; Disponible</span>');
+        mapaDomisMarkers.push(m);
+      });
+    }).catch(function(){});
 }
 </script>
 </body>
