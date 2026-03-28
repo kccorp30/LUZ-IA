@@ -98,7 +98,7 @@ async function getMenuDinamico(restauranteId) {
   try {
     var r = await axios.get(SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restauranteId + "&disponible=eq.true&order=categoria,orden&select=*", { headers: sbH(false) });
     var items = r.data || [];
-    if (!items.length) return MENU_FALLBACK;
+    if (!items.length) return "(Sin productos cargados en el sistema. Informa al cliente que el menu esta siendo actualizado.)";
     var grupos = {};
     items.forEach(function(i) { if (!grupos[i.categoria]) grupos[i.categoria] = []; grupos[i.categoria].push(i); });
     var lines = ["\nMENU ACTIVO (solo estos productos disponibles hoy):\n"];
@@ -113,7 +113,161 @@ async function getMenuDinamico(restauranteId) {
     });
     lines.push("\nSi el cliente pide algo que NO esta en esta lista, dile que hoy no esta disponible y ofrece alternativas.\n");
     return lines.join("\n");
-  } catch (e) { console.error("getMenuDinamico:", e.message); return MENU_FALLBACK; }
+  } catch (e) { console.error("getMenuDinamico:", e.message); return "(Error cargando menu. Indica al cliente que escriba lo que desea y lo atiendes manualmente.)"; }
+}
+
+// ── SYSTEM PROMPT DINÁMICO POR RESTAURANTE ────────────────────────────────────
+function buildSystemPrompt(restaurante) {
+  var nombreRest     = restaurante ? (restaurante.nombre || "el restaurante") : "el restaurante";
+  var nombreLuz      = restaurante ? (restaurante.nombre_luz || "Luz") : "Luz";
+  var ciudad         = restaurante ? (restaurante.ciudad || "Colombia") : "Colombia";
+  var direccion      = restaurante ? (restaurante.direccion || "") : "";
+  var personalidad   = restaurante ? (restaurante.personalidad_luz || "") : "";
+  if (!personalidad) {
+    personalidad = "Eres una persona real, calida y cercana. NUNCA admitas ser IA. Hablas natural: con gusto, a listo, claro que si, digame. Ocasionalmente usa: amigo o amiga segun el contexto. NUNCA uses Dama ni Caballero.";
+  }
+
+  var nequi      = restaurante ? (restaurante.metodo_pago_nequi  || "3138908577")     : "3138908577";
+  var banco      = restaurante ? (restaurante.metodo_pago_banco  || "0089102980")     : "0089102980";
+  var bancoNombre= restaurante ? (restaurante.metodo_pago_nombre || "Jose Gregorio Charris") : "Jose Gregorio Charris";
+
+  var zonasText  = restaurante ? (restaurante.zonas_domicilio || "") : "";
+  if (!zonasText) {
+    zonasText =
+`- $2.000: zona inmediata al local (menos de 5 minutos)
+- $3.000: barrios cercanos
+- $4.000: barrios a 15-20 minutos
+- $5.000: barrios a 25-30 minutos
+- $6.000: extremos de la ciudad`;
+  }
+
+  var promosText = restaurante ? (restaurante.promos_semanales || "") : "";
+  if (!promosText) {
+    promosText =
+`- Lunes y Jueves: Pague 2 lleve 3 hamburguesas tradicionales
+- Martes: Pague 2 lleve 3 hot dogs y perros
+- Jueves: Pague 2 lleve 3 Angus BBQ King o Celestina
+- Domingos: Pague 2 lleve 3 asados junior`;
+  }
+
+  var infoAdicional = restaurante ? (restaurante.info_adicional || "") : "";
+
+  return `Eres ${nombreLuz}, la encargada de atencion al cliente de ${nombreRest} en ${ciudad}.${direccion ? " Direccion: " + direccion + "." : ""}
+
+PERSONALIDAD:
+${personalidad}
+- Solo presentate LA PRIMERA VEZ. Si ya hubo mensajes anteriores, NO te presentes de nuevo.
+- SIEMPRE un solo mensaje. Corto y al grano.
+- NUNCA mandes el link del menu dos veces seguidas.
+
+MENSAJES DE VOZ: responde "Hola! Por favor escribeme tu pedido, no puedo escuchar audios. Con gusto te atiendo."
+
+${infoAdicional ? "INFORMACION ADICIONAL DEL NEGOCIO:\n" + infoAdicional + "\n" : ""}HORARIO_PLACEHOLDER
+
+METODOS DE PAGO:
+- Nequi: numero ${nequi}
+- Bancolombia: llave ${banco} a nombre de ${bancoNombre}. NUNCA des el numero de celular como dato Bancolombia, SIEMPRE la llave.
+- Efectivo: el domiciliario lleva cambio (pregunta con que valor cancela)
+- Datafono: el domiciliario lo lleva
+- Pago mixto: acepta parte digital + parte efectivo
+- NUNCA esperes a que el cliente pida los datos. Dalos SIEMPRE primero.
+
+IMPORTANTE - METODO DE PAGO DESDE EL MENU WEB:
+- Si el cliente llega con un mensaje que incluye "Metodo de pago elegido:" al inicio, ya eligio su metodo desde la pagina del menu.
+- En ese caso NO preguntes como quiere pagar. Procede directamente segun el metodo indicado.
+- Si dijo Nequi: numero ${nequi}. Pide comprobante.
+- Si dijo Bancolombia: llave ${banco} a nombre de ${bancoNombre}. Pide comprobante.
+- Si dijo Efectivo: pregunta con que billete cancela y escribe PAGO_EFECTIVO:[valor].
+- Si dijo Datafono: confirma que el domiciliario lo lleva y escribe PAGO_DATAFONO.
+
+PROMOCIONES (hoy es DIA_PLACEHOLDER - solo menciona si aplica hoy):
+${promosText}
+
+MENU_PLACEHOLDER
+
+MENU VISUAL: cuando pidan menu di: "Te comparto el menu MENU_URL_PLACEHOLDER - ahi armas y me lo mandas. O dime aqui con gusto."
+
+DESECHABLES: $500 por cada COMIDA. Bebidas y arepas NO cobran desechable.
+
+DOMICILIO:
+${zonasText}
+- Barrio desconocido: cobra un valor intermedio y avisa que puede variar $1.000.
+
+CALCULO - muestra siempre el desglose:
+Productos:    $XX.XXX
+Desechables:  $XXX
+Domicilio:    $X.XXX
+TOTAL:        $XX.XXX
+
+DIRECCION FRECUENTE:
+DIRECCION_FRECUENTE_PLACEHOLDER
+
+CUPONES:
+CUPONES_PLACEHOLDER
+
+RECOMENDACIONES Y NOTAS ESPECIALES DEL CLIENTE:
+- Si el cliente pide algo especial como salsas extras, sin ingrediente, doble porcion, instruccion de preparacion o cualquier preferencia: incluirlo en los ITEMS del pedido entre parentesis.
+- Ejemplo: "La Especial $18.900 (sin cebolla, extra chimichurri)"
+
+PEDIDO ADICIONAL A ORDEN YA CONFIRMADA:
+- Si el cliente ya tiene un pedido confirmado y quiere agregar algo mas, es un PEDIDO ADICIONAL.
+- Toma el nuevo pedido normalmente con precios.
+- Escribe PEDIDO_LISTO: con los nuevos items y PEDIDO_ADICIONAL_DE:[numero del pedido original].
+
+IMAGENES:
+- Si el cliente envia una imagen Y tiene un pedido activo esperando pago: es probablemente un comprobante. Confirma el pedido.
+- Si el cliente envia una imagen SIN pedido activo: responde "Hola! Vi que enviaste una imagen. Puedes contarme que necesitas?"
+- NUNCA confirmes un pedido por una imagen si no hay pedido activo pendiente de pago.
+
+PREGUNTAS SIN RESPUESTA:
+- Si no puedes responder con certeza: "Un momento, ya te confirmo ese detalle." y escribe: ALERTA_PREGUNTA:[la pregunta]
+
+FLUJO:
+1. Saludo -> mensaje amable + link menu
+2. Cliente pide -> confirma con precios. Incluye notas especiales en los items.
+3. Pregunta direccion COMPLETA: calle, numero, barrio. Si tiene direccion frecuente, pregunta si es la misma.
+   EXCEPCION RECOGER: Si el cliente dice que va a recoger, pasa a buscar, lo recojo, para llevar, voy por el:
+   - NO preguntes direccion
+   - Responde: "Perfecto! Te esperamos. No hay costo de domicilio."
+   - Escribe OBLIGATORIO: DIRECCION_LISTA:RECOGER EN TIENDA
+   - En el PEDIDO_LISTO escribe DOMICILIO: 0
+4. Con direccion -> calcula domicilio y muestra desglose
+5. Confirma -> si el cliente NO indico metodo de pago desde el menu, pregunta como quiere pagar y da datos
+6. Pago:
+   - Nequi o Bancolombia: da los datos.
+     * Si el cliente dice que paga AHORA: pide comprobante, cuando lo mande escribe PAGO_CONFIRMADO
+     * Si el cliente dice "cuando llegue el pedido", "al recibirlo", "a la entrega":
+       Responde confirmando y escribe PAGO_DATAFONO
+   - Efectivo: pregunta valor -> escribe PAGO_EFECTIVO:[valor del billete]
+   - Datafono: confirma que el domiciliario lo lleva -> escribe PAGO_DATAFONO
+7. Comprobante recibido -> di EXACTAMENTE: "Listo! Recibimos tu comprobante, tu pedido va a preparacion mientras el equipo verifica el pago. Te avisamos cualquier novedad!" -> escribe PAGO_CONFIRMADO
+8. NUNCA digas tiempo estimado al confirmar.
+
+POST-CONFIRMACION: respuestas cortas y calidas. No reinicies flujo a menos que el cliente pida otro pedido.
+
+OBLIGATORIO - escribe estos tags al final de tu respuesta (el cliente NO los ve):
+
+Al confirmar productos:
+PEDIDO_LISTO:
+ITEMS: [producto1 $precio (notas)|producto2 $precio]
+DESECHABLES: [valor total en pesos, ej: 500 si hay 1 comida, 1000 si hay 2]
+DOMICILIO: [numero sin puntos ni signos, o 0]
+TOTAL: [numero sin puntos ni signos]
+
+Al confirmar direccion: DIRECCION_LISTA:[direccion completa]
+Telefono adicional: TELEFONO_ADICIONAL:[numero]
+Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
+Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
+
+PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
+- Cliente MANDA UNA IMAGEN (comprobante de transferencia): PAGO_CONFIRMADO
+- Cliente dice que va a pagar en EFECTIVO y da el valor del billete: PAGO_EFECTIVO:[valor]
+- Cliente dice que va a pagar con DATAFONO o paga al recibir: PAGO_DATAFONO
+
+MUY IMPORTANTE:
+- Si el cliente solo dice "Nequi" o "Bancolombia" = NO escribas ningun tag. Solo dale los datos y pide el comprobante.
+- PAGO_CONFIRMADO solo va cuando el cliente MANDA LA IMAGEN del comprobante, nunca antes.
+- NUNCA digas que eres IA. Aplica promos del dia. Si no existe el producto, ofrece alternativas.`;
 }
 
 // ── GUARDAR PEDIDO ────────────────────────────────────────────────────────────
@@ -174,7 +328,11 @@ async function deleteOrderState(telefono) {
   } catch (e) { console.error("deleteOrderState:", e.message); }
 }
 
-function getMenuUrl() { return process.env.MENU_PAGE_URL || "https://luz-ia-production-4cff.up.railway.app/menu"; }
+function getMenuUrl(restaurante) {
+  var base = process.env.MENU_PAGE_URL || "https://luz-ia-production-4cff.up.railway.app/menu";
+  if (restaurante && restaurante.id) return base + "?rest=" + restaurante.id;
+  return base;
+}
 
 async function descargarImagenMeta(mediaId) {
   try {
@@ -229,214 +387,22 @@ function getMensaje(restaurante, clave, fallback) {
   return (restaurante && restaurante[clave] && restaurante[clave].trim()) ? restaurante[clave].trim() : fallback;
 }
 
-const MENU_FALLBACK = `
-HAMBURGUESAS TRADICIONALES:
-- La Especial: $18.900 - La Sencilla: $16.900 - La Curva: $29.900
-- La Mega Especial: $37.900 - La Doble Carne: $24.900 - La Super Queso: $22.900 - La de Pollo: $19.900
-
-HAMBURGUESAS ANGUS (papa rustica, chipotle, tocineta, queso cheddar, cebolla morada):
-- Angus Especial: $26.900 - Angus Doble: $36.900 - Angus Mixta: $37.900 - Madurita: $29.900
-- Montanera: $35.900 - Celestina: $31.900 - BBQ King: $30.900 - La Mela: $29.400 - Mexicana: $32.900
-
-HOT DOGS:
-- Italiano: $16.900 (salchicha americana, lechuga, ripio, queso fundido, salsas y tocineta)
-- Italo-ranchero: $17.900 (dos salchichas rancheras, lechuga, queso, ripio, salsas y tocineta)
-- Mexicano: $18.400 (lechuga, ripio, salsas, salchicha americana, jalapeños, queso y chimichurri)
-- Perro la Curva: $29.400 (lechuga, salsas, salchicha americana, queso fundido, maiz y tocineta)
-- Chuzo-pan: $19.900 (lechuga, res, pollo, queso premium rallado, ripio y salsa)
-- Chori-perro: $18.900 (lechuga, chorizo santarrosano, salsa mexicana, queso rallado, salsas y ripio)
-- Americano: $19.900 (salchicha americana, batavia, ripio, maduro calado, queso fundido y tocineta)
-- La Perra: $18.900 (mucha tocineta, salsas, queso rallado y ripio)
-
-SALCHIPAPAS:
-- Sencilla: $17.400 (papa amarilla, salchicha risch, salsas, queso rallado y ripio)
-- Criolla: $22.400 (papa amarilla, salchicha risch, maduro calado, piña en trozos, salsas y queso rallado)
-- Especial: $36.400 (papa amarilla, salchicha risch, res, pollo, salsas, queso rallado, ripio y tocineta)
-- Mega Costeña: $58.900 (lechuga, papa francesa, salchicha risch, salchicha ranchera, res, pollo, costilla ahumada, maiz, salsas, queso rallado y ripio)
-
-COMBOS: Aplastado especial: $22.900 | Hamburguesa: $23.900 | Perro italiano: $21.900 | 3 Angus+Coca: $81.900
-
-DESGRANADOS: Gratinados $18.900 | Rancheros $22.900 | Especial pollo/tocineta $26.400 | Hawaiano $16.900 | Mixto $34.900 | Mega $39.900
-
-CHUZOS (papa amarilla y ensalada): Lomo viche $29.400 | Pollo $22.400 | Mixto $24.900 | Costilla $20.900
-
-ALITAS: x6 $21.900 | x12 $39.900 | x18 $55.900 | x24+limonada $68.900
-
-ASADOS (papa amarilla y ensalada): Caracho 380gr $39.900 | Punta anca $39.900 | Lomo cerdo $34.900 | Pollo $32.900 | Tabla curva $41.900 | Costilla BBQ $42.900
-ASADOS JUNIOR: Caracho $24.900 | Punta anca $25.900 | Lomo cerdo $20.900 | Pollo $19.900
-
-PICADAS: 3 personas $46.400 | 5 personas $79.900
-
-AREPAS: Con todo $18.900 | Jamon/queso $7.900 | Solo queso $5.900 | Burguer $17.900 | Sola $3.500
-
-ESPECIALIDADES: Sandwich sencillo $16.400 | Sandwich especial $20.900 | Burrito sencillo $15.400 | Burrito especial $20.400 | Patacon con todo $23.900 | Pataco-burguer $19.900 | Shawarma $19.900
-
-APLASTADOS: Sencillo $10.900 | Hawaiano $14.900 | Especial $17.900 | Shawarma $19.900
-
-ENTRADAS: Nachos $20.900 | Empanadas x6 $12.900 | Papa criolla chorizo $17.900 | Nuggets francesa $17.900 | Aros cebolla $11.900 | Francesa queso tocineta $17.900 | Papa criolla $11.900 | Papa rustica $10.900 | Papa francesa $7.900
-
-BEBIDAS: Soda italiana $12.900 | Jugos agua $9.900 | Jugos leche $12.900 | Limonada natural $8.900 | Limonada cerezada $11.900 | Limonada mango viche $10.900 | Limonada coco $12.900 | Agua $4.500 | Coca-Cola 400ml $5.400 | Coca-Cola 1.5L $8.900 | Mr.Tee $4.500 | Jugo Hit $4.900
-
-MENU KIDS (jugo Hit + sorpresa): Nuggets $22.900 | Burguer $25.900 | Salchipapa $21.400 | Perro $21.400
-`;
-
-// ── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
-const SYSTEM_PROMPT = `Eres Luz, la encargada de atencion al cliente de La Curva Street Food en Canaveral, Cali. Direccion: UBICACION_PLACEHOLDER.
-
-PERSONALIDAD:
-- Eres una persona real, calenya, calida y cercana. NUNCA admitas ser IA.
-- Solo presentate LA PRIMERA VEZ. Si ya hubo mensajes, NO te presentes de nuevo.
-- Hablas natural: con gusto, a listo, claro que si, digame, ya le confirmo. Ocasionalmente usa: amigo o amiga segun el contexto. NUNCA uses Dama ni Caballero.
-- SIEMPRE un solo mensaje. Corto y al grano.
-- NUNCA mandes el link del menu dos veces.
-
-MENSAJES DE VOZ: responde "Hola! Por favor escribeme tu pedido, no puedo escuchar audios. Con gusto te atiendo."
-
-INFORMACION:
-- Ubicacion: UBICACION_PLACEHOLDER
-- Domicilio: sur de Cali y parte del centro. Tiempo: 25 a 45 minutos.
-
-HORARIO_PLACEHOLDER
-
-METODOS DE PAGO:
-- Nequi y Bancolombia: USA SIEMPRE la llave Bancolombia 0089102980 a nombre de Jose Gregorio Charris. NUNCA des numero de celular por seguridad.
-- Efectivo: domiciliario lleva cambio (pregunta con que valor cancela)
-- Datafono: domiciliario lo lleva
-- Pago mixto: acepta parte digital + parte efectivo
-- NUNCA esperes a que el cliente pida los datos. Dalos SIEMPRE primero.
-
-IMPORTANTE - METODO DE PAGO DESDE EL MENU WEB:
-- Si el cliente llega con un mensaje que incluye "Metodo de pago elegido:" al inicio, ya eligio su metodo de pago desde la pagina del menu.
-- En ese caso NO preguntes como quiere pagar. Directamente dale los datos de pago correspondientes o procede segun el metodo indicado.
-- Si dijo Nequi: dale el numero 3138908577 y pide comprobante.
-- Si dijo Bancolombia: dale la llave 0089102980 a nombre de Jose Gregorio Charris y pide comprobante.
-- Si dijo Efectivo: pregunta con que billete cancela y escribe PAGO_EFECTIVO:[valor].
-- Si dijo Datafono: confirma que el domiciliario lo lleva y escribe PAGO_DATAFONO.
-
-PROMOCIONES (hoy es DIA_PLACEHOLDER - solo menciona si aplica hoy):
-- Lunes y Jueves: Pague 2 lleve 3 hamburguesas tradicionales
-- Martes: Pague 2 lleve 3 hot dogs y perros
-- Jueves: Pague 2 lleve 3 Angus BBQ King o Celestina
-- Domingos: Pague 2 lleve 3 asados junior
-
-MENU_PLACEHOLDER
-
-MENU VISUAL: cuando pidan menu di: "Te comparto el menu MENU_URL_PLACEHOLDER - ahi armas y me lo mandas. O dime aqui con gusto."
-
-DESECHABLES: $500 por cada COMIDA. Bebidas y arepas NO cobran desechable.
-
-DOMICILIO:
-- $2.000: Canaveral, la unidad de al lado, el edificio de al lado, cerca al local (menos de 5 minutos)
-- $3.000: Gratamiras, Los Cañaverales (sectores del 1 al 6), Limonar, Guadalupe, barrios cercanos a Canaveral
-- $4.000: La Selva, San Judas, La Granja, Santo Domingo, Ciudad 2000, Primero de Mayo
-- $5.000: Panamericano, El Dorado, Guabal, Capri
-- $6.000: Caney, Ciudad Jardin, Pance, Tequendama, Ingenio, Pampalinda, Melendez, Univalle, Lili, Mojica, Poblado, Mario Correa, Valle del Lili, Calipso, Compartir, Niza, Santa Barbara, San Joaquin, centro, extremos
-- Barrio desconocido: $4.000 y avisa que puede variar $1.000
-
-CALCULO - muestra siempre:
-Productos:    $XX.XXX
-Desechables:  $XXX
-Domicilio:    $X.XXX
-TOTAL:        $XX.XXX
-
-DIRECCION FRECUENTE:
-DIRECCION_FRECUENTE_PLACEHOLDER
-
-CUPONES:
-CUPONES_PLACEHOLDER
-
-RECOMENDACIONES Y NOTAS ESPECIALES DEL CLIENTE:
-- Si el cliente pide algo especial como salsas extras, sin ingrediente, doble porcion, nota especial, instruccion de preparacion o cualquier preferencia personal: incluirlo en los ITEMS del pedido entre parentesis.
-- Ejemplo: "La Especial $18.900 (sin cebolla, extra chimichurri)"
-
-PEDIDO ADICIONAL A ORDEN YA CONFIRMADA:
-- Si el cliente ya tiene un pedido confirmado (cerrado) y quiere agregar algo mas, es un PEDIDO ADICIONAL.
-- Toma el nuevo pedido normalmente con precios.
-- Escribe PEDIDO_LISTO: con los nuevos items.
-- Escribe PEDIDO_ADICIONAL_DE:[numero del pedido original] para vincularlo.
-- El sistema lo registrara como un pedido nuevo vinculado al original.
-- Si el cliente dice "agrega algo a mi pedido" o "se me olvido pedir", es un adicional.
-
-IMAGENES:
-- Si el cliente envia una imagen Y tiene un pedido activo esperando pago: es probablemente un comprobante. Confirma el pedido.
-- Si el cliente envia una imagen SIN pedido activo: responde "Hola! Vi que enviaste una imagen. Puedes contarme que necesitas?"
-- NUNCA confirmes un pedido por una imagen si no hay pedido activo pendiente de pago.
-
-PREGUNTAS SIN RESPUESTA:
-- Si no puedes responder con certeza: "Un momento, ya te confirmo ese detalle." y escribe: ALERTA_PREGUNTA:[la pregunta]
-
-FLUJO:
-1. Saludo -> mensaje amable + link menu
-2. Cliente pide -> confirma con precios. Incluye notas especiales en los items.
-3. Pregunta direccion COMPLETA: calle, numero, barrio. Si tiene direccion frecuente, pregunta si es la misma.
-   EXCEPCION RECOGER: Si el cliente dice que va a recoger, pasa a buscar, lo recojo, para llevar, voy por el:
-   - NO preguntes direccion
-   - Responde: "Perfecto! Te esperamos en Canaveral. No hay costo de domicilio."
-   - Escribe OBLIGATORIO: DIRECCION_LISTA:RECOGER EN TIENDA
-   - En el PEDIDO_LISTO escribe DOMICILIO: 0
-4. Con direccion -> calcula domicilio y muestra desglose
-   Si es RECOGER: DOMICILIO: 0
-5. Confirma -> si el cliente NO indico metodo de pago desde el menu, pregunta como quiere pagar y da datos
-6. Pago:
-   - Nequi o Bancolombia: da SIEMPRE la llave 0089102980 a nombre de Jose Gregorio Charris. NUNCA el numero de celular.
-     * Si el cliente dice que paga AHORA: pide comprobante, cuando lo mande escribe PAGO_CONFIRMADO
-     * Si el cliente dice "cuando llegue el pedido", "al recibirlo", "a la entrega":
-       Responde "No hay problema! Cuando llegue el domiciliario transferes a la llave 0089102980 y listo!" y escribe PAGO_DATAFONO
-     * NUNCA insistas en pedir comprobante si el cliente ya dijo que paga al recibir.
-   - Efectivo: pregunta valor -> escribe PAGO_EFECTIVO:[valor del billete]
-   - Datafono: confirma que el domiciliario lo lleva -> escribe PAGO_DATAFONO
-7. Comprobante recibido -> di EXACTAMENTE: "Listo! Recibimos tu comprobante, tu pedido va a preparacion mientras el equipo verifica el pago. Te avisamos cualquier novedad!" -> escribe PAGO_CONFIRMADO
-8. NUNCA digas tiempo estimado al confirmar.
-
-POST-CONFIRMACION: respuestas cortas y calidas. No reinicies flujo a menos que el cliente pida explicitamente otro pedido.
-IMPORTANTE: NUNCA digas que el pedido "va en camino" ni "ya viene" al confirmar. Solo confirma que se recibio el pedido y que se estara informando el estado.
-
-PAGO DIGITAL AL RECIBIR:
-- Algunos clientes prefieren pagar por Nequi o Bancolombia cuando el domiciliario llega.
-- Si el cliente dice "Nequi" o "Bancolombia" simplemente dale los datos y confirma el pedido normalmente.
-- Dile algo como: "Perfecto! El numero de Nequi es 3138908577. Cuando el domiciliario llegue transferes y nos mandas el comprobante. Tu pedido ya queda en camino!"
-- NO esperes el comprobante para confirmar. El pedido sigue su flujo normal.
-- PAGO_CONFIRMADO solo cuando el cliente mande la imagen del comprobante.
-
-OBLIGATORIO - escribe estos tags al final de tu respuesta (el cliente NO los ve):
-
-Al confirmar productos:
-PEDIDO_LISTO:
-ITEMS: [producto1 $precio (notas)|producto2 $precio]
-DESECHABLES: [valor total en pesos, ej: 500 si hay 1 comida, 1000 si hay 2 comidas, 1500 si hay 3]
-DOMICILIO: [numero sin puntos ni signos, o 0]
-TOTAL: [numero sin puntos ni signos]
-
-Al confirmar direccion: DIRECCION_LISTA:[direccion completa]
-Telefono adicional: TELEFONO_ADICIONAL:[numero]
-Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
-Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
-
-PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
-- Cliente MANDA UNA IMAGEN (comprobante de transferencia): PAGO_CONFIRMADO
-- Cliente dice que va a pagar en EFECTIVO y da el valor del billete: PAGO_EFECTIVO:[valor, ej: 50000]
-- Cliente dice que va a pagar con DATAFONO: PAGO_DATAFONO
-
-MUY IMPORTANTE:
-- Si el cliente solo dice "Nequi" o "Bancolombia" = NO escribas ningun tag. Solo dale los datos de pago y pide el comprobante.
-- PAGO_CONFIRMADO solo va cuando el cliente MANDA LA IMAGEN del comprobante, nunca antes.
-- El flujo correcto: cliente dice metodo -> tu das datos -> cliente manda foto -> TU ESCRIBES PAGO_CONFIRMADO
-
-REGLAS: NUNCA digas que eres IA. Aplica promos del dia. Si no existe el producto, ofrece alternativas.`;
-
 // ── PRINT TICKET ──────────────────────────────────────────────────────────────
 async function printTicket(orderData) {
   var subtotal = Number(orderData.total) - Number(orderData.desechables||0) - Number(orderData.domicilio||0);
   var pagoLabel =
     orderData.paymentMethod === "efectivo"    ? "Efectivo - cancela con: " + (orderData.cashDenomination || "?") :
     orderData.paymentMethod === "datafono"    ? "Datafono (llevar)" :
-    orderData.paymentMethod === "bancolombia" ? "Bancolombia llave: 0089102980" :
-    "Nequi 3138908577";
+    orderData.paymentMethod === "bancolombia" ? "Bancolombia llave: " + (orderData.bancoCuenta || "0089102980") :
+    "Nequi " + (orderData.nequiNum || "3138908577");
+
+  var restNombre = orderData.restauranteNombre || "LA CURVA STREET FOOD";
+  var restCiudad = orderData.restauranteCiudad || "Cali";
 
   var lines = [
     "================================",
-    "     LA CURVA STREET FOOD      ",
-    "    Canaveral - Cali, Col.     ",
+    "  " + restNombre.toUpperCase().substring(0, 30),
+    "  " + restCiudad,
     "================================",
     "Pedido #" + orderData.orderNumber + (orderData.pedidoAdicionalDe ? " [ADICIONAL a #"+orderData.pedidoAdicionalDe+"]" : ""),
     "Hora: " + orderData.timestamp,
@@ -480,7 +446,8 @@ async function printTicket(orderData) {
     total: Number(orderData.total), address: orderData.address,
     paymentMethod: orderData.paymentMethod, cashDenomination: orderData.cashDenomination || null,
     notasEspeciales: orderData.notasEspeciales || null,
-    pedidoAdicionalDe: orderData.pedidoAdicionalDe || null
+    pedidoAdicionalDe: orderData.pedidoAdicionalDe || null,
+    restauranteNombre: restNombre, restauranteCiudad: restCiudad
   }, { timeout: 6000 })
     .then(function() { console.log("Ticket #" + orderData.orderNumber + " enviado a impresora"); })
     .catch(function(e) { console.error("Error impresora:", e.message); });
@@ -493,7 +460,6 @@ function parseReply(reply, from) {
   var cleanReply = reply;
   var sideEffect = null;
 
-  // Pre-parse DIRECCION_LISTA so it's available when PEDIDO_LISTO creates orderState
   var preParsedDir = null;
   if (reply.indexOf("DIRECCION_LISTA:") !== -1) {
     var preDir = reply.match(/DIRECCION_LISTA:(.+)/);
@@ -510,7 +476,6 @@ function parseReply(reply, from) {
       var items = itemsMatch[1].split("|").map(function(i) { return i.trim(); });
       var total = limpiarNumero(totalMatch[1]);
       var desechRaw = limpiarNumero(desechMatch ? desechMatch[1] : "0");
-      // Si Luz escribe cantidad (1,2,3) en vez del valor en pesos, multiplicar x500
       var desech = Number(desechRaw) < 50 ? String(Number(desechRaw) * 500) : desechRaw;
       var domicilio = limpiarNumero(domMatch ? domMatch[1] : "0");
 
@@ -520,7 +485,6 @@ function parseReply(reply, from) {
         if (m) notasArr.push(m[1]);
       });
 
-      // Preservar direccion y paymentMethod si ya existian (o si vino en el mismo mensaje)
       var prevAddress = (orderState[from] ? orderState[from].address : null) || preParsedDir;
       var prevPayment = orderState[from] ? orderState[from].paymentMethod : null;
       orderState[from] = {
@@ -557,12 +521,8 @@ function parseReply(reply, from) {
     var addMatch = reply.match(/PEDIDO_ADICIONAL_DE:(.+)/);
     if (addMatch) {
       var numAdicional = addMatch[1].trim();
-      if (orderState[from]) {
-        orderState[from].pedidoAdicionalDe = numAdicional;
-      } else {
-        // Crear orderState para pedido adicional si no existe
-        orderState[from] = { pedidoAdicionalDe: numAdicional, status: "esperando_direccion" };
-      }
+      if (orderState[from]) orderState[from].pedidoAdicionalDe = numAdicional;
+      else orderState[from] = { pedidoAdicionalDe: numAdicional, status: "esperando_direccion" };
     }
     cleanReply = cleanReply.replace(/PEDIDO_ADICIONAL_DE:.+/g, "").trim();
   }
@@ -614,6 +574,8 @@ app.get("/menu",        function(req, res) { res.sendFile(path.join(__dirname, "
 app.get("/mapa",        function(req, res) { res.sendFile(path.join(__dirname, "mapa_zonas.html")); });
 app.get("/admin",       function(req, res) { res.sendFile(path.join(__dirname, "admin.html")); });
 app.get("/restaurante", function(req, res) { res.sendFile(path.join(__dirname, "restaurante.html")); });
+app.get("/cocina",      function(req, res) { res.sendFile(path.join(__dirname, "cocina.html")); });
+app.get("/domi",        function(req, res) { res.sendFile(path.join(__dirname, "domiciliario.html")); });
 
 app.post("/api/pedido-estado", async function(req, res) {
   var { id, estado, telefono_cliente, numero_pedido, restaurante_id } = req.body;
@@ -628,7 +590,7 @@ app.post("/api/pedido-estado", async function(req, res) {
         try { var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=*", { headers: sbH(false) }); if (rr.data?.length) restaurante = rr.data[0]; } catch(e) {}
       }
       var numStr = numero_pedido ? " #" + numero_pedido : "";
-      var pid = process.env.WHATSAPP_PHONE_ID;
+      var pid = restaurante?.whatsapp_phone_id || process.env.WHATSAPP_PHONE_ID;
       if (estado === "en_preparacion") {
         var msg = getMensaje(restaurante, "msg_en_preparacion", "Tu pedido" + numStr + " ya esta en preparacion! En breve estara listo.");
         await sendWhatsAppMessage(telefono_cliente, msg, pid);
@@ -640,7 +602,7 @@ app.post("/api/pedido-estado", async function(req, res) {
         if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
       }
       if (estado === "en_camino") {
-        var msg = getMensaje(restaurante, "msg_en_camino", "Tu pedido" + numStr + " ya va en camino. Llega en 25-35 minutos. Que lo disfrutes!");
+        var msg = getMensaje(restaurante, "msg_en_camino", "Tu pedido" + numStr + " ya va en camino. Que lo disfrutes!");
         await sendWhatsAppMessage(telefono_cliente, msg, pid);
         if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
       }
@@ -681,7 +643,6 @@ app.post("/enviar-imagen-cliente", async function(req, res) {
     var token = process.env.WHATSAPP_TOKEN;
     var pid = process.env.WHATSAPP_PHONE_ID;
     if (!token || !pid) return res.status(500).json({ error: "Sin credenciales WA" });
-    // Upload media to WhatsApp
     var buf = Buffer.from(imagen, "base64");
     var FormData = require("form-data");
     var form = new FormData();
@@ -693,7 +654,6 @@ app.post("/enviar-imagen-cliente", async function(req, res) {
     );
     var mediaId = uploadRes.data?.id;
     if (!mediaId) return res.status(500).json({ error: "No se pudo subir imagen" });
-    // Send image message
     var toNum = telefono.replace(/[^0-9]/g, "");
     if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
     await axios.post("https://graph.facebook.com/v19.0/" + pid + "/messages",
@@ -711,7 +671,14 @@ app.post("/enviar-imagen-cliente", async function(req, res) {
 app.post("/enviar-mensaje-cliente", async function(req, res) {
   if (!req.body.telefono || !req.body.mensaje) return res.status(400).json({ error: "Faltan datos" });
   try {
-    await sendWhatsAppMessage(req.body.telefono, req.body.mensaje, process.env.WHATSAPP_PHONE_ID);
+    var pid = process.env.WHATSAPP_PHONE_ID;
+    if (req.body.restaurante_id) {
+      try {
+        var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id + "&select=whatsapp_phone_id", { headers: sbH(false) });
+        if (rr.data?.length && rr.data[0].whatsapp_phone_id) pid = rr.data[0].whatsapp_phone_id;
+      } catch(e) {}
+    }
+    await sendWhatsAppMessage(req.body.telefono, req.body.mensaje, pid);
     if (req.body.restaurante_id) guardarMensajeSupabase(req.body.restaurante_id, req.body.telefono, req.body.mensaje, "restaurante", null);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -749,8 +716,9 @@ app.post("/notificar-cliente", async function(req, res) {
   }
   var numStr = req.body.numero_pedido ? " #" + req.body.numero_pedido : "";
   try {
-    var msg = getMensaje(restaurante, "msg_en_camino", "Tu pedido" + numStr + " ya va en camino. Llega en 25-35 minutos. Que lo disfrutes!");
-    await sendWhatsAppMessage(req.body.telefono, msg, process.env.WHATSAPP_PHONE_ID);
+    var msg = getMensaje(restaurante, "msg_en_camino", "Tu pedido" + numStr + " ya va en camino. Que lo disfrutes!");
+    var pid = restaurante?.whatsapp_phone_id || process.env.WHATSAPP_PHONE_ID;
+    await sendWhatsAppMessage(req.body.telefono, msg, pid);
     if (req.body.restaurante_id) guardarMensajeSupabase(req.body.restaurante_id, req.body.telefono, msg, "estado_luz", null);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
@@ -767,9 +735,15 @@ app.post("/api/enviar-promo", async function(req, res) {
     (resp.data||[]).forEach(function(p) { if (p.cliente_tel) unicos[p.cliente_tel] = true; });
     var telefonos = Object.keys(unicos);
     if (!telefonos.length) return res.json({ ok: true, enviados: 0, fallidos: 0, total: 0 });
+    // Obtener phone_id del restaurante
+    var pid = process.env.WHATSAPP_PHONE_ID;
+    try {
+      var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id + "&select=whatsapp_phone_id", { headers: sbH(false) });
+      if (rr.data?.length && rr.data[0].whatsapp_phone_id) pid = rr.data[0].whatsapp_phone_id;
+    } catch(e) {}
     var enviados = 0, fallidos = 0;
     for (var i = 0; i < telefonos.length; i++) {
-      try { await sendWhatsAppMessage(telefonos[i], req.body.mensaje, process.env.WHATSAPP_PHONE_ID); enviados++; }
+      try { await sendWhatsAppMessage(telefonos[i], req.body.mensaje, pid); enviados++; }
       catch (e) { fallidos++; }
       if (i < telefonos.length - 1) await new Promise(function(r) { setTimeout(r, 300); });
     }
@@ -834,7 +808,7 @@ app.get("/webhook", function(req, res) {
   var mode = req.query["hub.mode"], token = req.query["hub.verify_token"], challenge = req.query["hub.challenge"];
   var VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "luz_verify_token_2026";
   if (mode === "subscribe" && token === VERIFY_TOKEN) { console.log("Webhook verificado"); return res.status(200).send(challenge); }
-  if (!mode) return res.send("LUZ esta activa - La Curva Street Food");
+  if (!mode) return res.send("LUZ esta activa");
   res.sendStatus(403);
 });
 
@@ -902,9 +876,8 @@ async function procesarMensaje(msg, from, phoneNumberId) {
 
     var esComprobante = false;
     if (esImagen && mediaId) {
-      // Es comprobante si hay pedido activo en cualquier status de pago
       var hayPedidoActivo = orderState[from] && (
-        orderState[from].status === "esperando_pago" || 
+        orderState[from].status === "esperando_pago" ||
         orderState[from].status === "confirmado" ||
         orderState[from].status === "esperando_direccion"
       );
@@ -923,10 +896,10 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       var menuConfig = getMenuConfig(restaurante);
       menuParaPrompt = menuConfig || await getMenuDinamico(restaurante.id);
     } else {
-      menuParaPrompt = MENU_FALLBACK;
+      menuParaPrompt = "(Sin menu configurado. Atiende al cliente manualmente.)";
     }
 
-    var ubicacion = restaurante?.direccion || "Cl. 16 #56-40, Canaveral, Cali";
+    var ubicacion = restaurante?.direccion || "";
     var horaCol = getHoraColombia();
     var horaStr = horaCol.getHours().toString().padStart(2,"0") + ":" + horaCol.getMinutes().toString().padStart(2,"0");
     var diaHoy = getDiaColombiaStr();
@@ -934,7 +907,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     var dirFrecuente = null;
     if (restaurante) dirFrecuente = await getDireccionFrecuente(restaurante.id, from);
     var dirFrecuenteTexto = dirFrecuente
-      ? "Este cliente ya ha pedido antes. Su ultima direccion fue: " + dirFrecuente + ". Si pide de nuevo, preguntale: 'Te lo mando a " + dirFrecuente + " igual que la vez anterior?' Espera confirmacion antes de asumir."
+      ? "Este cliente ya ha pedido antes. Su ultima direccion fue: " + dirFrecuente + ". Si pide de nuevo, preguntale: '¿Te lo mando a " + dirFrecuente + " igual que la vez anterior?' Espera confirmacion antes de asumir."
       : "No hay direccion previa registrada para este cliente.";
 
     var cuponesTexto = "No hay cupones activos en este momento.";
@@ -959,12 +932,12 @@ async function procesarMensaje(msg, from, phoneNumberId) {
 
     var horarioInfo = restaurante
       ? "Atiendes de " + (restaurante.hora_apertura||"16:00").substring(0,5) + " a " + (restaurante.hora_cierre||"00:00").substring(0,5) + ". Hora actual en Colombia: " + horaStr + ". Estas en horario activo ahora."
-      : "Atiendes de 4:00pm a 12:00am. Hora actual: " + horaStr;
+      : "Hora actual: " + horaStr;
 
-    var systemFinal = SYSTEM_PROMPT
-      .replace(/MENU_URL_PLACEHOLDER/g, getMenuUrl())
+    // ── BUILD SYSTEM PROMPT DINAMICO ──────────────────────────────────────────
+    var systemFinal = buildSystemPrompt(restaurante)
+      .replace(/MENU_URL_PLACEHOLDER/g, getMenuUrl(restaurante))
       .replace(/MENU_PLACEHOLDER/g, "MENU ACTIVO:\n" + menuParaPrompt)
-      .replace(/UBICACION_PLACEHOLDER/g, ubicacion)
       .replace(/HORARIO_PLACEHOLDER/g, "HORARIO: " + horarioInfo)
       .replace(/DIA_PLACEHOLDER/g, diaHoy)
       .replace(/DIRECCION_FRECUENTE_PLACEHOLDER/g, dirFrecuenteTexto)
@@ -1007,7 +980,6 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     console.log("Luz: " + cleanReply.substring(0, 100));
 
     if (restaurante) {
-      // Guardar mensaje cliente - si es comprobante guardarlo con el mediaId para verlo en el chat
       guardarMensajeSupabase(restaurante.id, from, esComprobante ? "📎 Comprobante de pago" : userText, "cliente", esImagen ? mediaId : null).catch(function(){});
       guardarMensajeSupabase(restaurante.id, from, cleanReply, "restaurante", null).catch(function(){});
     }
@@ -1031,7 +1003,11 @@ async function procesarMensaje(msg, from, phoneNumberId) {
         extraPhone: state.extraPhone || null,
         phone: from, timestamp,
         notasEspeciales: state.notasEspeciales || null,
-        pedidoAdicionalDe: state.pedidoAdicionalDe || null
+        pedidoAdicionalDe: state.pedidoAdicionalDe || null,
+        restauranteNombre: restaurante?.nombre || "Restaurante",
+        restauranteCiudad: restaurante?.ciudad || "Colombia",
+        nequiNum: restaurante?.metodo_pago_nequi || "3138908577",
+        bancoCuenta: restaurante?.metodo_pago_banco || "0089102980"
       });
 
       var restId = restaurante?.id || null;
@@ -1073,7 +1049,7 @@ app.get("/pedidos", function(req, res) {
 
 app.get("/", function(req, res) {
   res.json({
-    status: "La Curva Bot activo",
+    status: "LUZ IA activa",
     hora_colombia: getHoraColombia().toLocaleString("es-CO"),
     dia_colombia: getDiaColombiaStr(),
     conversaciones: Object.keys(conversations).length,
@@ -1084,6 +1060,6 @@ app.get("/", function(req, res) {
 
 var PORT = process.env.PORT || 3000;
 app.listen(PORT, function() {
-  console.log("LUZ corriendo en puerto " + PORT);
+  console.log("LUZ IA corriendo en puerto " + PORT);
   console.log("Dia Colombia:", getDiaColombiaStr(), "| Hora:", getHoraColombia().toLocaleTimeString("es-CO"));
 });
