@@ -247,8 +247,8 @@ select.finput{cursor:pointer}
 .alert-text{flex:1;font-size:13px;font-weight:600}
 .alert-text.verde{color:#6ee7b7}.alert-text.purple{color:#c4b5fd}.alert-text.amber{color:#fcd34d}.alert-text.yellow{color:#a5b4fc}
 .alert-close{font-size:18px;padding:0 4px;background:none;border:none;cursor:pointer;color:var(--text3)}
-.msg-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:flex-end;justify-content:center;}.msg-overlay.open{display:flex}
-.msg-box{width:100%;max-width:480px;background:rgba(20,15,40,0.97);backdrop-filter:var(--blur2);-webkit-backdrop-filter:var(--blur2);border:1px solid var(--glass-border2);border-bottom:none;box-shadow:0 -12px 60px rgba(124,58,237,0.2),var(--shadow2);border-radius:28px 28px 0 0;height:91vh;max-height:720px;display:flex;flex-direction:column;position:relative;overflow:hidden;}
+.msg-overlay{display:none;position:fixed;inset:0;z-index:450;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:flex-end;justify-content:center;}.msg-overlay.open{display:flex}
+.msg-box{width:100%;max-width:480px;background:rgba(20,15,40,0.97);backdrop-filter:var(--blur2);-webkit-backdrop-filter:var(--blur2);border:1px solid var(--glass-border2);border-bottom:none;box-shadow:0 -12px 60px rgba(124,58,237,0.2),var(--shadow2);border-radius:28px 28px 0 0;height:calc(100vh - 80px);max-height:720px;display:flex;flex-direction:column;position:relative;overflow:hidden;}
 .msg-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.2);margin:12px auto 0;flex-shrink:0;display:block}
 .msg-header{background:linear-gradient(90deg,rgba(124,58,237,0.2),rgba(79,70,229,0.1));border-bottom:1px solid var(--glass-border);padding:12px 16px;flex-shrink:0;display:flex;align-items:center;gap:12px;}
 .msg-avatar{width:42px;height:42px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;font-family:'JetBrains Mono',monospace;box-shadow:0 4px 14px rgba(124,58,237,0.5);}
@@ -406,19 +406,19 @@ select.finput{cursor:pointer}
     <div class="tb-right"><div class="live-pill"><div class="live-dot"></div>EN VIVO</div></div>
   </div>
 
-  <div class="alert-banner tipo-mensaje" id="alertBanner"><div class="alert-dot verde"></div><div class="alert-text verde" id="alertText">Nuevo mensaje</div><button class="alert-close" id="alertClose">&#10005;</button></div>
-  <div class="alert-banner tipo-humano" id="alertHumano" style="top:66px"><div class="alert-dot purple"></div><div class="alert-text purple" id="alertHumanoText">Cliente pide persona</div><button class="alert-close" id="alertHumanoClose">&#10005;</button></div>
-  <div class="alert-banner tipo-recoger" id="alertRecoger" style="top:66px"><div class="alert-dot amber"></div><div class="alert-text amber" id="alertRecogerText">Pedido para RECOGER</div><button class="alert-close" id="alertRecogerClose">&#10005;</button></div>
-  <div class="alert-banner tipo-pregunta" id="alertPregunta" style="top:66px"><div class="alert-dot yellow"></div><div class="alert-text yellow" id="alertPreguntaText">Pregunta sin respuesta</div><button class="alert-close" id="alertPreguntaClose">&#10005;</button></div>
+  <div class="alert-banner tipo-mensaje" id="alertBanner"><div class="alert-dot verde"></div><div class="alert-text verde" id="alertText">Nuevo mensaje</div><button class="alert-close" id="alertClose">✕</button></div>
+  <div class="alert-banner tipo-humano" id="alertHumano" style="top:66px"><div class="alert-dot purple"></div><div class="alert-text purple" id="alertHumanoText">Cliente pide persona</div><button class="alert-close" id="alertHumanoClose">✕</button></div>
+  <div class="alert-banner tipo-recoger" id="alertRecoger" style="top:66px"><div class="alert-dot amber"></div><div class="alert-text amber" id="alertRecogerText">Pedido para RECOGER</div><button class="alert-close" id="alertRecogerClose">✕</button></div>
+  <div class="alert-banner tipo-pregunta" id="alertPregunta" style="top:66px"><div class="alert-dot yellow"></div><div class="alert-text yellow" id="alertPreguntaText">Pregunta sin respuesta</div><button class="alert-close" id="alertPreguntaClose">✕</button></div>
 
   <div class="content">
     <!-- PEDIDOS -->
     <div class="page active" id="page-pedidos">
       <div class="stats-row">
-        <div class="stat-card"><span class="stat-icon">&#128722;</span><div class="stat-label">Pedidos hoy</div><div class="stat-val purple" id="countHoy">0</div><div class="stat-sub">activos ahora</div></div>
-        <div class="stat-card"><span class="stat-icon">&#128176;</span><div class="stat-label">Ventas hoy</div><div class="stat-val green" id="ventasHoy">$0</div><div class="stat-sub">total facturado</div></div>
+        <div class="stat-card"><span class="stat-icon">🛒</span><div class="stat-label">Pedidos hoy</div><div class="stat-val purple" id="countHoy">0</div><div class="stat-sub">activos ahora</div></div>
+        <div class="stat-card"><span class="stat-icon">💰</span><div class="stat-label">Ventas hoy</div><div class="stat-val green" id="ventasHoy">$0</div><div class="stat-sub">total facturado</div></div>
       </div>
-      <div class="pedidos-pad" id="pedidosLista"><div class="empty"><div class="ei">&#128722;</div><div class="et">No hay pedidos activos</div></div></div>
+      <div class="pedidos-pad" id="pedidosLista"><div class="empty"><div class="ei">🛒</div><div class="et">No hay pedidos activos</div></div></div>
     </div>
 
     <!-- HISTORIAL -->
@@ -458,7 +458,7 @@ select.finput{cursor:pointer}
         <button class="filtro-btn" id="chatFiltroPreguntas" onclick="filtrarChats('preguntas')">&#10067; Preguntas</button>
         <button class="filtro-btn" id="chatFiltroHoy" onclick="filtrarChats('hoy')">Hoy</button>
       </div>
-      <div class="chat-list" id="chatUniversalLista"><div class="empty"><div class="ei">&#128172;</div><div class="et">Cargando...</div></div></div>
+      <div class="chat-list" id="chatUniversalLista"><div class="empty"><div class="ei">💬</div><div class="et">Cargando...</div></div></div>
     </div>
 
     <!-- PROMO -->
@@ -476,10 +476,10 @@ select.finput{cursor:pointer}
         <div class="promo-tpl" data-msg="Esta noche estamos encendidos! Abrimos desde las 4pm"><div class="promo-tpl-label">Recordatorio</div><div class="promo-tpl-text">Abrimos esta noche.</div></div>
         <div class="promo-section-title">Mensaje personalizado</div>
         <div class="ffield"><textarea class="finput" id="promoTexto" placeholder="Escribe tu promo..." style="height:88px;resize:none;"></textarea></div>
-        <button class="promo-send" id="promoEnviarBtn"><span>&#128228;</span><span id="promoBtnLabel">Enviar ahora a todos</span></button>
+        <button class="promo-send" id="promoEnviarBtn"><span>📤</span><span id="promoBtnLabel">Enviar ahora a todos</span></button>
         <div class="promo-result" id="promoResult">
           <div class="promo-result-title">Resultado del envio</div>
-          <div class="promo-result-row"><span>&#9989; Enviados</span><span id="resOk" style="color:#6ee7b7;font-weight:700;font-family:'JetBrains Mono',monospace">0</span></div>
+          <div class="promo-result-row"><span>✅ Enviados</span><span id="resOk" style="color:#6ee7b7;font-weight:700;font-family:'JetBrains Mono',monospace">0</span></div>
           <div class="promo-result-row"><span>&#10060; Fallidos</span><span id="resFail" style="color:#fca5a5;font-weight:700;font-family:'JetBrains Mono',monospace">0</span></div>
           <div class="promo-result-row"><span>&#128100; Total</span><span id="resTotal" style="font-weight:700;font-family:'JetBrains Mono',monospace">0</span></div>
         </div>
@@ -518,7 +518,7 @@ select.finput{cursor:pointer}
       <div style="padding:16px 12px 4px"><div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Configuracion</div><div style="font-size:13px;color:var(--text3);margin-top:2px">Ajusta el comportamiento de Luz</div></div>
       <div class="cfg-pad">
         <div class="modo-banner modo-noche" id="modoBanner">
-          <span style="font-size:22px" id="modoIcon">&#127769;</span>
+          <span style="font-size:22px" id="modoIcon">🌙</span>
           <div><div id="modoLabel" style="font-weight:700;font-size:14px">Modo noche activo</div><div id="modoSubLabel" style="font-size:11px;margin-top:2px;opacity:0.7">Luz usa el menu de noche</div></div>
         </div>
         <div class="cfg-section">
@@ -546,7 +546,7 @@ select.finput{cursor:pointer}
         <div class="cfg-section"><div class="cfg-title">Direccion del local</div><input class="finput" id="cfg-direccion" placeholder="Cl. 16 #56-40, Canaveral, Cali"></div>
         <!-- DOMICILIARIOS -->
         <div class="cfg-section">
-          <div class="cfg-title">&#128667; Domiciliarios</div>
+          <div class="cfg-title">🛵 Domiciliarios</div>
           <div class="aform" style="margin-bottom:10px;padding:12px;">
             <div class="frow">
               <div class="ffield"><label class="flabel">Nombre</label><input class="finput" id="domi-nombre-input" placeholder="Carlos"></div>
@@ -558,10 +558,10 @@ select.finput{cursor:pointer}
         </div>
         <!-- PANTALLAS -->
         <div class="cfg-section">
-          <div class="cfg-title">&#128241; Pantallas del sistema</div>
+          <div class="cfg-title">📱 Pantallas del sistema</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-            <a href="/cocina" target="_blank" style="flex:1;padding:12px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.3);border-radius:13px;color:#fb923c;font-size:13px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">&#129379; Pantalla Cocina</a>
-            <a href="/domi" target="_blank" style="flex:1;padding:12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:13px;color:#34d399;font-size:13px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">&#128667; App Domiciliario</a>
+            <a href="/cocina" target="_blank" style="flex:1;padding:12px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.3);border-radius:13px;color:#fb923c;font-size:13px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">🍳 Pantalla Cocina</a>
+            <a href="/domi" target="_blank" style="flex:1;padding:12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:13px;color:#34d399;font-size:13px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">🛵 App Domiciliario</a>
           </div>
         </div>
         <button class="cfg-save" id="cfgGuardar">Guardar configuracion</button>
@@ -602,11 +602,11 @@ select.finput{cursor:pointer}
 
       <!-- MAPA SOLO VISUAL -->
       <div style="padding:0 12px 8px">
-        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">&#128506;&#65039; Mapa visual</div>
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">🗺️ Mapa visual</div>
         <div id="mapaWrapper" style="border-radius:18px;overflow:hidden;border:1px solid var(--glass-border);position:relative;background:#1a1520;">
           <div id="mapaContainer" style="width:100%;height:360px;"></div>
           <div id="mapaLoading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1a1520;gap:10px;">
-            <div style="font-size:32px">&#128506;&#65039;</div>
+            <div style="font-size:32px">🗺️</div>
             <div style="font-size:13px;color:var(--text3)">Cargando mapa...</div>
           </div>
         </div>
@@ -629,15 +629,15 @@ select.finput{cursor:pointer}
 </div>
 
 <div class="notif" id="notif"></div>
-<div class="promo-confirm" id="promoConfirm"><div class="promo-confirm-box"><div class="promo-confirm-icon">&#128226;</div><div class="promo-confirm-title">Enviar?</div><div class="promo-confirm-sub">Este mensaje llegara a <strong id="confirmCount">0</strong> clientes.</div><div class="promo-confirm-preview" id="confirmPreview"></div><div class="promo-confirm-btns"><button class="promo-confirm-cancel" id="promoConfirmCancel">Cancelar</button><button class="promo-confirm-ok" id="promoConfirmOk">Enviar ahora</button></div></div></div>
-<div class="confirm-overlay" id="confirmEliminar"><div class="confirm-box"><div class="confirm-icon">&#128465;</div><div class="confirm-title">Eliminar pedido?</div><div class="confirm-sub">Esta accion no se puede deshacer.</div><div class="confirm-btns"><button class="confirm-cancel" id="confirmEliminarCancel">Cancelar</button><button class="confirm-ok" id="confirmEliminarOk">Eliminar</button></div></div></div>
+<div class="promo-confirm" id="promoConfirm"><div class="promo-confirm-box"><div class="promo-confirm-icon">📢</div><div class="promo-confirm-title">Enviar?</div><div class="promo-confirm-sub">Este mensaje llegara a <strong id="confirmCount">0</strong> clientes.</div><div class="promo-confirm-preview" id="confirmPreview"></div><div class="promo-confirm-btns"><button class="promo-confirm-cancel" id="promoConfirmCancel">Cancelar</button><button class="promo-confirm-ok" id="promoConfirmOk">Enviar ahora</button></div></div></div>
+<div class="confirm-overlay" id="confirmEliminar"><div class="confirm-box"><div class="confirm-icon">🗑</div><div class="confirm-title">Eliminar pedido?</div><div class="confirm-sub">Esta accion no se puede deshacer.</div><div class="confirm-btns"><button class="confirm-cancel" id="confirmEliminarCancel">Cancelar</button><button class="confirm-ok" id="confirmEliminarOk">Eliminar</button></div></div></div>
 <div class="confirm-overlay" id="confirmBorrarHist"><div class="confirm-box"><div class="confirm-icon">&#9888;</div><div class="confirm-title">Borrar historial?</div><div class="confirm-sub">Se eliminaran todos los pedidos del periodo.</div><div class="confirm-btns"><button class="confirm-cancel" id="confirmBorrarHistCancel">Cancelar</button><button class="confirm-ok" id="confirmBorrarHistOk">Borrar todo</button></div></div></div>
-<div class="img-overlay" id="imgOverlay"><button class="img-overlay-close" id="imgOverlayClose">&#10005;</button><img id="imgOverlayImg" src="" alt="Imagen"></div>
+<div class="img-overlay" id="imgOverlay"><button class="img-overlay-close" id="imgOverlayClose">✕</button><img id="imgOverlayImg" src="" alt="Imagen"></div>
 
 <!-- MODAL ASIGNAR DOMICILIARIO -->
 <div class="domi-overlay" id="domiOverlay">
   <div class="domi-box">
-    <div class="domi-title">&#128667; Asignar domiciliario</div>
+    <div class="domi-title">🛵 Asignar domiciliario</div>
     <div class="domi-sub">Pedido <span id="domiPedidoNum" style="color:#c4b5fd;font-family:'JetBrains Mono',monospace"></span></div>
     <div id="domiLista"><div class="domi-empty">Cargando domiciliarios...</div></div>
     <div class="domi-btns">
@@ -659,8 +659,8 @@ select.finput{cursor:pointer}
         <div class="msg-pedido-info" id="msgPedidoInfo"></div>
       </div>
       <div class="msg-header-actions">
-        <button class="msg-action-btn" id="btnConstructor">&#128722;</button>
-        <button class="msg-action-btn" id="btnCerrarChat">&#10005;</button>
+        <button class="msg-action-btn" id="btnConstructor">🛒</button>
+        <button class="msg-action-btn" id="btnCerrarChat">✕</button>
       </div>
     </div>
     <div class="msg-silencio-row">
@@ -670,8 +670,8 @@ select.finput{cursor:pointer}
     <div id="chatArea"></div>
     <div class="chat-input-area">
       <div class="chat-tools-row">
-        <button class="chat-tool-btn" id="btnConstructorInline">&#128722; Armar pedido</button>
-        <button class="chat-tool-btn" onclick="cerrarChat()">&#10005; Cerrar</button>
+        <button class="chat-tool-btn" id="btnConstructorInline">🛒 Armar pedido</button>
+        <button class="chat-tool-btn" onclick="cerrarChat()">✕ Cerrar</button>
       </div>
       <div class="chat-input-row">
         <label class="chat-img-btn" id="btnChatImg" title="Enviar imagen">&#128247;<input type="file" id="chatImgInput" accept="image/*" style="display:none"></label>
@@ -753,7 +753,7 @@ function goApp(){
   document.getElementById("restNombre").innerHTML=p.join(" ")+" <span>"+l+"</span>";
   localStorage.setItem("luzRestId",rest.id);
   loadPedidos();loadStats();cargarConfig();renderCupones();cargarDomiciliarios();
-  timer=setInterval(function(){loadPedidos();loadStats();checkNuevosMensajes();checkProgsAutomaticas();},8000);
+  timer=setInterval(function(){loadPedidos();loadStats();checkNuevosMensajes();checkProgsAutomaticas();checkResetSilencios();},8000);
   setTimeout(checkNuevosMensajes,2000);setTimeout(checkProgsAutomaticas,3000);
 }
 
@@ -826,7 +826,7 @@ function renderDomiciliarios(){
     h+='<div style="display:flex;align-items:center;gap:10px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:13px;padding:10px 14px;margin-bottom:7px;">';
     h+='<div class="domi-avatar">'+d.nombre.charAt(0).toUpperCase()+'</div>';
     h+='<div style="flex:1"><div class="domi-name">'+d.nombre+'</div><div class="domi-tel">'+(d.telefono||"Sin telefono")+'</div></div>';
-    h+='<button style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;border-radius:9px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;" data-did="'+d.id+'">&#128465;</button>';
+    h+='<button style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;border-radius:9px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;" data-did="'+d.id+'">🗑</button>';
     h+='</div>';
   });
   lista.innerHTML=h;
@@ -900,27 +900,27 @@ function loadPedidos(){
       var esRecoger=recogerTexto.toLowerCase().indexOf("recoger")!==-1;
       var esAdicional=!!p.pedido_adicional_de;
       h+=(esRecoger?'<div class="pedido-card pedido-recoger">':'<div class="pedido-card">');
-      if(esAdicional)h+='<div style="padding:8px 16px"><span class="adicional-badge">&#10133; ADICIONAL al pedido #'+p.pedido_adicional_de+'</span></div>';
-      if(esRecoger)h+='<div style="background:linear-gradient(90deg,rgba(245,158,11,0.25),rgba(245,158,11,0.1));padding:10px 16px;font-size:13px;font-weight:800;color:#fcd34d;display:flex;align-items:center;gap:8px;"><span style="font-size:18px">&#127978;</span> PEDIDO PARA RECOGER EN TIENDA</div>';
+      if(esAdicional)h+='<div style="padding:8px 16px"><span class="adicional-badge">➕ ADICIONAL al pedido #'+p.pedido_adicional_de+'</span></div>';
+      if(esRecoger)h+='<div style="background:linear-gradient(90deg,rgba(245,158,11,0.25),rgba(245,158,11,0.1));padding:10px 16px;font-size:13px;font-weight:800;color:#fcd34d;display:flex;align-items:center;gap:8px;"><span style="font-size:18px">🏂</span> PEDIDO PARA RECOGER EN TIENDA</div>';
       h+='<div class="ph"><div><div class="pnum">#'+p.numero_pedido+'</div><div class="ptime">'+ago(p.created_at)+'</div></div><span class="etag '+cfg.c+'">'+cfg.l+'</span></div>';
       h+='<div class="pbody">';
       h+='<div>'+items.map(function(i){return'<div class="pitem">&bull; '+i+'</div>';}).join("")+'</div>';
-      if(p.notas_especiales){h+='<div class="notas-especiales"><span class="notas-icon">&#128221;</span><div><strong>Notas especiales:</strong> '+p.notas_especiales+'</div></div>';}
+      if(p.notas_especiales){h+='<div class="notas-especiales"><span class="notas-icon">📝</span><div><strong>Notas especiales:</strong> '+p.notas_especiales+'</div></div>';}
       h+='<div class="pmeta">';
-      h+='<div class="chip'+(esRecoger?" recoger":"")+'">&#128205; '+(p.direccion||"Sin direccion")+'</div>';
-      if(p.cliente_tel)h+='<div class="chip">&#128241; '+p.cliente_tel+'</div>';
-      if(p.metodo_pago)h+='<div class="chip">&#128179; '+p.metodo_pago+'</div>';
-      if(p.domiciliario_nombre)h+='<div class="chip" style="background:rgba(16,185,129,0.1);color:#6ee7b7;border-color:rgba(16,185,129,0.25);">&#128667; '+p.domiciliario_nombre+'</div>';
+      h+='<div class="chip'+(esRecoger?" recoger":"")+'">📍 '+(p.direccion||"Sin direccion")+'</div>';
+      if(p.cliente_tel)h+='<div class="chip">📱 '+p.cliente_tel+'</div>';
+      if(p.metodo_pago)h+='<div class="chip">💳 '+p.metodo_pago+'</div>';
+      if(p.domiciliario_nombre)h+='<div class="chip" style="background:rgba(16,185,129,0.1);color:#6ee7b7;border-color:rgba(16,185,129,0.25);">🛵 '+p.domiciliario_nombre+'</div>';
       h+='</div>';
       h+='<div class="desglose"><div class="desglose-row"><span>Subtotal</span><span>'+fmt(subtotal)+'</span></div><div class="desglose-row"><span>Desechables</span><span>'+fmt(desechables)+'</span></div><div class="desglose-row"><span>Domicilio</span><span>'+fmt(domicilio)+'</span></div><div class="desglose-row total"><span>TOTAL</span><span>'+fmt(total)+'</span></div></div>';
       if(p.comprobante_media_id)h+='<div class="comprobante-box"><div class="comprobante-header">&#129534; Comprobante</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" onerror="this.style.display=\'none\'"></div>';
       h+='<div class="ebtns">';
       if(cfg.n)h+='<button class="ebtn '+cfg.bc+'" data-id="'+p.id+'" data-e="'+cfg.n+'" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">'+cfg.bl+'</button>';
       if(p.estado==="listo"||p.estado==="en_camino")h+='<button class="ebtn bcerrar" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">&#128308; Cerrar orden</button>';
-      if(p.estado==="listo")h+='<button class="ebtn" style="background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.35);flex:0;padding:10px 14px;font-size:16px;" data-domi="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'">&#128667;</button>';
-      if(p.cliente_tel)h+='<button class="btn-msg ebtn be" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">&#128172;</button>';
-      h+='<button class="ebtn" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:2px solid rgba(59,130,246,0.3);flex:0;padding:10px 14px;" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+desechables+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">&#128424;</button>';
-      h+='<button class="ebtn" style="background:rgba(255,107,43,0.12);color:#fb923c;border:2px solid rgba(255,107,43,0.25);flex:0;padding:10px 14px;" data-edit="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"nequi")+'" data-ptot="'+total+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">&#9998;</button>';
+      if(p.estado==="listo")h+='<button class="ebtn" style="background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.35);flex:0;padding:10px 14px;font-size:16px;" data-domi="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'">🛵</button>';
+      if(p.cliente_tel)h+='<button class="btn-msg ebtn be" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">💬</button>';
+      h+='<button class="ebtn" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:2px solid rgba(59,130,246,0.3);flex:0;padding:10px 14px;" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+desechables+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">🖨</button>';
+      h+='<button class="ebtn" style="background:rgba(255,107,43,0.12);color:#fb923c;border:2px solid rgba(255,107,43,0.25);flex:0;padding:10px 14px;" data-edit="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"nequi")+'" data-ptot="'+total+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">✎</button>';
       h+='</div></div></div>';
     });
     lista.innerHTML=h;
@@ -1006,8 +1006,8 @@ function loadHistorial(){
       '<div class="informe-row"><span class="informe-label">Promedio</span><span class="informe-val">'+fmt(Math.round(tot/ps.length))+'</span></div>'+
       '<div class="informe-row"><span class="informe-label">Pago mas usado</span><span class="informe-val">'+topPago+'</span></div>'+
       '<div class="informe-row"><span class="informe-label">Producto top</span><span class="informe-val" style="font-size:11px">'+topProd+'</span></div>'+
-      '<button class="btn-imprimir" onclick="window.print()">&#128424; Imprimir</button>'+
-      '<button class="btn-borrar-hist" id="btnBorrarHist">&#128465; Borrar periodo</button></div>';
+      '<button class="btn-imprimir" onclick="window.print()">🖨 Imprimir</button>'+
+      '<button class="btn-borrar-hist" id="btnBorrarHist">🗑 Borrar periodo</button></div>';
     document.getElementById("btnBorrarHist").addEventListener("click",function(){document.getElementById("confirmBorrarHist").classList.add("open");});
     var h="";
     ps.forEach(function(p){
@@ -1017,17 +1017,17 @@ function loadHistorial(){
       var itemsEnc=encodeURIComponent(JSON.stringify(items));
       var esAdicional=!!p.pedido_adicional_de;
       h+='<div class="hcard">';
-      if(esAdicional)h+='<div style="margin-bottom:8px"><span class="adicional-badge">&#10133; ADICIONAL al #'+p.pedido_adicional_de+'</span></div>';
+      if(esAdicional)h+='<div style="margin-bottom:8px"><span class="adicional-badge">➕ ADICIONAL al #'+p.pedido_adicional_de+'</span></div>';
       h+='<div class="hcard-top"><div><div class="hnum">#'+p.numero_pedido+'</div>'+
         '<div class="hinfo">'+(p.cliente_tel||"--")+" &middot; "+(p.metodo_pago||"--")+'</div>'+
         '<div class="hinfo">'+new Date(p.created_at).toLocaleString("es-CO",{dateStyle:"short",timeStyle:"short"})+'</div></div>'+
         '<div style="text-align:right"><div class="htot">'+fmt(total)+'</div>'+
         '<span class="etag '+cfg.c+'" style="font-size:10px">'+cfg.l+'</span></div></div>';
-      if(p.notas_especiales)h+='<div class="notas-especiales" style="margin:8px 0"><span class="notas-icon">&#128221;</span><div>'+p.notas_especiales+'</div></div>';
+      if(p.notas_especiales)h+='<div class="notas-especiales" style="margin:8px 0"><span class="notas-icon">📝</span><div>'+p.notas_especiales+'</div></div>';
       h+='<div class="hcard-btns">'+
-        (p.cliente_tel?'<button class="hbtn hbtn-chat" data-tel="'+p.cliente_tel+'" data-num="'+p.numero_pedido+'">&#128172; Chat</button>':'')+
-        '<button class="hbtn hbtn-print" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+des+'" data-pdom="'+dom+'" data-pitems="'+itemsEnc+'">&#128424; Imprimir</button>'+
-        '<button class="hbtn hbtn-del" data-id="'+p.id+'">&#128465; Eliminar</button>'+
+        (p.cliente_tel?'<button class="hbtn hbtn-chat" data-tel="'+p.cliente_tel+'" data-num="'+p.numero_pedido+'">💬 Chat</button>':'')+
+        '<button class="hbtn hbtn-print" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+des+'" data-pdom="'+dom+'" data-pitems="'+itemsEnc+'">🖨 Imprimir</button>'+
+        '<button class="hbtn hbtn-del" data-id="'+p.id+'">🗑 Eliminar</button>'+
         '</div></div>';
     });
     hl.innerHTML=h;
@@ -1114,7 +1114,7 @@ function renderChatUniversal(){
     var tagLabel=c.tienePregunta?"? Pregunta":(c.pidioHumano?"Pide persona":(c.pedidoAbierto?"Sin cerrar":"Cerrado"));
     if(!c.tienePedido){tagClass="tag-incompleto";tagLabel="Sin pedido";}
     h+='<div class="chat-item" data-tel="'+c.tel+'" data-num="'+(c.ultimoPedidoNum||"")+'">'+
-      '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px"><div style="font-size:13px;font-weight:700;font-family:monospace;color:var(--text)">&#128241; '+c.tel+(c.silenciado?' <span style="font-size:10px;color:#a855f7">&#129323;</span>':"")+'</div><span class="chat-item-tag '+tagClass+'">'+tagLabel+'</span></div>'+
+      '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px"><div style="font-size:13px;font-weight:700;font-family:monospace;color:var(--text)">📱 '+c.tel+(c.silenciado?' <span style="font-size:10px;color:#a855f7">&#129323;</span>':"")+'</div><span class="chat-item-tag '+tagClass+'">'+tagLabel+'</span></div>'+
       '<div class="chat-item-preview">'+(c.tipo==="alerta_pregunta"?"? ":"")+(c.ultimo||"").replace("ALERTA_PREGUNTA: ","").substring(0,55)+'</div>'+
       '<div style="font-size:10px;color:var(--text3);margin-top:4px">'+ago(c.fecha)+(c.ultimoPedidoNum?" &middot; Pedido #"+c.ultimoPedidoNum:"")+'</div></div></div>';
   });
@@ -1127,7 +1127,7 @@ function abrirChat(tel,num,comp){
   msgTel=tel;msgNum=num;chatLastTs="";
   var inicial=(tel||"?").slice(-2);
   document.getElementById("msgAvatar").textContent=inicial;
-  document.getElementById("msgClienteInfo").textContent="&#128241; "+tel;
+  document.getElementById("msgClienteInfo").textContent="📱 "+tel;
   document.getElementById("msgTelInfo").textContent=tel;
   document.getElementById("msgPedidoInfo").textContent=num?"Pedido #"+num:"";
   document.getElementById("msgTexto").value="";
@@ -1162,9 +1162,9 @@ function renderMensajesChat(msgs,forzar){
     var dia=m.created_at?m.created_at.split("T")[0]:"";
     if(dia!==lastDay){var diaLabel=dia===new Date().toISOString().split("T")[0]?"Hoy":new Date(dia+"T12:00:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short"});h+='<div class="chat-day-divider"><span class="chat-day-label">'+diaLabel+'</span></div>';lastDay=dia;}
     var mediaIdComp=m.comprobante_media_id||(m.media_id&&(txt.indexOf("imagen")!==-1||txt.indexOf("comprobante")!==-1)?m.media_id:null);
-    if(m.tipo==="cliente"&&mediaIdComp){h+='<div class="chat-comp-bubble" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+mediaIdComp+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')"><div class="chat-comp-label"><span>&#9989;</span> Comprobante de pago</div><img src="/api/comprobante/'+mediaIdComp+'" onerror="this.style.display=\'none\'"><div class="chat-comp-time">'+horaStr+'</div></div>';}
+    if(m.tipo==="cliente"&&mediaIdComp){h+='<div class="chat-comp-bubble" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+mediaIdComp+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')"><div class="chat-comp-label"><span>✅</span> Comprobante de pago</div><img src="/api/comprobante/'+mediaIdComp+'" onerror="this.style.display=\'none\'"><div class="chat-comp-time">'+horaStr+'</div></div>';}
     else if(m.tipo==="cliente"&&!mediaIdComp&&txt.indexOf("[El cliente envio una imagen]")!==-1&&m.media_id){h+='<div class="chat-img-bubble" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+m.media_id+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')"><img src="/api/comprobante/'+m.media_id+'" onerror="this.style.display=\'none\'"><div class="chat-img-caption">Imagen del cliente</div></div>';}
-    else if(m.tipo==="estado_luz"){h+='<div class="chat-bubble chat-luz-estado"><div class="chat-label">&#129302; Luz (auto)</div><div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';}
+    else if(m.tipo==="estado_luz"){h+='<div class="chat-bubble chat-luz-estado"><div class="chat-label">🤖 Luz (auto)</div><div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';}
     else if(m.tipo==="alerta_pregunta"){h+='<div class="chat-bubble chat-alerta-pregunta"><div class="chat-label">? Pregunta sin respuesta</div><div>'+txt.replace("ALERTA_PREGUNTA: ","")+'</div><div class="chat-time">'+horaStr+'</div></div>';}
     else if(m.tipo==="restaurante"){h+='<div class="chat-bubble chat-restaurante"><div class="chat-label">&#128100; Panel</div><div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';}
     else{h+='<div class="chat-bubble chat-cliente"><div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';}
@@ -1244,11 +1244,44 @@ function renderProgs(){
   if(!progs.length){lista.innerHTML='<div class="empty" style="padding:20px"><div class="et">No hay promos programadas</div></div>';return;}
   var diasL={lunes:"Lun",martes:"Mar",miercoles:"Mie",jueves:"Jue",viernes:"Vie",sabado:"Sab",domingo:"Dom",todos:"Todos"};
   var h="";
-  progs.forEach(function(p){h+='<div class="prog-card"><div style="font-size:20px;flex-shrink:0">&#128336;</div><div class="prog-card-info"><div class="prog-card-title">'+p.mensaje.substring(0,50)+(p.mensaje.length>50?"...":"")+'<span class="prog-status '+(p.activa?"activa":"inactiva")+'">'+(p.activa?"Activa":"Inactiva")+'</span></div><div class="prog-card-meta">'+(diasL[p.dia]||p.dia)+' a las '+p.hora+'</div></div><div class="prog-card-btns"><button class="prog-btn prog-btn-toggle'+(p.activa?"":" off")+'" data-pid="'+p.id+'">'+(p.activa?"ON":"OFF")+'</button><button class="prog-btn prog-btn-del" data-pid="'+p.id+'">&#128465;</button></div></div>';});
+  progs.forEach(function(p){h+='<div class="prog-card"><div style="font-size:20px;flex-shrink:0">🕰</div><div class="prog-card-info"><div class="prog-card-title">'+p.mensaje.substring(0,50)+(p.mensaje.length>50?"...":"")+'<span class="prog-status '+(p.activa?"activa":"inactiva")+'">'+(p.activa?"Activa":"Inactiva")+'</span></div><div class="prog-card-meta">'+(diasL[p.dia]||p.dia)+' a las '+p.hora+'</div></div><div class="prog-card-btns"><button class="prog-btn prog-btn-toggle'+(p.activa?"":" off")+'" data-pid="'+p.id+'">'+(p.activa?"ON":"OFF")+'</button><button class="prog-btn prog-btn-del" data-pid="'+p.id+'">🗑</button></div></div>';});
   lista.innerHTML=h;
   lista.querySelectorAll(".prog-btn-toggle").forEach(function(b){b.addEventListener("click",function(){var progs=getProgs(),pid=Number(this.getAttribute("data-pid")),idx=progs.findIndex(function(p){return p.id===pid;});if(idx>=0){progs[idx].activa=!progs[idx].activa;saveProgs(progs);renderProgs();}});});
   lista.querySelectorAll(".prog-btn-del").forEach(function(b){b.addEventListener("click",function(){var progs=getProgs(),pid=Number(this.getAttribute("data-pid"));saveProgs(progs.filter(function(p){return p.id!==pid;}));renderProgs();notif("Promo eliminada");});});
 }
+// Reset silencios al cambiar de dia
+var ultimoDiaReset="";
+function checkResetSilencios(){
+  if(!rest)return;
+  var col=getHoraColombia();
+  var diaActual=col.toISOString().split("T")[0];
+  if(ultimoDiaReset===diaActual)return; // ya se reseto hoy
+  var horaActual=col.getHours()*60+col.getMinutes();
+  // Resetear a las 6am o cuando abra el restaurante
+  var horaReset=6*60; // 6am Colombia
+  if(horaActual<horaReset)return; // aun no es hora
+  ultimoDiaReset=diaActual;
+  // Desactivar todos los silencios de este restaurante del dia anterior
+  fetch(SU+"/rest/v1/silencio_conversacion?restaurante_id=eq."+rest.id+"&activo=eq.true",{
+    method:"PATCH",
+    headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+    body:JSON.stringify({activo:false,updated_at:new Date().toISOString()})
+  }).then(function(r){
+    if(r.ok||r.status===204){
+      // Limpiar cache local de silencios
+      var telefonosSilenciados=Object.keys(silencioPorTel).filter(function(t){return silencioPorTel[t];});
+      if(telefonosSilenciados.length>0){
+        telefonosSilenciados.forEach(function(t){silencioPorTel[t]=false;});
+        notif("Silencios del dia anterior desactivados","rgba(168,85,247,0.9)");
+        // Actualizar toggle si hay chat abierto
+        var tog=document.getElementById("toggleSilencio");
+        if(tog&&msgTel){tog.className="big-toggle "+(silencioPorTel[msgTel]?"on":"off");}
+        console.log("Silencios reseteados para nuevo dia:",telefonosSilenciados.length,"clientes");
+      }
+    }
+  }).catch(function(){});
+}
+
 function getDiaCol(){return["domingo","lunes","martes","miercoles","jueves","viernes","sabado"][getHoraColombia().getDay()];}
 var progsEnviadas={};
 function checkProgsAutomaticas(){
@@ -1281,7 +1314,7 @@ function renderCupones(){
     h+='<div class="cupon-card"><div class="cupon-top"><div class="cupon-codigo">'+c.codigo+'</div><span class="cupon-badge '+bClass+'">'+bLabel+'</span></div>'+
       '<div class="cupon-desc">'+desc+(c.descripcion?" &middot; "+c.descripcion:"")+'</div>'+
       '<div class="cupon-stats"><span>Usos: <span class="cupon-stat-val">'+c.usosActuales+(c.usosMax?"/"+c.usosMax:"")+'</span></span><span>Creado: <span class="cupon-stat-val">'+new Date(c.creadoEn).toLocaleDateString("es-CO")+'</span></span></div>'+
-      '<div class="cupon-btns"><button class="cupon-btn cupon-btn-copy" data-cod="'+c.codigo+'">&#128203; Copiar</button><button class="cupon-btn cupon-btn-toggle" data-cid="'+c.id+'">'+(c.activo?"Desactivar":"Activar")+'</button><button class="cupon-btn cupon-btn-del" data-cid="'+c.id+'">&#128465;</button></div></div>';
+      '<div class="cupon-btns"><button class="cupon-btn cupon-btn-copy" data-cod="'+c.codigo+'">📋 Copiar</button><button class="cupon-btn cupon-btn-toggle" data-cid="'+c.id+'">'+(c.activo?"Desactivar":"Activar")+'</button><button class="cupon-btn cupon-btn-del" data-cid="'+c.id+'">🗑</button></div></div>';
   });
   lista.innerHTML=h;
   lista.querySelectorAll(".cupon-btn-copy").forEach(function(b){b.addEventListener("click",function(){var cod=this.getAttribute("data-cod");navigator.clipboard&&navigator.clipboard.writeText(cod).then(function(){notif("Copiado: "+cod);}).catch(function(){notif("Codigo: "+cod);});});});
@@ -1312,8 +1345,8 @@ function cargarConfig(){
 }
 function actualizarToggleModoDia(activo){
   var btn=document.getElementById("toggleModoDia"),banner=document.getElementById("modoBanner"),label=document.getElementById("modoLabel"),sub=document.getElementById("modoSubLabel"),icon=document.getElementById("modoIcon");
-  if(activo){btn.className="big-toggle on";banner.className="modo-banner modo-dia";icon.textContent="&#127749;";label.textContent="Modo dia activo";sub.textContent="Luz usa el menu de dia";}
-  else{btn.className="big-toggle off";banner.className="modo-banner modo-noche";icon.textContent="&#127769;";label.textContent="Modo noche activo";sub.textContent="Luz usa el menu de noche";}
+  if(activo){btn.className="big-toggle on";banner.className="modo-banner modo-dia";icon.textContent="🌅";label.textContent="Modo dia activo";sub.textContent="Luz usa el menu de dia";}
+  else{btn.className="big-toggle off";banner.className="modo-banner modo-noche";icon.textContent="🌙";label.textContent="Modo noche activo";sub.textContent="Luz usa el menu de noche";}
 }
 document.getElementById("toggleModoDia").addEventListener("click",function(){modoDiaActual=!modoDiaActual;actualizarToggleModoDia(modoDiaActual);});
 document.querySelectorAll(".dia-btn").forEach(function(b){b.addEventListener("click",function(){this.classList.toggle("activo");});});
@@ -1446,8 +1479,8 @@ function renderZonasTabla(){
       h+='</div>';
     }
     h+='<div style="display:flex;gap:7px">';
-    h+='<button class="ebtn be" style="flex:1;padding:8px" data-zid="'+z.id+'" data-zedit="1">&#9998; Editar</button>';
-    h+='<button class="ebtn bcerrar" style="flex:0;padding:8px 12px" data-zid="'+z.id+'" data-zdel="1">&#128465;</button>';
+    h+='<button class="ebtn be" style="flex:1;padding:8px" data-zid="'+z.id+'" data-zedit="1">✎ Editar</button>';
+    h+='<button class="ebtn bcerrar" style="flex:0;padding:8px 12px" data-zid="'+z.id+'" data-zdel="1">🗑</button>';
     h+='</div></div>';
   });
   h+='</div>';
@@ -1626,7 +1659,7 @@ function cargarDomisEnMapa(){
         });
         var m=L.marker([CALI_CENTER[0]+offset[0],CALI_CENTER[1]+offset[1]],{icon:icon})
           .addTo(mapaInstance)
-          .bindPopup('<strong>'+d.nombre+'</strong><br><span style="color:#10b981;font-size:11px">&#128667; Disponible</span>');
+          .bindPopup('<strong>'+d.nombre+'</strong><br><span style="color:#10b981;font-size:11px">🛵 Disponible</span>');
         mapaDomisMarkers.push(m);
       });
     }).catch(function(){});
