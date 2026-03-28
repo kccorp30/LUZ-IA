@@ -598,7 +598,13 @@ select.finput{cursor:pointer}
           <button onclick="crearZonaDesdeBarrio()" style="width:100%;padding:9px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-size:13px;font-weight:700;cursor:pointer">+ Crear zona aqui</button>
         </div>
       </div>
-      <div id="mapaContainer" style="margin:0 12px;border-radius:18px;overflow:hidden;border:1px solid var(--glass-border);height:340px"></div>
+      <div id="mapaWrapper" style="margin:0 12px;border-radius:18px;overflow:hidden;border:1px solid var(--glass-border);background:#1a1520;position:relative;">
+        <div id="mapaContainer" style="width:100%;height:340px;"></div>
+        <div id="mapaLoading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1a1520;gap:10px;pointer-events:none;">
+          <div style="font-size:32px">&#x1F5FA;&#xFE0F;</div>
+          <div style="font-size:13px;color:var(--text3)">Cargando mapa...</div>
+        </div>
+      </div>
       <div id="mapaLeyenda" style="padding:10px 12px;display:flex;flex-wrap:wrap;gap:7px"></div>
       <div id="mapaZonasList" style="padding:0 12px 8px"></div>
     </div>
@@ -797,7 +803,7 @@ function showTab(n){
   if(n==="historial")loadHistorial();if(n==="menu")loadMenu();
   if(n==="promo"){loadPromoCount();renderProgs();}
   if(n==="chat")loadChatUniversal();if(n==="cupones")renderCupones();
-  if(n==="mapa")initMapa();if(n==="config")cargarDomiciliarios();
+  if(n==="mapa"){setTimeout(initMapa,80);}if(n==="config")cargarDomiciliarios();
 }
 
 // DOMICILIARIOS
@@ -1443,44 +1449,80 @@ function renderGeoResults(results,divId,onSelect){
 }
 
 function initMapa(){
-  if(mapaInstance){setTimeout(function(){mapaInstance.invalidateSize();},200);return;}
-  var container=document.getElementById("mapaContainer");if(!container)return;
-  // Forzar altura antes de inicializar para evitar mapa negro
-  container.style.height="340px";container.style.minHeight="340px";
-  var lat=3.4516,lng=-76.5320;
-  if(rest&&rest.lat&&!isNaN(Number(rest.lat)))lat=Number(rest.lat);
-  if(rest&&rest.lng&&!isNaN(Number(rest.lng)))lng=Number(rest.lng);
-  try{
-    mapaInstance=L.map("mapaContainer",{center:[lat,lng],zoom:13,zoomControl:true,preferCanvas:true});
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:19,attribution:""}).addTo(mapaInstance);
-    // Forzar redibujado tras 300ms para evitar gris/negro
-    setTimeout(function(){mapaInstance.invalidateSize();},300);
-    setTimeout(function(){mapaInstance.invalidateSize();},800);
-  }catch(e){console.error("Error Leaflet:",e);return;}
-  mapaInstance.on("click",function(e){if(mapaDrawing){mapaPoints.push([e.latlng.lat,e.latlng.lng]);actualizarLineaDraw();}});
-  mapaInstance.on("dblclick",function(e){if(mapaDrawing){e.originalEvent.preventDefault();finalizarMapaDraw();}});
-  cargarZonasDB();loadPedidosEnMapa();
-
-  // Búsqueda de ubicación del restaurante
-  var restSearch=document.getElementById("mapaRestSearch");
-  if(restSearch){
-    var restTimer=null;
-    restSearch.addEventListener("input",function(){
-      var q=this.value.trim();
-      if(q.length<3){document.getElementById("mapaRestResults").style.display="none";return;}
-      clearTimeout(restTimer);
-      restTimer=setTimeout(function(){
-        geoSearch(q+" Cali",function(results){
-          renderGeoResults(results,"mapaRestResults",function(r){
-            mapaInstance.setView([r.lat,r.lng],16);
-            restSearch.value=r.label;
-            if(rest)fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:{lat:r.lat,lng:r.lng}})}).catch(function(){});
-          });
-        });
-      },500);
-    });
-    document.addEventListener("click",function(e){if(!e.target.closest("#mapaRestSearch")&&!e.target.closest("#mapaRestResults"))document.getElementById("mapaRestResults").style.display="none";});
+  // Si ya existe, solo redibuja
+  if(mapaInstance){
+    setTimeout(function(){mapaInstance.invalidateSize();},100);
+    setTimeout(function(){mapaInstance.invalidateSize();},400);
+    return;
   }
+  // Esperar a que el contenedor sea visible y tenga dimensiones reales
+  var container=document.getElementById("mapaContainer");
+  if(!container)return;
+  function doInit(){
+    var rect=container.getBoundingClientRect();
+    if(rect.width<10){
+      // Contenedor aun no visible, reintentar
+      setTimeout(doInit,150);
+      return;
+    }
+    var lat=3.4516,lng=-76.5320;
+    if(rest&&rest.lat&&!isNaN(Number(rest.lat)))lat=Number(rest.lat);
+    if(rest&&rest.lng&&!isNaN(Number(rest.lng)))lng=Number(rest.lng);
+    try{
+      mapaInstance=L.map("mapaContainer",{
+        center:[lat,lng],zoom:13,zoomControl:true,
+        preferCanvas:true,
+        tapTolerance:15
+      });
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{
+        maxZoom:19,attribution:"",
+        crossOrigin:true
+      }).addTo(mapaInstance);
+      // Ocultar loading overlay cuando el mapa cargue
+      mapaInstance.on("load",function(){
+        var loading=document.getElementById("mapaLoading");
+        if(loading)loading.style.display="none";
+      });
+      // Tambien ocultar tras timeout por si el evento no dispara
+      setTimeout(function(){
+        var loading=document.getElementById("mapaLoading");
+        if(loading)loading.style.display="none";
+        mapaInstance.invalidateSize();
+      },1500);
+    }catch(e){console.error("Leaflet init error:",e);return;}
+    mapaInstance.on("click",function(e){
+      if(mapaDrawing){mapaPoints.push([e.latlng.lat,e.latlng.lng]);actualizarLineaDraw();}
+    });
+    mapaInstance.on("dblclick",function(e){
+      if(mapaDrawing){e.originalEvent.preventDefault();finalizarMapaDraw();}
+    });
+    cargarZonasDB();
+    loadPedidosEnMapa();
+    // Busqueda de ubicacion del restaurante
+    var restSearch=document.getElementById("mapaRestSearch");
+    if(restSearch){
+      var restTimer=null;
+      restSearch.addEventListener("input",function(){
+        var q=this.value.trim();
+        if(q.length<3){document.getElementById("mapaRestResults").style.display="none";return;}
+        clearTimeout(restTimer);
+        restTimer=setTimeout(function(){
+          geoSearch(q+" Cali",function(results){
+            renderGeoResults(results,"mapaRestResults",function(r){
+              mapaInstance.setView([r.lat,r.lng],16);
+              restSearch.value=r.label;
+              if(rest)fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:{lat:r.lat,lng:r.lng}})}).catch(function(){});
+            });
+          });
+        },500);
+      });
+      document.addEventListener("click",function(e){
+        if(!e.target.closest("#mapaRestSearch")&&!e.target.closest("#mapaRestResults"))
+          document.getElementById("mapaRestResults").style.display="none";
+      });
+    }
+  }
+  doInit();
 }
 function switchMapaTab(tab){
   mapaTabActual=tab;
