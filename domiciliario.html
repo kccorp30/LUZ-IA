@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Domiciliario — LUZ IA</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --p1:#7c3aed;--p2:#4f46e5;
+  --g1:#10b981;--a1:#f97316;--amber:#f59e0b;--r1:#ef4444;
+  --glass-bg:rgba(255,255,255,0.07);--glass-bg2:rgba(255,255,255,0.12);
+  --glass-border:rgba(255,255,255,0.14);--glass-border2:rgba(255,255,255,0.22);
+  --text:#f1f0ff;--text2:rgba(241,240,255,0.6);--text3:rgba(241,240,255,0.35);
+  --blur:blur(24px);--blur2:blur(40px);--shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+
+.blobs{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+.blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.4;animation:blobFloat 8s ease-in-out infinite;}
+.blob-1{width:400px;height:400px;background:radial-gradient(circle,#7c3aed,transparent 70%);top:-100px;left:-100px;}
+.blob-2{width:350px;height:350px;background:radial-gradient(circle,#10b981,transparent 70%);bottom:-80px;right:-80px;animation-delay:-3s;opacity:0.3}
+@keyframes blobFloat{0%,100%{transform:translate(0,0)}33%{transform:translate(20px,-30px)}66%{transform:translate(-15px,20px)}}
+
+/* LOGIN */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:1;}
+.login-box{width:100%;max-width:320px;background:rgba(255,255,255,0.07);border:1px solid var(--glass-border2);border-radius:32px;padding:36px 24px 32px;backdrop-filter:var(--blur2);-webkit-backdrop-filter:var(--blur2);box-shadow:0 16px 48px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.12);}
+.login-orb{width:68px;height:68px;border-radius:22px;margin:0 auto 14px;background:linear-gradient(135deg,#10b981,#2563eb);display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 8px 24px rgba(16,185,129,0.5);}
+.login-title{text-align:center;font-size:22px;font-weight:800;margin-bottom:4px;}
+.login-sub{text-align:center;font-size:12px;color:var(--text3);margin-bottom:24px;}
+.login-field{margin-bottom:14px;}
+.login-label{font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;display:block;}
+.login-input{width:100%;padding:12px 16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:14px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;outline:none;transition:all 0.15s;}
+.login-input:focus{border-color:rgba(16,185,129,0.6);background:rgba(16,185,129,0.07);box-shadow:0 0 0 3px rgba(16,185,129,0.12);}
+.login-input::placeholder{color:var(--text3);}
+.login-btn{width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#2563eb);border:none;border-radius:14px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.15s;box-shadow:0 4px 20px rgba(16,185,129,0.4);margin-top:4px;}
+.login-btn:active{transform:scale(0.97);opacity:0.9;}
+.login-err{color:#fca5a5;font-size:12px;text-align:center;margin-top:10px;min-height:18px;}
+
+/* APP */
+#app{display:none;position:relative;z-index:1;}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:100;height:60px;background:rgba(13,10,26,0.88);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
+.tb-left{display:flex;align-items:center;gap:10px;}
+.tb-avatar{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#10b981,#2563eb);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:white;font-family:'JetBrains Mono',monospace;box-shadow:0 4px 12px rgba(16,185,129,0.4);}
+.tb-name{font-size:15px;font-weight:700;}
+.tb-role{font-size:10px;color:var(--text3);}
+.live-pill{display:flex;align-items:center;gap:5px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:20px;padding:5px 12px;font-size:10px;font-weight:700;color:#34d399;letter-spacing:0.08em;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399;animation:lp 1.5s infinite;}
+@keyframes lp{0%,100%{opacity:1}50%{opacity:0.3}}
+.logout-btn{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:9px;padding:5px 10px;color:#fca5a5;font-size:11px;font-weight:600;cursor:pointer;}
+
+/* CONTENT */
+.content{padding-top:72px;padding-bottom:20px;}
+.page-header{padding:12px 14px 6px;}
+.page-title{font-size:22px;font-weight:900;letter-spacing:-0.02em;}
+.page-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:8px 14px 10px;}
+.scard{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px;padding:12px;text-align:center;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);}
+.scard-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;}
+.scard-val.green{background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.scard-val.amber{background:linear-gradient(135deg,#fde68a,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.scard-val.purple{background:linear-gradient(135deg,#c4b5fd,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.scard-label{font-size:10px;color:var(--text3);margin-top:3px;font-weight:500;}
+
+/* PEDIDO CARD */
+.pedidos-pad{padding:0 14px;}
+.dcard{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:22px;margin-bottom:10px;overflow:hidden;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow);transition:border-color 0.2s;}
+.dcard.estado-listo{border-color:rgba(245,158,11,0.45);box-shadow:0 0 24px rgba(245,158,11,0.15);}
+.dcard.estado-en_camino{border-color:rgba(16,185,129,0.45);box-shadow:0 0 24px rgba(16,185,129,0.15);animation:cardGlow 2.5s ease-in-out infinite;}
+@keyframes cardGlow{0%,100%{box-shadow:0 0 24px rgba(16,185,129,0.15)}50%{box-shadow:0 0 36px rgba(16,185,129,0.3)}}
+
+.dcard-header{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;}
+.dcard-header.h-listo{background:rgba(245,158,11,0.1);}
+.dcard-header.h-en_camino{background:rgba(16,185,129,0.08);}
+.dcard-num{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;}
+.dcard-num.n-listo{background:linear-gradient(135deg,#fde68a,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.dcard-num.n-en_camino{background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.dcard-etag{padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;}
+.etag-listo{background:rgba(245,158,11,0.15);color:#fcd34d;border:1px solid rgba(245,158,11,0.3);}
+.etag-en_camino{background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);}
+
+.dcard-body{padding:12px 14px;}
+.dcard-section{font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
+.dcard-items{margin-bottom:10px;}
+.dcard-item{font-size:13px;color:var(--text);padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.dcard-item:last-child{border:none;}
+.dcard-notas{background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-left:3px solid #818cf8;border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#c4b5fd;}
+.dcard-dir{background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:9px;}
+.dcard-dir-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+.dcard-dir-text{font-size:14px;font-weight:600;color:var(--text);line-height:1.4;}
+.dcard-dir-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.dcard-total{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;text-align:right;margin-bottom:10px;}
+.dcard-total span{background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.dcard-btns{display:flex;flex-direction:column;gap:8px;}
+.dcard-btn-maps{width:100%;padding:13px;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);border-radius:14px;color:#60a5fa;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.dcard-btn-maps:hover{background:rgba(37,99,235,0.25);}
+.dcard-btns-row{display:flex;gap:8px;}
+.dcard-btn{flex:1;padding:13px 8px;border-radius:14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.12s;border:1px solid;display:flex;align-items:center;justify-content:center;gap:5px;}
+.dcard-btn:active{transform:scale(0.93);}
+.btn-camino{background:rgba(16,185,129,0.15);color:#6ee7b7;border-color:rgba(16,185,129,0.35);}
+.btn-camino:hover{background:rgba(16,185,129,0.25);}
+.btn-entregado{background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.25));color:#34d399;border-color:rgba(16,185,129,0.4);font-size:14px;}
+.btn-entregado:hover{background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(5,150,105,0.35));}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;}
+.ei{font-size:56px;margin-bottom:14px;opacity:0.4;}
+.et{color:var(--text3);font-size:14px;line-height:1.6;}
+
+/* NOTIF */
+.notif{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-20px);background:rgba(13,10,26,0.97);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(16,185,129,0.4);box-shadow:0 0 30px rgba(16,185,129,0.2),0 8px 32px rgba(0,0,0,0.5);color:var(--text);padding:10px 22px;border-radius:24px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center;}
+.notif.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* CONFIRMACIÓN */
+.confirm-overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px;}
+.confirm-overlay.open{display:flex;}
+.confirm-box{background:rgba(18,12,38,0.99);border:1px solid var(--glass-border2);box-shadow:0 16px 48px rgba(0,0,0,0.6);border-radius:26px;padding:28px;width:100%;max-width:300px;text-align:center;}
+.confirm-icon{font-size:46px;margin-bottom:14px;}
+.confirm-title{font-size:20px;font-weight:800;margin-bottom:8px;}
+.confirm-sub{font-size:13px;color:var(--text3);margin-bottom:24px;line-height:1.5;}
+.confirm-btns{display:flex;gap:10px;}
+.confirm-cancel{flex:1;padding:13px;background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);border-radius:14px;color:var(--text2);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
+.confirm-ok{flex:2;padding:13px;background:linear-gradient(135deg,#10b981,#2563eb);border:none;border-radius:14px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(16,185,129,0.4);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.dcard{animation:fadeUp 0.2s ease both;}
+</style>
+</head>
+<body>
+<div class="blobs">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-orb">🛵</div>
+    <div class="login-title">Domiciliario</div>
+    <div class="login-sub">LUZ IA · La Curva Street Food</div>
+    <div class="login-field">
+      <label class="login-label">Tu nombre</label>
+      <input class="login-input" id="loginNombre" placeholder="Ej: Carlos" autocomplete="off">
+    </div>
+    <button class="login-btn" id="loginBtn">Entrar</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tb-avatar" id="tbAvatar">?</div>
+      <div>
+        <div class="tb-name" id="tbName">Domiciliario</div>
+        <div class="tb-role">🛵 En turno</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="live-pill"><div class="live-dot"></div>ACTIVO</div>
+      <button class="logout-btn" onclick="salir()">Salir</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="page-header">
+      <div class="page-title">Mis pedidos</div>
+      <div class="page-sub" id="pageSubLabel">Actualiza cada 8 segundos</div>
+    </div>
+    <div class="stats-row">
+      <div class="scard"><div class="scard-val amber" id="statAsignados">0</div><div class="scard-label">Asignados</div></div>
+      <div class="scard"><div class="scard-val green" id="statCamino">0</div><div class="scard-label">En camino</div></div>
+      <div class="scard"><div class="scard-val purple" id="statEntregados">0</div><div class="scard-label">Entregados hoy</div></div>
+    </div>
+    <div class="pedidos-pad" id="pedidosLista">
+      <div class="empty"><div class="ei">🛵</div><div class="et">Cargando pedidos...</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<div class="confirm-overlay" id="confirmEntregado">
+  <div class="confirm-box">
+    <div class="confirm-icon">✅</div>
+    <div class="confirm-title">¿Entrega confirmada?</div>
+    <div class="confirm-sub">Esto marcará el pedido como entregado y no se puede deshacer.</div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" id="confirmCancel">Cancelar</button>
+      <button class="confirm-ok" id="confirmOk">Sí, entregado</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
+var rest=null,domiciliarioNombre="",domiciliarioId=null,updateTimer=null,pedidosKnown={};
+var pedidoAEntregar=null,pedidoAEntregarNum="";
+
+function get(t,f){return fetch(SU+"/rest/v1/"+t+"?"+(f||""),{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json()});}
+
+function notif(m,color){var e=document.getElementById("notif");e.textContent=m;e.style.borderColor=color||"rgba(16,185,129,0.4)";e.classList.add("show");setTimeout(function(){e.classList.remove("show")},3000);}
+
+function fmt(n){return"$"+Number(n||0).toLocaleString("es-CO");}
+function ago(d){var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<1?"ahora":diff<60?diff+" min":Math.floor(diff/60)+"h";}
+
+function playSound(){
+  try{var ctx=new(window.AudioContext||window.webkitAudioContext)();var o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=880;o.type="sine";g.gain.setValueAtTime(0,ctx.currentTime);g.gain.linearRampToValueAtTime(0.3,ctx.currentTime+0.02);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.5);o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+0.5);}catch(e){}
+}
+
+// LOGIN
+document.getElementById("loginBtn").addEventListener("click",function(){hacerLogin();});
+document.getElementById("loginNombre").addEventListener("keydown",function(e){if(e.key==="Enter")hacerLogin();});
+
+function hacerLogin(){
+  var nombre=document.getElementById("loginNombre").value.trim();
+  if(!nombre||nombre.length<2){document.getElementById("loginErr").textContent="Escribe tu nombre";return;}
+  var err=document.getElementById("loginErr");err.textContent="Buscando...";
+  // Buscar restaurante primero
+  var rid=localStorage.getItem("luzRestId");
+  var promise=rid?get("restaurantes","id=eq."+rid+"&select=*"):get("restaurantes","estado=eq.activo&select=*&limit=1");
+  promise.then(function(d){
+    if(!d||!d.length){err.textContent="No se encontró restaurante activo";return;}
+    rest=d[0];localStorage.setItem("luzRestId",rest.id);
+    // Buscar domiciliario por nombre
+    get("domiciliarios","restaurante_id=eq."+rest.id+"&activo=eq.true&nombre=ilike."+encodeURIComponent(nombre)+"*").then(function(ds){
+      if(!ds||!ds.length){err.textContent="No estás registrado. Pídele al admin que te agregue.";return;}
+      domiciliarioId=ds[0].id;domiciliarioNombre=ds[0].nombre;
+      localStorage.setItem("luzDomiId",domiciliarioId);localStorage.setItem("luzDomiNombre",domiciliarioNombre);
+      arrancar();
+    }).catch(function(){err.textContent="Error de conexión";});
+  }).catch(function(){err.textContent="Error de conexión";});
+}
+
+function salir(){
+  clearInterval(updateTimer);
+  domiciliarioId=null;domiciliarioNombre="";
+  document.getElementById("app").style.display="none";
+  document.getElementById("loginScreen").style.display="flex";
+  document.getElementById("loginNombre").value="";
+  document.getElementById("loginErr").textContent="";
+}
+
+function arrancar(){
+  document.getElementById("loginScreen").style.display="none";
+  document.getElementById("app").style.display="block";
+  var ini=domiciliarioNombre.charAt(0).toUpperCase();
+  document.getElementById("tbAvatar").textContent=ini;
+  document.getElementById("tbName").textContent=domiciliarioNombre;
+  loadPedidos();
+  updateTimer=setInterval(loadPedidos,8000);
+}
+
+function loadPedidos(){
+  if(!rest||!domiciliarioId)return;
+  // Pedidos asignados a este domiciliario que no están entregados
+  get("pedidos","restaurante_id=eq."+rest.id+"&domiciliario_id=eq."+domiciliarioId+"&estado=in.(listo,en_camino)&order=created_at.asc&limit=20").then(function(pedidos){
+    var isFirst=Object.keys(pedidosKnown).length===0;
+    pedidos.forEach(function(p){if(!pedidosKnown[p.id]){if(!isFirst)playSound();pedidosKnown[p.id]=true;}});
+
+    // Stats
+    var asig=pedidos.filter(function(p){return p.estado==="listo";}).length;
+    var camp=pedidos.filter(function(p){return p.estado==="en_camino";}).length;
+    document.getElementById("statAsignados").textContent=asig;
+    document.getElementById("statCamino").textContent=camp;
+
+    // Entregados hoy
+    var col=new Date();var desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
+    get("pedidos","restaurante_id=eq."+rest.id+"&domiciliario_id=eq."+domiciliarioId+"&estado=eq.entregado&created_at=gte."+desde+"&select=id").then(function(e){document.getElementById("statEntregados").textContent=e.length;}).catch(function(){});
+
+    var lista=document.getElementById("pedidosLista");
+    if(!pedidos.length){lista.innerHTML='<div class="empty"><div class="ei">🎉</div><div class="et">¡Todo entregado!<br>No hay pedidos pendientes.</div></div>';return;}
+    var h="";
+    pedidos.forEach(function(p){
+      var items=Array.isArray(p.items)?p.items:[];
+      var total=Number(p.total||0),dom=Number(p.domicilio||0);
+      var esRecoger=(p.direccion||"").toLowerCase().indexOf("recoger")!==-1;
+      h+='<div class="dcard estado-'+p.estado+'">';
+      h+='<div class="dcard-header h-'+p.estado+'"><div><div class="dcard-num n-'+p.estado+'">#'+p.numero_pedido+'</div><div style="font-size:10px;color:var(--text3);margin-top:1px;">'+ago(p.created_at)+'</div></div>';
+      h+='<span class="dcard-etag '+(p.estado==="listo"?"etag-listo":"etag-en_camino")+'">'+(p.estado==="listo"?"⏳ Listo":"🛵 En camino")+'</span></div>';
+      h+='<div class="dcard-body">';
+      // Items
+      h+='<div class="dcard-section">Pedido</div><div class="dcard-items">';
+      items.forEach(function(it){h+='<div class="dcard-item">• '+it+'</div>';});
+      h+='</div>';
+      // Notas
+      if(p.notas_especiales)h+='<div class="dcard-notas">📋 '+p.notas_especiales+'</div>';
+      // Dirección
+      h+='<div class="dcard-dir"><div class="dcard-dir-icon">'+(esRecoger?"🏪":"📍")+'</div><div><div class="dcard-dir-text">'+(esRecoger?"RECOGER EN TIENDA":p.direccion||"Sin dirección")+'</div><div class="dcard-dir-sub">'+( p.cliente_tel?"📱 "+p.cliente_tel:"")+(p.metodo_pago?" · 💳 "+p.metodo_pago:"")+'</div></div></div>';
+      // Total
+      h+='<div class="dcard-total">Total: <span>'+fmt(total)+'</span>'+(dom>0?' <span style="font-size:12px;color:var(--text3)">(dom: '+fmt(dom)+')</span>':'')+'</div>';
+      // Botones
+      h+='<div class="dcard-btns">';
+      if(!esRecoger&&p.direccion&&p.direccion!=="Por confirmar"){
+        h+='<button class="dcard-btn-maps" data-dir="'+encodeURIComponent(p.direccion||"")+'">📍 Abrir en Google Maps</button>';
+      }
+      h+='<div class="dcard-btns-row">';
+      if(p.estado==="listo")h+='<button class="dcard-btn btn-camino" data-id="'+p.id+'" data-e="en_camino" data-n="'+p.numero_pedido+'" data-t="'+(p.cliente_tel||"")+'">🛵 En camino</button>';
+      if(p.estado==="en_camino")h+='<button class="dcard-btn btn-entregado" data-id="'+p.id+'" data-n="'+p.numero_pedido+'" data-t="'+(p.cliente_tel||"")+'">✅ Entregado</button>';
+      h+='</div></div></div></div>';
+    });
+    lista.innerHTML=h;
+    lista.querySelectorAll(".dcard-btn-maps").forEach(function(b){b.addEventListener("click",function(){var dir=decodeURIComponent(this.getAttribute("data-dir")||"");var url="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(dir+", Cali, Colombia");window.open(url,"_blank");});});
+    lista.querySelectorAll(".dcard-btn[data-e='en_camino']").forEach(function(b){b.addEventListener("click",function(){cambiarEstado(this.getAttribute("data-id"),"en_camino",this.getAttribute("data-t"),this.getAttribute("data-n"));});});
+    lista.querySelectorAll(".btn-entregado[data-id]").forEach(function(b){b.addEventListener("click",function(){pedidoAEntregar=this.getAttribute("data-id");pedidoAEntregarNum=this.getAttribute("data-n");document.getElementById("confirmEntregado").classList.add("open");});});
+  }).catch(function(){});
+}
+
+// Confirmar entrega
+document.getElementById("confirmCancel").addEventListener("click",function(){document.getElementById("confirmEntregado").classList.remove("open");pedidoAEntregar=null;});
+document.getElementById("confirmOk").addEventListener("click",function(){
+  if(!pedidoAEntregar)return;
+  document.getElementById("confirmEntregado").classList.remove("open");
+  cambiarEstado(pedidoAEntregar,"entregado","",pedidoAEntregarNum);
+  pedidoAEntregar=null;
+});
+
+function cambiarEstado(id,estado,tel,num){
+  notif("Actualizando...");
+  fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null})})
+  .then(function(r){return r.json();})
+  .then(function(){
+    if(estado==="entregado"){notif("✅ Pedido #"+num+" entregado!","rgba(16,185,129,0.5)");if(pedidosKnown[id])delete pedidosKnown[id];}
+    else{notif("🛵 En camino al pedido #"+num);}
+    loadPedidos();
+  })
+  .catch(function(){notif("Error de conexión","rgba(239,68,68,0.4)");});
+}
+
+// Auto-login si ya tiene sesión guardada
+(function(){
+  var savedId=localStorage.getItem("luzDomiId"),savedName=localStorage.getItem("luzDomiNombre"),savedRid=localStorage.getItem("luzRestId");
+  if(savedId&&savedName&&savedRid){
+    get("restaurantes","id=eq."+savedRid+"&select=*").then(function(d){
+      if(d&&d.length){rest=d[0];domiciliarioId=savedId;domiciliarioNombre=savedName;arrancar();}
+    }).catch(function(){});
+  }
+})();
+</script>
+</body>
+</html>
