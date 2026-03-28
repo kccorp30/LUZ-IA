@@ -388,6 +388,36 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="menu-page-url" id="editPanelUrl">—</div>
       <button class="copy-btn" style="margin-top:10px;width:100%" onclick="copiarPanelUrl()">📋 Copiar enlace del panel</button>
     </div>
+    <div class="section-divider">Personalización de Luz IA</div>
+<div class="form-group">
+  <label class="form-label">Nombre de la IA (ej: Luna, Sofia, Luz)</label>
+  <input class="form-input" id="edit-nombre-luz" placeholder="Luz">
+</div>
+<div class="form-group">
+  <label class="form-label">Personalidad y tono</label>
+  <textarea class="form-input" id="edit-personalidad" rows="3" placeholder="Eres una persona caleña, calida..."></textarea>
+</div>
+<div class="form-group">
+  <label class="form-label">Info adicional del negocio</label>
+  <textarea class="form-input" id="edit-info-adicional" rows="2" placeholder="Especialistas en asados desde 2018..."></textarea>
+</div>
+<div class="form-group">
+  <label class="form-label">Zonas de domicilio y precios</label>
+  <textarea class="form-input" id="edit-zonas" rows="4" placeholder="- $3.000: barrio X, Y&#10;- $5.000: barrio Z"></textarea>
+</div>
+<div class="form-group">
+  <label class="form-label">Promos semanales</label>
+  <textarea class="form-input" id="edit-promos" rows="3" placeholder="- Martes: 2x3 en hamburguesas&#10;- Domingos: descuento asados"></textarea>
+</div>
+<div class="section-divider">Datos de pago</div>
+<div class="form-grid">
+  <div class="form-group"><label class="form-label">Número Nequi</label><input class="form-input" id="edit-nequi" placeholder="3001234567"></div>
+  <div class="form-group"><label class="form-label">Llave Bancolombia</label><input class="form-input" id="edit-banco" placeholder="0089102980"></div>
+</div>
+<div class="form-group">
+  <label class="form-label">Nombre titular cuenta</label>
+  <input class="form-input" id="edit-banco-nombre" placeholder="Jose Gregorio Charris">
+</div>
     <div class="section-divider">Notas internas</div>
     <div class="form-group"><textarea class="form-input" id="edit-notas" rows="3" placeholder="Notas internas..."></textarea></div>
     <div class="modal-actions">
@@ -674,7 +704,14 @@ async function editarCliente(id){
   document.getElementById('edit-pin').value=r.pin||'';
   document.getElementById('edit-whatsapp').value=r.whatsapp||'';
   document.getElementById('edit-phoneid').value=r.whatsapp_phone_id||'';
-  document.getElementById('edit-notas').value=r.notas||'';
+  document.getElementById('edit-notas').value=r.notas||'';document.getElementById('edit-nombre-luz').value    = r.nombre_luz || '';
+document.getElementById('edit-personalidad').value  = r.personalidad_luz || '';
+document.getElementById('edit-info-adicional').value= r.info_adicional || '';
+document.getElementById('edit-zonas').value         = r.zonas_domicilio || '';
+document.getElementById('edit-promos').value        = r.promos_semanales || '';
+document.getElementById('edit-nequi').value         = r.metodo_pago_nequi || '';
+document.getElementById('edit-banco').value         = r.metodo_pago_banco || '';
+document.getElementById('edit-banco-nombre').value  = r.metodo_pago_nombre || '';
   var panelUrl=ADMIN_URL+'/restaurante?pin='+(r.pin||'');
   document.getElementById('editPanelUrl').textContent=panelUrl;
   openModal('editar');
@@ -697,6 +734,14 @@ async function guardarEdicion(){
     estado:document.getElementById('edit-estado').value,
     plan:document.getElementById('edit-plan').value,
     fecha_vencimiento:document.getElementById('edit-vence').value||null,
+    nombre_luz:         document.getElementById('edit-nombre-luz').value || null,
+personalidad_luz:   document.getElementById('edit-personalidad').value || null,
+info_adicional:     document.getElementById('edit-info-adicional').value || null,
+zonas_domicilio:    document.getElementById('edit-zonas').value || null,
+promos_semanales:   document.getElementById('edit-promos').value || null,
+metodo_pago_nequi:  document.getElementById('edit-nequi').value || null,
+metodo_pago_banco:  document.getElementById('edit-banco').value || null,
+metodo_pago_nombre: document.getElementById('edit-banco-nombre').value || null,
     pin:document.getElementById('edit-pin').value||null,
     whatsapp:document.getElementById('edit-whatsapp').value||null,
     whatsapp_phone_id:document.getElementById('edit-phoneid').value||null,
