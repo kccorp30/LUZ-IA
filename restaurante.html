@@ -1616,7 +1616,8 @@ function loadPedidos(){
     lista.querySelectorAll(".ebtn[data-e]").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"),this.getAttribute("data-n"));});});
     lista.querySelectorAll(".btn-msg[data-tel]").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();abrirChat(this.getAttribute("data-tel"),this.getAttribute("data-num"),"");});});
     lista.querySelectorAll("[data-print='1']").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();imprimirTicket(this);});});
-    lista.querySelectorAll("[data-edit='1']")lista.querySelectorAll("[data-domi='1']").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();if(!domiciliariosList.length)cargarDomiciliarios();abrirDomiModal(this.getAttribute("data-pid"),this.getAttribute("data-pnum"));});});.forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();
+    lista.querySelectorAll("[data-edit='1']")
+      lista.querySelectorAll("[data-domi='1']").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();if(!domiciliariosList.length)cargarDomiciliarios();abrirDomiModal(this.getAttribute("data-pid"),this.getAttribute("data-pnum"));});});.forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();
       editPedidoId=this.getAttribute("data-pid");
       document.getElementById("editPedidoNum").textContent="#"+this.getAttribute("data-pnum");
       document.getElementById("edit-dir").value=decodeURIComponent(this.getAttribute("data-pdir")||"");
