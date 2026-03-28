@@ -965,7 +965,22 @@ select.finput{cursor:pointer}
 .empty{text-align:center;padding:60px 20px}
 .ei{font-size:52px;margin-bottom:14px;opacity:0.5}
 .et{color:var(--text3);font-size:14px;line-height:1.6}
-@media print{
+/* ── DOMICILIARIOS MODAL ──────────────────────── */
+.domi-overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px;}
+.domi-overlay.open{display:flex}
+.domi-box{background:rgba(20,15,40,0.98);backdrop-filter:var(--blur2);-webkit-backdrop-filter:var(--blur2);border:1px solid var(--glass-border2);box-shadow:var(--shadow2);border-radius:26px;padding:26px;width:100%;max-width:340px;}
+.domi-title{font-size:18px;font-weight:800;margin-bottom:3px;}
+.domi-sub{font-size:12px;color:var(--text3);margin-bottom:18px;}
+.domi-card{display:flex;align-items:center;gap:10px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px;padding:10px 14px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;}
+.domi-card:hover{border-color:rgba(16,185,129,0.4);background:rgba(16,185,129,0.07);}
+.domi-card.sel{border-color:rgba(16,185,129,0.6);background:rgba(16,185,129,0.12);box-shadow:0 0 16px rgba(16,185,129,0.15);}
+.domi-avatar{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#10b981,#2563eb);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+.domi-name{font-size:14px;font-weight:700;}
+.domi-tel{font-size:11px;color:var(--text3);}
+.domi-btns{display:flex;gap:10px;margin-top:16px;}
+.domi-cancel{flex:1;padding:12px;background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);border-radius:14px;color:var(--text2);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
+.domi-asignar{flex:2;padding:12px;background:linear-gradient(135deg,#10b981,#2563eb);border:none;border-radius:14px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(16,185,129,0.4);}
+.domi-empty{text-align:center;padding:20px;font-size:13px;color:var(--text3);}@media print{
   .bottom-nav,.topbar,.notif,.img-overlay,.confirm-overlay,.msg-overlay,.promo-confirm,.edit-overlay,.alert-banner,.blobs{display:none!important}
   body{background:white;color:black}
   .content{padding:0}#page-historial{display:block!important}
@@ -1248,7 +1263,27 @@ select.finput{cursor:pointer}
           <div class="ffield" style="margin-top:12px"><div class="msg-tag msg-tag-orange">En camino</div><textarea class="finput" id="cfg-msg-camino" placeholder="Tu pedido va en camino." style="height:70px;resize:none;margin-top:6px;"></textarea></div>
         </div>
         <div class="cfg-section"><div class="cfg-title">Direccion del local</div><input class="finput" id="cfg-direccion" placeholder="Cl. 16 #56-40, Canaveral, Cali"></div>
-        <button class="cfg-save" id="cfgGuardar">Guardar configuracion</button>
+        <!-- DOMICILIARIOS -->
+<div class="cfg-section">
+  <div class="cfg-title">🛵 Domiciliarios</div>
+  <div class="aform" style="margin-bottom:10px;padding:12px;">
+    <div class="frow">
+      <div class="ffield"><label class="flabel">Nombre</label><input class="finput" id="domi-nombre-input" placeholder="Carlos"></div>
+      <div class="ffield"><label class="flabel">Telefono</label><input class="finput" id="domi-tel-input" placeholder="3001234567" type="tel"></div>
+    </div>
+    <button class="badd" id="btnAgregarDomi" style="background:linear-gradient(135deg,#10b981,#2563eb);box-shadow:0 4px 16px rgba(16,185,129,0.35);">+ Agregar domiciliario</button>
+  </div>
+  <div id="domiciliariosLista"><div class="domi-empty">No hay domiciliarios registrados</div></div>
+</div>
+
+<!-- PANTALLAS -->
+<div class="cfg-section">
+  <div class="cfg-title">📱 Pantallas del sistema</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+    <a href="/cocina" target="_blank" style="flex:1;padding:12px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.3);border-radius:13px;color:#fb923c;font-size:13px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">🍳 Pantalla Cocina</a>
+    <a href="/domi" target="_blank" style="flex:1;padding:12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:13px;color:#34d399;font-size:13px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">🛵 App Domiciliario</a>
+  </div>
+</div><button class="cfg-save" id="cfgGuardar">Guardar configuracion</button>
       </div>
     </div>
 
@@ -1364,7 +1399,19 @@ select.finput{cursor:pointer}
   </div>
 </div>
 
-<div class="edit-overlay" id="editOverlay">
+<!-- MODAL ASIGNAR DOMICILIARIO -->
+<div class="domi-overlay" id="domiOverlay">
+  <div class="domi-box">
+    <div class="domi-title">🛵 Asignar domiciliario</div>
+    <div class="domi-sub">Pedido <span id="domiPedidoNum" style="color:#c4b5fd;font-family:'JetBrains Mono',monospace"></span></div>
+    <div id="domiLista"><div class="domi-empty">Cargando...</div></div>
+    <div class="domi-btns">
+      <button class="domi-cancel" id="domiCancelar">Cancelar</button>
+      <button class="domi-asignar" id="domiAsignarBtn">Asignar</button>
+    </div>
+  </div>
+</div>
+  <div class="edit-overlay" id="editOverlay">
   <div class="edit-box">
     <div class="msg-handle" style="display:block;width:36px;height:4px;background:var(--glass-border2);border-radius:2px;margin:0 auto 18px"></div>
     <div class="edit-title">Editar pedido <span id="editPedidoNum" style="background:linear-gradient(135deg,#c4b5fd,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text"></span></div>
@@ -1437,7 +1484,7 @@ function goApp(){
   document.getElementById("app").style.display="block";
   var p=rest.nombre.split(" "),l=p.pop();
   document.getElementById("restNombre").innerHTML=p.join(" ")+" <span>"+l+"</span>";
-  loadPedidos();loadStats();cargarConfig();renderCupones();
+  loadPedidos();loadStats();cargarConfig();renderCupones();cargarDomiciliarios();
   timer=setInterval(function(){loadPedidos();loadStats();checkNuevosMensajes();checkProgsAutomaticas();},8000);
   setTimeout(checkNuevosMensajes,2000);setTimeout(checkProgsAutomaticas,3000);
 }
@@ -1552,14 +1599,14 @@ function loadPedidos(){
       h+='<div class="pmeta">';
       h+='<div class="chip'+(esRecoger?" recoger":"")+'">&#128205; '+(p.direccion||"Sin direccion")+'</div>';
       if(p.cliente_tel)h+='<div class="chip">📱 '+p.cliente_tel+'</div>';
-      if(p.metodo_pago)h+='<div class="chip">&#128179; '+p.metodo_pago+'</div>';
+      if(p.metodo_pago)h+='<div class="chip">&#128179; '+p.metodo_pago+'</div>';if(p.domiciliario_nombre)h+='<div class="chip" style="background:rgba(16,185,129,0.1);color:#6ee7b7;border-color:rgba(16,185,129,0.25);">🛵 '+p.domiciliario_nombre+'</div>';
       h+='</div>';
       h+='<div class="desglose"><div class="desglose-row"><span>Subtotal</span><span>'+fmt(subtotal)+'</span></div><div class="desglose-row"><span>Desechables</span><span>'+fmt(desechables)+'</span></div><div class="desglose-row"><span>Domicilio</span><span>'+fmt(domicilio)+'</span></div><div class="desglose-row total"><span>TOTAL</span><span>'+fmt(total)+'</span></div></div>';
       if(p.comprobante_media_id)h+='<div class="comprobante-box"><div class="comprobante-header">&#129534; Comprobante</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" onerror="this.style.display=\'none\'"></div>';
       h+='<div class="ebtns">';
       if(cfg.n)h+='<button class="ebtn '+cfg.bc+'" data-id="'+p.id+'" data-e="'+cfg.n+'" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">'+cfg.bl+'</button>';
       if(p.estado==="listo"||p.estado==="en_camino")h+='<button class="ebtn bcerrar" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">&#128308; Cerrar orden</button>';
-      if(p.cliente_tel)h+='<button class="btn-msg ebtn be" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">&#128172;</button>';
+      if(p.estado==="listo")h+='<button class="ebtn" style="background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.35);flex:0;padding:10px 14px;font-size:16px;" data-domi="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'">🛵</button>';if(p.cliente_tel)h+='<button class="btn-msg ebtn be" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">&#128172;</button>';
       h+='<button class="ebtn" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:2px solid rgba(59,130,246,0.3);flex:0;padding:10px 14px;" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+desechables+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">&#128424;</button>';
       h+='<button class="ebtn" style="background:rgba(255,107,43,0.12);color:var(--orange);border:2px solid rgba(255,107,43,0.25);flex:0;padding:10px 14px;" data-edit="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"nequi")+'" data-ptot="'+total+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">&#9998;</button>';
       h+='</div></div></div>';
@@ -1569,7 +1616,7 @@ function loadPedidos(){
     lista.querySelectorAll(".ebtn[data-e]").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"),this.getAttribute("data-n"));});});
     lista.querySelectorAll(".btn-msg[data-tel]").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();abrirChat(this.getAttribute("data-tel"),this.getAttribute("data-num"),"");});});
     lista.querySelectorAll("[data-print='1']").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();imprimirTicket(this);});});
-    lista.querySelectorAll("[data-edit='1']").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();
+    lista.querySelectorAll("[data-edit='1']")lista.querySelectorAll("[data-domi='1']").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();if(!domiciliariosList.length)cargarDomiciliarios();abrirDomiModal(this.getAttribute("data-pid"),this.getAttribute("data-pnum"));});});.forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();
       editPedidoId=this.getAttribute("data-pid");
       document.getElementById("editPedidoNum").textContent="#"+this.getAttribute("data-pnum");
       document.getElementById("edit-dir").value=decodeURIComponent(this.getAttribute("data-pdir")||"");
@@ -2115,7 +2162,92 @@ document.getElementById("btnAdd").addEventListener("click",function(){
 });
 
 // ── SMART CONSTRUCTOR ──────────────────────────────────────────────────────
-var cartItems={};var MENU_PROD=[];
+// ── DOMICILIARIOS ────────────────────────────────────────────────────────────
+var domiPedidoId=null,domiPedidoNumVal="",domiSelId=null,domiSelNombre="";
+var domiciliariosList=[];
+
+function cargarDomiciliarios(){
+  if(!rest)return;
+  get("domiciliarios","restaurante_id=eq."+rest.id+"&activo=eq.true&order=created_at.asc").then(function(ds){
+    domiciliariosList=ds||[];
+    renderDomiciliarios();
+  }).catch(function(){});
+}
+
+function renderDomiciliarios(){
+  var lista=document.getElementById("domiciliariosLista");if(!lista)return;
+  if(!domiciliariosList.length){lista.innerHTML='<div class="domi-empty">No hay domiciliarios registrados</div>';return;}
+  var h="";
+  domiciliariosList.forEach(function(d){
+    h+='<div style="display:flex;align-items:center;gap:10px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:13px;padding:10px 14px;margin-bottom:7px;">';
+    h+='<div class="domi-avatar">'+d.nombre.charAt(0).toUpperCase()+'</div>';
+    h+='<div style="flex:1"><div class="domi-name">'+d.nombre+'</div><div class="domi-tel">'+(d.telefono||"Sin teléfono")+'</div></div>';
+    h+='<button style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;border-radius:9px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;" data-did="'+d.id+'">&#128465;</button>';
+    h+='</div>';
+  });
+  lista.innerHTML=h;
+  lista.querySelectorAll("[data-did]").forEach(function(b){b.addEventListener("click",function(){eliminarDomiciliario(this.getAttribute("data-did"));});});
+}
+
+document.getElementById("btnAgregarDomi").addEventListener("click",function(){
+  if(!rest)return;
+  var nombre=document.getElementById("domi-nombre-input").value.trim();
+  var tel=document.getElementById("domi-tel-input").value.trim();
+  if(!nombre){notif("Escribe el nombre");return;}
+  var btn=this;btn.textContent="Guardando...";btn.disabled=true;
+  fetch(SU+"/rest/v1/domiciliarios",{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({restaurante_id:rest.id,nombre:nombre,telefono:tel||null,activo:true})})
+  .then(function(r){if(r.ok||r.status===201){notif("✅ "+nombre+" agregado");document.getElementById("domi-nombre-input").value="";document.getElementById("domi-tel-input").value="";cargarDomiciliarios();}else{notif("Error al guardar");}})
+  .catch(function(){notif("Error de conexión");})
+  .finally(function(){btn.textContent="+ Agregar domiciliario";btn.disabled=false;});
+});
+
+function eliminarDomiciliario(id){
+  if(!confirm("¿Eliminar este domiciliario?"))return;
+  fetch(SU+"/rest/v1/domiciliarios?id=eq."+id,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({activo:false})})
+  .then(function(r){if(r.ok||r.status===204){notif("Domiciliario eliminado");cargarDomiciliarios();}})
+  .catch(function(){notif("Error");});
+}
+
+// Modal asignar domiciliario
+document.getElementById("domiCancelar").addEventListener("click",function(){document.getElementById("domiOverlay").classList.remove("open");domiPedidoId=null;domiSelId=null;});
+document.getElementById("domiOverlay").addEventListener("click",function(e){if(e.target===this){this.classList.remove("open");domiPedidoId=null;domiSelId=null;}});
+
+function abrirDomiModal(pedidoId,pedidoNum){
+  domiPedidoId=pedidoId;domiPedidoNumVal=pedidoNum;domiSelId=null;domiSelNombre="";
+  document.getElementById("domiPedidoNum").textContent="#"+pedidoNum;
+  renderDomiModalLista();
+  document.getElementById("domiOverlay").classList.add("open");
+}
+
+function renderDomiModalLista(){
+  var lista=document.getElementById("domiLista");
+  if(!domiciliariosList.length){lista.innerHTML='<div class="domi-empty">No hay domiciliarios activos.<br>Agrégalos en Configuración.</div>';return;}
+  var h="";
+  domiciliariosList.forEach(function(d){
+    h+='<div class="domi-card'+(domiSelId===d.id?" sel":"")+'" data-did="'+d.id+'" data-dname="'+d.nombre+'">';
+    h+='<div class="domi-avatar">'+d.nombre.charAt(0).toUpperCase()+'</div>';
+    h+='<div><div class="domi-name">'+d.nombre+'</div><div class="domi-tel">'+(d.telefono||"Sin teléfono")+'</div></div>';
+    h+='</div>';
+  });
+  lista.innerHTML=h;
+  lista.querySelectorAll(".domi-card").forEach(function(c){c.addEventListener("click",function(){domiSelId=this.getAttribute("data-did");domiSelNombre=this.getAttribute("data-dname");lista.querySelectorAll(".domi-card").forEach(function(x){x.classList.remove("sel");});this.classList.add("sel");});});
+}
+
+document.getElementById("domiAsignarBtn").addEventListener("click",function(){
+  if(!domiPedidoId||!domiSelId){notif("Selecciona un domiciliario");return;}
+  var btn=this;btn.textContent="Asignando...";btn.disabled=true;
+  fetch(SU+"/rest/v1/pedidos?id=eq."+domiPedidoId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({domiciliario_id:domiSelId,domiciliario_nombre:domiSelNombre})})
+  .then(function(r){
+    if(r.ok||r.status===204){
+      notif("🛵 "+domiSelNombre+" asignado al pedido #"+domiPedidoNumVal,"rgba(16,185,129,0.5)");
+      document.getElementById("domiOverlay").classList.remove("open");
+      domiPedidoId=null;domiSelId=null;
+      loadPedidos();
+    }else{notif("Error al asignar");}
+  })
+  .catch(function(){notif("Error de conexión");})
+  .finally(function(){btn.textContent="Asignar";btn.disabled=false;});
+});var cartItems={};var MENU_PROD=[];
 function fmtCOP(n){return "$"+Number(n||0).toLocaleString("es-CO");}
 function cargarProd(){if(!rest||!rest.id)return;fetch(SU+"/rest/v1/menu_items?restaurante_id=eq."+rest.id+"&disponible=eq.true&select=*",{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json();}).then(function(d){MENU_PROD=d||[];}).catch(function(){});}
 function renderCarrito(){
