@@ -422,44 +422,53 @@ function doLogin(auto){
   var btn=document.getElementById("loginBtn");if(!auto){btn.textContent="Cargando...";btn.disabled=true;}
   var restId=rest?rest.id:null;
   // Contar pedidos reales del cliente
-  // Normalizar telefono
-  var telNorm=tel.replace(/[^0-9]/g,"");
-  if(telNorm.startsWith("57")&&telNorm.length===12) telNorm=telNorm.substring(2);
-  var telCon57="57"+telNorm;
+  // Guardar tel exacto como lo escribio el cliente
+  var telExacto=tel.replace(/[^0-9+]/g,"");
+  var telSolo=telExacto.replace(/[^0-9]/g,"");
 
   function calcNivel(n){return Number(n)>=25?"oro":Number(n)>=10?"plata":"bronce";}
 
   function guardarCliente(totalPedidos){
     var nivel=calcNivel(totalPedidos);
-    cliente={nombre:nombre,tel:telNorm,nivel:nivel,totalPedidos:totalPedidos};
+    cliente={nombre:nombre,tel:telSolo,nivel:nivel,totalPedidos:totalPedidos};
     if(nombre)localStorage.setItem("luzClienteNombre",nombre);
-    if(telCon57)localStorage.setItem("luzClienteTel",telNorm);// guardamos sin 57 para display
-    if(restId&&telNorm){
+    if(telSolo)localStorage.setItem("luzClienteTel",telSolo);
+    if(restId&&telSolo){
       fetch(SU+"/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",{
         method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},
-        body:JSON.stringify({restaurante_id:restId,telefono:telCon57,nombre_cliente:nombre||null,nivel_fidelidad:nivel,total_pedidos:totalPedidos,updated_at:new Date().toISOString()})
+        body:JSON.stringify({restaurante_id:restId,telefono:telSolo,nombre_cliente:nombre||null,nivel_fidelidad:nivel,total_pedidos:totalPedidos,updated_at:new Date().toISOString()})
       }).catch(function(){});
     }
     goApp();
     if(!auto){btn.textContent="Ver el menú 🚀";btn.disabled=false;}
   }
 
-  // Buscar pedidos con sin 57, luego con 57 si no encuentra
-  var q1=restId
-    ?"restaurante_id=eq."+restId+"&cliente_tel=eq."+telNorm+"&select=id"
-    :"cliente_tel=eq."+telNorm+"&select=id&limit=200";
-  get("pedidos",q1).then(function(ps1){
-    var count1=Array.isArray(ps1)?ps1.length:0;
-    if(count1>0){guardarCliente(count1);return;}
-    // Intentar con 57
-    var q2=restId
-      ?"restaurante_id=eq."+restId+"&cliente_tel=eq."+telCon57+"&select=id"
-      :"cliente_tel=eq."+telCon57+"&select=id&limit=200";
-    get("pedidos",q2).then(function(ps2){
-      var count2=Array.isArray(ps2)?ps2.length:0;
-      guardarCliente(count2);
-    }).catch(function(){guardarCliente(0);});
-  }).catch(function(){guardarCliente(0);});
+  // Generar todas las variantes posibles del telefono
+  var variantes=[telSolo];
+  // Sin prefijo de pais (quitar primeros 1 o 2 digitos si empieza con 1 o 57)
+  if(telSolo.startsWith("57")&&telSolo.length>=11) variantes.push(telSolo.substring(2));
+  if(telSolo.startsWith("1")&&telSolo.length===11) variantes.push(telSolo.substring(1));
+  // Con prefijo 57
+  var sinPais=telSolo.startsWith("57")?telSolo.substring(2):telSolo.startsWith("1")&&telSolo.length===11?telSolo.substring(1):telSolo;
+  variantes.push("57"+sinPais);
+  variantes.push(sinPais);
+  // Quitar duplicados
+  variantes=variantes.filter(function(v,i,a){return v.length>=7&&a.indexOf(v)===i;});
+
+  // Buscar pedidos en todas las variantes secuencialmente
+  function buscarVariante(idx){
+    if(idx>=variantes.length){guardarCliente(0);return;}
+    var v=variantes[idx];
+    var q=restId
+      ?"restaurante_id=eq."+restId+"&cliente_tel=eq."+v+"&select=id"
+      :"cliente_tel=eq."+v+"&select=id&limit=200";
+    get("pedidos",q).then(function(ps){
+      var count=Array.isArray(ps)?ps.length:0;
+      if(count>0){guardarCliente(count);}
+      else{buscarVariante(idx+1);}
+    }).catch(function(){buscarVariante(idx+1);});
+  }
+  buscarVariante(0);
 }
 
 function goApp(){
