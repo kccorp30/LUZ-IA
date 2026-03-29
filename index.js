@@ -11,6 +11,13 @@ const path    = require("path");
 const app     = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+// Forzar HTTPS en Railway
+app.use((req, res, next) => {
+  if (req.headers['x-forwarded-proto'] === 'http') {
+    return res.redirect(301, 'https://' + req.headers.host + req.originalUrl);
+  }
+  next();
+});
 
 const conversations = {};
 const orderState    = {};
