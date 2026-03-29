@@ -437,7 +437,7 @@ select.finput{cursor:pointer}
 .float-nav-inner{background:rgba(15,10,35,0.94);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(124,58,237,0.35);border-radius:28px;display:flex;padding:5px 4px calc(5px + env(safe-area-inset-bottom));box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 40px rgba(124,58,237,0.12)}
 .fnav-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:7px 2px 4px;transition:all 0.2s;border-radius:20px;margin:2px;position:relative}
 .fnav-icon{font-size:19px;line-height:1;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1)}.fnav-label{font-size:9px;color:rgba(255,255,255,0.3);font-weight:600;letter-spacing:0.03em}
-.fnav-tab.active{background:rgba(124,58,237,0.25);border:1px solid rgba(124,58,237,0.4)}
+
 .fnav-tab.active .fnav-icon{transform:scale(1.2);filter:drop-shadow(0 0 8px rgba(196,181,253,0.8))}
 .fnav-tab.active .fnav-label{background:linear-gradient(135deg,#c4b5fd,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700}
 .fnav-center{margin-top:-18px}
@@ -813,25 +813,16 @@ select.finput{cursor:pointer}
       </div>
     </div>
 
-  <div class="float-nav">
-    <div class="float-nav-inner">
-      <!-- Fila 1: operaciones -->
-      <div class="fnav-row">
-        <div class="fnav-tab active" id="tab-pedidos"><div class="fnav-icon">🛒</div><div class="fnav-label">Pedidos</div><div class="nav-badge" id="pedidosBadge"></div></div>
-        <div class="fnav-tab" id="tab-historial"><div class="fnav-icon">📊</div><div class="fnav-label">Historial</div></div>
-        <div class="fnav-tab" id="tab-mesas"><div class="fnav-icon">🪑</div><div class="fnav-label">Mesas</div></div>
-        <div class="fnav-tab fnav-center" id="tab-chat"><div class="fnav-center-ring"><div style="font-size:22px">💬</div></div><div class="fnav-label">Chats</div><div class="nav-badge" id="chatBadge"></div></div>
-        <div class="fnav-tab" id="tab-clientes"><div class="fnav-icon">👥</div><div class="fnav-label">Clientes</div></div>
-        <div class="fnav-tab" id="tab-domis"><div class="fnav-icon">🛵</div><div class="fnav-label">Domis</div></div>
-        <div class="fnav-tab" id="tab-mapa"><div class="fnav-icon">🗺️</div><div class="fnav-label">Mapa</div></div>
-      </div>
-      <!-- Fila 2: configuracion -->
-      <div class="fnav-row fnav-row-2">
-        <div class="fnav-tab" id="tab-menu"><div class="fnav-icon">📋</div><div class="fnav-label">Menú</div></div>
-        <div class="fnav-tab" id="tab-promo"><div class="fnav-icon">📣</div><div class="fnav-label">Promos</div></div>
-        <div class="fnav-tab" id="tab-cupones"><div class="fnav-icon">🏷️</div><div class="fnav-label">Cupones</div></div>
-        <div class="fnav-tab" id="tab-config"><div class="fnav-icon">⚙️</div><div class="fnav-label">Config</div></div>
-      </div>
+  <!-- RADIAL NAV -->
+  <div id="radialOverlay" onclick="toggleRadial()" style="display:none;position:fixed;inset:0;z-index:398;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);"></div>
+  <div id="radialNav" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:400;">
+    <!-- Items radiales - posicionados con JS -->
+    <div id="radialItems" style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:0;height:0;pointer-events:none;"></div>
+    <!-- Botón central -->
+    <div id="radialBtn" onclick="toggleRadial()" style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:2px solid rgba(196,181,253,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 32px rgba(124,58,237,0.5),0 0 0 0 rgba(124,58,237,0.3);position:relative;z-index:401;transition:all 0.3s;">
+      <div id="radialBtnIcon" style="font-size:26px;transition:transform 0.3s;">💬</div>
+      <div id="pedidosBadge" class="nav-badge" style="position:absolute;top:-4px;right:-4px;"></div>
+      <div id="chatBadge" class="nav-badge" style="position:absolute;top:-4px;left:-4px;"></div>
     </div>
   </div>
 </div>
@@ -978,7 +969,8 @@ function mostrarAlerta(tipo,texto,tel){
 ["alertClose","alertHumanoClose","alertRecogerClose","alertPreguntaClose"].forEach(function(id){var el=document.getElementById(id);if(el)el.addEventListener("click",function(e){e.stopPropagation();this.closest(".alert-banner").classList.remove("show");});});
 document.getElementById("alertBanner").addEventListener("click",function(e){if(e.target.id!=="alertClose"){showTab("chat");}});
 document.getElementById("alertHumano").addEventListener("click",function(e){if(e.target.id!=="alertHumanoClose"){var tel=this.getAttribute("data-tel");if(tel)abrirChat(tel,"","");showTab("chat");}});
-document.getElementById("alertRecoger").addEventListener("click",function(e){if(e.target.id!=="alertRecogerClose"){showTab("pedidos");}});
+document.getElementById("alertRecoger").addEventListener("click",function(e){if(e.target.id!=="alertRecogerClose"){showTab("pedidos");
+  initRadial();}});
 document.getElementById("alertPregunta").addEventListener("click",function(e){if(e.target.id!=="alertPreguntaClose"){var tel=this.getAttribute("data-tel");if(tel)abrirChat(tel,"","");showTab("chat");}});
 
 function checkNuevosMensajes(){
@@ -1003,15 +995,68 @@ function checkNuevosMensajes(){
 }
 
 // TABS
-["pedidos","historial","menu","chat","promo","cupones","config","domis","clientes","mesas","mapa"].forEach(function(n){
+["pedidos","historial","menu","chat","promo","cupones","config","domis","clientes","mesas","mapa"].forEach(function(n){// legacy click handlers
+
   var el=document.getElementById("tab-"+n);if(!el)return;
   el.addEventListener("click",function(){showTab(n);if(n==="pedidos"){pedidosBadgeCount=0;document.getElementById("pedidosBadge").classList.remove("show");}if(n==="chat"){chatBadgeCount=0;document.getElementById("chatBadge").classList.remove("show");}});
 });
+var radialOpen=false;
+var radialTabs=[
+  {id:"pedidos",icon:"🛒",label:"Pedidos"},
+  {id:"historial",icon:"📊",label:"Historial"},
+  {id:"menu",icon:"📋",label:"Menú"},
+  {id:"promo",icon:"📣",label:"Promos"},
+  {id:"cupones",icon:"🏷️",label:"Cupones"},
+  {id:"config",icon:"⚙️",label:"Config"},
+  {id:"domis",icon:"🛵",label:"Domis"},
+  {id:"clientes",icon:"👥",label:"Clientes"},
+  {id:"mesas",icon:"🪑",label:"Mesas"},
+  {id:"mapa",icon:"🗺️",label:"Mapa"},
+];
+function initRadial(){
+  var container=document.getElementById("radialItems");
+  if(!container)return;
+  var total=radialTabs.length;
+  var radius=122;
+  radialTabs.forEach(function(tab,i){
+    var angle=180-(i*(180/(total-1)));
+    var rad=angle*Math.PI/180;
+    var x=Math.cos(rad)*radius;
+    var y=-Math.sin(rad)*radius;
+    var el=document.createElement("div");
+    el.className="radial-item";
+    el.id="radial-"+tab.id;
+    el.style.left=x+"px";
+    el.style.top=(y-30)+"px";
+    el.innerHTML='<div class="radial-item-btn" id="rbtn-'+tab.id+'">'+tab.icon+'</div><div class="radial-item-label">'+tab.label+'</div>';
+    (function(t){el.addEventListener("click",function(e){e.stopPropagation();showTab(t.id);});})(tab);
+    container.appendChild(el);
+  });
+  updateRadialActive("pedidos");
+}
+function toggleRadial(){
+  radialOpen=!radialOpen;
+  var ov=document.getElementById("radialOverlay");
+  var ic=document.getElementById("radialBtnIcon");
+  var btn=document.getElementById("radialBtn");
+  if(ov)ov.style.display=radialOpen?"block":"none";
+  if(ic){ic.style.transform=radialOpen?"rotate(45deg)":"rotate(0)";ic.textContent=radialOpen?"✕":"☰";}
+  if(btn)btn.style.background=radialOpen?"linear-gradient(135deg,#ef4444,#dc2626)":"linear-gradient(135deg,#7c3aed,#4f46e5)";
+  document.querySelectorAll(".radial-item").forEach(function(el,i){
+    if(radialOpen){setTimeout(function(){el.classList.add("open");},i*28);}
+    else{el.classList.remove("open");}
+  });
+}
+function updateRadialActive(n){
+  document.querySelectorAll(".radial-item-btn").forEach(function(b){b.classList.remove("active-tab");});
+  var b=document.getElementById("rbtn-"+n);if(b)b.classList.add("active-tab");
+}
 function showTab(n){
+  if(radialOpen)toggleRadial();
   document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active");});
-  document.querySelectorAll(".fnav-tab").forEach(function(t){t.classList.remove("active");});
-  var pg=document.getElementById("page-"+n),tab=document.getElementById("tab-"+n);
-  if(pg)pg.classList.add("active");if(tab)tab.classList.add("active");
+  var pg=document.getElementById("page-"+n);
+  if(pg)pg.classList.add("active");
+  updateRadialActive(n);
   if(n==="historial")loadHistorial();if(n==="menu")loadMenu();
   if(n==="promo"){loadPromoCount();renderProgs();}
   if(n==="chat")loadChatUniversal();if(n==="cupones")renderCupones();
