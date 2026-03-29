@@ -385,8 +385,8 @@ window.addEventListener("load",function(){
   }
   // Auto-login si hay sesion guardada
   var savedTel=localStorage.getItem("luzClienteTel"),savedNombre=localStorage.getItem("luzClienteNombre");
-  if(savedTel&&savedNombre){
-    document.getElementById("loginNombre").value=savedNombre;
+  if(savedTel){
+    document.getElementById("loginNombre").value=savedNombre||"";
     document.getElementById("loginTel").value=savedTel;
   }
 });
@@ -417,22 +417,30 @@ function doLogin(auto){
   var btn=document.getElementById("loginBtn");if(!auto){btn.textContent="Cargando...";btn.disabled=true;}
   var restId=rest?rest.id:null;
   // Contar pedidos reales del cliente
+  // Normalizar telefono - intentar con y sin 57
+  var telNorm=tel;
+  if(telNorm.startsWith("57")&&telNorm.length===12)telNorm=telNorm.substring(2);
+  var telCon57=telNorm.startsWith("57")?telNorm:"57"+telNorm;
+  var filtroTel="cliente_tel=in.("+telNorm+","+telCon57+")";
   var pedidosQuery=restId
-    ?"restaurante_id=eq."+restId+"&cliente_tel=eq."+tel+"&select=id"
-    :"cliente_tel=eq."+tel+"&select=id&limit=200";
+    ?"restaurante_id=eq."+restId+"&"+filtroTel+"&select=id"
+    :filtroTel+"&select=id&limit=200";
   get("pedidos",pedidosQuery).then(function(ps){
-    var totalPedidos=(ps||[]).length;
-    var nivel=totalPedidos>=25?"oro":totalPedidos>=10?"plata":totalPedidos>=1?"bronce":"bronce";
-    cliente={nombre:nombre,tel:tel,nivel:nivel,totalPedidos:totalPedidos};
+    var totalPedidos=Array.isArray(ps)?ps.length:0;
+    var nivel=totalPedidos>=25?"oro":totalPedidos>=10?"plata":"bronce";
+    cliente={nombre:nombre,tel:telNorm,nivel:nivel,totalPedidos:totalPedidos};
     if(nombre)localStorage.setItem("luzClienteNombre",nombre);
-    if(tel)localStorage.setItem("luzClienteTel",tel);
+    if(telNorm)localStorage.setItem("luzClienteTel",telNorm);
     // Guardar/actualizar cliente frecuente con nombre y nivel
-    if(restId&&tel){
-      fetch(SU+"/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({restaurante_id:restId,telefono:tel,nombre_cliente:nombre||null,nivel_fidelidad:nivel,total_pedidos:totalPedidos,updated_at:new Date().toISOString()})}).catch(function(){});
+    if(restId&&telNorm){
+      fetch(SU+"/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({restaurante_id:restId,telefono:telNorm,nombre_cliente:nombre||null,nivel_fidelidad:nivel,total_pedidos:totalPedidos,updated_at:new Date().toISOString()})}).catch(function(){});
     }
     goApp();
   }).catch(function(){
-    cliente={nombre:nombre,tel:tel,nivel:"bronce",totalPedidos:0};
+    // Si falla la consulta, entrar igual con nivel bronce
+    cliente={nombre:nombre,tel:telNorm,nivel:"bronce",totalPedidos:0};
+    if(nombre)localStorage.setItem("luzClienteNombre",nombre);
+    if(telNorm)localStorage.setItem("luzClienteTel",telNorm);
     goApp();
   }).finally(function(){if(!auto){btn.textContent="Ver el menú 🚀";btn.disabled=false;}});
 }
@@ -593,7 +601,7 @@ function renderProductos(cat){
       var ingrs=(i.descripcion||"").split(",").map(function(s){return s.trim();}).filter(function(s){return s.length>2&&s.length<30;});
       var tieneIngrs=ingrs.length>1;
       h+='<div class="prod-card'+(i.disponible?"":" no-disponible")+'" id="pc-'+i.id+'">';
-      h+='<div class="prod-main" '+(tieneIngrs&&i.disponible?'onclick="toggleIngredientes(''+i.id+'')" style="cursor:pointer"':'')+' >';
+      h+='<div class="prod-main" '+(tieneIngrs&&i.disponible?'data-pid="'+i.id+'" onclick="toggleIngredientes(this.getAttribute(\'data-pid\'))" style="cursor:pointer"':'')+' >';
       h+='<div class="prod-img-wrap">'+(i.foto_url?'<img src="'+i.foto_url+'" onerror="this.parentElement.innerHTML=\''+(i.emoji||'🍔')+'\'">':(i.emoji||"🍔"))+'</div>';
       h+='<div class="prod-info">';
       h+='<div class="prod-nombre">'+i.nombre+'</div>';
