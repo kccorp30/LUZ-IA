@@ -420,9 +420,11 @@ function doLogin(auto){
   var btn=document.getElementById("loginBtn");btn.textContent="Cargando...";btn.disabled=true;
   var restId=rest?rest.id:null;
   // Contar pedidos reales del cliente
-  // Guardar tel exacto como lo escribio el cliente
-  var telExacto=tel.replace(/[^0-9+]/g,"");
-  var telSolo=telExacto.replace(/[^0-9]/g,"");
+  // Normalizar telefono - quitar codigo de pais
+  var telSolo=tel.replace(/[^0-9]/g,"");
+  // Quitar codigo de pais (57=Colombia, 1=USA)
+  if(telSolo.startsWith("57")&&telSolo.length===12) telSolo=telSolo.substring(2);
+  else if(telSolo.startsWith("1")&&telSolo.length===11) telSolo=telSolo.substring(1);
 
   function calcNivel(n){return Number(n)>=25?"oro":Number(n)>=10?"plata":"bronce";}
 
