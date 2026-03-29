@@ -1049,7 +1049,7 @@ async function enviarPedidoMesa(lineas,sub,des,total,items){
     var restId=rest?rest.id:null;
     if(!restId)throw new Error("Sin restaurante");
     // Generar numero de pedido temporal
-    var num="M"+mesaActual+"-"+Date.now().toString().slice(-4);
+    var num=Math.floor(Date.now()/1000)%100000; // numero entero unico
     // Construir items string
     var itemsStr=items.map(function(i){
       var s=i.qty+"x "+i.nombre+" $"+Math.round(i.precio*i.qty);
@@ -1067,6 +1067,7 @@ async function enviarPedidoMesa(lineas,sub,des,total,items){
       desechables:des,
       domicilio:0,
       total:total,
+      servicio:calcServicio(sub)||0,
       direccion:"Mesa "+mesaActual,
       metodo_pago:pagoSel||"en mesa",
       estado:"confirmado",
