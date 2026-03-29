@@ -294,8 +294,11 @@ function selMesero(el){
 function entrarApp(){
   document.getElementById("loginScreen").style.display="none";
   document.getElementById("app").style.display="block";
+  document.getElementById("vistaSelector").style.display="block";
+  document.getElementById("vistaPedido").style.display="none";
   document.getElementById("vsSaludo").textContent="Hola, "+mesero.nombre+" 👋";
   document.getElementById("tbMesero").textContent="Mesero: "+mesero.nombre;
+  document.getElementById("tbMesa").textContent="Selecciona mesa";
   cargarMenu();
   cargarEstadoMesas();
 }
@@ -341,8 +344,11 @@ function abrirMesa(num){
   document.getElementById("vistaSelector").style.display="none";
   document.getElementById("vistaPedido").style.display="block";
   document.getElementById("cartBar").style.display="none";
-  renderCats();
-  renderProds();
+  document.getElementById("searchInput").value="";
+  document.getElementById("searchClear").style.display="none";
+  catActual="todas";
+  if(menuItems.length){renderCats();renderProds();}
+  else{cargarMenu();}
   cargarActivosMesa(num);
 }
 
@@ -362,15 +368,10 @@ function volverSelector(){
 function cargarActivosMesa(num){
   var wrap=document.getElementById("activosWrap");
   wrap.innerHTML="";
-  api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,listo)&select=numero_pedido,estado,items,total").then(function(pedidos){
-    var misPedidos=(pedidos||[]).filter(function(p){
-      return p.direccion===undefined||true; // we'll filter below
-    });
-    // Re-fetch with direccion
-    api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,listo)&select=numero_pedido,estado,items,total,direccion").then(function(todos){
+  api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,listo)&select=numero_pedido,estado,items,total,direccion&order=created_at.desc&limit=20").then(function(todos){
       var activos=(todos||[]).filter(function(p){
         if(!p.direccion)return false;
-        return p.direccion.toLowerCase()==="mesa "+num;
+        return p.direccion.toLowerCase()==="mesa "+String(num);
       });
       if(!activos.length){wrap.innerHTML="";return;}
       var estIcon={confirmado:"🔵",preparando:"🟡",listo:"🟢"};
@@ -389,15 +390,16 @@ function cargarActivosMesa(num){
       });
       h+='</div>';
       wrap.innerHTML=h;
-    });
-  }).catch(function(){});
+  }).catch(function(e){console.error("activos:",e);});
 }
 
 // ── MENÚ ──
 function cargarMenu(){
   api("menu_items","restaurante_id=eq."+rest.id+"&disponible=eq.true&order=categoria,orden&select=id,nombre,descripcion,precio,categoria,emoji").then(function(items){
     menuItems=items||[];
-  }).catch(function(){});
+    renderCats();
+    renderProds();
+  }).catch(function(e){console.error("Menu error:",e);});
 }
 
 function renderCats(){
