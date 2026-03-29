@@ -273,13 +273,15 @@ window.addEventListener("load",function(){
 });
 
 function cargarMeseros(){
-  api("domiciliarios","restaurante_id=eq."+rest.id+"&tipo=eq.mesero&order=nombre&select=*").then(function(ms){
+  api("domiciliarios","restaurante_id=eq."+rest.id+"&select=id,nombre,tipo&order=nombre").then(function(ms){
     var grid=document.getElementById("maserosGrid");
-    if(!ms||!ms.length){
+    // Filter meseros in JS to handle missing tipo column
+    var meseros=(ms||[]).filter(function(m){return m.tipo&&m.tipo.indexOf("mese")===0;});
+    if(!meseros.length){
       grid.innerHTML='<div class="login-empty" style="grid-column:1/-1">Sin meseros registrados.<br>Agrégalos en el panel → Mesas.</div>';
       return;
     }
-    grid.innerHTML=ms.map(function(m){
+    grid.innerHTML=meseros.map(function(m){
       var ini=m.nombre.charAt(0).toUpperCase();
       return'<div class="mesero-btn" data-id="'+m.id+'" data-nombre="'+m.nombre+'" onclick="selMesero(this)">'+
         '<div class="mesero-avatar">'+ini+'</div>'+
