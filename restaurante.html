@@ -1713,18 +1713,26 @@ function loadClientes(){
           (pedidos||[]).forEach(function(p){
             if(!p.cliente_tel)return;
             var t=p.cliente_tel.replace(/[^0-9]/g,"");
-            // Indexar con y sin 57 para matching flexible
-            if(!pedidosPorTel[t])pedidosPorTel[t]=[];
-            pedidosPorTel[t].push(p);
-            var tSin=t.startsWith("57")&&t.length===12?t.substring(2):t;
-            var tCon=tSin.startsWith("57")?tSin:"57"+tSin;
-            if(tSin!==t){if(!pedidosPorTel[tSin])pedidosPorTel[tSin]=[];pedidosPorTel[tSin].push(p);}
-            if(tCon!==t){if(!pedidosPorTel[tCon])pedidosPorTel[tCon]=[];pedidosPorTel[tCon].push(p);}
+            // Indexar el numero exacto y todas sus variantes
+            [t,
+             t.startsWith("57")&&t.length>=11?t.substring(2):null,
+             t.startsWith("1")&&t.length===11?t.substring(1):null,
+             "57"+t,
+             t.length===10?"57"+t:null
+            ].filter(function(v){return v&&v.length>=7;}).forEach(function(v){
+              if(!pedidosPorTel[v])pedidosPorTel[v]=[];
+              pedidosPorTel[v].push(p);
+            });
           });
           // Enriquecer clientes
           clientesData=clientes.map(function(c){
             var telNorm=(c.telefono||"").replace(/[^0-9]/g,"");
-            var misPedidos=pedidosPorTel[telNorm]||pedidosPorTel["57"+telNorm]||[];
+            // Buscar en todas las variantes
+            var misPedidos=pedidosPorTel[telNorm]
+              ||pedidosPorTel["57"+telNorm]
+              ||(telNorm.startsWith("57")?pedidosPorTel[telNorm.substring(2)]:null)
+              ||(telNorm.startsWith("1")&&telNorm.length===11?pedidosPorTel[telNorm.substring(1)]:null)
+              ||[];
             var totalPedidos=misPedidos.length;
             var totalGastado=misPedidos.reduce(function(s,p){return s+Number(p.total||0);},0);
             var ultimoPedido=misPedidos.length?misPedidos.sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);})[0]:null;
