@@ -388,12 +388,13 @@ window.addEventListener("load",function(){
       else{setupLogin();}
     }).catch(function(){setupLogin();});
   }
-  // Auto-login si hay sesion guardada
-  var savedTel=localStorage.getItem("luzClienteTel"),savedNombre=localStorage.getItem("luzClienteNombre");
-  if(savedTel){
-    document.getElementById("loginNombre").value=savedNombre||"";
-    document.getElementById("loginTel").value=savedTel;
-  }
+  // Pre-llenar si hay datos guardados pero SIEMPRE mostrar login
+  try {
+    var savedTel=sessionStorage.getItem("luzClienteTel")||localStorage.getItem("luzClienteTel")||"";
+    var savedNombre=sessionStorage.getItem("luzClienteNombre")||localStorage.getItem("luzClienteNombre")||"";
+    if(savedTel) document.getElementById("loginTel").value=savedTel;
+    if(savedNombre) document.getElementById("loginNombre").value=savedNombre;
+  } catch(e) {}
 });
 
 function setupLogin(){
@@ -401,9 +402,7 @@ function setupLogin(){
     document.getElementById("loginRestNombre").textContent=rest.nombre||"Bienvenido";
     document.getElementById("tbNombre").innerHTML='🍔 <span>'+rest.nombre+'</span>';
   }
-  // Auto-login si tiene datos guardados
-  var savedTel=localStorage.getItem("luzClienteTel");
-  if(savedTel){doLogin(true);}
+  // No auto-login - siempre mostrar pantalla de ingreso
 }
 
 document.getElementById("loginBtn").addEventListener("click",function(){doLogin(false);});
@@ -417,9 +416,8 @@ document.getElementById("loginTel").addEventListener("keydown",function(e){if(e.
 function doLogin(auto){
   var nombre=document.getElementById("loginNombre").value.trim();
   var tel=document.getElementById("loginTel").value.replace(/[^0-9]/g,"");
-  if(!auto&&(!nombre||tel.length<7)){document.getElementById("loginErr").textContent="Ingresa tu nombre y WhatsApp";return;}
-  if(auto){nombre=localStorage.getItem("luzClienteNombre")||"";tel=localStorage.getItem("luzClienteTel")||"";}
-  var btn=document.getElementById("loginBtn");if(!auto){btn.textContent="Cargando...";btn.disabled=true;}
+  if(!nombre||tel.length<7){document.getElementById("loginErr").textContent="Ingresa tu nombre y WhatsApp";return;}
+  var btn=document.getElementById("loginBtn");btn.textContent="Cargando...";btn.disabled=true;
   var restId=rest?rest.id:null;
   // Contar pedidos reales del cliente
   // Guardar tel exacto como lo escribio el cliente
@@ -431,8 +429,8 @@ function doLogin(auto){
   function guardarCliente(totalPedidos){
     var nivel=calcNivel(totalPedidos);
     cliente={nombre:nombre,tel:telSolo,nivel:nivel,totalPedidos:totalPedidos};
-    if(nombre)localStorage.setItem("luzClienteNombre",nombre);
-    if(telSolo)localStorage.setItem("luzClienteTel",telSolo);
+    try{if(nombre){localStorage.setItem("luzClienteNombre",nombre);sessionStorage.setItem("luzClienteNombre",nombre);}}catch(e){}
+    try{if(telSolo){localStorage.setItem("luzClienteTel",telSolo);sessionStorage.setItem("luzClienteTel",telSolo);}}catch(e){}
     if(restId&&telSolo){
       fetch(SU+"/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",{
         method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},
@@ -440,7 +438,7 @@ function doLogin(auto){
       }).catch(function(){});
     }
     goApp();
-    if(!auto){btn.textContent="Ver el menú 🚀";btn.disabled=false;}
+    btn.textContent="Ver el menú 🚀";btn.disabled=false;
   }
 
   // Generar todas las variantes posibles del telefono
