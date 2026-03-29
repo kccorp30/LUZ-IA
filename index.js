@@ -335,6 +335,18 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
     if (pedidoData.address && pedidoData.address !== "Por confirmar") {
       guardarDireccionFrecuente(restauranteId, pedidoData.phone, pedidoData.address);
     }
+    // Actualizar conteo de pedidos en clientes_frecuentes
+    try {
+      var svcKey2 = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+      // Contar pedidos reales de este cliente
+      var countResp = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId + "&cliente_tel=eq." + encodeURIComponent(pedidoData.phone) + "&select=id", { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2 } });
+      var totalPedidos = (countResp.data || []).length;
+      var nivel = totalPedidos >= 25 ? "oro" : totalPedidos >= 10 ? "plata" : "bronce";
+      await axios.post(SUPABASE_URL + "/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",
+        { restaurante_id: restauranteId, telefono: pedidoData.phone, total_pedidos: totalPedidos, nivel_fidelidad: nivel, updated_at: new Date().toISOString() },
+        { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } });
+      console.log("Cliente " + pedidoData.phone + " -> " + totalPedidos + " pedidos, nivel: " + nivel);
+    } catch(e) { console.error("updateClienteNivel:", e.message); }
   } catch (err) {
     console.error("Error guardando pedido:", err.response ? JSON.stringify(err.response.data) : err.message);
   }
