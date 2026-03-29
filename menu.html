@@ -259,7 +259,10 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
   <div class="topbar">
     <div class="tb-row">
       <div class="tb-brand" id="tbNombre">🍔 <span>Menú</span></div>
-      <div class="nivel-badge nivel-visitante" id="nivelBadge" onclick="document.getElementById('nivelPopup').classList.add('open')">👤 Ingresar</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div id="mesaBadge" style="display:none;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.35);color:#34d399;font-size:12px;font-weight:700;"></div>
+        <div class="nivel-badge nivel-visitante" id="nivelBadge" onclick="document.getElementById('nivelPopup').classList.add('open')">👤 Ingresar</div>
+      </div>
     </div>
     <div class="nivel-bar-wrap" id="nivelBarWrap" style="display:none" onclick="document.getElementById('nivelPopup').classList.add('open')" style="cursor:pointer">
       <div class="nivel-bar-labels"><span id="nivelBarLabel">Nivel actual</span><span id="nivelBarNext" style="font-weight:700"></span></div>
@@ -403,8 +406,8 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
       <textarea id="notasEspeciales" placeholder="Ej: sin cebolla, extra chimichurri, bien cocida..." style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:13px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;outline:none;resize:none;height:70px;margin-top:6px;transition:all 0.15s;" onfocus="this.style.borderColor='rgba(16,185,129,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'"></textarea>
     </div>
     <div class="pago-section" id="pagoSection" style="display:none">
-      <div class="pago-title">Método de pago</div>
-      <div class="pago-opts">
+      <div class="pago-title" id="pagoTitle">Método de pago</div>
+      <div class="pago-opts" id="pagoOpts">
         <div class="pago-opt" data-pago="Nequi" onclick="selPago(this)"><span class="pago-opt-icon">💚</span>Nequi</div>
         <div class="pago-opt" data-pago="Bancolombia" onclick="selPago(this)"><span class="pago-opt-icon">🏦</span>Bancolombia</div>
         <div class="pago-opt" data-pago="Efectivo" onclick="selPago(this)"><span class="pago-opt-icon">💵</span>Efectivo</div>
@@ -439,6 +442,11 @@ function getRestId(){
   var p=new URLSearchParams(window.location.search);
   return p.get("rest")||p.get("r")||null;
 }
+function getMesa(){
+  var p=new URLSearchParams(window.location.search);
+  return p.get("mesa")||p.get("m")||null;
+}
+var mesaActual=null;
 
 // INIT
 window.addEventListener("load",function(){
@@ -521,8 +529,17 @@ function doLogin(auto){
 }
 
 function goApp(){
+  mesaActual=getMesa();
   document.getElementById("loginScreen").style.display="none";
   document.getElementById("app").style.display="block";
+  // Si es pedido de mesa, ajustar UI
+  if(mesaActual){
+    var badge=document.getElementById("mesaBadge");
+    if(badge){badge.textContent="🪑 Mesa "+mesaActual;badge.style.display="flex";}
+    // Cambiar titulo del login
+    var loginSub=document.querySelector(".login-sub");
+    if(loginSub)loginSub.textContent="Dinos tu nombre para personalizar tu pedido de mesa.";
+  }
   actualizarNivelUI();
   cargarMenu();
   cargarPromos();
@@ -856,6 +873,16 @@ function renderCarritoItems(){
   var notasSection=document.getElementById("notasSection");
   if(notasSection)notasSection.style.display="block";
   pagoSection.style.display="block";
+  // Si es mesa, mostrar opciones de pago de mesa
+  if(mesaActual){
+    var pagoOpts=document.getElementById("pagoOpts");
+    if(pagoOpts&&!pagoOpts._mesaSet){
+      pagoOpts._mesaSet=true;
+      pagoOpts.innerHTML='<div class="pago-opt" data-pago="Efectivo en mesa" onclick="selPago(this)"><span class="pago-opt-icon">💵</span>Efectivo</div><div class="pago-opt" data-pago="Datafono en mesa" onclick="selPago(this)"><span class="pago-opt-icon">💳</span>Datáfono</div><div class="pago-opt" data-pago="Nequi" onclick="selPago(this)"><span class="pago-opt-icon">💚</span>Nequi</div>';
+      var pagoTitle=document.getElementById("pagoTitle");
+      if(pagoTitle)pagoTitle.textContent="¿Cómo vas a pagar en la mesa?";
+    }
+  }
 
   // Boton siempre activo - si no hay pago seleccionado pide que elija
   btnPedir.disabled=false;
@@ -921,7 +948,16 @@ function enviarPedido(){
   var total=Math.max(0,sub+des-descNivel-descCupon);
 
   var notasExtra=(document.getElementById("notasEspeciales")||{value:""}).value.trim();
-  var lineas=["Metodo de pago elegido: "+pagoSel,""];
+  var lineas=[];
+  // Si es pedido de mesa
+  if(mesaActual){
+    lineas.push("🪑 *PEDIDO DE MESA "+mesaActual+"*");
+    lineas.push("Metodo de pago elegido: "+pagoSel);
+    lineas.push("");
+  } else {
+    lineas.push("Metodo de pago elegido: "+pagoSel);
+    lineas.push("");
+  }
   if(cliente.nombre)lineas.push("👤 "+cliente.nombre);
   lineas.push("");
   lineas.push("*Mi pedido:*");
