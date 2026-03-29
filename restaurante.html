@@ -412,6 +412,18 @@ select.finput{cursor:pointer}
 .clientes-search::placeholder{color:var(--text3);}
 .nivel-filter-row{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none;}.nivel-filter-row::-webkit-scrollbar{display:none}
 
+/* IMAGE UPLOAD */
+.img-upload-area{border:2px dashed rgba(124,58,237,0.3);border-radius:16px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;background:rgba(124,58,237,0.05);margin-bottom:10px;position:relative;}
+.img-upload-area:hover,.img-upload-area.drag{border-color:rgba(124,58,237,0.7);background:rgba(124,58,237,0.1);}
+.img-upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.img-preview{width:100%;height:160px;object-fit:cover;border-radius:12px;margin-bottom:8px;display:none;}
+.img-upload-icon{font-size:28px;margin-bottom:6px;}
+.img-upload-text{font-size:13px;color:var(--text3);font-weight:600;}
+.img-upload-sub{font-size:11px;color:var(--text3);opacity:0.6;margin-top:3px;}
+.img-clear-btn{display:none;width:100%;padding:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:10px;color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:8px;}
+.img-uploading{font-size:12px;color:#c4b5fd;font-weight:600;text-align:center;padding:8px;display:none;}
+.promo-section-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin:14px 0 8px;}
+
 /* FLOAT NAV */
 .float-nav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:400;width:calc(100% - 20px);max-width:480px}
 .float-nav-inner{background:rgba(15,10,35,0.94);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(124,58,237,0.35);border-radius:28px;display:flex;padding:5px 4px calc(5px + env(safe-area-inset-bottom));box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 40px rgba(124,58,237,0.12)}
@@ -553,6 +565,18 @@ select.finput{cursor:pointer}
         <div class="promo-tpl" data-msg="Martes de perros! Pague 2 y lleve 3 en todos los hot dogs"><div class="promo-tpl-label">2x3 Hot Dogs</div><div class="promo-tpl-text">Martes: pague 2 lleve 3.</div></div>
         <div class="promo-tpl" data-msg="Domingos de asados! 2x3 en asados junior"><div class="promo-tpl-label">2x3 Asados Junior</div><div class="promo-tpl-text">Domingos de asados.</div></div>
         <div class="promo-tpl" data-msg="Esta noche estamos encendidos! Abrimos desde las 4pm"><div class="promo-tpl-label">Recordatorio</div><div class="promo-tpl-text">Abrimos esta noche.</div></div>
+        <div class="promo-section-title">Imagen (opcional)</div>
+        <div class="img-upload-area" id="imgUploadArea">
+          <input type="file" id="promoImgInput" accept="image/*">
+          <img class="img-preview" id="promoImgPreview">
+          <div id="imgUploadPlaceholder">
+            <div class="img-upload-icon">🖼️</div>
+            <div class="img-upload-text">Toca para subir una imagen</div>
+            <div class="img-upload-sub">JPG, PNG o GIF · Máx 5MB</div>
+          </div>
+        </div>
+        <button class="img-clear-btn" id="imgClearBtn" onclick="clearPromoImg()">✕ Quitar imagen</button>
+        <div class="img-uploading" id="imgUploading">⏳ Subiendo imagen...</div>
         <div class="promo-section-title">Mensaje personalizado</div>
         <div class="ffield"><textarea class="finput" id="promoTexto" placeholder="Escribe tu promo..." style="height:88px;resize:none;"></textarea></div>
         <button class="promo-send" id="promoEnviarBtn"><span>📤</span><span id="promoBtnLabel">Enviar ahora a todos</span></button>
@@ -1375,11 +1399,89 @@ document.querySelectorAll(".promo-tpl").forEach(function(el){el.addEventListener
 document.getElementById("promoEnviarBtn").addEventListener("click",function(){var texto=document.getElementById("promoTexto").value.trim();if(!texto){notif("Escribe o elige un mensaje");return;}document.getElementById("confirmCount").textContent=document.getElementById("promoCount").textContent;document.getElementById("confirmPreview").textContent=texto;document.getElementById("promoConfirm").classList.add("open");});
 document.getElementById("promoConfirmCancel").addEventListener("click",function(){document.getElementById("promoConfirm").classList.remove("open");});
 document.getElementById("promoConfirmOk").addEventListener("click",function(){document.getElementById("promoConfirm").classList.remove("open");enviarPromo();});
+
+// ── IMAGE UPLOAD ──────────────────────────────────────────────────────────────
+var promoImgUrl = null;
+
+document.addEventListener('DOMContentLoaded', function(){
+  var input = document.getElementById('promoImgInput');
+  if(!input) return;
+  input.addEventListener('change', function(){
+    var file = this.files[0];
+    if(!file) return;
+    if(file.size > 5*1024*1024){ notif('La imagen debe ser menor a 5MB','rgba(239,68,68,0.8)'); return; }
+    // Preview
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var preview = document.getElementById('promoImgPreview');
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+      document.getElementById('imgUploadPlaceholder').style.display = 'none';
+      document.getElementById('imgClearBtn').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+    // Upload to Supabase
+    subirImagenSupabase(file);
+  });
+  // Drag and drop
+  var area = document.getElementById('imgUploadArea');
+  if(area){
+    area.addEventListener('dragover', function(e){ e.preventDefault(); area.classList.add('drag'); });
+    area.addEventListener('dragleave', function(){ area.classList.remove('drag'); });
+    area.addEventListener('drop', function(e){
+      e.preventDefault(); area.classList.remove('drag');
+      var file = e.dataTransfer.files[0];
+      if(file && file.type.startsWith('image/')){
+        document.getElementById('promoImgInput').files = e.dataTransfer.files;
+        document.getElementById('promoImgInput').dispatchEvent(new Event('change'));
+      }
+    });
+  }
+});
+
+function subirImagenSupabase(file){
+  var uploading = document.getElementById('imgUploading');
+  uploading.style.display = 'block';
+  promoImgUrl = null;
+  var ext = file.name.split('.').pop() || 'jpg';
+  var fileName = 'promos/' + Date.now() + '.' + ext;
+  fetch('https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/media/' + fileName, {
+    method: 'POST',
+    headers: {
+      'apikey': 'sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5',
+      'Authorization': 'Bearer sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5',
+      'Content-Type': file.type,
+      'x-upsert': 'true'
+    },
+    body: file
+  }).then(function(r){
+    if(r.ok){
+      promoImgUrl = 'https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/' + fileName;
+      notif('✅ Imagen lista para enviar','rgba(16,185,129,0.8)');
+    } else {
+      return r.text().then(function(t){ throw new Error(t); });
+    }
+  }).catch(function(e){
+    console.error('Upload error:', e);
+    notif('❌ Error subiendo imagen: '+e.message,'rgba(239,68,68,0.8)');
+    clearPromoImg();
+  }).finally(function(){ uploading.style.display = 'none'; });
+}
+
+function clearPromoImg(){
+  promoImgUrl = null;
+  var preview = document.getElementById('promoImgPreview');
+  preview.style.display = 'none'; preview.src = '';
+  document.getElementById('imgUploadPlaceholder').style.display = 'block';
+  document.getElementById('imgClearBtn').style.display = 'none';
+  document.getElementById('promoImgInput').value = '';
+}
+
 function enviarPromo(){
   var texto=document.getElementById("promoTexto").value.trim();if(!texto||!rest)return;
   var btn=document.getElementById("promoEnviarBtn"),label=document.getElementById("promoBtnLabel");
   btn.disabled=true;label.textContent="Enviando...";
-  fetch("/api/enviar-promo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,mensaje:texto})})
+  fetch("/api/enviar-promo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,mensaje:texto,imagen_url:promoImgUrl||null})})
     .then(function(r){return r.json();})
     .then(function(d){if(d.ok){notif("Enviado a "+d.enviados+" clientes!","rgba(34,197,94,0.9)");document.getElementById("resOk").textContent=d.enviados||0;document.getElementById("resFail").textContent=d.fallidos||0;document.getElementById("resTotal").textContent=d.total||0;document.getElementById("promoResult").classList.add("show");document.getElementById("promoTexto").value="";document.querySelectorAll(".promo-tpl").forEach(function(e){e.classList.remove("sel");});}else{notif("Error: "+(d.error||"").substring(0,40));}})
     .catch(function(){notif("Error de conexion");})
@@ -1894,21 +1996,34 @@ function actualizarResetFecha(){
 function ejecutarResetFidelidad(){
   if(!rest)return;
   var dias=getResetDias();
-  var proxReset=dias>0?new Date(Date.now()+dias*24*60*60*1000).toISOString():null;
-  var fechaHoy=new Date().toISOString();
-  // Reset total_pedidos y nivel de todos los clientes del restaurante
-  // Reset via index.js endpoint to use service key
-  fetch("/api/reset-fidelidad",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({restaurante_id:rest.id,dias:Number(document.getElementById("resetPeriodo").value)})
-  }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok){
-      document.getElementById("resetFidelidadModal").style.display="none";
-      notif("✅ Rangos reiniciados. Los clientes empiezan desde 0 hoy.");
-      setTimeout(function(){loadClientes();},1500);
-    } else { notif("❌ Error: "+(d.error||"intenta de nuevo")); }
-  }).catch(function(){notif("❌ Error al reiniciar");});
+  var btn=document.querySelector("#resetFidelidadModal button:last-child");
+  if(btn){btn.textContent="Reiniciando...";btn.disabled=true;}
+  // Reset directo en Supabase - dos pasos
+  fetch(SU+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+rest.id,{
+    method:"PATCH",
+    headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+    body:JSON.stringify({total_pedidos:0,nivel_fidelidad:"bronce"})
+  }).then(function(r){
+    console.log("Reset clientes status:",r.status);
+    if(!r.ok) throw new Error("Status "+r.status);
+    // Update restaurante fecha
+    var fechaHoy=new Date().toISOString();
+    var proxReset=dias>0?new Date(Date.now()+dias*24*60*60*1000).toISOString():null;
+    return fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{
+      method:"PATCH",
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({fecha_inicio_fidelidad:fechaHoy,proximo_reset_fidelidad:proxReset,dias_ciclo_fidelidad:dias||null})
+    });
+  }).then(function(r){
+    console.log("Reset restaurante status:",r.status);
+    document.getElementById("resetFidelidadModal").style.display="none";
+    notif("✅ Rangos reiniciados. Los clientes empiezan desde 0 hoy.");
+    setTimeout(function(){loadClientes();},1000);
+  }).catch(function(e){
+    console.error("Reset error:",e);
+    notif("❌ Error: "+e.message);
+    if(btn){btn.textContent="Sí, reiniciar ahora";btn.disabled=false;}
+  });
 }
 
 // MAPA
