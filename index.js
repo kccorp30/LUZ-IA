@@ -691,7 +691,7 @@ function parseReply(reply, from) {
 
 // ── RUTAS ─────────────────────────────────────────────────────────────────────
 app.get("/mesero", function(req, res) {
-  res.sendFile(path.join(__dirname, "mesero.html"));
+  res.sendFile(path.join(__dirname, "mesero2.html"));
 });
 
 app.get("/menu",        function(req, res) { res.sendFile(path.join(__dirname, "menu.html")); });
@@ -1062,7 +1062,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       var telLocalCtx = stripCountryCode(from);
       var activoResp = await axios.get(
         SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id +
-        "&estado=neq.entregado&estado=neq.cancelado&order=created_at.desc&limit=1" +
+        "&estado=in.(confirmado,en_preparacion,listo,en_camino)&order=created_at.desc&limit=1" +
         "&or=(cliente_tel.eq." + encodeURIComponent(from) + ",cliente_tel.eq." + encodeURIComponent(telLocalCtx) + ")",
         { headers: sbH(true) }
       );
