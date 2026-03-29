@@ -247,6 +247,7 @@ TOTAL:        $XX.XXX
 CLIENTE:
 NOMBRE_CLIENTE_PLACEHOLDER
 NIVEL_CLIENTE_PLACEHOLDER
+PEDIDO_ACTIVO_PLACEHOLDER
 
 DIRECCION FRECUENTE:
 DIRECCION_FRECUENTE_PLACEHOLDER
@@ -1015,6 +1016,20 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     var nombreClienteTexto = nombreCliente
       ? "El cliente se llama " + nombreCliente + ". Usalo naturalmente en la conversacion cuando sea apropiado, no en cada mensaje."
       : "No tenemos el nombre de este cliente registrado.";
+    // Buscar pedido activo para poder enlazar adicionales
+    var pedidoActivoTexto = "";
+    try {
+      var telLocalCtx = stripCountryCode(from);
+      var activoResp = await axios.get(
+        SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id +
+        "&estado=neq.entregado&estado=neq.cancelado&order=created_at.desc&limit=1" +
+        "&or=(cliente_tel.eq." + encodeURIComponent(from) + ",cliente_tel.eq." + encodeURIComponent(telLocalCtx) + ")",
+        { headers: sbH(true) }
+      );
+      if (activoResp.data && activoResp.data.length > 0) {
+        pedidoActivoTexto = "PEDIDO ACTIVO de este cliente: #" + activoResp.data[0].numero_pedido + " (estado: " + activoResp.data[0].estado + "). Si hace un pedido adicional usa PEDIDO_ADICIONAL_DE:" + activoResp.data[0].numero_pedido;
+      }
+    } catch(e) {}
     var nivelClienteTexto = nivelCliente && nivelCliente !== "bronce"
       ? "Este cliente es nivel " + nivelCliente.toUpperCase() + " en el programa de fidelidad."
       : "";
@@ -1056,6 +1071,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       .replace(/CUPONES_PLACEHOLDER/g, cuponesTexto)
       .replace(/NOMBRE_CLIENTE_PLACEHOLDER/g, nombreClienteTexto)
       .replace(/NIVEL_CLIENTE_PLACEHOLDER/g, nivelClienteTexto)
+      .replace(/PEDIDO_ACTIVO_PLACEHOLDER/g, pedidoActivoTexto)
       .replace(/FECHA_INICIO_PLACEHOLDER/g, fechaInicioFidelidad)
       + bienvenidaExtra;
 
@@ -1174,6 +1190,34 @@ app.get("/", function(req, res) {
 });
 
 var PORT = process.env.PORT || 3000;
+// ── RESET FIDELIDAD ──────────────────────────────────────────────────────────
+app.post("/api/reset-fidelidad", async (req, res) => {
+  try {
+    var { restaurante_id, dias } = req.body;
+    if (!restaurante_id) return res.json({ ok: false, error: "restaurante_id requerido" });
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var fechaHoy = new Date().toISOString();
+    var proxReset = dias > 0 ? new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString() : null;
+    // Reset total_pedidos y nivel de todos los clientes
+    await axios.patch(
+      SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante_id,
+      { total_pedidos: 0, nivel_fidelidad: "bronce" },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    // Actualizar fecha inicio fidelidad en restaurante
+    await axios.patch(
+      SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id,
+      { fecha_inicio_fidelidad: fechaHoy, proximo_reset_fidelidad: proxReset, dias_ciclo_fidelidad: dias || null },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" } }
+    );
+    console.log("Fidelidad reiniciada para restaurante", restaurante_id);
+    res.json({ ok: true });
+  } catch(e) {
+    console.error("reset-fidelidad error:", e.message);
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 app.listen(PORT, function() {
   console.log("LUZ IA corriendo en puerto " + PORT);
   console.log("Dia Colombia:", getDiaColombiaStr(), "| Hora:", getHoraColombia().toLocaleTimeString("es-CO"));
