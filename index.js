@@ -190,14 +190,16 @@ MENSAJES DE VOZ: responde "Hola! Por favor escribeme tu pedido, no puedo escucha
 
 ${infoAdicional ? "INFORMACION ADICIONAL DEL NEGOCIO:\n" + infoAdicional + "\n" : ""}
 PROGRAMA DE FIDELIDAD (explica si te preguntan):
-- Los clientes acumulan niveles segun cuantos pedidos han hecho.
+- Este sistema se implemento el FECHA_INICIO_PLACEHOLDER. Los pedidos cuentan desde esa fecha.
+- Los clientes acumulan niveles segun cuantos pedidos han hecho desde FECHA_INICIO_PLACEHOLDER.
 - BRONCE (1-9 pedidos): acceso al menu completo, sin descuento adicional.
-- PLATA (10-24 pedidos): 5% de descuento en todos los productos automaticamente.
-- ORO (25+ pedidos): 10% de descuento en todos los productos automaticamente.
-- Los descuentos se aplican al comprar desde el menu web (${nombreRest} menu online).
-- Para subir de nivel solo hay que seguir pidiendo. El sistema lo detecta automaticamente.
+- PLATA (10-24 pedidos): 5% de descuento en todos los productos automaticamente en el menu web.
+- ORO (25+ pedidos): 10% de descuento en todos los productos automaticamente en el menu web.
+- Los descuentos se aplican AUTOMATICAMENTE cuando el cliente entra al menu web. El cliente NO necesita mencionar su nivel ni descuento — el sistema ya lo aplica solo.
+- Si un cliente menciona su nivel en el chat (ej: "soy cliente Oro"): NO apliques ningun descuento manualmente. El descuento ya fue aplicado en el menu antes de que enviara el pedido, o no le corresponde.
 - Si el cliente pregunta como subir de nivel: "Cada pedido cuenta. Con 10 pedidos llegas a Plata con 5% de descuento, y con 25 pedidos llegas a Oro con 10% en todo."
 - Si preguntan donde ver su nivel: "En nuestro menu online puedes ver tu nivel al registrarte con tu numero."
+- Cuando un cliente confirme un pedido, puedes felicitarlo si subio de nivel o esta cerca: ej: "Por cierto, ya llevas X pedidos con nosotros — te faltan Y para llegar a nivel Plata con 5% de descuento en todo!"
 
 HORARIO_PLACEHOLDER
 
@@ -215,6 +217,7 @@ IMPORTANTE - METODO DE PAGO DESDE EL MENU WEB:
 - Si dijo Nequi: usuario ${nequi} (busca en la app Nequi). Pide comprobante.
 - Si dijo Bancolombia: llave ${banco} a nombre de ${bancoNombre}. Pide comprobante.
 - Si dijo Efectivo: pregunta con que billete cancela y escribe PAGO_EFECTIVO:[valor].
+- Si el cliente dice "sencilla", "exacto", "con el valor exacto", "pago completo", "sin cambio", "justo", "con lo justo" o similar: el cliente paga el total exacto, NO necesita cambio. Escribe directamente PAGO_EFECTIVO:exacto y confirma el pedido sin pedir mas informacion.
 - Si dijo Datafono: confirma que el domiciliario lo lleva y escribe PAGO_DATAFONO.
 
 PROMOCIONES (hoy es DIA_PLACEHOLDER - solo menciona si aplica hoy):
@@ -333,6 +336,16 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var subtotal = Number(pedidoData.total) - Number(pedidoData.desechables||0) - Number(pedidoData.domicilio||0);
+    // Buscar nombre y nivel del cliente
+    var nombreClientePedido = null, nivelClientePedido = null;
+    try {
+      var telLocalPedido = stripCountryCode(pedidoData.phone);
+      var cfResp = await axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restauranteId + "&telefono=eq." + telLocalPedido + "&select=nombre_cliente,nivel_fidelidad,total_pedidos", { headers: sbH(true) });
+      if (cfResp.data && cfResp.data.length) {
+        nombreClientePedido = cfResp.data[0].nombre_cliente || null;
+        nivelClientePedido = cfResp.data[0].nivel_fidelidad || null;
+      }
+    } catch(e) {}
     var payload = {
       restaurante_id: restauranteId, numero_pedido: pedidoData.orderNumber,
       cliente_tel: pedidoData.phone, items: pedidoData.items,
@@ -342,7 +355,9 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
       notas_especiales: pedidoData.notasEspeciales || null,
       pedido_adicional_de: pedidoData.pedidoAdicionalDe || null,
       comprobante_url: pedidoData.comprobanteUrl || null,
-      comprobante_media_id: pedidoData.comprobanteMediaId || null
+      comprobante_media_id: pedidoData.comprobanteMediaId || null,
+      cliente_nombre: nombreClientePedido,
+      cliente_nivel: nivelClientePedido
     };
     var response = await axios.post(SUPABASE_URL + "/rest/v1/pedidos", payload, {
       headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
@@ -363,6 +378,11 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
         { restaurante_id: restauranteId, telefono: telLocal, total_pedidos: totalPedidos, nivel_fidelidad: nivel, updated_at: new Date().toISOString() },
         { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } });
       console.log("Cliente " + pedidoData.phone + " -> " + totalPedidos + " pedidos, nivel: " + nivel);
+      // Guardar nivel en orderState para que Luz pueda felicitar
+      if (pedidoData.phone) {
+        if (!global.clienteNiveles) global.clienteNiveles = {};
+        global.clienteNiveles[pedidoData.phone] = { total: totalPedidos, nivel };
+      }
     } catch(e) { console.error("updateClienteNivel:", e.message); }
   } catch (err) {
     console.error("Error guardando pedido:", err.response ? JSON.stringify(err.response.data) : err.message);
@@ -1024,6 +1044,9 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       : "Hora actual: " + horaStr;
 
     // ── BUILD SYSTEM PROMPT DINAMICO ──────────────────────────────────────────
+    var fechaInicioFidelidad = restaurante.fecha_inicio_fidelidad
+      ? new Date(restaurante.fecha_inicio_fidelidad).toLocaleDateString("es-CO", {day:"numeric",month:"long",year:"numeric"})
+      : "29 de marzo de 2025";
     var systemFinal = buildSystemPrompt(restaurante)
       .replace(/MENU_URL_PLACEHOLDER/g, getMenuUrl(restaurante))
       .replace(/MENU_PLACEHOLDER/g, "MENU ACTIVO:\n" + menuParaPrompt)
@@ -1033,6 +1056,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       .replace(/CUPONES_PLACEHOLDER/g, cuponesTexto)
       .replace(/NOMBRE_CLIENTE_PLACEHOLDER/g, nombreClienteTexto)
       .replace(/NIVEL_CLIENTE_PLACEHOLDER/g, nivelClienteTexto)
+      .replace(/FECHA_INICIO_PLACEHOLDER/g, fechaInicioFidelidad)
       + bienvenidaExtra;
 
     var claudeResponse = await axios.post(
