@@ -1050,19 +1050,20 @@ async function enviarPedidoMesa(lineas,sub,des,total,items){
     if(!restId)throw new Error("Sin restaurante");
     // Generar numero de pedido temporal
     var num=Math.floor(Date.now()/1000)%100000; // numero entero unico
-    // Construir items string
-    var itemsStr=items.map(function(i){
+    // Construir items como array (formato que espera el panel)
+    var itemsArr=items.map(function(i){
       var s=i.qty+"x "+i.nombre+" $"+Math.round(i.precio*i.qty);
       if(i.notas)s+=" ("+i.notas+")";
       return s;
-    }).join(" | ");
+    });
+    var itemsStr=itemsArr.join(" | ");// para el mensaje
     var notasExtra=(document.getElementById("notasEspeciales")||{value:""}).value.trim();
     var payload={
       restaurante_id:restId,
       numero_pedido:num,
       cliente_tel:"MESA-"+mesaActual,
       cliente_nombre:cliente.nombre||"Mesa "+mesaActual,
-      items:itemsStr,
+      items:itemsArr,
       subtotal:sub,
       desechables:des,
       domicilio:0,
