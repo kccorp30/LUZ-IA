@@ -203,6 +203,36 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 .empty-cart{text-align:center;padding:32px 0;color:var(--text3);font-size:14px;}
 
 @keyframes shake2{0%,100%{transform:scale(1)}50%{transform:scale(0.96);border-color:rgba(249,115,22,0.6)!important;}}
+@keyframes tickerMove{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.ticker-wrap{overflow:hidden;background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(16,185,129,0.15));border-bottom:1px solid rgba(124,58,237,0.2);padding:0;height:36px;display:flex;align-items:center;position:relative;}
+.ticker-wrap::before,.ticker-wrap::after{content:'';position:absolute;top:0;bottom:0;width:40px;z-index:2;pointer-events:none;}
+.ticker-wrap::before{left:0;background:linear-gradient(90deg,rgba(13,10,26,1),transparent);}
+.ticker-wrap::after{right:0;background:linear-gradient(270deg,rgba(13,10,26,1),transparent);}
+.ticker-track{display:flex;white-space:nowrap;animation:tickerMove 28s linear infinite;width:max-content;}
+.ticker-item{display:inline-flex;align-items:center;gap:8px;padding:0 28px;font-size:12px;font-weight:700;color:rgba(196,181,253,0.9);letter-spacing:0.03em;}
+.ticker-dot{width:5px;height:5px;border-radius:50%;background:#7c3aed;opacity:0.6;flex-shrink:0;}
+.niveles-showcase{margin:10px 14px 0;border-radius:20px;overflow:hidden;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);}
+.ns-header{padding:12px 16px 8px;display:flex;align-items:center;gap:8px;cursor:pointer;}
+.ns-header-icon{font-size:20px;}
+.ns-header-text{flex:1;}
+.ns-header-title{font-size:13px;font-weight:800;color:white;}
+.ns-header-sub{font-size:11px;color:rgba(241,240,255,0.4);margin-top:1px;}
+.ns-header-arrow{font-size:14px;color:rgba(255,255,255,0.3);transition:transform 0.2s;}
+.ns-header-arrow.open{transform:rotate(90deg);}
+.ns-levels{display:none;padding:0 12px 12px;gap:8px;flex-direction:column;}
+.ns-levels.open{display:flex;}
+.ns-level-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;border:1px solid;}
+.ns-level-row.bronce{background:rgba(205,127,50,0.08);border-color:rgba(205,127,50,0.2);}
+.ns-level-row.plata{background:rgba(156,163,175,0.08);border-color:rgba(156,163,175,0.2);}
+.ns-level-row.oro{background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.25);}
+.ns-level-icon{font-size:22px;flex-shrink:0;}
+.ns-level-info{flex:1;}
+.ns-level-name{font-size:13px;font-weight:800;}
+.ns-level-req{font-size:11px;color:rgba(241,240,255,0.4);margin-top:1px;}
+.ns-level-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;flex-shrink:0;}
+.ns-level-badge.bronce{background:rgba(205,127,50,0.15);color:#cd7f32;}
+.ns-level-badge.plata{background:rgba(156,163,175,0.15);color:#d1d5db;}
+.ns-level-badge.oro{background:rgba(245,158,11,0.15);color:#fbbf24;}
 .notif{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-60px);background:rgba(13,10,26,0.95);border:1px solid rgba(16,185,129,0.4);color:white;padding:10px 22px;border-radius:24px;font-size:13px;font-weight:600;z-index:600;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center;}
 .notif.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
@@ -249,8 +279,44 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
     <div class="nmb-right" id="nmbRight">→</div>
   </div>
 
+  <!-- TICKER PUBLICITARIO -->
+  <div class="ticker-wrap" id="tickerWrap">
+    <div class="ticker-track" id="tickerTrack">
+      <!-- Se llena dinámicamente -->
+    </div>
+  </div>
+
+  <!-- NIVELES SHOWCASE -->
+  <div class="niveles-showcase" id="nivelesShowcase" style="display:none">
+    <div class="ns-header" onclick="toggleNivelesShowcase()">
+      <div class="ns-header-icon">🏆</div>
+      <div class="ns-header-text">
+        <div class="ns-header-title">Programa de fidelidad</div>
+        <div class="ns-header-sub" id="nsHeaderSub">Acumula pedidos y gana descuentos permanentes</div>
+      </div>
+      <div class="ns-header-arrow" id="nsArrow">›</div>
+    </div>
+    <div class="ns-levels" id="nsLevels">
+      <div class="ns-level-row bronce">
+        <div class="ns-level-icon">🥉</div>
+        <div class="ns-level-info"><div class="ns-level-name" style="color:#cd7f32">Bronce</div><div class="ns-level-req">1 – 9 pedidos</div></div>
+        <div class="ns-level-badge bronce">Precio normal</div>
+      </div>
+      <div class="ns-level-row plata">
+        <div class="ns-level-icon">🥈</div>
+        <div class="ns-level-info"><div class="ns-level-name" style="color:#d1d5db">Plata</div><div class="ns-level-req">10 – 24 pedidos</div></div>
+        <div class="ns-level-badge plata">5% dcto en todo</div>
+      </div>
+      <div class="ns-level-row oro">
+        <div class="ns-level-icon">🥇</div>
+        <div class="ns-level-info"><div class="ns-level-name" style="color:#fbbf24">Oro</div><div class="ns-level-req">25+ pedidos</div></div>
+        <div class="ns-level-badge oro">10% dcto en todo 🔥</div>
+      </div>
+    </div>
+  </div>
+
   <!-- PROMO BANNER -->
-  <div class="promo-banner" id="promoBanner" style="display:none" onclick="document.getElementById('nivelPopup').classList.add('open')">
+  <div class="promo-banner"  id="promoBanner" style="display:none" onclick="document.getElementById('nivelPopup').classList.add('open')">
     <div class="promo-banner-icon">🔥</div>
     <div class="promo-banner-text">
       <div class="promo-banner-title" id="promoBannerTitle">Promo del día</div>
@@ -460,6 +526,43 @@ function goApp(){
   actualizarNivelUI();
   cargarMenu();
   cargarPromos();
+  cargarTicker();
+  // Mostrar niveles showcase si es visitante o bronce
+  if(!cliente.tel||cliente.nivel==="bronce"){
+    var ns=document.getElementById("nivelesShowcase");
+    if(ns)ns.style.display="block";
+  }
+}
+function cargarTicker(){
+  var items=[];
+  if(rest&&rest.nombre)items.push("🍔 Bienvenido a "+rest.nombre);
+  items.push("🥉 Bronce → 🥈 Plata con 10 pedidos — 5% de descuento en todo");
+  items.push("🥇 Nivel Oro con 25 pedidos — 10% de descuento permanente en todos los productos");
+  items.push("📱 Regístrate con tu número para acumular puntos y subir de nivel");
+  if(rest&&rest.promos_semanales){
+    var dias=["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
+    var hoy=dias[new Date().getDay()];
+    var promoHoy=(rest.promos_semanales||"").split("\n").find(function(l){return l.toLowerCase().indexOf(hoy)!==-1;});
+    if(promoHoy)items.push("🔥 Promo de hoy: "+promoHoy.replace(/^[-*]\s*/,""));
+  }
+  items.push("✅ Pedidos rápidos por WhatsApp — rastrea tu pedido en tiempo real");
+  // Duplicar para loop infinito
+  var allItems=[...items,...items];
+  var track=document.getElementById("tickerTrack");
+  if(track)track.innerHTML=allItems.map(function(t){return'<span class="ticker-item"><span class="ticker-dot"></span>'+t+'</span>';}).join("");
+}
+function toggleNivelesShowcase(){
+  var levels=document.getElementById("nsLevels");
+  var arrow=document.getElementById("nsArrow");
+  if(levels){levels.classList.toggle("open");if(arrow)arrow.classList.toggle("open");}
+  // Update header sub
+  var sub=document.getElementById("nsHeaderSub");
+  if(sub&&cliente.nivel&&cliente.nivel!=="visitante"){
+    var faltan=cliente.nivel==="bronce"?Math.max(0,10-cliente.totalPedidos):Math.max(0,25-cliente.totalPedidos);
+    var next=cliente.nivel==="bronce"?"Plata (5% dcto)":"Oro (10% dcto)";
+    if(cliente.nivel==="oro")sub.textContent="¡Eres cliente Oro! 10% dcto activo en todo";
+    else sub.textContent="Te faltan "+faltan+" pedidos para "+next;
+  }
 }
 
 function actualizarNivelUI(){
@@ -831,9 +934,8 @@ function enviarPedido(){
   lineas.push("");
   lineas.push("Subtotal: "+fmt(sub));
   lineas.push("Desechables: "+fmt(des));
-  if(descNivel>0)lineas.push("Dcto nivel "+dcto+"%: -"+fmt(descNivel));
-  if(descCupon>0)lineas.push("Cupon "+cuponAplicado.codigo+": -"+fmt(descCupon));
   lineas.push("*TOTAL: "+fmt(total)+"*");
+  // Nota interna para que Luz sepa (no el descuento, solo el total final ya aplicado)
 
   var wa=rest&&rest.whatsapp_numero?rest.whatsapp_numero:"573177269578";
   var msg=encodeURIComponent(lineas.join("\n"));
