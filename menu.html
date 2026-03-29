@@ -392,6 +392,7 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
     <div class="carrito-desglose" id="carritoDesglose" style="display:none">
       <div class="desglose-row"><span>Subtotal</span><span id="dSubtotal">$0</span></div>
       <div class="desglose-row"><span>Desechables</span><span id="dDesechables">$0</span></div>
+      <div class="desglose-row" id="dServicioRow" style="display:none"><span>Servicio</span><span id="dServicio" style="color:#34d399">$0</span></div>
       <div class="desglose-desc" id="dDescuento" style="display:none">🎉 Descuento nivel aplicado</div>
       <div class="desglose-row total"><span>TOTAL</span><span id="dTotal">$0</span></div>
     </div>
@@ -404,6 +405,27 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
     <div class="notas-section" id="notasSection" style="display:none;margin-bottom:14px;">
       <div class="pago-title">Notas especiales (opcional)</div>
       <textarea id="notasEspeciales" placeholder="Ej: sin cebolla, extra chimichurri, bien cocida..." style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:13px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;outline:none;resize:none;height:70px;margin-top:6px;transition:all 0.15s;" onfocus="this.style.borderColor='rgba(16,185,129,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'"></textarea>
+    </div>
+    <div id="servicioSection" style="display:none;margin-bottom:14px">
+      <div class="pago-title">Propina / Servicio</div>
+      <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:13px;color:rgba(241,240,255,0.6)">Servicio sugerido</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button onclick="setServicio(0)" id="srvBtn0" style="padding:5px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:rgba(241,240,255,0.5);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Sin servicio</button>
+            <button onclick="setServicio(10)" id="srvBtn10" style="padding:5px 12px;border-radius:8px;border:1px solid rgba(16,185,129,0.4);background:rgba(16,185,129,0.15);color:#34d399;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">10%</button>
+            <button onclick="setServicio(15)" id="srvBtn15" style="padding:5px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:rgba(241,240,255,0.5);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">15%</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:13px;color:rgba(241,240,255,0.5)">Personalizar:</span>
+          <div style="display:flex;align-items:center;gap:6px;flex:1">
+            <input id="servicioInput" type="number" min="0" max="30" value="10" style="width:60px;padding:6px 10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:white;font-size:14px;font-weight:700;outline:none;text-align:center;font-family:inherit" oninput="renderCarritoItems()">
+            <span style="font-size:14px;color:rgba(241,240,255,0.4)">%</span>
+          </div>
+          <span id="servicioMonto" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#34d399">$0</span>
+        </div>
+      </div>
     </div>
     <div class="pago-section" id="pagoSection" style="display:none">
       <div class="pago-title" id="pagoTitle">Método de pago</div>
@@ -812,10 +834,16 @@ function calcSubtotal(){
 function calcDesechables(){
   return Object.values(carrito).filter(function(i){return!i.esBebida;}).reduce(function(s,i){return s+i.qty;},0)*500;
 }
+function calcServicio(sub){
+  if(!mesaActual)return 0;
+  var pct=Number(document.getElementById("servicioInput")?document.getElementById("servicioInput").value:10)||0;
+  return Math.round(sub*pct/100);
+}
 function calcTotal(sub){
   var des=calcDesechables();
   var desc=cuponAplicado?cuponAplicado.desc:0;
-  return Math.max(0,sub+des-desc);
+  var srv=calcServicio(sub);
+  return Math.max(0,sub+des+srv-desc);
 }
 
 function abrirCarrito(){
@@ -861,6 +889,12 @@ function renderCarritoItems(){
 
   document.getElementById("dSubtotal").textContent=fmt(sub);
   document.getElementById("dDesechables").textContent=fmt(des);
+  // Servicio row
+  var srv=calcServicio(sub);
+  var srvRow=document.getElementById("dServicioRow");
+  var srvMonto=document.getElementById("servicioMonto");
+  if(srvMonto)srvMonto.textContent=fmt(srv);
+  if(srvRow){if(mesaActual&&srv>0){srvRow.style.display="flex";document.getElementById("dServicio").textContent=fmt(srv);}else{srvRow.style.display="none";}}
   document.getElementById("dTotal").textContent=fmt(total);
   var descEl=document.getElementById("dDescuento");
   if(descNivel>0||descCupon>0){
@@ -872,6 +906,8 @@ function renderCarritoItems(){
   cuponRow.style.display="flex";
   var notasSection=document.getElementById("notasSection");
   if(notasSection)notasSection.style.display="block";
+  var servicioSection=document.getElementById("servicioSection");
+  if(servicioSection)servicioSection.style.display=mesaActual?"block":"none";
   pagoSection.style.display="block";
   // Si es mesa, mostrar opciones de pago de mesa
   if(mesaActual){
@@ -888,7 +924,7 @@ function renderCarritoItems(){
   btnPedir.disabled=false;
   if(pagoSel){
     btnPedir.style.opacity="1";
-    btnPedir.textContent="Pedir por WhatsApp 📲";
+    btnPedir.textContent=mesaActual?"Realizar pedido 🪑":"Pedir por WhatsApp 📲";
     btnPedir.onclick=enviarPedido;
   } else {
     btnPedir.style.opacity="0.75";
@@ -913,6 +949,25 @@ function changeQty(id,delta){
   if(btn){if(carrito[id]){btn.textContent="✓";btn.classList.add("added");}else{btn.textContent="+";btn.classList.remove("added");}}
 }
 
+function setServicio(pct){
+  var input=document.getElementById("servicioInput");
+  if(input){input.value=pct;}
+  // Update button styles
+  [0,10,15].forEach(function(p){
+    var btn=document.getElementById("srvBtn"+p);
+    if(!btn)return;
+    if(p===pct){
+      btn.style.background="rgba(16,185,129,0.15)";
+      btn.style.borderColor="rgba(16,185,129,0.4)";
+      btn.style.color="#34d399";
+    } else {
+      btn.style.background="rgba(255,255,255,0.05)";
+      btn.style.borderColor="rgba(255,255,255,0.1)";
+      btn.style.color="rgba(241,240,255,0.5)";
+    }
+  });
+  renderCarritoItems();
+}
 function selPago(el){
   document.querySelectorAll(".pago-opt").forEach(function(o){o.classList.remove("sel");});
   el.classList.add("sel");
@@ -970,13 +1025,81 @@ function enviarPedido(){
   lineas.push("");
   lineas.push("Subtotal: "+fmt(sub));
   lineas.push("Desechables: "+fmt(des));
+  var srv2=calcServicio(sub);
+  if(srv2>0)lineas.push("Servicio ("+document.getElementById("servicioInput").value+"%): "+fmt(srv2));
   lineas.push("*TOTAL: "+fmt(total)+"*");
   // Nota interna para que Luz sepa (no el descuento, solo el total final ya aplicado)
 
+  // Si es pedido de mesa, enviar directo al sistema
+  if(mesaActual){
+    enviarPedidoMesa(lineas,sub,des,total,items);
+    return;
+  }
   var wa=rest&&rest.whatsapp_numero?rest.whatsapp_numero:"573177269578";
   var msg=encodeURIComponent(lineas.join("\n"));
   window.open("https://wa.me/"+wa+"?text="+msg,"_blank");
   notif("¡Redirigiendo a WhatsApp! 📲","rgba(16,185,129,0.4)");
+}
+
+async function enviarPedidoMesa(lineas,sub,des,total,items){
+  var btn=document.getElementById("btnPedir");
+  btn.disabled=true;btn.textContent="Enviando pedido...";
+  try{
+    var restId=rest?rest.id:null;
+    if(!restId)throw new Error("Sin restaurante");
+    // Generar numero de pedido temporal
+    var num="M"+mesaActual+"-"+Date.now().toString().slice(-4);
+    // Construir items string
+    var itemsStr=items.map(function(i){
+      var s=i.qty+"x "+i.nombre+" $"+Math.round(i.precio*i.qty);
+      if(i.notas)s+=" ("+i.notas+")";
+      return s;
+    }).join(" | ");
+    var notasExtra=(document.getElementById("notasEspeciales")||{value:""}).value.trim();
+    var payload={
+      restaurante_id:restId,
+      numero_pedido:num,
+      cliente_tel:"MESA-"+mesaActual,
+      cliente_nombre:cliente.nombre||"Mesa "+mesaActual,
+      items:itemsStr,
+      subtotal:sub,
+      desechables:des,
+      domicilio:0,
+      total:total,
+      servicio:calcServicio(sub),
+      direccion:"Mesa "+mesaActual,
+      metodo_pago:pagoSel||"en mesa",
+      estado:"confirmado",
+      notas_especiales:notasExtra||null
+    };
+    var r=await fetch("https://vbxuwzcfzfjwhllkppkg.supabase.co/rest/v1/pedidos",{
+      method:"POST",
+      headers:{"apikey":"sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5","Authorization":"Bearer sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5","Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify(payload)
+    });
+    if(!r.ok){var t=await r.text();throw new Error(t);}
+    // Mostrar confirmacion
+    cerrarCarrito();
+    carrito={};ingredsRemovidos={};pagoSel="";
+    actualizarCarritoBar();
+    // Mostrar pantalla de exito
+    mostrarExitoMesa();
+  }catch(e){
+    console.error("Error mesa:",e);
+    notif("❌ Error enviando pedido: "+e.message,"rgba(239,68,68,0.8)");
+    btn.disabled=false;btn.textContent="Realizar pedido 🪑";
+  }
+}
+
+function mostrarExitoMesa(){
+  var overlay=document.createElement("div");
+  overlay.style.cssText="position:fixed;inset:0;z-index:999;background:rgba(13,10,26,0.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;";
+  overlay.innerHTML='<div style="font-size:80px;margin-bottom:20px;animation:pulse 1s ease-in-out 3">✅</div>'+
+    '<div style="font-size:26px;font-weight:900;color:white;margin-bottom:10px">¡Pedido enviado!</div>'+
+    '<div style="font-size:16px;color:rgba(255,255,255,0.6);margin-bottom:8px">Tu pedido para <strong style=color:#34d399>Mesa '+mesaActual+'</strong> ya entró a preparación.</div>'+
+    '<div style="font-size:14px;color:rgba(255,255,255,0.4);margin-bottom:32px">El equipo te lo lleva a la mesa en unos minutos.</div>'+
+    '<button onclick="this.parentElement.remove();renderProductos(catActiva);" style="padding:14px 32px;background:linear-gradient(135deg,#10b981,#2563eb);border:none;border-radius:16px;color:white;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit">Seguir viendo el menú</button>';
+  document.body.appendChild(overlay);
 }
 </script>
 </body>
