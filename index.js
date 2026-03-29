@@ -438,6 +438,21 @@ async function descargarImagenMeta(mediaId) {
   } catch (e) { console.error("descargarImagen:", e.message); return null; }
 }
 
+async function sendWhatsAppImage(to, imageUrl, caption, phoneId) {
+  var pid = phoneId || process.env.WHATSAPP_PHONE_ID;
+  var token = process.env.WHATSAPP_TOKEN;
+  var payload = {
+    messaging_product: "whatsapp",
+    to: to,
+    type: "image",
+    image: { link: imageUrl, caption: caption || "" }
+  };
+  var r = await axios.post("https://graph.facebook.com/v19.0/" + pid + "/messages", payload, {
+    headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" }
+  });
+  return r.data;
+}
+
 async function sendWhatsAppMessage(to, message, phoneNumberId) {
   var token = process.env.WHATSAPP_TOKEN;
   var pid   = phoneNumberId || process.env.WHATSAPP_PHONE_ID;
@@ -835,7 +850,15 @@ app.post("/api/enviar-promo", async function(req, res) {
     } catch(e) {}
     var enviados = 0, fallidos = 0;
     for (var i = 0; i < telefonos.length; i++) {
-      try { await sendWhatsAppMessage(telefonos[i], req.body.mensaje, pid); enviados++; }
+      try {
+          if (req.body.imagen_url) {
+            // Send image first then text
+            await sendWhatsAppImage(telefonos[i], req.body.imagen_url, req.body.mensaje, pid);
+          } else {
+            await sendWhatsAppMessage(telefonos[i], req.body.mensaje, pid);
+          }
+          enviados++;
+        }
       catch (e) { fallidos++; }
       if (i < telefonos.length - 1) await new Promise(function(r) { setTimeout(r, 300); });
     }
