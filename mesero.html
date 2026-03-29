@@ -292,6 +292,7 @@ function selMesero(el){
 }
 
 function entrarApp(){
+  // Show app with loading state
   document.getElementById("loginScreen").style.display="none";
   document.getElementById("app").style.display="block";
   document.getElementById("vistaSelector").style.display="block";
@@ -299,8 +300,29 @@ function entrarApp(){
   document.getElementById("vsSaludo").textContent="Hola, "+mesero.nombre+" 👋";
   document.getElementById("tbMesero").textContent="Mesero: "+mesero.nombre;
   document.getElementById("tbMesa").textContent="Selecciona mesa";
-  cargarMenu();
-  cargarEstadoMesas();
+  document.getElementById("mesesGrid").innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);font-size:13px">Cargando...</div>';
+  // Load menu AND mesas in parallel, show mesas only when menu is ready
+  Promise.all([
+    api("menu_items","restaurante_id=eq."+rest.id+"&disponible=eq.true&order=categoria,orden&select=id,nombre,descripcion,precio,categoria,emoji"),
+    api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,listo,cuenta)&select=direccion,estado,metodo_pago")
+  ]).then(function(results){
+    menuItems=results[0]||[];
+    var pedidos=results[1]||[];
+    var mesas={};
+    pedidos.forEach(function(p){
+      if(!p.direccion)return;
+      var m=p.direccion.toLowerCase().replace("mesa ","").trim();
+      if(!isNaN(m)){
+        var num=Number(m);
+        if(p.metodo_pago==="cuenta"||p.estado==="cuenta")mesas[num]="cuenta";
+        else if(mesas[num]!=="cuenta")mesas[num]="ocupada";
+      }
+    });
+    renderMesas(8,mesas);
+  }).catch(function(e){
+    console.error("Init error:",e);
+    document.getElementById("mesesGrid").innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:#fca5a5;font-size:13px">Error cargando. Recarga la página.</div>';
+  });
 }
 
 // ── MESAS ──
@@ -347,8 +369,8 @@ function abrirMesa(num){
   document.getElementById("searchInput").value="";
   document.getElementById("searchClear").style.display="none";
   catActual="todas";
-  if(menuItems.length){renderCats();renderProds();}
-  else{cargarMenu();}
+  renderCats();
+  renderProds();
   cargarActivosMesa(num);
 }
 
@@ -394,13 +416,7 @@ function cargarActivosMesa(num){
 }
 
 // ── MENÚ ──
-function cargarMenu(){
-  api("menu_items","restaurante_id=eq."+rest.id+"&disponible=eq.true&order=categoria,orden&select=id,nombre,descripcion,precio,categoria,emoji").then(function(items){
-    menuItems=items||[];
-    renderCats();
-    renderProds();
-  }).catch(function(e){console.error("Menu error:",e);});
-}
+function cargarMenu(){}
 
 function renderCats(){
   var cats=[];
