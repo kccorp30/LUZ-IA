@@ -814,7 +814,7 @@ function enviarPedido(){
   if(descCupon>0)lineas.push("Cupon "+cuponAplicado.codigo+": -"+fmt(descCupon));
   lineas.push("*TOTAL: "+fmt(total)+"*");
 
-  var wa=rest&&rest.whatsapp_numero?rest.whatsapp_numero:"573138908577";
+  var wa=rest&&rest.whatsapp_numero?rest.whatsapp_numero:"573177269578";
   var msg=encodeURIComponent(lineas.join("\n"));
   window.open("https://wa.me/"+wa+"?text="+msg,"_blank");
   notif("¡Redirigiendo a WhatsApp! 📲","rgba(16,185,129,0.4)");
