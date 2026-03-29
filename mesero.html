@@ -253,10 +253,9 @@ var menuItems=[],carrito={},catActual="todas";
 function fmt(n){return"$"+Math.round(Number(n)||0).toLocaleString("es-CO");}
 function notif(m,c){var e=document.getElementById("notif");e.textContent=m;e.style.borderColor=c||"rgba(16,185,129,0.4)";e.classList.add("show");setTimeout(function(){e.classList.remove("show");},2400);}
 function api(tabla,filtro){
-  return fetch(SU+"/rest/v1/"+tabla+"?"+(filtro||""),{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){
-    if(!r.ok)throw new Error("HTTP "+r.status);
-    return r.json();
-  });
+  return fetch(SU+"/rest/v1/"+tabla+"?"+(filtro||""),{
+    headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Accept":"application/json"}
+  }).then(function(r){return r.json();});
 }
 function restId(){var p=new URLSearchParams(window.location.search);return p.get("rest")||null;}
 
@@ -269,7 +268,10 @@ window.addEventListener("load",function(){
     rest=d[0];
     document.getElementById("loginRestNombre").textContent=rest.nombre||"";
     cargarMeseros();
-  }).catch(function(){document.getElementById("loginErr").textContent="Error de conexión";});
+  }).catch(function(e){
+    document.getElementById("loginErr").textContent="Error: "+e.message;
+    document.getElementById("maserosGrid").innerHTML='<div class="login-empty" style="grid-column:1/-1;color:#fca5a5">Error conectando. Recarga.</div>';
+  });
 });
 
 function cargarMeseros(){
