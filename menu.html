@@ -202,6 +202,7 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 .btn-pedir:disabled{background:rgba(255,255,255,0.1);box-shadow:none;cursor:not-allowed;color:var(--text3);}
 .empty-cart{text-align:center;padding:32px 0;color:var(--text3);font-size:14px;}
 
+@keyframes shake2{0%,100%{transform:scale(1)}50%{transform:scale(0.96);border-color:rgba(249,115,22,0.6)!important;}}
 .notif{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-60px);background:rgba(13,10,26,0.95);border:1px solid rgba(16,185,129,0.4);color:white;padding:10px 22px;border-radius:24px;font-size:13px;font-weight:600;z-index:600;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center;}
 .notif.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
@@ -331,6 +332,10 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
     </div>
     <div class="cupon-ok" id="cuponOk"></div>
     <div class="cupon-err" id="cuponErr"></div>
+    <div class="notas-section" id="notasSection" style="display:none;margin-bottom:14px;">
+      <div class="pago-title">Notas especiales (opcional)</div>
+      <textarea id="notasEspeciales" placeholder="Ej: sin cebolla, extra chimichurri, bien cocida..." style="width:100%;padding:11px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:13px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;outline:none;resize:none;height:70px;margin-top:6px;transition:all 0.15s;" onfocus="this.style.borderColor='rgba(16,185,129,0.5)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'"></textarea>
+    </div>
     <div class="pago-section" id="pagoSection" style="display:none">
       <div class="pago-title">Método de pago</div>
       <div class="pago-opts">
@@ -417,32 +422,44 @@ function doLogin(auto){
   var btn=document.getElementById("loginBtn");if(!auto){btn.textContent="Cargando...";btn.disabled=true;}
   var restId=rest?rest.id:null;
   // Contar pedidos reales del cliente
-  // Normalizar telefono - intentar con y sin 57
-  var telNorm=tel;
-  if(telNorm.startsWith("57")&&telNorm.length===12)telNorm=telNorm.substring(2);
-  var telCon57=telNorm.startsWith("57")?telNorm:"57"+telNorm;
-  var filtroTel="cliente_tel=in.("+telNorm+","+telCon57+")";
-  var pedidosQuery=restId
-    ?"restaurante_id=eq."+restId+"&"+filtroTel+"&select=id"
-    :filtroTel+"&select=id&limit=200";
-  get("pedidos",pedidosQuery).then(function(ps){
-    var totalPedidos=Array.isArray(ps)?ps.length:0;
-    var nivel=totalPedidos>=25?"oro":totalPedidos>=10?"plata":"bronce";
+  // Normalizar telefono
+  var telNorm=tel.replace(/[^0-9]/g,"");
+  if(telNorm.startsWith("57")&&telNorm.length===12) telNorm=telNorm.substring(2);
+  var telCon57="57"+telNorm;
+
+  function calcNivel(n){return n>=25?"oro":n>=10?"plata":"bronce";}
+
+  function guardarCliente(totalPedidos){
+    var nivel=calcNivel(totalPedidos);
     cliente={nombre:nombre,tel:telNorm,nivel:nivel,totalPedidos:totalPedidos};
     if(nombre)localStorage.setItem("luzClienteNombre",nombre);
     if(telNorm)localStorage.setItem("luzClienteTel",telNorm);
-    // Guardar/actualizar cliente frecuente con nombre y nivel
     if(restId&&telNorm){
-      fetch(SU+"/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({restaurante_id:restId,telefono:telNorm,nombre_cliente:nombre||null,nivel_fidelidad:nivel,total_pedidos:totalPedidos,updated_at:new Date().toISOString()})}).catch(function(){});
+      fetch(SU+"/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",{
+        method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},
+        body:JSON.stringify({restaurante_id:restId,telefono:telNorm,nombre_cliente:nombre||null,nivel_fidelidad:nivel,total_pedidos:totalPedidos,updated_at:new Date().toISOString()})
+      }).catch(function(){});
     }
     goApp();
-  }).catch(function(){
-    // Si falla la consulta, entrar igual con nivel bronce
-    cliente={nombre:nombre,tel:telNorm,nivel:"bronce",totalPedidos:0};
-    if(nombre)localStorage.setItem("luzClienteNombre",nombre);
-    if(telNorm)localStorage.setItem("luzClienteTel",telNorm);
-    goApp();
-  }).finally(function(){if(!auto){btn.textContent="Ver el menú 🚀";btn.disabled=false;}});
+    if(!auto){btn.textContent="Ver el menú 🚀";btn.disabled=false;}
+  }
+
+  // Buscar pedidos con sin 57, luego con 57 si no encuentra
+  var q1=restId
+    ?"restaurante_id=eq."+restId+"&cliente_tel=eq."+telNorm+"&select=id"
+    :"cliente_tel=eq."+telNorm+"&select=id&limit=200";
+  get("pedidos",q1).then(function(ps1){
+    var count1=Array.isArray(ps1)?ps1.length:0;
+    if(count1>0){guardarCliente(count1);return;}
+    // Intentar con 57
+    var q2=restId
+      ?"restaurante_id=eq."+restId+"&cliente_tel=eq."+telCon57+"&select=id"
+      :"cliente_tel=eq."+telCon57+"&select=id&limit=200";
+    get("pedidos",q2).then(function(ps2){
+      var count2=Array.isArray(ps2)?ps2.length:0;
+      guardarCliente(count2);
+    }).catch(function(){guardarCliente(0);});
+  }).catch(function(){guardarCliente(0);});
 }
 
 function goApp(){
@@ -741,15 +758,25 @@ function renderCarritoItems(){
 
   desglose.style.display="block";
   cuponRow.style.display="flex";
+  var notasSection=document.getElementById("notasSection");
+  if(notasSection)notasSection.style.display="block";
   pagoSection.style.display="block";
 
+  // Boton siempre activo - si no hay pago seleccionado pide que elija
+  btnPedir.disabled=false;
   if(pagoSel){
-    btnPedir.disabled=false;
+    btnPedir.style.opacity="1";
     btnPedir.textContent="Pedir por WhatsApp 📲";
     btnPedir.onclick=enviarPedido;
   } else {
-    btnPedir.disabled=true;
-    btnPedir.textContent="Elige método de pago";
+    btnPedir.style.opacity="0.75";
+    btnPedir.textContent="👆 Elige método de pago primero";
+    btnPedir.onclick=function(){
+      var opts=document.querySelectorAll(".pago-opt");
+      opts.forEach(function(o){o.style.animation="shake2 0.3s ease";setTimeout(function(){o.style.animation="";},400);});
+      notif("Selecciona cómo vas a pagar","rgba(249,115,22,0.8)");
+      document.querySelector(".pago-section").scrollIntoView({behavior:"smooth"});
+    };
   }
 }
 
@@ -798,6 +825,7 @@ function enviarPedido(){
   var descCupon=cuponAplicado?cuponAplicado.desc:0;
   var total=Math.max(0,sub+des-descNivel-descCupon);
 
+  var notasExtra=(document.getElementById("notasEspeciales")||{value:""}).value.trim();
   var lineas=["Metodo de pago elegido: "+pagoSel,""];
   if(cliente.nombre)lineas.push("👤 "+cliente.nombre);
   lineas.push("");
@@ -807,6 +835,7 @@ function enviarPedido(){
     if(i.notas)linea+=" ("+i.notas+")";
     lineas.push(linea);
   });
+  if(notasExtra){lineas.push("");lineas.push("📝 Notas: "+notasExtra);}
   lineas.push("");
   lineas.push("Subtotal: "+fmt(sub));
   lineas.push("Desechables: "+fmt(des));
