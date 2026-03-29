@@ -832,6 +832,7 @@ function calcSubtotal(){
   return Object.values(carrito).reduce(function(s,i){return s+i.precio*i.qty;},0);
 }
 function calcDesechables(){
+  if(mesaActual)return 0; // En mesa no se cobran desechables
   return Object.values(carrito).filter(function(i){return!i.esBebida;}).reduce(function(s,i){return s+i.qty;},0)*500;
 }
 function calcServicio(sub){
@@ -1066,7 +1067,6 @@ async function enviarPedidoMesa(lineas,sub,des,total,items){
       desechables:des,
       domicilio:0,
       total:total,
-      servicio:calcServicio(sub),
       direccion:"Mesa "+mesaActual,
       metodo_pago:pagoSel||"en mesa",
       estado:"confirmado",
