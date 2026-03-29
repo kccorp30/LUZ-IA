@@ -593,11 +593,12 @@ function renderProductos(cat){
       var ingrs=(i.descripcion||"").split(",").map(function(s){return s.trim();}).filter(function(s){return s.length>2&&s.length<30;});
       var tieneIngrs=ingrs.length>1;
       h+='<div class="prod-card'+(i.disponible?"":" no-disponible")+'" id="pc-'+i.id+'">';
-      h+='<div class="prod-main">';
+      h+='<div class="prod-main" '+(tieneIngrs&&i.disponible?'onclick="toggleIngredientes(''+i.id+'')" style="cursor:pointer"':'')+' >';
       h+='<div class="prod-img-wrap">'+(i.foto_url?'<img src="'+i.foto_url+'" onerror="this.parentElement.innerHTML=\''+(i.emoji||'🍔')+'\'">':(i.emoji||"🍔"))+'</div>';
       h+='<div class="prod-info">';
       h+='<div class="prod-nombre">'+i.nombre+'</div>';
       h+='<div class="prod-desc">'+(i.descripcion||"")+'</div>';
+      if(tieneIngrs&&i.disponible)h+='<div style="font-size:10px;color:var(--g1);font-weight:700;margin-top:4px;">✏️ Personalizar ingredientes</div>';
       h+='<div class="prod-precio-wrap">';
       h+='<div class="prod-precio">'+fmt(p.final)+'</div>';
       if(p.antes)h+='<div class="prod-precio-tachado">'+fmt(p.antes)+'</div>';
@@ -790,7 +791,7 @@ function enviarPedido(){
   var total=Math.max(0,sub+des-descNivel-descCupon);
 
   var lineas=["Metodo de pago elegido: "+pagoSel,""];
-  if(cliente.nombre)lineas.push("👤 "+cliente.nombre+(cliente.nivel&&cliente.nivel!=="visitante"?" (Nivel "+cliente.nivel.charAt(0).toUpperCase()+cliente.nivel.slice(1)+")":""));
+  if(cliente.nombre)lineas.push("👤 "+cliente.nombre);
   lineas.push("");
   lineas.push("*Mi pedido:*");
   items.forEach(function(i){
