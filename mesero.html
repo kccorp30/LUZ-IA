@@ -298,9 +298,10 @@ function seleccionarMesa(num){
 
 function cargarPedidosActivos(num){
   if(!rest)return;
-  get("pedidos","restaurante_id=eq."+rest.id+"&estado=neq.entregado&estado=neq.cancelado&order=created_at.desc").then(function(pedidos){
+  get("pedidos","restaurante_id=eq."+rest.id+"&estado=not.in.(entregado,cancelado,cuenta)&order=created_at.desc&limit=50").then(function(pedidos){
+    var mesaStr="mesa "+String(num).toLowerCase();
     var misPedidos=(pedidos||[]).filter(function(p){
-      return p.direccion&&p.direccion.toLowerCase()==="mesa "+num;
+      return p.direccion&&p.direccion.toLowerCase()===mesaStr;
     });
     if(!misPedidos.length){
       document.getElementById("mesaActivaPanel").style.display="none";
