@@ -817,7 +817,7 @@ select.finput{cursor:pointer}
   <div id="radialOverlay" onclick="toggleRadial()" style="display:none;position:fixed;inset:0;z-index:398;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);"></div>
   <div id="radialNav" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:400;">
     <!-- Items radiales - posicionados con JS -->
-    <div id="radialItems" style="position:absolute;bottom:30px;left:50%;width:0;height:0;pointer-events:none;"></div>
+    <div id="radialItems" style="position:absolute;bottom:28px;left:50%;width:0;height:0;pointer-events:none;"></div>
     <!-- Botón central -->
     <div id="radialBtn" onclick="toggleRadial()" style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:2px solid rgba(196,181,253,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 32px rgba(124,58,237,0.5),0 0 0 0 rgba(124,58,237,0.3);position:relative;z-index:401;transition:all 0.3s;">
       <div id="radialBtnIcon" style="font-size:26px;transition:transform 0.3s;">💬</div>
@@ -1017,22 +1017,17 @@ function initRadial(){
   var container=document.getElementById("radialItems");
   if(!container)return;
   var total=radialTabs.length;
-  var radius=130;
-  // Center of the button (30px = half button height from bottom of container)
-  var cx=0, cy=-30;
+  var radius=115;
   radialTabs.forEach(function(tab,i){
-    // Spread from 200deg to 340deg (semicircle upward)
-    var angle=200+(i*(140/(total-1)));
-    var rad=angle*Math.PI/180;
-    var x=cx+Math.cos(rad)*radius;
-    var y=cy+Math.sin(rad)*radius;
+    var angle=Math.PI+(i*(Math.PI/(total-1)));
+    var x=Math.cos(angle)*radius;
+    var y=Math.sin(angle)*radius;
     var el=document.createElement("div");
     el.className="radial-item";
     el.id="radial-"+tab.id;
-    // Position: centered on x,y
-    el.style.left=(x)+"px";
-    el.style.top=(y)+"px";
-    el.style.transitionDelay=i*0.03+"s";
+    el.style.left=x+"px";
+    el.style.top=y+"px";
+    el.style.transitionDelay=(i*0.03)+"s";
     el.innerHTML='<div class="radial-item-btn" id="rbtn-'+tab.id+'">'+tab.icon+'</div><div class="radial-item-label">'+tab.label+'</div>';
     (function(t){el.addEventListener("click",function(e){e.stopPropagation();showTab(t.id);});})(tab);
     container.appendChild(el);
