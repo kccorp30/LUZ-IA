@@ -209,6 +209,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Plus J
 </div>
 
 <!-- CARRITO BAR -->
+<div id="cuentaBarBtn" onclick="pedirCuenta()" style="display:none;position:fixed;bottom:90px;right:16px;z-index:201;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:white;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(245,158,11,0.5);display:flex;align-items:center;justify-content:center;" title="Pedir cuenta">💳</div>
 <div class="cart-bar" id="cartBar" onclick="abrirModal()">
   <div class="cart-bar-inner">
     <div class="cart-icon">🛒<div class="cart-badge" id="cartBadge">0</div></div>
@@ -307,7 +308,7 @@ function entrarApp(){
   // Load menu AND mesas in parallel, show mesas only when menu is ready
   Promise.all([
     api("menu_items","restaurante_id=eq."+rest.id+"&order=categoria,orden&select=*"),
-    api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,listo,cuenta)&select=direccion,estado,metodo_pago")
+    api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,en_preparacion,listo,cuenta)&select=direccion,estado,metodo_pago")
   ]).then(function(results){
     menuItems=results[0]||[];
     var pedidos=results[1]||[];
@@ -331,7 +332,7 @@ function entrarApp(){
 // ── MESAS ──
 function cargarEstadoMesas(){
   var total=8;
-  api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,listo,cuenta)&select=direccion,estado,metodo_pago").then(function(pedidos){
+  api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,en_preparacion,listo,cuenta)&select=direccion,estado,metodo_pago").then(function(pedidos){
     var mesas={};
     (pedidos||[]).forEach(function(p){
       if(!p.direccion)return;
@@ -369,6 +370,8 @@ function abrirMesa(num){
   document.getElementById("vistaSelector").style.display="none";
   document.getElementById("vistaPedido").style.display="block";
   document.getElementById("cartBar").style.display="none";
+  document.getElementById("cuentaBarBtn").style.display="none";
+  document.getElementById("cuentaBarBtn").style.display="flex";
   document.getElementById("searchInput").value="";
   document.getElementById("searchClear").style.display="none";
   catActual="todas";
@@ -404,15 +407,15 @@ function volverSelector(){
 function cargarActivosMesa(num){
   var wrap=document.getElementById("activosWrap");
   wrap.innerHTML="";
-  api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,listo)&select=numero_pedido,estado,items,total,direccion&order=created_at.desc&limit=20").then(function(todos){
+  api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,en_preparacion,listo)&select=numero_pedido,estado,items,total,direccion&order=created_at.desc&limit=20").then(function(todos){
       var activos=(todos||[]).filter(function(p){
         if(!p.direccion)return false;
         return p.direccion.toLowerCase()==="mesa "+String(num);
       });
       if(!activos.length){wrap.innerHTML="";return;}
-      var estIcon={confirmado:"🔵",preparando:"🟡",listo:"🟢"};
-      var estClass={confirmado:"est-confirmado",preparando:"est-preparando",listo:"est-listo"};
-      var estLabel={confirmado:"Recibido",preparando:"Preparando",listo:"¡Listo!"};
+      var estIcon={confirmado:"🔵",preparando:"🟡",en_preparacion:"🟡",listo:"🟢"};
+      var estClass={confirmado:"est-confirmado",preparando:"est-preparando",en_preparacion:"est-preparando",listo:"est-listo"};
+      var estLabel={confirmado:"Recibido",preparando:"Preparando",en_preparacion:"Preparando",listo:"¡Listo!"};
       var h='<div class="activos-panel">';
       h+='<div class="activos-title">📋 Pedidos activos en Mesa '+num+'</div>';
       activos.forEach(function(p){
@@ -421,7 +424,10 @@ function cargarActivosMesa(num){
         h+='<div class="activo-item">';
         h+='<div class="activo-header"><span class="activo-num">#'+p.numero_pedido+'</span><span class="activo-estado '+estClass[est]+'">'+estIcon[est]+' '+estLabel[est]+'</span></div>';
         h+='<div class="activo-productos">'+items.map(function(i){return'• '+i;}).join('<br>')+'</div>';
-        if(est==="listo")h+='<div class="listo-banner">✅ LISTO PARA SERVIR — lleva a la mesa</div>';
+        if(est==="listo"||est==="en_camino"){
+        h+='<div class="listo-banner">✅ LISTO PARA SERVIR</div>';
+        h+='<button data-pid="'+p.id+'" onclick="marcarEntregado(this.getAttribute(\'data-pid\'),'+num+')" style="width:100%;margin-top:6px;padding:8px;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);border-radius:9px;color:#34d399;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">✓ Marcar como entregado</button>';
+      }
         h+='</div>';
       });
       h+='</div>';
@@ -503,152 +509,12 @@ function renderProds(q){
       h+='</div>';
       h+='<div class="prod-precio">'+fmt(i.precio)+'</div>';
       if(qty>0){
-        h+='<div class="qty-ctrl">';
-        h+='<button class="qty-btn" onclick="cambiarQty(\''+i.id+'\',-1)">−</button>';
-        h+='<span class="qty-num">'+qty+'</span>';
-        h+='<button class="qty-btn" onclick="cambiarQty(\''+i.id+'\',1)">+</button>';
-        h+='</div>';
+        h+='<div class="qty-ctrl"><button class="qty-btn" data-id="'+i.id+'" data-d="-1" onclick="qtyClick(this)">−</button><span class="qty-num">'+qty+'</span><button class="qty-btn" data-id="'+i.id+'" data-d="1" onclick="qtyClick(this)">+</button></div>';
       } else {
-        h+='<button class="prod-add" onclick="agregar(\''+i.id+'\')">+</button>';
+        h+='<button class="prod-add" data-id="'+i.id+'" onclick="addClick(this)">+</button>';
       }
       h+='</div>';
     });
   });
   wrap.innerHTML=h;
 }
-
-function getItem(id){return menuItems.find(function(i){return i.id===id;});}
-
-function agregar(id){
-  var item=getItem(id);if(!item)return;
-  if(carrito[id])carrito[id].qty++;
-  else carrito[id]={qty:1,nombre:item.nombre,precio:item.precio,emoji:item.emoji||"🍔"};
-  actualizarBar();
-  renderProds();
-  notif("✓ "+item.nombre);
-}
-
-function cambiarQty(id,delta){
-  if(!carrito[id])return;
-  carrito[id].qty+=delta;
-  if(carrito[id].qty<=0)delete carrito[id];
-  actualizarBar();
-  renderProds();
-}
-
-function calcTotal(){return Object.values(carrito).reduce(function(s,i){return s+i.precio*i.qty;},0);}
-function calcCount(){return Object.values(carrito).reduce(function(s,i){return s+i.qty;},0);}
-
-function actualizarBar(){
-  var count=calcCount();
-  var bar=document.getElementById("cartBar");
-  bar.style.display=count>0?"block":"none";
-  document.getElementById("cartBadge").textContent=count;
-  document.getElementById("cartMonto").textContent=fmt(calcTotal());
-  document.getElementById("tbTotal").textContent=count>0?fmt(calcTotal()):"";
-}
-
-// ── MODAL ──
-function abrirModal(){
-  renderModal();
-  document.getElementById("modalWrap").classList.add("open");
-}
-function cerrarModal(){document.getElementById("modalWrap").classList.remove("open");}
-document.getElementById("modalWrap").addEventListener("click",function(e){if(e.target===this)cerrarModal();});
-
-function renderModal(){
-  var items=Object.values(carrito);
-  var el=document.getElementById("modalItems");
-  if(!items.length){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">Carrito vacío</div>';return;}
-  var h="";
-  items.forEach(function(i){
-    h+='<div class="cart-item-row">';
-    h+='<div class="ci-emoji">'+i.emoji+'</div>';
-    h+='<div class="ci-info"><div class="ci-nombre">'+i.nombre+'</div></div>';
-    h+='<div class="qty-ctrl" style="margin-right:8px"><button class="qty-btn" onclick="cambiarQty(\''+i.id+'\',-1);renderModal();actualizarBar();">−</button><span class="qty-num">'+i.qty+'</span><button class="qty-btn" onclick="cambiarQty(\''+i.id+'\',1);renderModal();actualizarBar();">+</button></div>';
-    h+='<div class="ci-precio">'+fmt(i.precio*i.qty)+'</div>';
-    h+='</div>';
-  });
-  el.innerHTML=h;
-  document.getElementById("modalTotal").textContent=fmt(calcTotal());
-  // Mostrar botón cuenta solo si hay pedidos activos
-  document.getElementById("btnEnviar").disabled=items.length===0;
-}
-
-// ── ENVIAR PEDIDO ──
-async function enviarPedido(){
-  var items=Object.values(carrito);
-  if(!items.length)return;
-  var btn=document.getElementById("btnEnviar");
-  btn.disabled=true;btn.textContent="Enviando...";
-  var notas=document.getElementById("notasTa").value.trim();
-  var total=calcTotal();
-  var itemsArr=items.map(function(i){return i.qty+"x "+i.nombre+" "+fmt(i.precio*i.qty);});
-  var payload={
-    restaurante_id:rest.id,
-    numero_pedido:Math.floor(Date.now()/1000)%100000,
-    cliente_tel:"MESA-"+mesaActual,
-    cliente_nombre:"Mesa "+mesaActual,
-    domiciliario_nombre:mesero.nombre,
-    items:itemsArr,
-    subtotal:total,desechables:0,domicilio:0,servicio:0,total:total,
-    direccion:"Mesa "+mesaActual,
-    metodo_pago:"en mesa",
-    estado:"confirmado",
-    notas_especiales:notas||null
-  };
-  try{
-    var r=await fetch(SU+"/rest/v1/pedidos",{
-      method:"POST",
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
-      body:JSON.stringify(payload)
-    });
-    if(!r.ok)throw new Error("Status "+r.status);
-    cerrarModal();
-    carrito={};
-    actualizarBar();
-    renderProds();
-    document.getElementById("exitoMsg").textContent="Pedido de Mesa "+mesaActual+" enviado a cocina. Ya lo preparan.";
-    document.getElementById("exitoOverlay").classList.add("show");
-  }catch(e){
-    notif("❌ Error: "+e.message,"rgba(239,68,68,0.7)");
-    btn.disabled=false;btn.textContent="Enviar a cocina 🍳";
-  }
-}
-
-function cerrarExito(){
-  document.getElementById("exitoOverlay").classList.remove("show");
-  volverSelector();
-}
-
-// ── PEDIR CUENTA ──
-async function pedirCuenta(){
-  cerrarModal();
-  if(!rest||!mesaActual)return;
-  try{
-    await fetch(SU+"/rest/v1/pedidos",{
-      method:"POST",
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
-      body:JSON.stringify({
-        restaurante_id:rest.id,
-        numero_pedido:Math.floor(Date.now()/1000)%100000,
-        cliente_tel:"MESA-"+mesaActual,
-        cliente_nombre:"Mesa "+mesaActual,
-        items:["💳 SOLICITUD DE CUENTA"],
-        subtotal:0,desechables:0,domicilio:0,servicio:0,total:0,
-        direccion:"Mesa "+mesaActual,
-        metodo_pago:"cuenta",
-        estado:"cuenta",
-        notas_especiales:"Cliente solicita la cuenta"+(mesero?" — Mesero: "+mesero.nombre:""),
-        domiciliario_nombre:mesero?mesero.nombre:null
-      })
-    });
-    notif("💳 Cuenta enviada al panel","rgba(245,158,11,0.9)");
-    setTimeout(volverSelector,1500);
-  }catch(e){
-    notif("💳 Cuenta solicitada","rgba(245,158,11,0.8)");
-  }
-}
-</script>
-</body>
-</html>
