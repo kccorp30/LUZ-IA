@@ -137,7 +137,7 @@ function buildSystemPrompt(restaurante) {
     personalidad = "Eres una persona real, calida y cercana. NUNCA admitas ser IA. Hablas natural: con gusto, a listo, claro que si, digame, con mucho gusto. NUNCA uses amigo, amiga, Dama ni Caballero. Si necesitas dirigirte al cliente usa: mi amor, corazon, o simplemente habla sin apelativo.";
   }
 
-  var nequi      = restaurante ? (restaurante.metodo_pago_nequi  || "3138908577")     : "3138908577";
+  var nequi      = restaurante ? (restaurante.metodo_pago_nequi  || "3177269578")     : "3177269578";
   var banco      = restaurante ? (restaurante.metodo_pago_banco  || "0089102980")     : "0089102980";
   var bancoNombre= restaurante ? (restaurante.metodo_pago_nombre || "Jose Gregorio Charris") : "Jose Gregorio Charris";
 
@@ -214,6 +214,10 @@ Desechables:  $XXX
 Domicilio:    $X.XXX
 TOTAL:        $XX.XXX
 
+CLIENTE:
+NOMBRE_CLIENTE_PLACEHOLDER
+NIVEL_CLIENTE_PLACEHOLDER
+
 DIRECCION FRECUENTE:
 DIRECCION_FRECUENTE_PLACEHOLDER
 
@@ -288,7 +292,13 @@ PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
 MUY IMPORTANTE:
 - Si el cliente solo dice "Nequi" o "Bancolombia" = NO escribas ningun tag. Solo dale los datos y pide el comprobante.
 - PAGO_CONFIRMADO solo va cuando el cliente MANDA LA IMAGEN del comprobante, nunca antes.
-- NUNCA digas que eres IA. Aplica promos del dia. Si no existe el producto, ofrece alternativas.`;
+- Aplica promos del dia. Si no existe el producto, ofrece alternativas.
+
+SI EL CLIENTE PREGUNTA SI ERES IA O UN BOT:
+- Responde con honestidad y calidez. Ejemplo: "Si, soy una IA. Me llamo ${nombreLuz}, fui creada por KCCorp para hacer tu experiencia de pedido mas rapida y agradable. Puedo tomar tu pedido, resolver tus dudas y avisarte en cada paso. Y si prefieres hablar con alguien del equipo, con mucho gusto te comunico."
+- NO niegues ser IA si te preguntan directamente. La honestidad genera mas confianza.
+- Puedes destacar que eres IA de KCCorp pero con intencion genuina de ayudar, no como disculpa.
+- Si preguntan quien te creo o quien esta detras: "Fui desarrollada por KCCorp, una empresa estadounidense especializada en soluciones de IA para negocios."`;
 }
 
 // ── GUARDAR PEDIDO ────────────────────────────────────────────────────────────
@@ -415,7 +425,7 @@ async function printTicket(orderData) {
     orderData.paymentMethod === "efectivo"    ? "Efectivo - cancela con: " + (orderData.cashDenomination || "?") :
     orderData.paymentMethod === "datafono"    ? "Datafono (llevar)" :
     orderData.paymentMethod === "bancolombia" ? "Bancolombia llave: " + (orderData.bancoCuenta || "0089102980") :
-    "Nequi " + (orderData.nequiNum || "3138908577");
+    "Nequi " + (orderData.nequiNum || "3177269578");
 
   var restNombre = orderData.restauranteNombre || "LA CURVA STREET FOOD";
   var restCiudad = orderData.restauranteCiudad || "Cali";
@@ -926,10 +936,28 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     var diaHoy = getDiaColombiaStr();
 
     var dirFrecuente = null;
-    if (restaurante) dirFrecuente = await getDireccionFrecuente(restaurante.id, from);
+    var nombreCliente = null;
+    var nivelCliente = null;
+    if (restaurante) {
+      dirFrecuente = await getDireccionFrecuente(restaurante.id, from);
+      // Obtener nombre y nivel del cliente
+      try {
+        var clienteInfo = await axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante.id + "&telefono=eq." + encodeURIComponent(from) + "&select=nombre_cliente,nivel_fidelidad,total_pedidos", { headers: sbH(true) });
+        if (clienteInfo.data && clienteInfo.data.length > 0) {
+          nombreCliente = clienteInfo.data[0].nombre_cliente || null;
+          nivelCliente = clienteInfo.data[0].nivel_fidelidad || null;
+        }
+      } catch(e) {}
+    }
     var dirFrecuenteTexto = dirFrecuente
       ? "Este cliente ya ha pedido antes. Su ultima direccion fue: " + dirFrecuente + ". Si pide de nuevo, preguntale: '¿Te lo mando a " + dirFrecuente + " igual que la vez anterior?' Espera confirmacion antes de asumir."
       : "No hay direccion previa registrada para este cliente.";
+    var nombreClienteTexto = nombreCliente
+      ? "El cliente se llama " + nombreCliente + ". Usalo naturalmente en la conversacion cuando sea apropiado, no en cada mensaje."
+      : "No tenemos el nombre de este cliente registrado.";
+    var nivelClienteTexto = nivelCliente && nivelCliente !== "bronce"
+      ? "Este cliente es nivel " + nivelCliente.toUpperCase() + " en el programa de fidelidad."
+      : "";
 
     var cuponesTexto = "No hay cupones activos en este momento.";
     if (restaurante && restaurante.cupones_activos) {
@@ -963,6 +991,8 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       .replace(/DIA_PLACEHOLDER/g, diaHoy)
       .replace(/DIRECCION_FRECUENTE_PLACEHOLDER/g, dirFrecuenteTexto)
       .replace(/CUPONES_PLACEHOLDER/g, cuponesTexto)
+      .replace(/NOMBRE_CLIENTE_PLACEHOLDER/g, nombreClienteTexto)
+      .replace(/NIVEL_CLIENTE_PLACEHOLDER/g, nivelClienteTexto)
       + bienvenidaExtra;
 
     var claudeResponse = await axios.post(
@@ -1027,7 +1057,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
         pedidoAdicionalDe: state.pedidoAdicionalDe || null,
         restauranteNombre: restaurante?.nombre || "Restaurante",
         restauranteCiudad: restaurante?.ciudad || "Colombia",
-        nequiNum: restaurante?.metodo_pago_nequi || "3138908577",
+        nequiNum: restaurante?.metodo_pago_nequi || "3177269578",
         bancoCuenta: restaurante?.metodo_pago_banco || "0089102980"
       });
 
