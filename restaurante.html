@@ -1093,7 +1093,14 @@ function loadPedidos(){
   if(!rest)return;
   get("pedidos","restaurante_id=eq."+rest.id+"&estado=neq.entregado&order=created_at.desc&limit=20").then(function(pedidos){
     var isFirst=Object.keys(known).length===0;
-    pedidos.forEach(function(p){if(!known[p.id]){if(!isFirst){notif("Pedido #"+p.numero_pedido);playSound("nuevo_pedido");pedidosBadgeCount++;var b=document.getElementById("pedidosBadge");b.textContent=pedidosBadgeCount>9?"9+":String(pedidosBadgeCount);b.classList.add("show");}known[p.id]=true;}});
+    pedidos.forEach(function(p){if(!known[p.id]){if(!isFirst){
+              var esCuentaNueva=p.metodo_pago==="cuenta"||p.estado==="cuenta";
+              if(esCuentaNueva){
+                notif("💳 "+( p.direccion||"Mesa")+" solicita la cuenta","rgba(245,158,11,0.9)");
+                playSound("cuenta");
+              } else {
+                notif("Pedido #"+p.numero_pedido);playSound("nuevo_pedido");
+              }pedidosBadgeCount++;var b=document.getElementById("pedidosBadge");b.textContent=pedidosBadgeCount>9?"9+":String(pedidosBadgeCount);b.classList.add("show");}known[p.id]=true;}});
     var lista=document.getElementById("pedidosLista");
     if(!pedidos.length){lista.innerHTML='<div class="empty"><div class="ei">&#127828;</div><div class="et">No hay pedidos activos.</div></div>';return;}
     var h="";
@@ -1106,9 +1113,11 @@ function loadPedidos(){
       var esRecoger=recogerTexto.toLowerCase().indexOf("recoger")!==-1;
       var esAdicional=!!p.pedido_adicional_de;
       var esMesa=p.direccion&&p.direccion.toUpperCase().indexOf("MESA ")===0;
-      var cardClass=esMesa?'pedido-card pedido-mesa-card':esAdicional?'pedido-card pedido-adicional-card':esRecoger?'pedido-card pedido-recoger':'pedido-card';
+      var esCuenta=p.metodo_pago==="cuenta"||p.estado==="cuenta";
+      var cardClass=esCuenta?'pedido-card pedido-cuenta-card':esMesa?'pedido-card pedido-mesa-card':esAdicional?'pedido-card pedido-adicional-card':esRecoger?'pedido-card pedido-recoger':'pedido-card';
       h+='<div class="'+cardClass+'">';
-      if(esMesa)h+='<div style="background:linear-gradient(90deg,rgba(16,185,129,0.2),transparent);padding:8px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(16,185,129,0.2)"><span style="font-size:16px">🪑</span><span style="font-size:12px;font-weight:800;color:#34d399">'+p.direccion.toUpperCase()+' — EN SITIO</span></div>';
+      if(esCuenta)h+='<div style="background:linear-gradient(90deg,rgba(245,158,11,0.3),rgba(245,158,11,0.1));padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(245,158,11,0.3)"><span style="font-size:20px">💳</span><span style="font-size:13px;font-weight:900;color:#fbbf24">'+p.direccion.toUpperCase()+' — SOLICITA LA CUENTA</span></div>';
+      else if(esMesa)h+='<div style="background:linear-gradient(90deg,rgba(16,185,129,0.2),transparent);padding:8px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(16,185,129,0.2)"><span style="font-size:16px">🪑</span><span style="font-size:12px;font-weight:800;color:#34d399">'+p.direccion.toUpperCase()+' — EN SITIO</span></div>';
       if(esAdicional)h+='<div style="padding:8px 16px"><span class="adicional-badge">➕ ADICIONAL al pedido #'+p.pedido_adicional_de+'</span></div>';
       if(esRecoger)h+='<div style="background:linear-gradient(90deg,rgba(245,158,11,0.25),rgba(245,158,11,0.1));padding:10px 16px;font-size:13px;font-weight:800;color:#fcd34d;display:flex;align-items:center;gap:8px;"><span style="font-size:18px">🏂</span> PEDIDO PARA RECOGER EN TIENDA</div>';
       h+='<div class="ph"><div><div class="pnum">#'+p.numero_pedido+'</div><div class="ptime">'+ago(p.created_at)+'</div></div><span class="etag '+cfg.c+'">'+cfg.l+'</span></div>';
