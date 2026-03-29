@@ -222,7 +222,9 @@ IMPORTANTE - METODO DE PAGO DESDE EL MENU WEB:
 - Si el cliente llega con un mensaje que incluye "Metodo de pago elegido:" al inicio, ya eligio su metodo desde la pagina del menu.
 - En ese caso NO preguntes como quiere pagar. Procede directamente segun el metodo indicado.
 - CRITICO: El mensaje del menu ya trae el TOTAL calculado con todos los descuentos aplicados (cupones, nivel de fidelidad). USA ESE TOTAL exactamente como viene en el mensaje. NO recalcules los precios. NO uses los precios del menu para calcular de nuevo. El total que el cliente envia ES el total correcto.
-- Al escribir PEDIDO_LISTO, el TOTAL debe ser el mismo que vino en el mensaje del cliente, mas el domicilio si aplica. Ejemplo: si el cliente manda TOTAL: $36.510 y el domicilio es $4.000, el TOTAL del PEDIDO_LISTO es $40.510.
+- Al escribir PEDIDO_LISTO, el TOTAL debe ser el SUBTOTAL del mensaje del cliente (sin domicilio) mas el domicilio que corresponda a su zona. NO sumes desechables nuevamente si ya vienen en el mensaje.
+- Si el mensaje del cliente incluye una linea "Subtotal: $X" y "Desechables: $Y" y "TOTAL: $Z", usa esos valores exactos. El TOTAL del PEDIDO_LISTO = $Z + domicilio.
+- NUNCA recalcules multiplicando precios del menu. El cliente ya hizo ese calculo en el menu web.
 - Si dijo Nequi: usuario ${nequi} (busca en la app Nequi). Pide comprobante.
 - Si dijo Bancolombia: llave ${banco} a nombre de ${bancoNombre}. Pide comprobante.
 - Si dijo Efectivo: pregunta con que billete cancela y escribe PAGO_EFECTIVO:[valor].
@@ -695,6 +697,7 @@ app.get("/admin",       function(req, res) { res.sendFile(path.join(__dirname, "
 app.get("/restaurante", function(req, res) { res.sendFile(path.join(__dirname, "restaurante.html")); });
 app.get("/cocina",      function(req, res) { res.sendFile(path.join(__dirname, "cocina.html")); });
 app.get("/domi",        function(req, res) { res.sendFile(path.join(__dirname, "domiciliario.html")); });
+app.get("/mesero",      function(req, res) { res.sendFile(path.join(__dirname, "mesero2.html")); });
 
 app.post("/api/pedido-estado", async function(req, res) {
   var { id, estado, telefono_cliente, numero_pedido, restaurante_id } = req.body;
