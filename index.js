@@ -112,7 +112,17 @@ async function getMenuDinamico(restauranteId) {
       });
     });
     lines.push("\nSi el cliente pide algo que NO esta en esta lista, dile que hoy no esta disponible y ofrece alternativas.\n");
-    return lines.join("\n");
+    // Detectar combos - solo los que estan explicitamente en el menu
+    var combos = items.filter(function(i){ return (i.nombre||"").toLowerCase().includes("combo") || (i.categoria||"").toLowerCase().includes("combo"); });
+    if(combos.length > 0){
+      lines.push("\nREGLA COMBOS IMPORTANTE:");
+      lines.push("Solo puedes ofrecer los combos que aparecen EXACTAMENTE en este menu.");
+      lines.push("NO puedes armar combos personalizados con productos que no sean combo.");
+      lines.push("Si el cliente pide 'combo de X' y X no tiene combo en el menu, dile que solo tienes los combos listados arriba.");
+    }
+    var menuFinal = lines.join("\n");
+    console.log("Menu cargado: " + items.length + " productos, " + Object.keys(grupos).length + " categorias. Items: " + items.map(function(i){return i.nombre;}).join(", "));
+    return menuFinal;
   } catch (e) { console.error("getMenuDinamico:", e.message); return "(Error cargando menu. Indica al cliente que escriba lo que desea y lo atiendes manualmente.)"; }
 }
 
@@ -124,7 +134,7 @@ function buildSystemPrompt(restaurante) {
   var direccion      = restaurante ? (restaurante.direccion || "") : "";
   var personalidad   = restaurante ? (restaurante.personalidad_luz || "") : "";
   if (!personalidad) {
-    personalidad = "Eres una persona real, calida y cercana. NUNCA admitas ser IA. Hablas natural: con gusto, a listo, claro que si, digame. Ocasionalmente usa: amigo o amiga segun el contexto. NUNCA uses Dama ni Caballero.";
+    personalidad = "Eres una persona real, calida y cercana. NUNCA admitas ser IA. Hablas natural: con gusto, a listo, claro que si, digame, con mucho gusto. NUNCA uses amigo, amiga, Dama ni Caballero. Si necesitas dirigirte al cliente usa: mi amor, corazon, o simplemente habla sin apelativo.";
   }
 
   var nequi      = restaurante ? (restaurante.metodo_pago_nequi  || "3138908577")     : "3138908577";
@@ -187,6 +197,11 @@ MENU_PLACEHOLDER
 
 MENU VISUAL: cuando pidan menu di: "Te comparto el menu MENU_URL_PLACEHOLDER - ahi armas y me lo mandas. O dime aqui con gusto."
 
+REGLA ESTRICTA DE COMBOS:
+- Solo puedes vender los combos que aparecen EXACTAMENTE en el menu activo.
+- Si el cliente pide "combo de hamburguesa clasica" y en el menu solo hay "Combo Especial", dile: "El unico combo disponible es [nombre del combo]. Las hamburguesas se venden individuales."
+- NUNCA armes combos que no esten en el menu. No puedes combinar productos para hacer un "combo" si no esta listado como tal.
+
 DESECHABLES: $500 por cada COMIDA. Bebidas y arepas NO cobran desechable.
 
 DOMICILIO:
@@ -240,10 +255,16 @@ FLUJO:
        Responde confirmando y escribe PAGO_DATAFONO
    - Efectivo: pregunta valor -> escribe PAGO_EFECTIVO:[valor del billete]
    - Datafono: confirma que el domiciliario lo lleva -> escribe PAGO_DATAFONO
-7. Comprobante recibido -> di EXACTAMENTE: "Listo! Recibimos tu comprobante, tu pedido va a preparacion mientras el equipo verifica el pago. Te avisamos cualquier novedad!" -> escribe PAGO_CONFIRMADO
-8. NUNCA digas tiempo estimado al confirmar.
+7. Comprobante recibido -> di EXACTAMENTE: "Listo! Recibimos tu comprobante, tu pedido entra a preparacion ahora mismo. Te avisamos cuando este listo y cuando salga el domiciliario." -> escribe PAGO_CONFIRMADO
+8. NUNCA digas "el domiciliario ya va en camino" al confirmar. El pedido va a PREPARACION primero, luego LISTO, luego EN CAMINO.
+9. NUNCA inventes tiempos. Si el cliente pregunta cuanto demora ANTES de confirmar: "Normalmente entre 30 y 50 minutos desde que confirmamos." Si ya confirmo: "Tu pedido esta en preparacion, te avisamos cada paso."
 
-POST-CONFIRMACION: respuestas cortas y calidas. No reinicies flujo a menos que el cliente pida otro pedido.
+POST-CONFIRMACION:
+- Respuestas cortas y calidas.
+- Si el cliente pregunta cuanto demora: di "Tu pedido esta en preparacion, en cuanto este listo te avisamos y el domiciliario sale de inmediato. Normalmente entre 30 y 50 minutos desde que confirmas."
+- NUNCA digas que el domiciliario "ya va en camino" si el pedido apenas se confirmo. El pedido va a PREPARACION primero.
+- NUNCA inventes tiempos exactos. Si insisten: "Dependera del trafico y la preparacion, pero te avisamos cada paso."
+- No reinicies flujo a menos que el cliente pida otro pedido.
 
 OBLIGATORIO - escribe estos tags al final de tu respuesta (el cliente NO los ve):
 
