@@ -209,7 +209,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Plus J
 </div>
 
 <!-- CARRITO BAR -->
-<div id="cuentaBarBtn" onclick="pedirCuenta()" style="display:none;position:fixed;bottom:90px;right:16px;z-index:201;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:white;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(245,158,11,0.5);display:flex;align-items:center;justify-content:center;" title="Pedir cuenta">💳</div>
+<div id="cuentaBarBtn" onclick="pedirCuenta()" style="display:none;position:fixed;bottom:90px;right:16px;z-index:201;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:white;font-size:22px;cursor:pointer;box-shadow:0 4px 20px rgba(245,158,11,0.5);align-items:center;justify-content:center;" title="Pedir cuenta">💳</div>
 <div class="cart-bar" id="cartBar" onclick="abrirModal()">
   <div class="cart-bar-inner">
     <div class="cart-icon">🛒<div class="cart-badge" id="cartBadge">0</div></div>
@@ -273,7 +273,7 @@ window.addEventListener("load",function(){
 });
 
 function cargarMeseros(){
-  api("domiciliarios","restaurante_id=eq."+rest.id+"&tipo=eq.mesero&activo=eq.true&select=id,nombre&order=nombre").then(function(ms){
+  api("domiciliarios","restaurante_id=eq."+rest.id+"&tipo=eq.mesero&order=nombre&select=*").then(function(ms){
     var grid=document.getElementById("maserosGrid");
     if(!ms||!ms.length){
       grid.innerHTML='<div class="login-empty" style="grid-column:1/-1">Sin meseros registrados.<br>Agrégalos en el panel → Mesas.</div>';
@@ -285,7 +285,7 @@ function cargarMeseros(){
         '<div class="mesero-avatar">'+ini+'</div>'+
         '<div class="mesero-nombre">'+m.nombre+'</div></div>';
     }).join("");
-  }).catch(function(){document.getElementById("loginErr").textContent="Error cargando meseros";});
+  }).catch(function(e){console.error("meseros error:",e);document.getElementById("loginErr").textContent="Error: "+e.message;});
 }
 
 function selMesero(el){
