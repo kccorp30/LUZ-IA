@@ -673,9 +673,12 @@ select.finput{cursor:pointer}
 
     <!-- CLIENTES -->
     <div class="page" id="page-clientes">
-      <div style="padding:16px 12px 4px">
-        <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Clientes</div>
-        <div style="font-size:13px;color:var(--text3);margin-top:2px">Base de clientes y programa de fidelidad</div>
+      <div style="padding:16px 12px 4px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+        <div>
+          <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Clientes</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:2px">Base de clientes y programa de fidelidad</div>
+        </div>
+        <button onclick="mostrarResetFidelidad()" style="padding:8px 14px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:12px;color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:'Plus Jakarta Sans',sans-serif">🔄 Reiniciar rangos</button>
       </div>
       <div style="padding:4px 12px 0">
         <div class="clientes-resumen" id="clientesResumen">
@@ -1037,6 +1040,18 @@ function loadPedidos(){
       if(esAdicional)h+='<div style="padding:8px 16px"><span class="adicional-badge">➕ ADICIONAL al pedido #'+p.pedido_adicional_de+'</span></div>';
       if(esRecoger)h+='<div style="background:linear-gradient(90deg,rgba(245,158,11,0.25),rgba(245,158,11,0.1));padding:10px 16px;font-size:13px;font-weight:800;color:#fcd34d;display:flex;align-items:center;gap:8px;"><span style="font-size:18px">🏂</span> PEDIDO PARA RECOGER EN TIENDA</div>';
       h+='<div class="ph"><div><div class="pnum">#'+p.numero_pedido+'</div><div class="ptime">'+ago(p.created_at)+'</div></div><span class="etag '+cfg.c+'">'+cfg.l+'</span></div>';
+      // Nombre y nivel del cliente
+      if(p.cliente_nombre||p.cliente_nivel){
+        var niv=p.cliente_nivel||"bronce";
+        var nivIcos={oro:"🥇",plata:"🥈",bronce:"🥉"};
+        var nivCols={oro:"rgba(245,158,11,0.15)",plata:"rgba(156,163,175,0.12)",bronce:"rgba(205,127,50,0.1)"};
+        var nivTxt={oro:"#fbbf24",plata:"#d1d5db",bronce:"#cd7f32"};
+        h+='<div style="padding:5px 16px 6px;display:flex;align-items:center;gap:8px;background:'+nivCols[niv]+';border-bottom:1px solid rgba(255,255,255,0.05)">';
+        h+='<span style="font-size:14px">'+nivIcos[niv]+'</span>';
+        h+='<span style="font-size:12px;font-weight:700;color:'+nivTxt[niv]+'">'+(p.cliente_nombre||p.cliente_tel)+'</span>';
+        h+='<span style="font-size:10px;color:rgba(255,255,255,0.35);font-weight:600;text-transform:uppercase">· '+niv+'</span>';
+        h+='</div>';
+      }
       h+='<div class="pbody">';
       h+='<div>'+items.map(function(i){return'<div class="pitem">&bull; '+i+'</div>';}).join("")+'</div>';
       if(p.notas_especiales){h+='<div class="notas-especiales"><span class="notas-icon">📝</span><div><strong>Notas especiales:</strong> '+p.notas_especiales+'</div></div>';}
@@ -1838,6 +1853,45 @@ function renderClientes(){
 function toggleClienteDetail(tel){
   var el=document.getElementById("cdet-"+tel);
   if(el)el.classList.toggle("open");
+}
+
+
+// ── RESET FIDELIDAD ───────────────────────────────────────────────────────────
+function mostrarResetFidelidad(){
+  var modal=document.getElementById("resetFidelidadModal");
+  modal.style.display="flex";
+  actualizarFechaProxima();
+  document.getElementById("resetPeriodo").onchange=actualizarFechaProxima;
+}
+function actualizarFechaProxima(){
+  var dias=Number(document.getElementById("resetPeriodo").value);
+  var el=document.getElementById("resetFechaProxima");
+  if(dias===0){el.textContent="Solo se reiniciará esta vez, sin automatismo";return;}
+  var prox=new Date(Date.now()+dias*24*60*60*1000);
+  el.textContent="Próximo reinicio automático: "+prox.toLocaleDateString("es-CO",{day:"numeric",month:"long",year:"numeric"});
+}
+function ejecutarResetFidelidad(){
+  if(!rest)return;
+  var dias=Number(document.getElementById("resetPeriodo").value);
+  var proxReset=dias>0?new Date(Date.now()+dias*24*60*60*1000).toISOString():null;
+  var fechaHoy=new Date().toISOString();
+  // Reset total_pedidos y nivel de todos los clientes del restaurante
+  fetch(SU+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+rest.id,{
+    method:"PATCH",
+    headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+    body:JSON.stringify({total_pedidos:0,nivel_fidelidad:"bronce"})
+  }).then(function(){
+    // Guardar config de reset en restaurante
+    return fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{
+      method:"PATCH",
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json"},
+      body:JSON.stringify({fecha_inicio_fidelidad:fechaHoy,proximo_reset_fidelidad:proxReset,dias_ciclo_fidelidad:dias||null})
+    });
+  }).then(function(){
+    document.getElementById("resetFidelidadModal").style.display="none";
+    notif("✅ Rangos reiniciados. Los clientes empiezan desde 0 hoy.");
+    setTimeout(function(){loadClientes();},1000);
+  }).catch(function(){notif("❌ Error al reiniciar");});
 }
 
 // MAPA
