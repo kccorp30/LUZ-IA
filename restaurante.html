@@ -1712,18 +1712,25 @@ function loadClientes(){
           var pedidosPorTel={};
           (pedidos||[]).forEach(function(p){
             if(!p.cliente_tel)return;
-            if(!pedidosPorTel[p.cliente_tel])pedidosPorTel[p.cliente_tel]=[];
-            pedidosPorTel[p.cliente_tel].push(p);
+            var t=p.cliente_tel.replace(/[^0-9]/g,"");
+            // Indexar con y sin 57 para matching flexible
+            if(!pedidosPorTel[t])pedidosPorTel[t]=[];
+            pedidosPorTel[t].push(p);
+            var tSin=t.startsWith("57")&&t.length===12?t.substring(2):t;
+            var tCon=tSin.startsWith("57")?tSin:"57"+tSin;
+            if(tSin!==t){if(!pedidosPorTel[tSin])pedidosPorTel[tSin]=[];pedidosPorTel[tSin].push(p);}
+            if(tCon!==t){if(!pedidosPorTel[tCon])pedidosPorTel[tCon]=[];pedidosPorTel[tCon].push(p);}
           });
           // Enriquecer clientes
           clientesData=clientes.map(function(c){
-            var misPedidos=pedidosPorTel[c.telefono]||[];
+            var telNorm=(c.telefono||"").replace(/[^0-9]/g,"");
+            var misPedidos=pedidosPorTel[telNorm]||pedidosPorTel["57"+telNorm]||[];
             var totalPedidos=misPedidos.length;
             var totalGastado=misPedidos.reduce(function(s,p){return s+Number(p.total||0);},0);
             var ultimoPedido=misPedidos.length?misPedidos.sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);})[0]:null;
-            // Calcular nivel real basado en pedidos
+            // Calcular nivel real basado en pedidos reales (no el guardado)
             var nivel=totalPedidos>=25?"oro":totalPedidos>=10?"plata":totalPedidos>=1?"bronce":"nuevo";
-            return{...c,totalPedidos:totalPedidos,totalGastado:totalGastado,nivel:nivel,ultimoPedido:ultimoPedido,pedidos:misPedidos.slice(0,5)};
+            return Object.assign({},c,{totalPedidos:totalPedidos,totalGastado:totalGastado,nivel:nivel,ultimoPedido:ultimoPedido,pedidos:misPedidos.slice(0,5)});
           });
           // Stats resumen
           var oro=clientesData.filter(function(c){return c.nivel==="oro";}).length;
