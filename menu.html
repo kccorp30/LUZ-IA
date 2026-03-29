@@ -427,17 +427,17 @@ function doLogin(auto){
   if(telNorm.startsWith("57")&&telNorm.length===12) telNorm=telNorm.substring(2);
   var telCon57="57"+telNorm;
 
-  function calcNivel(n){return n>=25?"oro":n>=10?"plata":"bronce";}
+  function calcNivel(n){return Number(n)>=25?"oro":Number(n)>=10?"plata":"bronce";}
 
   function guardarCliente(totalPedidos){
     var nivel=calcNivel(totalPedidos);
     cliente={nombre:nombre,tel:telNorm,nivel:nivel,totalPedidos:totalPedidos};
     if(nombre)localStorage.setItem("luzClienteNombre",nombre);
-    if(telNorm)localStorage.setItem("luzClienteTel",telNorm);
+    if(telCon57)localStorage.setItem("luzClienteTel",telNorm);// guardamos sin 57 para display
     if(restId&&telNorm){
       fetch(SU+"/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",{
         method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},
-        body:JSON.stringify({restaurante_id:restId,telefono:telNorm,nombre_cliente:nombre||null,nivel_fidelidad:nivel,total_pedidos:totalPedidos,updated_at:new Date().toISOString()})
+        body:JSON.stringify({restaurante_id:restId,telefono:telCon57,nombre_cliente:nombre||null,nivel_fidelidad:nivel,total_pedidos:totalPedidos,updated_at:new Date().toISOString()})
       }).catch(function(){});
     }
     goApp();
