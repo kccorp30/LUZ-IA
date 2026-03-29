@@ -369,8 +369,19 @@ function abrirMesa(num){
   document.getElementById("searchInput").value="";
   document.getElementById("searchClear").style.display="none";
   catActual="todas";
-  renderCats();
-  renderProds();
+  if(menuItems.length>0){
+    renderCats();
+    renderProds();
+  } else {
+    // Menu not loaded yet - fetch directly
+    var pw=document.getElementById("prodsWrap");
+    pw.innerHTML='<div class="empty-search">Cargando menú...</div>';
+    api("menu_items","restaurante_id=eq."+rest.id+"&disponible=eq.true&order=categoria,orden&select=id,nombre,descripcion,precio,categoria,emoji").then(function(items){
+      menuItems=items||[];
+      renderCats();
+      renderProds();
+    }).catch(function(){pw.innerHTML='<div class="empty-search">Error cargando menú. Recarga.</div>';});
+  }
   cargarActivosMesa(num);
 }
 
