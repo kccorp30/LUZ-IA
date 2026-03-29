@@ -690,6 +690,10 @@ function parseReply(reply, from) {
 }
 
 // ── RUTAS ─────────────────────────────────────────────────────────────────────
+app.get("/mesero", function(req, res) {
+  res.sendFile(path.join(__dirname, "mesero.html"));
+});
+
 app.get("/menu",        function(req, res) { res.sendFile(path.join(__dirname, "menu.html")); });
 app.get("/mapa",        function(req, res) { res.sendFile(path.join(__dirname, "mapa_zonas.html")); });
 app.get("/admin",       function(req, res) { res.sendFile(path.join(__dirname, "admin.html")); });
