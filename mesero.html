@@ -260,7 +260,7 @@ function restId(){var p=new URLSearchParams(window.location.search);return p.get
 window.addEventListener("load",function(){
   var rid=restId();
   if(!rid){document.getElementById("maserosGrid").innerHTML='<div class="login-empty" style="grid-column:1/-1">URL inválida. Abre desde el panel → Mesas.</div>';return;}
-  api("restaurantes","id=eq."+rid+"&select=id,nombre,mesas_config").then(function(d){
+  api("restaurantes","id=eq."+rid+"&select=id,nombre").then(function(d){
     if(!d||!d.length){document.getElementById("maserosGrid").innerHTML='<div class="login-empty" style="grid-column:1/-1">Restaurante no encontrado.</div>';return;}
     rest=d[0];
     document.getElementById("loginRestNombre").textContent=rest.nombre||"";
@@ -302,7 +302,7 @@ function entrarApp(){
 
 // ── MESAS ──
 function cargarEstadoMesas(){
-  var total=Number(rest.mesas_config)||8;
+  var total=8;
   api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,listo,cuenta)&select=direccion,estado,metodo_pago").then(function(pedidos){
     var mesas={};
     (pedidos||[]).forEach(function(p){
