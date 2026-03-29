@@ -2169,7 +2169,7 @@ function descargarQR(mesa){
 // ── MESEROS ───────────────────────────────────────────────────────────────────
 function cargarMeseros(){
   if(!rest)return;
-  fetch(SU+"/rest/v1/domiciliarios?restaurante_id=eq."+rest.id+"&tipo=eq.mesero&select=*",{
+  fetch(SU+"/rest/v1/meseros?restaurante_id=eq."+rest.id+"&activo=eq.true&select=*",{
     headers:{"apikey":SK,"Authorization":"Bearer "+SK}
   }).then(function(r){return r.json();}).then(function(meseros){
     var lista=document.getElementById("meserosList");
@@ -2188,10 +2188,10 @@ function cargarMeseros(){
 function agregarMesero(){
   var nombre=document.getElementById("meseroNombreInput").value.trim();
   if(!nombre||!rest)return;
-  fetch(SU+"/rest/v1/domiciliarios",{
+  fetch(SU+"/rest/v1/meseros",{
     method:"POST",
     headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
-    body:JSON.stringify({restaurante_id:rest.id,nombre:nombre,tipo:"mesero",activo:true})
+    body:JSON.stringify({restaurante_id:rest.id,nombre:nombre,activo:true})
   }).then(function(){
     document.getElementById("meseroNombreInput").value="";
     notif("✅ Mesero agregado");
@@ -2200,7 +2200,7 @@ function agregarMesero(){
 }
 
 function eliminarMesero(id){
-  fetch(SU+"/rest/v1/domiciliarios?id=eq."+id,{
+  fetch(SU+"/rest/v1/meseros?id=eq."+id,{
     method:"DELETE",
     headers:{"apikey":SK,"Authorization":"Bearer "+SK}
   }).then(function(){notif("Mesero eliminado");cargarMeseros();});
