@@ -678,7 +678,7 @@ select.finput{cursor:pointer}
           <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Clientes</div>
           <div style="font-size:13px;color:var(--text3);margin-top:2px">Base de clientes y programa de fidelidad</div>
         </div>
-        <button onclick="mostrarResetFidelidad()" style="padding:8px 14px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:12px;color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:'Plus Jakarta Sans',sans-serif">🔄 Reiniciar rangos</button>
+        <button onclick="mostrarResetFidelidad()" style="padding:8px 14px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:12px;color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:'Plus Jakarta Sans',sans-serif" onclick="mostrarResetFidelidad()">🔄 Reiniciar rangos</button>
       </div>
       <div style="padding:4px 12px 0">
         <div class="clientes-resumen" id="clientesResumen">
@@ -1739,14 +1739,27 @@ function loadClientes(){
               pedidosPorTel[v].push(p);
             });
           });
+          // Deduplicar clientes por ultimos 10 digitos
+          var clientesDedup={};
+          clientes.forEach(function(c){
+            var t=(c.telefono||"").replace(/[^0-9]/g,"");
+            // Normalizar a 10 digitos (sin codigo pais)
+            var tNorm=t;
+            if(t.startsWith("57")&&t.length===12)tNorm=t.substring(2);
+            else if(t.startsWith("1")&&t.length===11)tNorm=t.substring(1);
+            // Guardar el que tenga nombre o sea mas reciente
+            if(!clientesDedup[tNorm]||c.nombre_cliente){clientesDedup[tNorm]=c;}
+          });
+          var clientesUnicos=Object.values(clientesDedup);
           // Enriquecer clientes
-          clientesData=clientes.map(function(c){
+          clientesData=clientesUnicos.map(function(c){
             var telNorm=(c.telefono||"").replace(/[^0-9]/g,"");
+            if(telNorm.startsWith("57")&&telNorm.length===12)telNorm=telNorm.substring(2);
+            else if(telNorm.startsWith("1")&&telNorm.length===11)telNorm=telNorm.substring(1);
             // Buscar en todas las variantes
             var misPedidos=pedidosPorTel[telNorm]
               ||pedidosPorTel["57"+telNorm]
-              ||(telNorm.startsWith("57")?pedidosPorTel[telNorm.substring(2)]:null)
-              ||(telNorm.startsWith("1")&&telNorm.length===11?pedidosPorTel[telNorm.substring(1)]:null)
+              ||pedidosPorTel["1"+telNorm]
               ||[];
             var totalPedidos=misPedidos.length;
             var totalGastado=misPedidos.reduce(function(s,p){return s+Number(p.total||0);},0);
@@ -1876,21 +1889,17 @@ function ejecutarResetFidelidad(){
   var proxReset=dias>0?new Date(Date.now()+dias*24*60*60*1000).toISOString():null;
   var fechaHoy=new Date().toISOString();
   // Reset total_pedidos y nivel de todos los clientes del restaurante
-  fetch(SU+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+rest.id,{
-    method:"PATCH",
-    headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
-    body:JSON.stringify({total_pedidos:0,nivel_fidelidad:"bronce"})
-  }).then(function(){
-    // Guardar config de reset en restaurante
-    return fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{
-      method:"PATCH",
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json"},
-      body:JSON.stringify({fecha_inicio_fidelidad:fechaHoy,proximo_reset_fidelidad:proxReset,dias_ciclo_fidelidad:dias||null})
-    });
-  }).then(function(){
-    document.getElementById("resetFidelidadModal").style.display="none";
-    notif("✅ Rangos reiniciados. Los clientes empiezan desde 0 hoy.");
-    setTimeout(function(){loadClientes();},1000);
+  // Reset via index.js endpoint to use service key
+  fetch("/api/reset-fidelidad",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({restaurante_id:rest.id,dias:Number(document.getElementById("resetPeriodo").value)})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){
+      document.getElementById("resetFidelidadModal").style.display="none";
+      notif("✅ Rangos reiniciados. Los clientes empiezan desde 0 hoy.");
+      setTimeout(function(){loadClientes();},1500);
+    } else { notif("❌ Error: "+(d.error||"intenta de nuevo")); }
   }).catch(function(){notif("❌ Error al reiniciar");});
 }
 
