@@ -333,6 +333,40 @@ select.finput{cursor:pointer}
 .mapa-modal-box{background:rgba(18,12,38,0.99);border:1px solid rgba(124,58,237,0.4);border-radius:18px;padding:22px;width:100%;max-width:340px}
 .mapa-colores{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px}
 .mapa-col{width:26px;height:26px;border-radius:7px;cursor:pointer;border:2px solid transparent;transition:all 0.15px}.mapa-col.sel{border-color:white;transform:scale(1.15)}
+
+/* PANEL DOMICILIARIOS */
+.domi-panel-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:20px;margin-bottom:10px;overflow:hidden;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow);transition:all 0.2s;}
+.domi-panel-header{display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(16,185,129,0.08);border-bottom:1px solid rgba(16,185,129,0.15);cursor:pointer;}
+.domi-panel-avatar{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#10b981,#2563eb);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:white;font-family:'JetBrains Mono',monospace;flex-shrink:0;box-shadow:0 4px 12px rgba(16,185,129,0.35);}
+.domi-panel-info{flex:1}
+.domi-panel-nombre{font-size:15px;font-weight:700;}
+.domi-panel-tel{font-size:11px;color:var(--text3);}
+.domi-panel-status{display:flex;align-items:center;gap:6px;}
+.domi-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.domi-status-dot.activo{background:#34d399;box-shadow:0 0 6px #34d399;animation:ldot 1.5s infinite;}
+.domi-status-dot.inactivo{background:rgba(255,255,255,0.2);}
+.domi-status-label{font-size:10px;font-weight:700;letter-spacing:0.06em;}
+.domi-panel-stats{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1px;background:rgba(255,255,255,0.05);}
+.domi-pstat{padding:12px 10px;text-align:center;background:rgba(0,0,0,0.15);}
+.domi-pstat-val{font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
+.domi-pstat-label{font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;}
+.domi-panel-pedidos{padding:10px 14px;}
+.domi-mini-pedido{display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:10px;margin-bottom:6px;font-size:12px;}
+.domi-mini-pedido:last-child{margin-bottom:0}
+.domi-mini-num{font-family:'JetBrains Mono',monospace;font-weight:700;color:#c4b5fd;font-size:13px;min-width:40px;}
+.domi-mini-dir{flex:1;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.domi-mini-estado{padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;}
+.domi-mini-estado.listo{background:rgba(245,158,11,0.15);color:#fcd34d;}
+.domi-mini-estado.en_camino{background:rgba(16,185,129,0.15);color:#34d399;}
+.domi-mini-estado.entregado{background:rgba(99,102,241,0.15);color:#a5b4fc;}
+.domi-panel-empty{text-align:center;padding:16px;font-size:12px;color:var(--text3);}
+.domi-resumen-hero{border-radius:20px;padding:18px;background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(37,99,235,0.15));border:1px solid rgba(16,185,129,0.25);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.domi-resumen-stat{text-align:center;}
+.domi-resumen-val{font-size:28px;font-weight:900;font-family:'JetBrains Mono',monospace;background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
+.domi-resumen-label{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;}
+.domi-filtros{display:flex;gap:7px;padding:0 0 10px;overflow-x:auto;scrollbar-width:none;}
+.domi-filtros::-webkit-scrollbar{display:none}
+
 /* FLOAT NAV */
 .float-nav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:400;width:calc(100% - 20px);max-width:480px}
 .float-nav-inner{background:rgba(15,10,35,0.94);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(124,58,237,0.35);border-radius:28px;display:flex;padding:5px 4px calc(5px + env(safe-area-inset-bottom));box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 40px rgba(124,58,237,0.12)}
@@ -568,6 +602,29 @@ select.finput{cursor:pointer}
       </div>
     </div>
 
+
+    <!-- DOMICILIARIOS -->
+    <div class="page" id="page-domis">
+      <div style="padding:16px 12px 4px">
+        <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Domiciliarios</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:2px">Control y estadisticas de tu equipo</div>
+      </div>
+      <div style="padding:4px 12px 0">
+        <div class="domi-resumen-hero" id="domiResumenHero">
+          <div class="domi-resumen-stat"><div class="domi-resumen-val" id="domiResTotal">0</div><div class="domi-resumen-label">Entregas hoy</div></div>
+          <div class="domi-resumen-stat"><div class="domi-resumen-val" id="domiResActivos">0</div><div class="domi-resumen-label">En ruta ahora</div></div>
+          <div class="domi-resumen-stat"><div class="domi-resumen-val" id="domiResTiempo">--</div><div class="domi-resumen-label">Tiempo prom.</div></div>
+          <div class="domi-resumen-stat"><div class="domi-resumen-val" id="domiResMejor">--</div><div class="domi-resumen-label">Mejor tiempo</div></div>
+        </div>
+        <div class="domi-filtros">
+          <button class="filtro-btn active" id="domiFiltroHoy" onclick="filtrarDomis('hoy')">Hoy</button>
+          <button class="filtro-btn" id="domiFiltroSemana" onclick="filtrarDomis('semana')">Semana</button>
+          <button class="filtro-btn" id="domiFiltroMes" onclick="filtrarDomis('mes')">Mes</button>
+        </div>
+        <div id="domiPanelLista"><div class="empty"><div class="ei">🛵</div><div class="et">Cargando domiciliarios...</div></div></div>
+      </div>
+    </div>
+
     <!-- MAPA -->
     <div class="page" id="page-mapa">
       <div style="padding:16px 12px 8px">
@@ -623,6 +680,7 @@ select.finput{cursor:pointer}
       <div class="fnav-tab" id="tab-promo"><div class="fnav-icon">&#x1F4E3;</div><div class="fnav-label">Promos</div></div>
       <div class="fnav-tab" id="tab-cupones"><div class="fnav-icon">&#x1F3F7;&#xFE0F;</div><div class="fnav-label">Cupones</div></div>
       <div class="fnav-tab" id="tab-config"><div class="fnav-icon">&#x2699;&#xFE0F;</div><div class="fnav-label">Config</div></div>
+      <div class="fnav-tab" id="tab-domis"><div class="fnav-icon">🛵</div><div class="fnav-label">Domis</div></div>
       <div class="fnav-tab" id="tab-mapa"><div class="fnav-icon">&#x1F5FA;&#xFE0F;</div><div class="fnav-label">Mapa</div></div>
     </div>
   </div>
@@ -795,7 +853,7 @@ function checkNuevosMensajes(){
 }
 
 // TABS
-["pedidos","historial","menu","chat","promo","cupones","config","mapa"].forEach(function(n){
+["pedidos","historial","menu","chat","promo","cupones","config","domis","mapa"].forEach(function(n){
   var el=document.getElementById("tab-"+n);if(!el)return;
   el.addEventListener("click",function(){showTab(n);if(n==="pedidos"){pedidosBadgeCount=0;document.getElementById("pedidosBadge").classList.remove("show");}if(n==="chat"){chatBadgeCount=0;document.getElementById("chatBadge").classList.remove("show");}});
 });
@@ -807,7 +865,7 @@ function showTab(n){
   if(n==="historial")loadHistorial();if(n==="menu")loadMenu();
   if(n==="promo"){loadPromoCount();renderProgs();}
   if(n==="chat")loadChatUniversal();if(n==="cupones")renderCupones();
-  if(n==="mapa"){setTimeout(function(){cargarZonas();initMapa();},80);}if(n==="config")cargarDomiciliarios();
+  if(n==="mapa"){setTimeout(function(){cargarZonas();initMapa();},80);}if(n==="config")cargarDomiciliarios();if(n==="domis")loadDomiPanel();
 }
 
 // DOMICILIARIOS
@@ -1437,6 +1495,114 @@ function abrirConstructor(){
   var bci=document.getElementById("btnConstructorInline");if(bci)bci.addEventListener("click",tog);
 }());
 setTimeout(function(){if(typeof rest!=="undefined"&&rest)cargarProd();},3000);
+
+// ── PANEL DOMICILIARIOS ──────────────────────────────────────────────────────
+var domiFiltroActual="hoy";
+function filtrarDomis(filtro){
+  domiFiltroActual=filtro;
+  ["hoy","semana","mes"].forEach(function(f){
+    var btn=document.getElementById("domiFiltro"+f.charAt(0).toUpperCase()+f.slice(1));
+    if(btn)btn.className="filtro-btn"+(f===filtro?" active":"");
+  });
+  loadDomiPanel();
+}
+function getDomiFechaDesde(){
+  var col=getHoraColombia();
+  if(domiFiltroActual==="hoy")return new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
+  if(domiFiltroActual==="semana"){var d=new Date(col);d.setDate(d.getDate()-7);return new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),5,0,0)).toISOString();}
+  if(domiFiltroActual==="mes"){var d=new Date(col);d.setDate(d.getDate()-30);return new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),5,0,0)).toISOString();}
+  return null;
+}
+function fmtMin(m){if(!m||isNaN(m))return"--";return m<60?m+"min":Math.floor(m/60)+"h "+Math.round(m%60)+"m";}
+function toggleDomiPedidos(header){
+  var pedidos=header.parentElement.querySelector('.domi-panel-pedidos');
+  if(pedidos)pedidos.style.display=pedidos.style.display==='none'?'block':'none';
+}
+function loadDomiPanel(){
+  if(!rest)return;
+  var lista=document.getElementById("domiPanelLista");
+  lista.innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
+  var desde=getDomiFechaDesde();
+  // Cargar domiciliarios activos
+  get("domiciliarios","restaurante_id=eq."+rest.id+"&activo=eq.true&order=nombre.asc").then(function(domis){
+    if(!domis||!domis.length){
+      lista.innerHTML='<div class="empty"><div class="ei">🛵</div><div class="et">No hay domiciliarios registrados.<br>Agrega uno en Configuracion.</div></div>';
+      return;
+    }
+    // Cargar pedidos del periodo para calcular stats
+    var filtro="restaurante_id=eq."+rest.id+"&domiciliario_id=not.is.null";
+    if(desde)filtro+="&created_at=gte."+desde;
+    get("pedidos",filtro+"&select=id,numero_pedido,domiciliario_id,domiciliario_nombre,estado,direccion,created_at,updated_at,total").then(function(pedidos){
+      // Calcular resumen global
+      var entregadosHoy=pedidos.filter(function(p){return p.estado==="entregado";});
+      var enRuta=pedidos.filter(function(p){return p.estado==="en_camino";});
+      var tiemposGlobal=entregadosHoy.map(function(p){
+        if(p.updated_at&&p.created_at){var m=Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);return(m>0&&m<300)?m:null;}return null;
+      }).filter(function(t){return t!==null;});
+      var promGlobal=tiemposGlobal.length?Math.round(tiemposGlobal.reduce(function(s,t){return s+t;},0)/tiemposGlobal.length):null;
+      var mejorGlobal=tiemposGlobal.length?Math.min.apply(null,tiemposGlobal):null;
+      document.getElementById("domiResTotal").textContent=entregadosHoy.length;
+      document.getElementById("domiResActivos").textContent=enRuta.length;
+      document.getElementById("domiResTiempo").textContent=fmtMin(promGlobal);
+      document.getElementById("domiResMejor").textContent=fmtMin(mejorGlobal);
+
+      // Renderizar card por domiciliario
+      var h="";
+      domis.forEach(function(d){
+        var misPedidos=pedidos.filter(function(p){return p.domiciliario_id===d.id;});
+        var entregados=misPedidos.filter(function(p){return p.estado==="entregado";});
+        var enCamino=misPedidos.filter(function(p){return p.estado==="en_camino";});
+        var listos=misPedidos.filter(function(p){return p.estado==="listo";});
+        var tiempos=entregados.map(function(p){
+          if(p.updated_at&&p.created_at){var m=Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);return(m>0&&m<300)?m:null;}return null;
+        }).filter(function(t){return t!==null;});
+        var prom=tiempos.length?Math.round(tiempos.reduce(function(s,t){return s+t;},0)/tiempos.length):null;
+        var mejor=tiempos.length?Math.min.apply(null,tiempos):null;
+        var estaActivo=enCamino.length>0||listos.length>0;
+        h+='<div class="domi-panel-card">';
+        // Header
+        h+='<div class="domi-panel-header" onclick="toggleDomiPedidos(this)">';
+        h+='<div class="domi-panel-avatar">'+d.nombre.charAt(0).toUpperCase()+'</div>';
+        h+='<div class="domi-panel-info"><div class="domi-panel-nombre">'+d.nombre+'</div><div class="domi-panel-tel">'+(d.telefono||"Sin telefono")+'</div></div>';
+        h+='<div class="domi-panel-status"><div class="domi-status-dot '+(estaActivo?"activo":"inactivo")+'"></div><span class="domi-status-label" style="color:'+(estaActivo?"#34d399":"var(--text3)")+'">'+(estaActivo?"ACTIVO":"LIBRE")+'</span></div>';
+        h+='</div>';
+        // Stats
+        h+='<div class="domi-panel-stats">';
+        h+='<div class="domi-pstat"><div class="domi-pstat-val">'+entregados.length+'</div><div class="domi-pstat-label">Entregados</div></div>';
+        h+='<div class="domi-pstat"><div class="domi-pstat-val">'+enCamino.length+'</div><div class="domi-pstat-label">En camino</div></div>';
+        h+='<div class="domi-pstat"><div class="domi-pstat-val" style="font-size:14px">'+fmtMin(prom)+'</div><div class="domi-pstat-label">Prom. entrega</div></div>';
+        h+='<div class="domi-pstat"><div class="domi-pstat-val" style="font-size:14px">'+fmtMin(mejor)+'</div><div class="domi-pstat-label">Mejor tiempo</div></div>';
+        h+='</div>';
+        // Pedidos activos y recientes
+        h+='<div class="domi-panel-pedidos" style="display:none">';
+        var pedidosVer=misPedidos.slice(0,8);
+        if(!pedidosVer.length){h+='<div class="domi-panel-empty">Sin pedidos en este periodo</div>';}
+        else{
+          pedidosVer.forEach(function(p){
+            var estadoLabel={listo:"Listo",en_camino:"En camino",entregado:"Entregado",confirmado:"Confirmado"}[p.estado]||p.estado;
+            h+='<div class="domi-mini-pedido">';
+            h+='<div class="domi-mini-num">#'+p.numero_pedido+'</div>';
+            h+='<div class="domi-mini-dir">'+(p.direccion||"Sin dir")+'</div>';
+            h+='<div class="domi-mini-estado '+p.estado+'">'+estadoLabel+'</div>';
+            if(p.estado==="entregado"&&tiempos.length){
+              var min=Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);
+              if(min>0&&min<300)h+='<div style="font-size:10px;color:var(--text3);margin-left:4px;font-family:monospace">'+min+'m</div>';
+            }
+            h+='</div>';
+          });
+        }
+        // Boton llamar si tiene telefono
+        if(d.telefono){
+          h+='<a href="tel:'+d.telefono+'" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding:10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:11px;color:#34d399;font-size:13px;font-weight:700;text-decoration:none;transition:all 0.15s;">📞 Llamar a '+d.nombre+'</a>';
+        }
+        h+='</div>';
+        h+='</div>';
+      });
+      lista.innerHTML=h;
+    }).catch(function(){lista.innerHTML='<div class="empty"><div class="et">Error cargando datos</div></div>';});
+  }).catch(function(){lista.innerHTML='<div class="empty"><div class="et">Error</div></div>';});
+}
+
 // MAPA
 var mapaInstance=null, mapaZonas=[], mapaLayersZonas=[], mapaDomisMarkers=[];
 var ZONA_COLORES=["#7c3aed","#2563eb","#10b981","#f97316","#ef4444","#f59e0b","#8b5cf6","#06b6d4","#ec4899","#84cc16"];
