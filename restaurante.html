@@ -813,19 +813,19 @@ select.finput{cursor:pointer}
       </div>
     </div>
 
-  <!-- HORIZONTAL NAV -->
-  <div id="navWrap" style="position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:400;display:flex;align-items:center;gap:0;">
-    <!-- Tabs ocultos izquierda -->
-    <div id="navLeft" style="display:flex;align-items:center;gap:6px;overflow:hidden;max-width:0;opacity:0;transition:max-width 0.4s cubic-bezier(0.34,1.56,0.64,1),opacity 0.3s ease;padding-right:0;">
-    </div>
-    <!-- Boton central -->
-    <div id="navBtn" onclick="toggleNav()" style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:2px solid rgba(196,181,253,0.35);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 24px rgba(124,58,237,0.5);transition:all 0.3s;flex-shrink:0;position:relative;">
-      <div id="navBtnIcon" style="font-size:24px;transition:transform 0.3s;">☰</div>
-      <div id="pedidosBadge" class="nav-badge" style="position:absolute;top:-3px;right:-3px;"></div>
-      <div id="chatBadge" class="nav-badge" style="position:absolute;top:-3px;left:-3px;"></div>
-    </div>
-    <!-- Tabs ocultos derecha -->
-    <div id="navRight" style="display:flex;align-items:center;gap:6px;overflow:hidden;max-width:0;opacity:0;transition:max-width 0.4s cubic-bezier(0.34,1.56,0.64,1),opacity 0.3s ease;padding-left:0;">
+  <div class="float-nav">
+    <div class="float-nav-inner">
+      <div class="fnav-tab active" id="tab-pedidos"><div class="fnav-icon">🛒</div><div class="fnav-label">Pedidos</div><div class="nav-badge" id="pedidosBadge"></div></div>
+      <div class="fnav-tab" id="tab-historial"><div class="fnav-icon">📊</div><div class="fnav-label">Historial</div></div>
+      <div class="fnav-tab" id="tab-menu"><div class="fnav-icon">📋</div><div class="fnav-label">Menú</div></div>
+      <div class="fnav-tab fnav-center" id="tab-chat"><div class="fnav-center-ring"><div style="font-size:24px">💬</div></div><div class="fnav-label">Chats</div><div class="nav-badge" id="chatBadge"></div></div>
+      <div class="fnav-tab" id="tab-promo"><div class="fnav-icon">📣</div><div class="fnav-label">Promos</div></div>
+      <div class="fnav-tab" id="tab-cupones"><div class="fnav-icon">🏷️</div><div class="fnav-label">Cupones</div></div>
+      <div class="fnav-tab" id="tab-config"><div class="fnav-icon">⚙️</div><div class="fnav-label">Config</div></div>
+      <div class="fnav-tab" id="tab-domis"><div class="fnav-icon">🛵</div><div class="fnav-label">Domis</div></div>
+      <div class="fnav-tab" id="tab-clientes"><div class="fnav-icon">👥</div><div class="fnav-label">Clientes</div></div>
+      <div class="fnav-tab" id="tab-mesas"><div class="fnav-icon">🪑</div><div class="fnav-label">Mesas</div></div>
+      <div class="fnav-tab" id="tab-mapa"><div class="fnav-icon">🗺️</div><div class="fnav-label">Mapa</div></div>
     </div>
   </div>
 </div>
@@ -1003,64 +1003,13 @@ function checkNuevosMensajes(){
   var el=document.getElementById("tab-"+n);if(!el)return;
   el.addEventListener("click",function(){showTab(n);if(n==="pedidos"){pedidosBadgeCount=0;document.getElementById("pedidosBadge").classList.remove("show");}if(n==="chat"){chatBadgeCount=0;document.getElementById("chatBadge").classList.remove("show");}});
 });
-var navOpen=false;
-var navTabs=[
-  {id:"pedidos",icon:"🛒",label:"Pedidos"},
-  {id:"historial",icon:"📊",label:"Historial"},
-  {id:"menu",icon:"📋",label:"Menú"},
-  {id:"promo",icon:"📣",label:"Promos"},
-  {id:"cupones",icon:"🏷️",label:"Cupones"},
-  {id:"config",icon:"⚙️",label:"Config"},
-  {id:"domis",icon:"🛵",label:"Domis"},
-  {id:"clientes",icon:"👥",label:"Clientes"},
-  {id:"mesas",icon:"🪑",label:"Mesas"},
-  {id:"mapa",icon:"🗺️",label:"Mapa"},
-  {id:"chat",icon:"💬",label:"Chats"},
-];
-function initRadial(){
-  var left=document.getElementById("navLeft");
-  var right=document.getElementById("navRight");
-  if(!left||!right)return;
-  var half=Math.ceil(navTabs.length/2);
-  navTabs.forEach(function(tab,i){
-    var btn=document.createElement("div");
-    btn.className="nav-tab-btn";
-    btn.id="ntb-"+tab.id;
-    btn.innerHTML='<div class="nav-tab-icon">'+tab.icon+'</div><div class="nav-tab-label">'+tab.label+'</div>';
-    (function(t){btn.addEventListener("click",function(){showTab(t.id);});})(tab);
-    if(i<half){left.insertBefore(btn,left.firstChild);}
-    else{right.appendChild(btn);}
-  });
-  updateRadialActive("pedidos");
-}
-function toggleNav(){
-  navOpen=!navOpen;
-  var left=document.getElementById("navLeft");
-  var right=document.getElementById("navRight");
-  var ic=document.getElementById("navBtnIcon");
-  var btn=document.getElementById("navBtn");
-  if(navOpen){
-    left.style.maxWidth="400px";left.style.opacity="1";left.style.paddingRight="8px";
-    right.style.maxWidth="400px";right.style.opacity="1";right.style.paddingLeft="8px";
-    if(ic){ic.textContent="✕";ic.style.transform="rotate(90deg)";}
-    if(btn)btn.style.background="linear-gradient(135deg,#10b981,#2563eb)";
-  } else {
-    left.style.maxWidth="0";left.style.opacity="0";left.style.paddingRight="0";
-    right.style.maxWidth="0";right.style.opacity="0";right.style.paddingLeft="0";
-    if(ic){ic.textContent="☰";ic.style.transform="rotate(0)";}
-    if(btn)btn.style.background="linear-gradient(135deg,#7c3aed,#4f46e5)";
-  }
-}
-function updateRadialActive(n){
-  document.querySelectorAll(".nav-tab-btn").forEach(function(b){b.classList.remove("active-tab");});
-  var b=document.getElementById("ntb-"+n);if(b)b.classList.add("active-tab");
-}
+function initRadial(){}
 function showTab(n){
-  if(navOpen)toggleNav();
   document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active");});
-  var pg=document.getElementById("page-"+n);
+  document.querySelectorAll(".fnav-tab").forEach(function(t){t.classList.remove("active");});
+  var pg=document.getElementById("page-"+n),tab=document.getElementById("tab-"+n);
   if(pg)pg.classList.add("active");
-  updateRadialActive(n);
+  if(tab)tab.classList.add("active");
   if(n==="historial")loadHistorial();if(n==="menu")loadMenu();
   if(n==="promo"){loadPromoCount();renderProgs();}
   if(n==="chat")loadChatUniversal();if(n==="cupones")renderCupones();
