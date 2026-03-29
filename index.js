@@ -70,7 +70,7 @@ async function getRestaurante(phoneNumberId) {
 // ── SILENCIO ──────────────────────────────────────────────────────────────────
 async function estaEnSilencio(restauranteId, telefono) {
   try {
-    var r = await axios.get(SUPABASE_URL + "/rest/v1/silencio_conversacion?restaurante_id=eq." + restauranteId + "&telefono=eq." + encodeURIComponent(telefono) + "&activo=eq.true&select=id", { headers: sbH(true) });
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/silencio_conversacion?restaurante_id=eq." + restauranteId + "&telefono=eq." + encodeURIComponent(stripCountryCode(telefono)) + "&activo=eq.true&select=id", { headers: sbH(true) });
     return r.data && r.data.length > 0;
   } catch (e) { return false; }
 }
@@ -84,11 +84,20 @@ async function getDireccionFrecuente(restauranteId, telefono) {
   } catch (e) { return null; }
 }
 
+function stripCountryCode(tel) {
+  // Remove country codes to get local number
+  var t = String(tel).replace(/[^0-9]/g, "");
+  if (t.startsWith("57") && t.length === 12) return t.substring(2); // Colombia
+  if (t.startsWith("1") && t.length === 11) return t.substring(1);  // USA
+  return t;
+}
+
 async function guardarDireccionFrecuente(restauranteId, telefono, direccion) {
   if (!direccion || direccion === "Por confirmar") return;
   try {
+    var telLocal = stripCountryCode(telefono);
     await axios.post(SUPABASE_URL + "/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",
-      { restaurante_id: restauranteId, telefono, ultima_direccion: direccion, updated_at: new Date().toISOString() },
+      { restaurante_id: restauranteId, telefono: telLocal, ultima_direccion: direccion, updated_at: new Date().toISOString() },
       { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } });
   } catch (e) { console.error("guardarDireccion:", e.message); }
 }
@@ -342,8 +351,9 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
       var countResp = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId + "&cliente_tel=eq." + encodeURIComponent(pedidoData.phone) + "&select=id", { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2 } });
       var totalPedidos = (countResp.data || []).length;
       var nivel = totalPedidos >= 25 ? "oro" : totalPedidos >= 10 ? "plata" : "bronce";
+      var telLocal = stripCountryCode(pedidoData.phone);
       await axios.post(SUPABASE_URL + "/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",
-        { restaurante_id: restauranteId, telefono: pedidoData.phone, total_pedidos: totalPedidos, nivel_fidelidad: nivel, updated_at: new Date().toISOString() },
+        { restaurante_id: restauranteId, telefono: telLocal, total_pedidos: totalPedidos, nivel_fidelidad: nivel, updated_at: new Date().toISOString() },
         { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } });
       console.log("Cliente " + pedidoData.phone + " -> " + totalPedidos + " pedidos, nivel: " + nivel);
     } catch(e) { console.error("updateClienteNivel:", e.message); }
