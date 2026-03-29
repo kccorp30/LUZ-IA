@@ -47,14 +47,16 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 @keyframes ldot{0%,100%{opacity:1}50%{opacity:0.3}}
 
 /* TABS */
-.tab-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(13,10,26,0.95);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-top:1px solid var(--glass-border);display:flex;padding:8px 4px calc(8px + env(safe-area-inset-bottom));}
-.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;cursor:pointer;border-radius:12px;transition:all 0.15s;}
-.tab-btn.active{background:rgba(16,185,129,0.15);}
-.tab-icon{font-size:20px;line-height:1;}
-.tab-label{font-size:9px;color:var(--text3);font-weight:600;}
+.tab-bar{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:400;width:calc(100% - 20px);max-width:480px;}
+.tab-bar-inner{background:rgba(15,10,35,0.94);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(16,185,129,0.3);border-radius:28px;display:flex;padding:5px 4px calc(5px + env(safe-area-inset-bottom));box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 40px rgba(16,185,129,0.08);}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:7px 2px 4px;transition:all 0.2s;border-radius:20px;margin:2px;}
+.tab-btn.active{background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.35);}
+.tab-icon{font-size:19px;line-height:1;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);}
+.tab-btn.active .tab-icon{transform:scale(1.2);filter:drop-shadow(0 0 8px rgba(110,231,183,0.8));}
+.tab-label{font-size:9px;color:rgba(255,255,255,0.3);font-weight:600;letter-spacing:0.03em;}
 .tab-btn.active .tab-label{color:#34d399;font-weight:700;}
 
-.content{padding-top:68px;padding-bottom:calc(72px + env(safe-area-inset-bottom));}
+.content{padding-top:68px;padding-bottom:calc(96px + env(safe-area-inset-bottom));}
 .page{display:none}.page.active{display:block;animation:fadeUp 0.2s ease both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
@@ -241,9 +243,11 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
   </div>
 
   <div class="tab-bar">
-    <div class="tab-btn active" id="tab-pedidos"><div class="tab-icon">🛵</div><div class="tab-label">Pedidos</div></div>
-    <div class="tab-btn" id="tab-historial"><div class="tab-icon">📋</div><div class="tab-label">Historial</div></div>
-    <div class="tab-btn" id="tab-informe"><div class="tab-icon">📊</div><div class="tab-label">Mi dia</div></div>
+    <div class="tab-bar-inner">
+      <div class="tab-btn active" id="tab-pedidos"><div class="tab-icon">🛵</div><div class="tab-label">Pedidos</div></div>
+      <div class="tab-btn" id="tab-historial"><div class="tab-icon">📋</div><div class="tab-label">Historial</div></div>
+      <div class="tab-btn" id="tab-informe"><div class="tab-icon">📊</div><div class="tab-label">Mi dia</div></div>
+    </div>
   </div>
 </div>
 
@@ -371,9 +375,15 @@ function loadPedidos(){
       // Metodo de pago
       if(p.metodo_pago)h+='<div style="margin-bottom:10px"><span class="dcard-pago">💳 '+p.metodo_pago+'</span></div>';
       h+='<div class="dcard-btns">';
-      if(!esRecoger&&p.direccion&&p.direccion!=="Por confirmar"){
-        h+='<button class="dcard-btn-maps" data-dir="'+encodeURIComponent(p.direccion||"")+'">📍 Abrir en Google Maps</button>';
+      // Botones de accion y llamada en misma fila
+      h+='<div style="display:flex;gap:7px;margin-bottom:8px">';
+      if(p.cliente_tel){
+        h+='<a href="tel:'+p.cliente_tel+'" class="dcard-btn-maps" style="flex:0;padding:11px 14px;font-size:16px;text-decoration:none;display:flex;align-items:center;justify-content:center;" title="Llamar cliente">📞</a>';
       }
+      if(!esRecoger&&p.direccion&&p.direccion!=="Por confirmar"){
+        h+='<button class="dcard-btn-maps" style="flex:1;" data-dir="'+encodeURIComponent(p.direccion||"")+'">📍 Google Maps</button>';
+      }
+      h+='</div>';
       h+='<div class="dcard-btns-row">';
       if(p.estado==="listo")h+='<button class="dcard-btn btn-camino" data-id="'+p.id+'" data-e="en_camino" data-n="'+p.numero_pedido+'" data-t="'+(p.cliente_tel||"")+'">🛵 Salí en camino</button>';
       if(p.estado==="en_camino")h+='<button class="dcard-btn btn-entregado" data-id="'+p.id+'" data-n="'+p.numero_pedido+'" data-t="'+(p.cliente_tel||"")+'">✅ Entregué el pedido</button>';
