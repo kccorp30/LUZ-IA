@@ -1179,8 +1179,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
         // Try to recover address from conversation if missing
       if (!state.address || state.address === "Por confirmar") {
         var convText = (conversations[from]||[]).map(function(m){return m.content;}).join(" ");
-        var dirMatch2 = convText.match(/DIRECCION_LISTA:([^
-]+)/);
+        var dirMatch2 = convText.match(/DIRECCION_LISTA:([^\n]+)/);
         if (dirMatch2) state.address = dirMatch2[1].trim();
       }
       await guardarPedidoSupabase(restId, {
