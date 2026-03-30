@@ -360,7 +360,7 @@ function loadPedidos(){
       h+='<div class="ccard-btns">';
       if(p.estado==="confirmado")h+='<button class="ccard-btn btn-preparar" data-id="'+p.id+'" data-e="en_preparacion" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">🔥 Preparando</button>';
       if(p.estado==="en_preparacion")h+='<button class="ccard-btn btn-listo" data-id="'+p.id+'" data-e="listo" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">✅ Listo</button>';
-      if(p.estado==="listo")h+='<div class="ccard-btn" style="background:rgba(16,185,129,0.06);color:#34d399;border-color:rgba(16,185,129,0.2);cursor:default;">🛵 Esperando domi</div>';
+      if(p.estado==="listo")h+='<div class="ccard-btn" style="background:rgba(16,185,129,0.06);color:#34d399;border-color:rgba(16,185,129,0.2);cursor:defaul'+(esMesa?'🪑 '+(p.domiciliario_nombre?'Mesero: '+p.domiciliario_nombre:'Esperando mesero'):'🛵 Esperando domi')+'</div>';
       h+='<button class="ccard-btn btn-print" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+des+'" data-pdom="'+dom+'" data-pitems="'+itemsEnc+'">🖨️</button>';
       h+='</div>';
       h+='</div></div>';
