@@ -299,6 +299,7 @@ function selMesero(el){
   setTimeout(entrarApp,250);
 }
 
+var mesasPollInterval=null;
 function entrarApp(){
   // Show app with loading state
   document.getElementById("loginScreen").style.display="none";
@@ -309,6 +310,13 @@ function entrarApp(){
   document.getElementById("tbMesero").textContent="Mesero: "+mesero.nombre;
   document.getElementById("tbMesa").textContent="Selecciona mesa";
   document.getElementById("mesesGrid").innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);font-size:13px">Cargando...</div>';
+  // Poll mesa states every 15s
+  if(mesasPollInterval)clearInterval(mesasPollInterval);
+  mesasPollInterval=setInterval(function(){
+    if(document.getElementById("vistaSelector").style.display!=="none"){
+      refreshMesaStates();
+    }
+  },15000);
   // Load menu AND mesas in parallel, show mesas only when menu is ready
   Promise.all([
     api("menu_items","restaurante_id=eq."+rest.id+"&order=categoria,orden&select=*"),
@@ -349,6 +357,23 @@ function cargarEstadoMesas(){
     });
     renderMesas(total,mesas);
   }).catch(function(){renderMesas(Number(rest.mesas_config)||8,{});});
+}
+
+function refreshMesaStates(){
+  if(!rest)return;
+  api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,en_preparacion,listo,cuenta)&select=direccion,estado,metodo_pago").then(function(pedidos){
+    var mesas={};
+    (pedidos||[]).forEach(function(p){
+      if(!p.direccion)return;
+      var m=p.direccion.toLowerCase().replace("mesa ","").trim();
+      if(!isNaN(m)){
+        var num=Number(m);
+        if(p.metodo_pago==="cuenta"||p.estado==="cuenta")mesas[num]="cuenta";
+        else if(mesas[num]!=="cuenta")mesas[num]="ocupada";
+      }
+    });
+    renderMesas(8,mesas);
+  }).catch(function(){});
 }
 
 function renderMesas(total,estados){
