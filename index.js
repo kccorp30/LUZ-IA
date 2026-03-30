@@ -286,7 +286,7 @@ FLUJO:
 1. Saludo -> mensaje amable + link menu
 2. Cliente pide -> confirma con precios. Incluye notas especiales en los items.
 3. Pregunta direccion COMPLETA: calle, numero, barrio. Si tiene direccion frecuente, pregunta si es la misma.
-   - SOLO escribe DIRECCION_LISTA:[direccion] cuando el cliente te haya dado una direccion real y completa.
+   - SOLO escribe DIRECCION_LISTA:[direccion] cuando el cliente te haya dado una direccion real y completa. SIEMPRE escribe DIRECCION_LISTA en el MISMO mensaje donde confirmas la direccion, no en un mensaje separado.
    - Si el cliente dice solo "ahi mismo", "la misma", "igual que antes": confirma la direccion frecuente en voz alta y luego escribe DIRECCION_LISTA con esa direccion.
    - NUNCA escribas DIRECCION_LISTA si el cliente no ha dado ninguna direccion todavia.
    - Si no tienes direccion del cliente NO confirmes el pedido, sigue preguntando.
@@ -1176,7 +1176,14 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       }
 
       if (restId) {
-        await guardarPedidoSupabase(restId, {
+        // Try to recover address from conversation if missing
+      if (!state.address || state.address === "Por confirmar") {
+        var convText = (conversations[from]||[]).map(function(m){return m.content;}).join(" ");
+        var dirMatch2 = convText.match(/DIRECCION_LISTA:([^
+]+)/);
+        if (dirMatch2) state.address = dirMatch2[1].trim();
+      }
+      await guardarPedidoSupabase(restId, {
           orderNumber: state.orderNumber, phone: from, items: state.items,
           subtotal: Number(state.total) - Number(state.desechables||0) - Number(state.domicilio||0),
           desechables: Number(state.desechables||0), domicilio: Number(state.domicilio||0),
