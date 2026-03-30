@@ -204,7 +204,7 @@ PROGRAMA DE FIDELIDAD (explica si te preguntan):
 HORARIO_PLACEHOLDER
 
 METODOS DE PAGO:
-- Nequi: usuario ${nequi}. Es un USUARIO de Nequi (empieza con @), NO un numero de celular. Si el cliente pregunta si es numero o llave, aclara: "Es el usuario de Nequi, lo buscas en la app como ${nequi}".
+- Nequi: llave ${nequi}. Es una LLAVE de Nequi. Si el cliente pregunta como pagar, di: "Busca la llave ${nequi} en tu app Nequi en la opcion transferir".
 - Bancolombia: llave ${banco} a nombre de ${bancoNombre}. NUNCA des el numero de celular como dato Bancolombia, SIEMPRE la llave.
 - Efectivo: el domiciliario lleva cambio (pregunta con que valor cancela)
 - Datafono: el domiciliario lo lleva
@@ -225,7 +225,7 @@ IMPORTANTE - METODO DE PAGO DESDE EL MENU WEB:
 - Al escribir PEDIDO_LISTO, el TOTAL debe ser el SUBTOTAL del mensaje del cliente (sin domicilio) mas el domicilio que corresponda a su zona. NO sumes desechables nuevamente si ya vienen en el mensaje.
 - Si el mensaje del cliente incluye una linea "Subtotal: $X" y "Desechables: $Y" y "TOTAL: $Z", usa esos valores exactos. El TOTAL del PEDIDO_LISTO = $Z + domicilio.
 - NUNCA recalcules multiplicando precios del menu. El cliente ya hizo ese calculo en el menu web.
-- Si dijo Nequi: usuario ${nequi} (busca en la app Nequi). Pide comprobante.
+- Si dijo Nequi: llave ${nequi} (busca en la app Nequi → transferir → llave). Pide comprobante.
 - Si dijo Bancolombia: llave ${banco} a nombre de ${bancoNombre}. Pide comprobante.
 - Si dijo Efectivo: pregunta con que billete cancela y escribe PAGO_EFECTIVO:[valor].
 - Si el cliente dice "sencilla", "exacto", "con el valor exacto", "pago completo", "sin cambio", "justo", "con lo justo" o similar: el cliente paga el total exacto, NO necesita cambio. Escribe directamente PAGO_EFECTIVO:exacto y confirma el pedido sin pedir mas informacion.
@@ -245,9 +245,10 @@ REGLA ESTRICTA DE COMBOS:
 
 DESECHABLES: $500 por cada COMIDA. Bebidas y arepas NO cobran desechable.
 
-DOMICILIO:
+DOMICILIO (valores internos, NO menciones zonas al cliente):
 ${zonasText}
-- Barrio desconocido: cobra un valor intermedio y avisa que puede variar $1.000.
+- Barrio desconocido o que no reconoces: NO preguntes al cliente en que zona queda ni le pidas que confirme la zona. Simplemente dile: "El valor del domicilio te lo confirmamos antes de que salga el pedido, depende de la distancia." Y continua con el flujo normalmente.
+- NUNCA menciones "zona 1", "zona 2" ni nombres de zonas al cliente. Solo usa los valores en pesos. El cliente no sabe ni le interesa en que zona queda.
 
 CALCULO - muestra siempre el desglose:
 Productos:    $XX.XXX
@@ -285,7 +286,7 @@ PREGUNTAS SIN RESPUESTA:
 FLUJO:
 1. Saludo -> mensaje amable + link menu
 2. Cliente pide -> confirma con precios. Incluye notas especiales en los items.
-3. Pregunta direccion COMPLETA: calle, numero, barrio. Si tiene direccion frecuente, pregunta si es la misma.
+3. Pregunta direccion COMPLETA: calle, numero, barrio. Si tiene direccion frecuente, pregunta si es la misma. Si el cliente menciona conjunto, edificio, urbanizacion o unidad residencial: pide OBLIGATORIAMENTE numero de apartamento y bloque/torre para facilitar la entrega.
    - SOLO escribe DIRECCION_LISTA:[direccion] cuando el cliente te haya dado una direccion real y completa. SIEMPRE escribe DIRECCION_LISTA en el MISMO mensaje donde confirmas la direccion, no en un mensaje separado.
    - Si el cliente dice solo "ahi mismo", "la misma", "igual que antes": confirma la direccion frecuente en voz alta y luego escribe DIRECCION_LISTA con esa direccion.
    - NUNCA escribas DIRECCION_LISTA si el cliente no ha dado ninguna direccion todavia.
@@ -313,7 +314,10 @@ POST-CONFIRMACION:
 - Si el cliente pregunta cuanto demora: di "Tu pedido esta en preparacion, en cuanto este listo te avisamos y el domiciliario sale de inmediato. Normalmente entre 30 y 50 minutos desde que confirmas."
 - NUNCA digas "va en camino" o "el domiciliario ya salio" a menos que el sistema te haya enviado el mensaje de estado "en_camino". Solo el sistema puede confirmar ese estado.
 - NUNCA inventes tiempos exactos. Si insisten: "Dependera del trafico y la preparacion, pero te avisamos cada paso."
-- No reinicies flujo a menos que el cliente pida otro pedido.
+- NO reinicies el flujo ni tomes un nuevo pedido si el cliente ya tiene un pedido activo confirmado. Si el cliente saluda de nuevo o pregunta algo, responde en contexto del pedido activo.
+- Si el cliente quiere AGREGAR productos a su pedido activo: di "Claro, que quieres agregar?" y cuando lo diga escribe MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[producto y precio]
+- Si el cliente quiere CANCELAR su pedido: di "Entendido, voy a avisar al equipo para cancelar tu pedido #[numero]. Ten en cuenta que si ya esta en preparacion puede que no sea posible." y escribe CANCELAR_PEDIDO:[numero_pedido]
+- Si el cliente quiere cambiar la direccion de entrega: toma la nueva direccion y escribe MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
 
 OBLIGATORIO - escribe estos tags al final de tu respuesta (el cliente NO los ve):
 
@@ -328,6 +332,8 @@ Al confirmar direccion: DIRECCION_LISTA:[direccion completa]
 Telefono adicional: TELEFONO_ADICIONAL:[numero]
 Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
 Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
+Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
+Cancelar pedido: CANCELAR_PEDIDO:[numero_pedido]
 
 PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
 - Cliente MANDA UNA IMAGEN (comprobante de transferencia): PAGO_CONFIRMADO
@@ -658,6 +664,26 @@ function parseReply(reply, from) {
     cleanReply = cleanReply.replace(/ALERTA_PREGUNTA:.+/g, "").trim();
   }
 
+  if (reply.indexOf("MODIFICAR_PEDIDO:") !== -1) {
+    var modMatch = reply.match(/MODIFICAR_PEDIDO:([^|]+)\|(.+)/);
+    if (modMatch) {
+      sideEffect = "modificar_pedido";
+      if (!orderState[from]) orderState[from] = {};
+      orderState[from].modificarPedido = { numero: modMatch[1].trim(), accion: modMatch[2].trim() };
+    }
+    cleanReply = cleanReply.replace(/MODIFICAR_PEDIDO:.+/g, "").trim();
+  }
+
+  if (reply.indexOf("CANCELAR_PEDIDO:") !== -1) {
+    var cancelMatch = reply.match(/CANCELAR_PEDIDO:(.+)/);
+    if (cancelMatch) {
+      sideEffect = "cancelar_pedido";
+      if (!orderState[from]) orderState[from] = {};
+      orderState[from].cancelarPedido = cancelMatch[1].trim();
+    }
+    cleanReply = cleanReply.replace(/CANCELAR_PEDIDO:.+/g, "").trim();
+  }
+
   if (reply.indexOf("PAGO_EFECTIVO:") !== -1) {
     var cashMatch = reply.match(/PAGO_EFECTIVO:(.+)/);
     if (cashMatch && orderState[from]) {
@@ -719,7 +745,12 @@ app.post("/api/pedido-estado", async function(req, res) {
         if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
       }
       if (estado === "listo") {
-        var msg = getMensaje(restaurante, "msg_listo", "Tu pedido" + numStr + " esta listo y esperando al domiciliario!");
+        var esMesaPedido = req.body.direccion && req.body.direccion.toUpperCase().indexOf("MESA") !== -1;
+        var meseroNombre = req.body.domiciliario_nombre || null;
+        var msgListoDefault = esMesaPedido
+          ? "Tu pedido" + numStr + " esta listo!" + (meseroNombre ? " " + meseroNombre + " te lo lleva enseguida." : " Ya te lo llevamos.")
+          : "Tu pedido" + numStr + " esta listo y esperando al domiciliario!";
+        var msg = getMensaje(restaurante, "msg_listo", msgListoDefault);
         await sendWhatsAppMessage(telefono_cliente, msg, pid);
         if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
       }
@@ -995,7 +1026,18 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     var restaurante = await getRestaurante(phoneNumberId);
     if (restaurante) {
       if (restaurante.estado !== "activo") { console.log("Restaurante inactivo"); return; }
-      if (!estaEnHorario(restaurante)) { console.log("Fuera de horario"); return; }
+      if (!estaEnHorario(restaurante)) {
+        console.log("Fuera de horario - avisando cliente");
+        var horaAp = (restaurante.hora_apertura||"16:00:00").substring(0,5);
+        var horaCi = (restaurante.hora_cierre||"00:00:00").substring(0,5);
+        var diasAct = (restaurante.dias_activos||"lunes a domingo").replace(/,/g," | ");
+        var msgFuera = getMensaje(restaurante, "msg_fuera_horario",
+          "Hola! En este momento estamos cerrados. Nuestro horario de atencion es de " + horaAp + " a " + horaCi + " (" + diasAct + "). Con mucho gusto te atendemos en ese horario!");
+        await sendWhatsAppMessage(from, msgFuera, phoneNumberId);
+        if (restaurante) guardarMensajeSupabase(restaurante.id, from, userText, "cliente", null).catch(function(){});
+        if (restaurante) guardarMensajeSupabase(restaurante.id, from, msgFuera, "restaurante", null).catch(function(){});
+        return;
+      }
       var silencio = await estaEnSilencio(restaurante.id, from);
       if (silencio) {
         console.log("SILENCIO para:", from);
@@ -1079,8 +1121,19 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       bienvenidaExtra = "\n\nMENSAJE DE BIENVENIDA PERSONALIZADO:\n" + msgBienvenida;
     }
 
-    var horarioInfo = restaurante
-      ? "Atiendes de " + (restaurante.hora_apertura||"16:00").substring(0,5) + " a " + (restaurante.hora_cierre||"00:00").substring(0,5) + ". Hora actual en Colombia: " + horaStr + ". Estas en horario activo ahora."
+    // Check if closing soon (within 20 minutes)
+  var cierreProximo = false;
+  try {
+    var horaColNow = getHoraColombia();
+    var horaActMin = horaColNow.getHours() * 60 + horaColNow.getMinutes();
+    var ciParts = (restaurante.hora_cierre||"00:00:00").split(":").map(Number);
+    var minCierre = ciParts[0] * 60 + ciParts[1];
+    var diff = minCierre - horaActMin;
+    if (diff < 0) diff += 1440;
+    cierreProximo = diff <= 20 && diff >= 0;
+  } catch(e) {}
+  var horarioInfo = restaurante
+      ? "Atiendes de " + (restaurante.hora_apertura||"16:00").substring(0,5) + " a " + (restaurante.hora_cierre||"00:00").substring(0,5) + ". Hora actual en Colombia: " + horaStr + "." + (cierreProximo ? " IMPORTANTE: Cierras en menos de 20 minutos. Si el cliente esta pidiendo, avisale amablemente que cierras pronto y que su pedido debe confirmarse rapido para alcanzar. Si ya no es posible tomar el pedido, disculpate y di el horario de manana." : " Estas en horario activo.")
       : "Hora actual: " + horaStr;
 
     // ── BUILD SYSTEM PROMPT DINAMICO ──────────────────────────────────────────
@@ -1126,6 +1179,43 @@ async function procesarMensaje(msg, from, phoneNumberId) {
 
     if (sideEffect === "alerta_pregunta" && restaurante && orderState[from]?.alertaPregunta) {
       guardarMensajeSupabase(restaurante.id, from, "ALERTA_PREGUNTA: " + orderState[from].alertaPregunta, "alerta_pregunta", null).catch(function(){});
+    }
+
+    if (sideEffect === "modificar_pedido" && orderState[from]?.modificarPedido && restaurante) {
+      var mod = orderState[from].modificarPedido;
+      try {
+        var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        // Find the pedido by numero_pedido
+        var pedResp = await axios.get(
+          SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id + "&numero_pedido=eq." + mod.numero + "&select=id,items,total,direccion",
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+        );
+        if (pedResp.data && pedResp.data.length > 0) {
+          var ped = pedResp.data[0];
+          var patch = {};
+          if (mod.accion.startsWith("AGREGAR:")) {
+            var nuevoItem = mod.accion.replace("AGREGAR:", "").trim();
+            var itemsActuales = Array.isArray(ped.items) ? ped.items : [];
+            itemsActuales.push(nuevoItem);
+            patch.items = itemsActuales;
+            patch.notas_especiales = "MODIFICADO: se agrego " + nuevoItem;
+          } else if (mod.accion.startsWith("DIRECCION:")) {
+            patch.direccion = mod.accion.replace("DIRECCION:", "").trim();
+          }
+          await axios.patch(
+            SUPABASE_URL + "/rest/v1/pedidos?id=eq." + ped.id, patch,
+            { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+          );
+          guardarMensajeSupabase(restaurante.id, from, "MODIFICACION PEDIDO #" + mod.numero + ": " + mod.accion, "alerta_pregunta", null).catch(function(){});
+          console.log("Pedido #" + mod.numero + " modificado:", mod.accion);
+        }
+      } catch(e) { console.error("modificar_pedido error:", e.message); }
+    }
+
+    if (sideEffect === "cancelar_pedido" && orderState[from]?.cancelarPedido && restaurante) {
+      var numCancel = orderState[from].cancelarPedido;
+      guardarMensajeSupabase(restaurante.id, from, "⚠️ CLIENTE SOLICITA CANCELAR PEDIDO #" + numCancel, "alerta_pregunta", null).catch(function(){});
+      console.log("Solicitud cancelacion pedido #" + numCancel + " de:", from);
     }
 
     conversations[from].push({ role: "assistant", content: rawReply });
