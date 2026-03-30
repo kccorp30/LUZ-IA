@@ -46,39 +46,32 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 .live-dot{width:6px;height:6px;border-radius:50%;background:#34d399;animation:ldot 1.5s ease-in-out infinite;}
 @keyframes ldot{0%,100%{opacity:1}50%{opacity:0.3}}
 
-/* TABS */
 .tab-bar{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:400;width:calc(100% - 20px);max-width:480px;}
-.tab-bar-inner{background:rgba(15,10,35,0.94);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(16,185,129,0.3);border-radius:28px;display:flex;padding:5px 4px calc(5px + env(safe-area-inset-bottom));box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 40px rgba(16,185,129,0.08);}
+.tab-bar-inner{background:rgba(15,10,35,0.94);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(16,185,129,0.3);border-radius:28px;display:flex;padding:5px 4px calc(5px + env(safe-area-inset-bottom));box-shadow:0 8px 32px rgba(0,0,0,0.6);}
 .tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:7px 2px 4px;transition:all 0.2s;border-radius:20px;margin:2px;}
 .tab-btn.active{background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.35);}
-.tab-icon{font-size:19px;line-height:1;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1);}
-.tab-btn.active .tab-icon{transform:scale(1.2);filter:drop-shadow(0 0 8px rgba(110,231,183,0.8));}
-.tab-label{font-size:9px;color:rgba(255,255,255,0.3);font-weight:600;letter-spacing:0.03em;}
+.tab-icon{font-size:19px;line-height:1;}
+.tab-label{font-size:9px;color:rgba(255,255,255,0.3);font-weight:600;}
 .tab-btn.active .tab-label{color:#34d399;font-weight:700;}
 
 .content{padding-top:68px;padding-bottom:calc(96px + env(safe-area-inset-bottom));}
 .page{display:none}.page.active{display:block;animation:fadeUp 0.2s ease both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-/* STATS */
 .stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 14px 4px;}
-.stat-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:18px;padding:14px 10px;text-align:center;position:relative;overflow:hidden;}
-.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--g,linear-gradient(90deg,#10b981,#2563eb));}
+.stat-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:18px;padding:14px 10px;text-align:center;}
 .stat-icon{font-size:22px;margin-bottom:6px;}
 .stat-val{font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
 .stat-label{font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;}
 
-/* STATS EXTRA */
 .stats-extra{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 14px 8px;}
 .stat-extra-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;}
 .stat-extra-icon{font-size:22px;flex-shrink:0;}
 .stat-extra-val{font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--text);}
 .stat-extra-label{font-size:10px;color:var(--text3);font-weight:500;}
 
-/* PEDIDO CARD */
 .pedidos-pad{padding:4px 14px;}
-.dcard{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:22px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow);transition:transform 0.15s;}
-.dcard:hover{transform:translateY(-1px)}
+.dcard{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:22px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow);}
 .dcard.estado-listo{border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.05);}
 .dcard.estado-en_camino{border-color:rgba(16,185,129,0.4);background:rgba(16,185,129,0.05);}
 .dcard-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;}
@@ -106,15 +99,18 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 .timer-val.urgente{color:#fca5a5;animation:urgPulse 1s ease-in-out infinite;}
 @keyframes urgPulse{0%,100%{opacity:1}50%{opacity:0.5}}
 .dcard-btns{display:flex;flex-direction:column;gap:8px;}
-.dcard-btn-maps{width:100%;padding:11px;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);border-radius:13px;color:#93c5fd;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.12s;}
-.dcard-btn-maps:active{transform:scale(0.97);background:rgba(37,99,235,0.25);}
+.dcard-btn-maps{width:100%;padding:11px;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);border-radius:13px;color:#93c5fd;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.12s;text-decoration:none;}
+.dcard-btn-maps:active{transform:scale(0.97);}
+.dcard-btn-wa{padding:11px 14px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.3);border-radius:13px;color:#25d366;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;transition:all 0.12s;}
+.dcard-btn-wa:active{transform:scale(0.97);}
+.dcard-btn-call{padding:11px 14px;background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.3);border-radius:13px;color:#60a5fa;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;transition:all 0.12s;}
+.dcard-btn-call:active{transform:scale(0.97);}
 .dcard-btns-row{display:flex;gap:8px;}
 .dcard-btn{flex:1;padding:13px;border:none;border-radius:14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.12s;display:flex;align-items:center;justify-content:center;gap:7px;}
 .dcard-btn:active{transform:scale(0.96);}
 .btn-camino{background:linear-gradient(135deg,#f97316,#f59e0b);color:white;box-shadow:0 4px 16px rgba(249,115,22,0.4);}
 .btn-entregado{background:linear-gradient(135deg,#10b981,#2563eb);color:white;box-shadow:0 4px 16px rgba(16,185,129,0.4);}
 
-/* HISTORIAL */
 .hist-pad{padding:4px 14px;}
 .hcard{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:18px;padding:14px 16px;margin-bottom:9px;box-shadow:var(--shadow);}
 .hcard-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
@@ -139,19 +135,31 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 .istat-val{font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
 .istat-label{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-top:5px;}
 .istat.wide{grid-column:span 2;}
+
+/* CUADRE DEL DIA */
+.cuadre-section{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:20px;padding:18px;margin-bottom:12px;}
+.cuadre-title{font-size:14px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.cuadre-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;}
+.cuadre-row:last-child{border:none;}
+.cuadre-label{color:var(--text3);}
+.cuadre-val{font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text);}
+.cuadre-val.green{color:#34d399;}
+.cuadre-val.amber{color:#fbbf24;}
+.cuadre-total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;font-size:15px;font-weight:800;}
+.cuadre-total-val{font-family:'JetBrains Mono',monospace;font-size:20px;color:#34d399;}
+
 .informe-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;}
 .informe-row:last-child{border:none;}
 .informe-label{color:var(--text3);font-weight:500;}
 .informe-val{font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text);}
 
-/* OVERLAY CONFIRM */
 .confirm-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px;}.confirm-overlay.open{display:flex}
 .confirm-box{background:rgba(20,15,40,0.98);border:1px solid var(--glass-border2);box-shadow:0 16px 48px rgba(0,0,0,0.6);border-radius:26px;padding:28px;width:100%;max-width:300px;text-align:center;}
 .confirm-icon{font-size:46px;margin-bottom:14px;}.confirm-title{font-size:20px;font-weight:800;margin-bottom:8px;}
 .confirm-sub{font-size:13px;color:var(--text3);margin-bottom:24px;line-height:1.5;}
 .confirm-btns{display:flex;gap:10px;}
 .confirm-cancel{flex:1;padding:13px;background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);border-radius:14px;color:var(--text2);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
-.confirm-ok{flex:2;padding:13px;background:linear-gradient(135deg,#10b981,#2563eb);border:none;border-radius:14px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 16px rgba(16,185,129,0.4);}
+.confirm-ok{flex:2;padding:13px;background:linear-gradient(135deg,#10b981,#2563eb);border:none;border-radius:14px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
 
 .notif{position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-20px);background:rgba(13,10,26,0.95);backdrop-filter:var(--blur);border:1px solid rgba(16,185,129,0.4);color:var(--text);padding:10px 22px;border-radius:24px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center;}
 .notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -161,7 +169,6 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 <body>
 <div class="blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
 
-<!-- LOGIN -->
 <div id="loginScreen">
   <div class="login-box">
     <div class="login-orb">🛵</div>
@@ -176,7 +183,6 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
   </div>
 </div>
 
-<!-- APP -->
 <div id="app">
   <div class="topbar">
     <div class="tb-left">
@@ -187,7 +193,6 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
   </div>
 
   <div class="content">
-    <!-- PEDIDOS ACTIVOS -->
     <div class="page active" id="page-pedidos">
       <div class="stats-row">
         <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-val" id="statAsignados">0</div><div class="stat-label">Listos</div></div>
@@ -209,22 +214,18 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
       </div>
     </div>
 
-    <!-- HISTORIAL -->
     <div class="page" id="page-historial">
-      <div style="padding:14px 14px 4px"><div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Historial</div><div style="font-size:13px;color:var(--text3);margin-top:2px">Tus pedidos entregados hoy</div></div>
-      <div class="hist-pad" id="historialLista">
-        <div class="empty"><div class="et">Cargando...</div></div>
-      </div>
+      <div style="padding:14px 14px 4px"><div style="font-size:22px;font-weight:900;">Historial</div><div style="font-size:13px;color:var(--text3);margin-top:2px">Tus pedidos de hoy</div></div>
+      <div class="hist-pad" id="historialLista"><div class="empty"><div class="et">Cargando...</div></div></div>
     </div>
 
-    <!-- INFORME -->
     <div class="page" id="page-informe">
-      <div style="padding:14px 14px 4px"><div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Mi desempeño</div><div style="font-size:13px;color:var(--text3);margin-top:2px">Estadisticas de hoy</div></div>
+      <div style="padding:14px 14px 4px"><div style="font-size:22px;font-weight:900;">Mi día</div><div style="font-size:13px;color:var(--text3);margin-top:2px">Estadísticas y cuadre</div></div>
       <div class="informe-pad">
         <div class="informe-hero">
-          <div style="font-size:12px;font-weight:700;color:rgba(110,231,183,0.7);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px">Resumen del dia</div>
+          <div style="font-size:12px;font-weight:700;color:rgba(110,231,183,0.7);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px">Resumen del día</div>
           <div class="informe-title" id="informeGreeting">Hola!</div>
-          <div class="informe-sub" id="informeSub">Cargando estadisticas...</div>
+          <div class="informe-sub" id="informeSub">Cargando estadísticas...</div>
         </div>
         <div class="informe-stats">
           <div class="istat"><div class="istat-val" id="iEntregados">0</div><div class="istat-label">Entregados</div></div>
@@ -232,12 +233,23 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
           <div class="istat"><div class="istat-val" id="iRecord">--</div><div class="istat-label">Mejor tiempo</div></div>
           <div class="istat"><div class="istat-val" id="iPendientes">0</div><div class="istat-label">Pendientes</div></div>
           <div class="istat wide" style="background:rgba(124,58,237,0.1);border-color:rgba(124,58,237,0.25)">
-            <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Eficiencia del dia</div>
+            <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Eficiencia del día</div>
             <div id="barraEficiencia" style="height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:5px"><div id="barraFill" style="height:100%;background:linear-gradient(90deg,#10b981,#2563eb);border-radius:4px;width:0%;transition:width 0.8s ease"></div></div>
             <div id="eficienciaLabel" style="font-size:11px;color:var(--text3)">Calculando...</div>
           </div>
         </div>
-        <button id="btnCerrarSesion" style="width:100%;padding:13px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:14px;color:#fca5a5;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;">🚪 Cerrar sesion</button>
+
+        <!-- CUADRE DEL DÍA -->
+        <div class="cuadre-section">
+          <div class="cuadre-title">💰 Cuadre del día</div>
+          <div class="cuadre-row"><span class="cuadre-label">Total recaudado (efectivo)</span><span class="cuadre-val" id="cuadreEfectivo">$0</span></div>
+          <div class="cuadre-row"><span class="cuadre-label">Total domicilios cobrados</span><span class="cuadre-val amber" id="cuadreDomicilios">$0</span></div>
+          <div class="cuadre-row"><span class="cuadre-label">Pedidos entregados</span><span class="cuadre-val" id="cuadreConteo">0</span></div>
+          <div class="cuadre-row" style="border-top:1px solid rgba(255,255,255,0.1);margin-top:4px;padding-top:12px;"><span class="cuadre-label" style="font-weight:700;color:var(--text)">Tu comisión (domicilios)</span><span class="cuadre-val green" id="cuadreGanancia">$0</span></div>
+          <div class="cuadre-row"><span class="cuadre-label">A entregar al restaurante</span><span class="cuadre-val amber" id="cuadreEntregar">$0</span></div>
+        </div>
+
+        <button id="btnCerrarSesion" style="width:100%;padding:13px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:14px;color:#fca5a5;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;">🚪 Cerrar sesión</button>
       </div>
     </div>
   </div>
@@ -246,7 +258,7 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
     <div class="tab-bar-inner">
       <div class="tab-btn active" id="tab-pedidos"><div class="tab-icon">🛵</div><div class="tab-label">Pedidos</div></div>
       <div class="tab-btn" id="tab-historial"><div class="tab-icon">📋</div><div class="tab-label">Historial</div></div>
-      <div class="tab-btn" id="tab-informe"><div class="tab-icon">📊</div><div class="tab-label">Mi dia</div></div>
+      <div class="tab-btn" id="tab-informe"><div class="tab-icon">📊</div><div class="tab-label">Mi día</div></div>
     </div>
   </div>
 </div>
@@ -258,8 +270,8 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
     <div class="confirm-title">Confirmar entrega</div>
     <div class="confirm-sub">¿Confirmás que entregaste el pedido <strong id="confirmNum">#?</strong> al cliente?</div>
     <div class="confirm-btns">
-      <button class="confirm-cancel" id="confirmCancel">No aun</button>
-      <button class="confirm-ok" id="confirmOk">Si, entregado!</button>
+      <button class="confirm-cancel" id="confirmCancel">No aún</button>
+      <button class="confirm-ok" id="confirmOk">Sí, entregado!</button>
     </div>
   </div>
 </div>
@@ -268,7 +280,6 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 var rest=null,domiciliarioId=null,domiciliarioNombre="";
 var pedidosKnown={},pedidoAEntregar=null,pedidoAEntregarNum="";
-var tiemposEntrega=[]; // {num, minutos, asignadoEn, entregadoEn}
 var timerPedidos=null;
 
 function get(t,f){return fetch(SU+"/rest/v1/"+t+"?"+(f||""),{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json();});}
@@ -277,30 +288,29 @@ function ago(d){var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<
 function fmtMin(m){if(!m||isNaN(m))return"--";return m<60?m+"min":Math.floor(m/60)+"h "+Math.round(m%60)+"m";}
 function notif(m,c){var e=document.getElementById("notif");e.textContent=m;e.style.borderColor=c||"rgba(16,185,129,0.4)";e.classList.add("show");setTimeout(function(){e.classList.remove("show");},2800);}
 function getHoraCol(){var a=new Date();return new Date(a.getTime()+a.getTimezoneOffset()*60000-(5*60*60*1000));}
-
 function playSound(){try{var ctx=new(window.AudioContext||window.webkitAudioContext)();[[880,0,0.4],[1046,0.15,0.5]].forEach(function(n){var o=ctx.createOscillator(),g=ctx.createGain(),t=ctx.currentTime+n[1];o.frequency.value=n[0];g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(n[2],t+0.02);g.gain.exponentialRampToValueAtTime(0.001,t+0.5);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.6);});}catch(e){}}
+function waLink(tel){var t=String(tel).replace(/[^0-9]/g,"");if(!t.startsWith("57")&&t.length===10)t="57"+t;return"https://wa.me/"+t;}
 
-// LOGIN
 document.getElementById("loginBtn").addEventListener("click",doLogin);
 document.getElementById("loginNombre").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
 function doLogin(){
   var nombre=document.getElementById("loginNombre").value.trim();
   if(!nombre){document.getElementById("loginErr").textContent="Escribe tu nombre";return;}
   var btn=document.getElementById("loginBtn");btn.textContent="Buscando...";btn.disabled=true;
-  // Buscar restaurante activo + domiciliario con ese nombre
   var restId=localStorage.getItem("luzRestId");
   var query=restId?"restaurante_id=eq."+restId+"&nombre=ilike."+encodeURIComponent(nombre)+"&activo=eq.true&select=*":"nombre=ilike."+encodeURIComponent(nombre)+"&activo=eq.true&select=*&limit=1";
   get("domiciliarios",query).then(function(ds){
-    if(!ds||!ds.length){document.getElementById("loginErr").textContent="No encontramos ese nombre. Verificalo con el encargado.";btn.textContent="Entrar";btn.disabled=false;return;}
+    if(!ds||!ds.length){document.getElementById("loginErr").textContent="No encontramos ese nombre.";btn.textContent="Entrar";btn.disabled=false;return;}
     var d=ds[0];
     get("restaurantes","id=eq."+d.restaurante_id+"&select=*").then(function(rs){
       if(!rs||!rs.length){document.getElementById("loginErr").textContent="Error al cargar el restaurante.";btn.textContent="Entrar";btn.disabled=false;return;}
       rest=rs[0];domiciliarioId=d.id;domiciliarioNombre=d.nombre;
       localStorage.setItem("luzDomiId",d.id);localStorage.setItem("luzDomiNombre",d.nombre);localStorage.setItem("luzRestId",rest.id);
       arrancar();
-    }).catch(function(){document.getElementById("loginErr").textContent="Error de conexion";btn.textContent="Entrar";btn.disabled=false;});
-  }).catch(function(){document.getElementById("loginErr").textContent="Error de conexion";btn.textContent="Entrar";btn.disabled=false;});
+    }).catch(function(){document.getElementById("loginErr").textContent="Error de conexión";btn.textContent="Entrar";btn.disabled=false;});
+  }).catch(function(){document.getElementById("loginErr").textContent="Error de conexión";btn.textContent="Entrar";btn.disabled=false;});
 }
+
 function arrancar(){
   document.getElementById("loginScreen").style.display="none";
   document.getElementById("app").style.display="block";
@@ -311,7 +321,6 @@ function arrancar(){
   setInterval(function(){loadHistorial();loadInforme();},30000);
 }
 
-// TABS
 ["pedidos","historial","informe"].forEach(function(n){
   var el=document.getElementById("tab-"+n);if(!el)return;
   el.addEventListener("click",function(){
@@ -324,29 +333,21 @@ function arrancar(){
   });
 });
 
-// PEDIDOS ACTIVOS
 function loadPedidos(){
   if(!rest||!domiciliarioId)return;
   get("pedidos","restaurante_id=eq."+rest.id+"&domiciliario_id=eq."+domiciliarioId+"&estado=in.(listo,en_camino)&order=created_at.asc&limit=20").then(function(pedidos){
     var isFirst=Object.keys(pedidosKnown).length===0;
-    pedidos.forEach(function(p){if(!pedidosKnown[p.id]){if(!isFirst)playSound();pedidosKnown[p.id]={asignadoEn:p.updated_at||p.created_at};}});
-    // Stats activos
+    pedidos.forEach(function(p){if(!pedidosKnown[p.id]){if(!isFirst)playSound();pedidosKnown[p.id]=true;}});
     document.getElementById("statAsignados").textContent=pedidos.filter(function(p){return p.estado==="listo";}).length;
     document.getElementById("statCamino").textContent=pedidos.filter(function(p){return p.estado==="en_camino";}).length;
-    // Entregados hoy
     var col=getHoraCol(),desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
     get("pedidos","restaurante_id=eq."+rest.id+"&domiciliario_id=eq."+domiciliarioId+"&estado=eq.entregado&created_at=gte."+desde+"&select=id,created_at,updated_at").then(function(e){
       document.getElementById("statEntregados").textContent=e.length;
-      // Calcular tiempos
-      var tiempos=e.map(function(p){
-        if(p.updated_at&&p.created_at){return Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);}
-        return null;
-      }).filter(function(t){return t!==null&&t>0&&t<300;});
+      var tiempos=e.map(function(p){if(p.updated_at&&p.created_at){return Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);}return null;}).filter(function(t){return t!==null&&t>0&&t<300;});
       if(tiempos.length){
         var prom=Math.round(tiempos.reduce(function(s,t){return s+t;},0)/tiempos.length);
-        var mejor=Math.min.apply(null,tiempos);
         document.getElementById("statTiempoPromedio").textContent=fmtMin(prom);
-        document.getElementById("statRecord").textContent=fmtMin(mejor);
+        document.getElementById("statRecord").textContent=fmtMin(Math.min.apply(null,tiempos));
       }
     }).catch(function(){});
 
@@ -360,95 +361,107 @@ function loadPedidos(){
       var esRecoger=(p.direccion||"").toLowerCase().indexOf("recoger")!==-1;
       var minutos=Math.floor((ahora-new Date(p.created_at))/60000);
       var urgente=minutos>25;
+      var tel=p.cliente_tel||"";
       h+='<div class="dcard estado-'+p.estado+'">';
       h+='<div class="dcard-header h-'+p.estado+'"><div><div class="dcard-num n-'+p.estado+'">#'+p.numero_pedido+'</div><div style="font-size:10px;color:var(--text3);margin-top:1px">Pedido hace '+ago(p.created_at)+'</div></div>';
       h+='<span class="dcard-etag '+(p.estado==="listo"?"etag-listo":"etag-en_camino")+'">'+(p.estado==="listo"?"⏳ Listo":"🛵 En camino")+'</span></div>';
       h+='<div class="dcard-body">';
-      h+='<div class="dcard-timer">⏱ Tiempo transcurrido: <span class="timer-val'+(urgente?" urgente":"")+'">'+minutos+' min'+(urgente?" ⚠️":"")+'</span></div>';
+      h+='<div class="dcard-timer">⏱ Tiempo: <span class="timer-val'+(urgente?" urgente":"")+'">'+minutos+' min'+(urgente?" ⚠️":"")+'</span></div>';
       h+='<div class="dcard-section">Productos</div><div class="dcard-items">';
       items.forEach(function(it){h+='<div class="dcard-item">• '+it+'</div>';});
       h+='</div>';
       if(p.notas_especiales)h+='<div class="dcard-notas">📋 '+p.notas_especiales+'</div>';
-      h+='<div class="dcard-dir"><div class="dcard-dir-icon">'+(esRecoger?"🏪":"📍")+'</div><div><div class="dcard-dir-text">'+(esRecoger?"RECOGER EN TIENDA":p.direccion||"Sin dirección")+'</div><div class="dcard-dir-sub">'+(p.cliente_tel?"📱 "+p.cliente_tel:"")+'</div></div></div>';
-      // Total sin mostrar valor del domicilio
-      h+='<div class="dcard-total">Total del pedido: <span>'+fmt(total)+'</span></div>';
-      // Metodo de pago
+      h+='<div class="dcard-dir"><div class="dcard-dir-icon">'+(esRecoger?"🏪":"📍")+'</div><div><div class="dcard-dir-text">'+(esRecoger?"RECOGER EN TIENDA":p.direccion||"Sin dirección")+'</div><div class="dcard-dir-sub">'+(tel?"📱 "+tel:"")+'</div></div></div>';
+      h+='<div class="dcard-total">Total: <span>'+fmt(total)+'</span></div>';
       if(p.metodo_pago)h+='<div style="margin-bottom:10px"><span class="dcard-pago">💳 '+p.metodo_pago+'</span></div>';
       h+='<div class="dcard-btns">';
-      // Botones de accion y llamada en misma fila
-      h+='<div style="display:flex;gap:7px;margin-bottom:8px">';
-      if(p.cliente_tel){
-        h+='<a href="tel:'+p.cliente_tel+'" class="dcard-btn-maps" style="flex:0;padding:11px 14px;font-size:16px;text-decoration:none;display:flex;align-items:center;justify-content:center;" title="Llamar cliente">📞</a>';
+      // Botones contacto
+      if(tel){
+        h+='<div style="display:flex;gap:7px;margin-bottom:8px">';
+        h+='<a href="tel:'+tel+'" class="dcard-btn-call" title="Llamar">📞</a>';
+        h+='<a href="'+waLink(tel)+'" class="dcard-btn-wa" target="_blank" title="WhatsApp">💬</a>';
+        if(!esRecoger&&p.direccion&&p.direccion!=="Por confirmar"){
+          h+='<button class="dcard-btn-maps" style="flex:1;" data-dir="'+encodeURIComponent(p.direccion||"")+'">📍 Google Maps</button>';
+        }
+        h+='</div>';
+      } else if(!esRecoger&&p.direccion&&p.direccion!=="Por confirmar"){
+        h+='<button class="dcard-btn-maps" style="margin-bottom:8px;" data-dir="'+encodeURIComponent(p.direccion||"")+'">📍 Google Maps</button>';
       }
-      if(!esRecoger&&p.direccion&&p.direccion!=="Por confirmar"){
-        h+='<button class="dcard-btn-maps" style="flex:1;" data-dir="'+encodeURIComponent(p.direccion||"")+'">📍 Google Maps</button>';
-      }
-      h+='</div>';
       h+='<div class="dcard-btns-row">';
-      if(p.estado==="listo")h+='<button class="dcard-btn btn-camino" data-id="'+p.id+'" data-e="en_camino" data-n="'+p.numero_pedido+'" data-t="'+(p.cliente_tel||"")+'">🛵 Salí en camino</button>';
-      if(p.estado==="en_camino")h+='<button class="dcard-btn btn-entregado" data-id="'+p.id+'" data-n="'+p.numero_pedido+'" data-t="'+(p.cliente_tel||"")+'">✅ Entregué el pedido</button>';
+      if(p.estado==="listo")h+='<button class="dcard-btn btn-camino" data-id="'+p.id+'" data-e="en_camino" data-n="'+p.numero_pedido+'" data-t="'+tel+'">🛵 Salí en camino</button>';
+      if(p.estado==="en_camino")h+='<button class="dcard-btn btn-entregado" data-id="'+p.id+'" data-n="'+p.numero_pedido+'" data-t="'+tel+'">✅ Entregué el pedido</button>';
       h+='</div></div></div></div>';
     });
     lista.innerHTML=h;
-    lista.querySelectorAll(".dcard-btn-maps").forEach(function(b){b.addEventListener("click",function(){var dir=decodeURIComponent(this.getAttribute("data-dir")||"");window.open("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(dir+", Cali, Colombia"),"_blank");});});
+    lista.querySelectorAll(".dcard-btn-maps[data-dir]").forEach(function(b){b.addEventListener("click",function(){window.open("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(decodeURIComponent(this.getAttribute("data-dir"))+", Cali, Colombia"),"_blank");});});
     lista.querySelectorAll(".dcard-btn[data-e='en_camino']").forEach(function(b){b.addEventListener("click",function(){cambiarEstado(this.getAttribute("data-id"),"en_camino",this.getAttribute("data-t"),this.getAttribute("data-n"));});});
     lista.querySelectorAll(".btn-entregado[data-id]").forEach(function(b){b.addEventListener("click",function(){pedidoAEntregar=this.getAttribute("data-id");pedidoAEntregarNum=this.getAttribute("data-n");document.getElementById("confirmNum").textContent="#"+pedidoAEntregarNum;document.getElementById("confirmEntregado").classList.add("open");});});
   }).catch(function(){});
 }
 
-// HISTORIAL
 function loadHistorial(){
   if(!rest||!domiciliarioId)return;
   var col=getHoraCol(),desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
   get("pedidos","restaurante_id=eq."+rest.id+"&domiciliario_id=eq."+domiciliarioId+"&created_at=gte."+desde+"&order=created_at.desc&limit=50").then(function(pedidos){
     var lista=document.getElementById("historialLista");
-    if(!pedidos.length){lista.innerHTML='<div class="empty"><div class="ei">📋</div><div class="et">Aun no tienes pedidos hoy.</div></div>';return;}
+    if(!pedidos.length){lista.innerHTML='<div class="empty"><div class="ei">📋</div><div class="et">Aún no tienes pedidos hoy.</div></div>';return;}
     var h="";
     pedidos.forEach(function(p){
       var total=Number(p.total||0);
       var entregado=p.estado==="entregado";
       var minutos=null;
-      if(entregado&&p.updated_at&&p.created_at){
-        minutos=Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);
-        if(minutos<0||minutos>300)minutos=null;
-      }
+      if(entregado&&p.updated_at&&p.created_at){minutos=Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);if(minutos<0||minutos>300)minutos=null;}
       h+='<div class="hcard">';
       h+='<div class="hcard-top"><div><div class="hnum">#'+p.numero_pedido+'</div><div class="htime">'+new Date(p.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})+'</div></div><div style="text-align:right"><div class="htot">'+fmt(total)+'</div><span class="hstatus '+(entregado?"entregado":"pendiente")+'">'+(entregado?"✅ Entregado":"⏳ Pendiente")+'</span></div></div>';
       if(p.direccion&&p.direccion!=="RECOGER EN TIENDA")h+='<div class="hdir">📍 '+p.direccion+'</div>';
-      if(minutos!==null)h+='<div class="htiempo">⏱ Tiempo de entrega: <span class="htiempo-val">'+fmtMin(minutos)+'</span></div>';
+      if(minutos!==null)h+='<div class="htiempo">⏱ <span class="htiempo-val">'+fmtMin(minutos)+'</span></div>';
       h+='</div>';
     });
     lista.innerHTML=h;
   }).catch(function(){});
 }
 
-// INFORME
 function loadInforme(){
   if(!rest||!domiciliarioId)return;
   var col=getHoraCol(),desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
   document.getElementById("informeGreeting").textContent="Hola, "+domiciliarioNombre+"!";
-  get("pedidos","restaurante_id=eq."+rest.id+"&domiciliario_id=eq."+domiciliarioId+"&created_at=gte."+desde+"&order=created_at.asc&limit=100").then(function(pedidos){
+  get("pedidos","restaurante_id=eq."+rest.id+"&domiciliario_id=eq."+domiciliarioId+"&created_at=gte."+desde+"&order=created_at.asc&limit=100&select=*").then(function(pedidos){
     var entregados=pedidos.filter(function(p){return p.estado==="entregado";});
     var pendientes=pedidos.filter(function(p){return p.estado!=="entregado";});
-    var tiempos=entregados.map(function(p){
-      if(p.updated_at&&p.created_at){var m=Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);return(m>0&&m<300)?m:null;}
-      return null;
-    }).filter(function(t){return t!==null;});
+    var tiempos=entregados.map(function(p){if(p.updated_at&&p.created_at){var m=Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);return(m>0&&m<300)?m:null;}return null;}).filter(function(t){return t!==null;});
     var prom=tiempos.length?Math.round(tiempos.reduce(function(s,t){return s+t;},0)/tiempos.length):null;
     var mejor=tiempos.length?Math.min.apply(null,tiempos):null;
-    var eficiencia=Math.min(100,entregados.length>0?Math.round((entregados.length/(pedidos.length||1))*100):0);
+    var eficiencia=Math.min(100,pedidos.length>0?Math.round((entregados.length/pedidos.length)*100):0);
     document.getElementById("iEntregados").textContent=entregados.length;
     document.getElementById("iTiempoPromedio").textContent=fmtMin(prom);
     document.getElementById("iRecord").textContent=fmtMin(mejor);
     document.getElementById("iPendientes").textContent=pendientes.length;
     document.getElementById("barraFill").style.width=eficiencia+"%";
-    var msg=eficiencia>=90?"Excelente dia! Sigue asi 🔥":eficiencia>=70?"Buen ritmo! 💪":entregados.length===0?"Esperando primer pedido del dia...":"Vamos bien, a seguir!";
-    document.getElementById("eficienciaLabel").textContent=eficiencia+"%  "+msg;
+    var msg=eficiencia>=90?"Excelente día! 🔥":eficiencia>=70?"Buen ritmo! 💪":entregados.length===0?"Esperando primer pedido...":"Vamos bien!";
+    document.getElementById("eficienciaLabel").textContent=eficiencia+"% — "+msg;
     document.getElementById("informeSub").textContent=entregados.length+" entregado"+(entregados.length!==1?"s":"")+" hoy"+(prom?" · Promedio "+fmtMin(prom):"");
+
+    // CUADRE DEL DÍA
+    // Solo pedidos con domicilio en efectivo o con domicilio cobrado
+    var totalEfectivo=0,totalDomicilios=0;
+    entregados.forEach(function(p){
+      var dom=Number(p.domicilio||0);
+      var met=(p.metodo_pago||"").toLowerCase();
+      totalDomicilios+=dom;
+      // Solo suma al efectivo si pagaron en efectivo (el domi recibe el dinero)
+      if(met==="efectivo"){totalEfectivo+=Number(p.total||0);}
+      else{totalEfectivo+=dom;} // Solo el domicilio si fue pago digital
+    });
+    var comision=Math.round(totalDomicilios*0.9); // 90% para el domi (10% invisible al restaurante)
+    var entregar=totalEfectivo-comision;
+    document.getElementById("cuadreEfectivo").textContent=fmt(totalEfectivo);
+    document.getElementById("cuadreDomicilios").textContent=fmt(totalDomicilios);
+    document.getElementById("cuadreConteo").textContent=entregados.length;
+    document.getElementById("cuadreGanancia").textContent=fmt(comision);
+    document.getElementById("cuadreEntregar").textContent=fmt(Math.max(0,entregar));
   }).catch(function(){});
 }
 
-// CONFIRMAR ENTREGA
 document.getElementById("confirmCancel").addEventListener("click",function(){document.getElementById("confirmEntregado").classList.remove("open");pedidoAEntregar=null;});
 document.getElementById("confirmOk").addEventListener("click",function(){
   if(!pedidoAEntregar)return;
@@ -463,13 +476,12 @@ function cambiarEstado(id,estado,tel,num){
   .then(function(r){return r.json();})
   .then(function(){
     if(estado==="entregado"){notif("✅ Pedido #"+num+" entregado!");}
-    else{notif("🛵 Marcado en camino al pedido #"+num);}
+    else{notif("🛵 En camino al pedido #"+num);}
     loadPedidos();loadHistorial();loadInforme();
   })
   .catch(function(){notif("Error de conexión");});
 }
 
-// CERRAR SESION
 document.getElementById("btnCerrarSesion").addEventListener("click",function(){
   if(!confirm("¿Cerrar sesión?"))return;
   localStorage.removeItem("luzDomiId");localStorage.removeItem("luzDomiNombre");
@@ -477,7 +489,6 @@ document.getElementById("btnCerrarSesion").addEventListener("click",function(){
   location.reload();
 });
 
-// AUTO-LOGIN
 (function(){
   var savedId=localStorage.getItem("luzDomiId"),savedName=localStorage.getItem("luzDomiNombre"),savedRid=localStorage.getItem("luzRestId");
   if(savedId&&savedName&&savedRid){
