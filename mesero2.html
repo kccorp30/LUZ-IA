@@ -263,7 +263,7 @@ function restId(){var p=new URLSearchParams(window.location.search);return p.get
 window.addEventListener("load",function(){
   var rid=restId();
   if(!rid){document.getElementById("maserosGrid").innerHTML='<div class="login-empty" style="grid-column:1/-1">URL inválida. Abre desde el panel → Mesas.</div>';return;}
-  api("restaurantes","id=eq."+rid+"&select=id,nombre").then(function(d){
+  api("restaurantes","id=eq."+rid+"&select=id,nombre,numero_mesas").then(function(d){
     if(!d||!d.length){document.getElementById("maserosGrid").innerHTML='<div class="login-empty" style="grid-column:1/-1">Restaurante no encontrado.</div>';return;}
     rest=d[0];
     document.getElementById("loginRestNombre").textContent=rest.nombre||"";
@@ -334,7 +334,7 @@ function entrarApp(){
         else if(mesas[num]!=="cuenta")mesas[num]="ocupada";
       }
     });
-    renderMesas(8,mesas);
+    renderMesas(Number(rest.numero_mesas)||8,mesas);
   }).catch(function(e){
     console.error("Init error:",e);
     document.getElementById("mesesGrid").innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:#fca5a5;font-size:13px">Error cargando. Recarga la página.</div>';
@@ -372,7 +372,7 @@ function refreshMesaStates(){
         else if(mesas[num]!=="cuenta")mesas[num]="ocupada";
       }
     });
-    renderMesas(8,mesas);
+    renderMesas(Number(rest.numero_mesas)||8,mesas);
   }).catch(function(){});
 }
 
