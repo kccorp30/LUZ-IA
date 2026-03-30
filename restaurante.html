@@ -514,7 +514,7 @@ select.finput{cursor:pointer}
     <!-- PEDIDOS -->
     <div class="page active" id="page-pedidos">
       <div class="stats-row">
-        <div class="stat-card"><span class="stat-icon">🛒</span><div class="stat-label">Pedidos hoy</div><div class="stat-val purple" id="countHoy">0</div><div class="stat-sub">activos ahora</div></div>
+        <div class="stat-card"><span class="stat-icon">🛒</span><div class="stat-label">Pedidos hoy</div><div class="stat-val purple" id="countHoy">0</div><div class="stat-sub">total hoy</div></div>
         <div class="stat-card"><span class="stat-icon">💰</span><div class="stat-label">Ventas hoy</div><div class="stat-val green" id="ventasHoy">$0</div><div class="stat-sub">total facturado</div></div>
       </div>
       <div class="pedidos-pad" id="pedidosLista"><div class="empty"><div class="ei">🛒</div><div class="et">No hay pedidos activos</div></div></div>
@@ -745,7 +745,7 @@ select.finput{cursor:pointer}
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <div style="font-size:12px;color:var(--text3);font-weight:600">Mesas:</div>
-          <input id="mesaCount" type="number" min="1" max="30" value="8" style="width:56px;padding:7px 10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;outline:none;text-align:center;">
+          <input id="mesaCount" type="number" min="1" max="30" value="8" onchange="loadMesas()" style="width:56px;padding:7px 10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;outline:none;text-align:center;">
           <button onclick="loadMesas()" style="padding:8px 14px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.35);border-radius:10px;color:#c4b5fd;font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Generar</button>
         </div>
       </div>
@@ -912,7 +912,7 @@ select.finput{cursor:pointer}
 <script>
 var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 var rest=null,pin="",known={},timer=null;
-var ESTADOS={confirmado:{l:"Recibido",c:"tr",n:"en_preparacion",bl:"Preparando",bc:"bp"},en_preparacion:{l:"Preparando",c:"tp",n:"listo",bl:"Listo",bc:"bl"},listo:{l:"Listo",c:"tl2",n:"en_camino",bl:"En camino",bc:"bc"},en_camino:{l:"En camino",c:"tc",n:"entregado",bl:"Entregado",bc:"be"},entregado:{l:"Entregado",c:"te",n:null,bl:null,bc:null}};
+var ESTADOS={confirmado:{l:"Recibido",c:"tr",n:"en_preparacion",bl:"Preparando",bc:"bp"},en_preparacion:{l:"Preparando",c:"tp",n:"listo",bl:"Listo",bc:"bl"},listo:{l:"Listo",c:"tl2",n:"en_camino",bl:"En camino",bc:"bc"},en_camino:{l:"En camino",c:"tc",n:"entregado",bl:"Entregado",bc:"be"},cuenta:{l:"💳 Cuenta",c:"tp",n:"entregado",bl:"✅ Cuenta cobrada",bc:"be"},entregado:{l:"Entregado",c:"te",n:null,bl:null,bc:null}};
 var filtroActual="hoy",pedidoAEliminar=null,editPedidoId=null;
 var chatBadgeCount=0,pedidosBadgeCount=0,ultimoMensajeTs={};
 var chatUniversalFiltro="todos",chatUniversalData=[];
@@ -1147,7 +1147,7 @@ function loadPedidos(){
       h+='<div class="ebtns">';
       if(cfg.n)h+='<button class="ebtn '+cfg.bc+'" data-id="'+p.id+'" data-e="'+cfg.n+'" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">'+cfg.bl+'</button>';
       if(p.estado==="listo"||p.estado==="en_camino")h+='<button class="ebtn bcerrar" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">&#128308; Cerrar orden</button>';
-      if(p.estado==="listo")h+='<button class="ebtn" style="background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.35);flex:0;padding:10px 14px;font-size:16px;" data-domi="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'">🛵</button>';
+      if(p.estado==="listo"&&!esMesa)h+='<button class="ebtn" style="background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.35);flex:0;padding:10px 14px;font-size:16px;" data-domi="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'">🛵</button>';
       if(p.cliente_tel)h+='<button class="btn-msg ebtn be" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">💬</button>';
       h+='<button class="ebtn" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:2px solid rgba(59,130,246,0.3);flex:0;padding:10px 14px;" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+desechables+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">🖨</button>';
       h+='<button class="ebtn" style="background:rgba(255,107,43,0.12);color:#fb923c;border:2px solid rgba(255,107,43,0.25);flex:0;padding:10px 14px;" data-edit="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"nequi")+'" data-ptot="'+total+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">✎</button>';
@@ -1189,7 +1189,7 @@ function loadStats(){
   if(!rest)return;
   var col=getHoraColombia();
   var desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
-  get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+desde+"&select=total").then(function(p){
+  get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+desde+"&estado=neq.cancelado&metodo_pago=neq.cuenta&select=total").then(function(p){
     document.getElementById("countHoy").textContent=p.length;
     document.getElementById("ventasHoy").textContent=fmt(p.reduce(function(s,x){return s+Number(x.total);},0));
   }).catch(function(){});
@@ -2088,6 +2088,12 @@ function ejecutarResetFidelidad(){
 function loadMesas(){
   if(!rest)return;
   var count=Number(document.getElementById("mesaCount").value)||8;
+  // Save count to Supabase
+  fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{
+    method:"PATCH",
+    headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+    body:JSON.stringify({numero_mesas:count})
+  }).catch(function(){});
   var grid=document.getElementById("mesasGrid");
   grid.innerHTML="";
   // Load QRCode library
