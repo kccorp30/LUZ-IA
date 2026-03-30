@@ -522,3 +522,152 @@ function renderProds(q){
   });
   wrap.innerHTML=h;
 }
+
+
+function getItem(id){return menuItems.find(function(i){return i.id===id;});}
+
+function agregar(id){
+  var item=getItem(id);if(!item)return;
+  if(carrito[id])carrito[id].qty++;
+  else carrito[id]={qty:1,nombre:item.nombre,precio:item.precio,emoji:item.emoji||"🍔"};
+  actualizarBar();
+  renderProds();
+  notif("✓ "+item.nombre);
+}
+
+function qtyClick(btn){cambiarQty(btn.getAttribute("data-id"),Number(btn.getAttribute("data-d")));}
+function addClick(btn){agregar(btn.getAttribute("data-id"));}
+
+function cambiarQty(id,delta){
+  if(!carrito[id])return;
+  carrito[id].qty+=delta;
+  if(carrito[id].qty<=0)delete carrito[id];
+  actualizarBar();
+  renderProds();
+}
+
+function calcTotal(){return Object.values(carrito).reduce(function(s,i){return s+i.precio*i.qty;},0);}
+function calcCount(){return Object.values(carrito).reduce(function(s,i){return s+i.qty;},0);}
+
+function actualizarBar(){
+  var count=calcCount();
+  var bar=document.getElementById("cartBar");
+  bar.style.display=count>0?"block":"none";
+  document.getElementById("cartBadge").textContent=count;
+  document.getElementById("cartMonto").textContent=fmt(calcTotal());
+  document.getElementById("tbTotal").textContent=count>0?fmt(calcTotal()):"";
+}
+
+function abrirModal(){
+  renderModal();
+  document.getElementById("modalWrap").classList.add("open");
+}
+function cerrarModal(){document.getElementById("modalWrap").classList.remove("open");}
+
+function renderModal(){
+  var items=Object.values(carrito);
+  var el=document.getElementById("modalItems");
+  if(!items.length){el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">Carrito vacío</div>';return;}
+  var h="";
+  items.forEach(function(i){
+    h+='<div class="cart-item-row">';
+    h+='<div class="ci-emoji">'+i.emoji+'</div>';
+    h+='<div class="ci-info"><div class="ci-nombre">'+i.nombre+'</div></div>';
+    h+='<div class="qty-ctrl" style="margin-right:8px"><button class="qty-btn" data-id="'+i.id+'" data-d="-1" onclick="qtyClick(this);renderModal();actualizarBar();">−</button><span class="qty-num">'+i.qty+'</span><button class="qty-btn" data-id="'+i.id+'" data-d="1" onclick="qtyClick(this);renderModal();actualizarBar();">+</button></div>';
+    h+='<div class="ci-precio">'+fmt(i.precio*i.qty)+'</div>';
+    h+='</div>';
+  });
+  el.innerHTML=h;
+  document.getElementById("modalTotal").textContent=fmt(calcTotal());
+  document.getElementById("btnEnviar").disabled=items.length===0;
+}
+
+async function enviarPedido(){
+  var items=Object.values(carrito);
+  if(!items.length)return;
+  var btn=document.getElementById("btnEnviar");
+  btn.disabled=true;btn.textContent="Enviando...";
+  var notas=document.getElementById("notasTa").value.trim();
+  var total=calcTotal();
+  var itemsArr=items.map(function(i){return i.qty+"x "+i.nombre+" "+fmt(i.precio*i.qty);});
+  var payload={
+    restaurante_id:rest.id,
+    numero_pedido:Math.floor(Date.now()/1000)%100000,
+    cliente_tel:"MESA-"+mesaActual,
+    cliente_nombre:"Mesa "+mesaActual,
+    domiciliario_nombre:mesero?mesero.nombre:null,
+    items:itemsArr,
+    subtotal:total,desechables:0,domicilio:0,servicio:0,total:total,
+    direccion:"Mesa "+mesaActual,
+    metodo_pago:"en mesa",
+    estado:"confirmado",
+    notas_especiales:notas||null
+  };
+  try{
+    var r=await fetch(SU+"/rest/v1/pedidos",{
+      method:"POST",
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify(payload)
+    });
+    if(!r.ok)throw new Error("Status "+r.status);
+    cerrarModal();
+    carrito={};
+    actualizarBar();
+    renderProds();
+    document.getElementById("exitoMsg").textContent="Pedido de Mesa "+mesaActual+" enviado a cocina.";
+    document.getElementById("exitoOverlay").classList.add("show");
+  }catch(e){
+    notif("❌ Error: "+e.message,"rgba(239,68,68,0.7)");
+    btn.disabled=false;btn.textContent="Enviar a cocina 🍳";
+  }
+}
+
+function cerrarExito(){
+  document.getElementById("exitoOverlay").classList.remove("show");
+  volverSelector();
+}
+
+async function marcarEntregado(pedidoId,mesaNum){
+  try{
+    await fetch(SU+"/rest/v1/pedidos?id=eq."+pedidoId,{
+      method:"PATCH",
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({estado:"entregado"})
+    });
+    notif("✅ Pedido entregado","rgba(16,185,129,0.7)");
+    cargarActivosMesa(mesaNum);
+  }catch(e){notif("❌ Error","rgba(239,68,68,0.7)");}
+}
+
+async function pedirCuenta(){
+  cerrarModal();
+  if(!rest||!mesaActual)return;
+  try{
+    await fetch(SU+"/rest/v1/pedidos",{
+      method:"POST",
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({
+        restaurante_id:rest.id,
+        numero_pedido:Math.floor(Date.now()/1000)%100000,
+        cliente_tel:"MESA-"+mesaActual,
+        cliente_nombre:"Mesa "+mesaActual,
+        items:["💳 SOLICITUD DE CUENTA"],
+        subtotal:0,desechables:0,domicilio:0,servicio:0,total:0,
+        direccion:"Mesa "+mesaActual,
+        metodo_pago:"cuenta",
+        estado:"cuenta",
+        notas_especiales:"Cliente solicita la cuenta"+(mesero?" — Mesero: "+mesero.nombre:""),
+        domiciliario_nombre:mesero?mesero.nombre:null
+      })
+    });
+    notif("💳 Cuenta enviada al panel","rgba(245,158,11,0.9)");
+    setTimeout(volverSelector,1500);
+  }catch(e){
+    notif("💳 Cuenta solicitada","rgba(245,158,11,0.8)");
+  }
+}
+
+document.getElementById("modalWrap").addEventListener("click",function(e){if(e.target===this)cerrarModal();});
+</script>
+</body>
+</html>
