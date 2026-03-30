@@ -230,6 +230,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Plus J
     </div>
     <div class="modal-total"><span>TOTAL</span><span id="modalTotal" style="color:#34d399;font-family:'JetBrains Mono',monospace">$0</span></div>
     <button class="btn-enviar" id="btnEnviar" onclick="enviarPedido()">Enviar a cocina 🍳</button>
+    <button class="btn-cerrar" style="color:rgba(96,165,250,0.8);border:1px solid rgba(96,165,250,0.2);border-radius:12px;padding:10px;" onclick="imprimirComanda()">🖨️ Imprimir comanda</button>
     <button class="btn-cuenta" onclick="pedirCuenta()">💳 Solicitar la cuenta</button>
     <button class="btn-cerrar" onclick="cerrarModal()">Seguir agregando</button>
   </div>
@@ -361,8 +362,9 @@ function cargarEstadoMesas(){
 
 function refreshMesaStates(){
   if(!rest)return;
-  api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,en_preparacion,listo,cuenta)&select=direccion,estado,metodo_pago").then(function(pedidos){
+  api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,en_preparacion,listo,cuenta)&select=direccion,estado,metodo_pago,domiciliario_nombre").then(function(pedidos){
     var mesas={};
+    var meserosPorMesa={};
     (pedidos||[]).forEach(function(p){
       if(!p.direccion)return;
       var m=p.direccion.toLowerCase().replace("mesa ","").trim();
@@ -370,21 +372,26 @@ function refreshMesaStates(){
         var num=Number(m);
         if(p.metodo_pago==="cuenta"||p.estado==="cuenta")mesas[num]="cuenta";
         else if(mesas[num]!=="cuenta")mesas[num]="ocupada";
+        if(p.domiciliario_nombre&&!meserosPorMesa[num])meserosPorMesa[num]=p.domiciliario_nombre;
       }
     });
-    renderMesas(Number(rest.numero_mesas)||8,mesas);
+    renderMesas(Number(rest.numero_mesas)||8,mesas,meserosPorMesa);
   }).catch(function(){});
 }
 
-function renderMesas(total,estados){
+function renderMesas(total,estados,meserosPorMesa){
+  meserosPorMesa=meserosPorMesa||{};
   var grid=document.getElementById("mesesGrid");
   var h="";
   for(var i=1;i<=total;i++){
     var est=estados[i]||"libre";
     var label={libre:"Libre",ocupada:"Activa",cuenta:"Cuenta"}[est];
-    h+='<div class="mesa-card '+est+'" onclick="abrirMesa('+i+')">'+
+    var mName=meserosPorMesa[i]||"";
+    var clickable=est==="libre"||(mName===mesero.nombre)||(est==="cuenta");
+    var h2=est==="libre"?'onclick="abrirMesa('+i+')"':(mName&&mName!==mesero.nombre?'onclick="notif(\"Mesa de '+mName+'\",\"rgba(245,158,11,0.8)\")"':'onclick="abrirMesa('+i+')"');
+    h+='<div class="mesa-card '+est+'" '+h2+'>'+
       '<div class="mesa-num">'+i+'</div>'+
-      '<div class="mesa-est">'+label+'</div>'+
+      '<div class="mesa-est">'+(mName&&est!=="libre"?mName:label)+'</div>'+
       (est!=="libre"?'<div class="mesa-dot"></div>':'')+
       '</div>';
   }
@@ -399,7 +406,6 @@ function abrirMesa(num){
   document.getElementById("vistaSelector").style.display="none";
   document.getElementById("vistaPedido").style.display="block";
   document.getElementById("cartBar").style.display="none";
-  document.getElementById("cuentaBarBtn").style.display="none";
   document.getElementById("cuentaBarBtn").style.display="flex";
   document.getElementById("searchInput").value="";
   document.getElementById("searchClear").style.display="none";
@@ -664,11 +670,31 @@ async function marcarEntregado(pedidoId,mesaNum){
   }catch(e){notif("❌ Error","rgba(239,68,68,0.7)");}
 }
 
+function imprimirComanda(){
+  var items=Object.values(carrito);
+  if(!items.length){notif("Carrito vacío");return;}
+  var v=window.open("","_blank","width=380,height=500");
+  if(!v)return;
+  var t="<html><head><meta charset='UTF-8'><style>body{font-family:monospace;font-size:13px;margin:12px}hr{border:1px dashed #ccc}h3{text-align:center;margin:4px 0}.r{display:flex;justify-content:space-between}.b{font-weight:bold}</style></head><body>";
+  t+="<h3>"+(rest?rest.nombre:"RESTAURANTE")+"</h3>";
+  t+="<h3>🪑 COMANDA — Mesa "+mesaActual+"</h3>";
+  t+="<div style='text-align:center;font-size:11px;margin-bottom:6px'>"+(mesero?mesero.nombre:"")+" · "+new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})+"</div>";
+  t+="<hr><b>PRODUCTOS:</b><br>";
+  items.forEach(function(i){t+="<div class='r'><span>"+i.qty+"x "+i.nombre+"</span><span>$"+Math.round(i.precio*i.qty).toLocaleString("es-CO")+"</span></div>";});
+  t+="<hr><div class='r b'><span>TOTAL</span><span>$"+Math.round(Object.values(carrito).reduce(function(s,i){return s+i.precio*i.qty;},0)).toLocaleString("es-CO")+"</span></div><hr>";
+  if(document.getElementById("notasTa").value.trim()){t+="<div>NOTAS: "+document.getElementById("notasTa").value.trim()+"</div><hr>";}
+  t+="<sc"+"ript>window.onload=function(){window.print();window.close();}<\/sc"+"ript></body></html>";
+  v.document.write(t);v.document.close();
+}
+
 async function pedirCuenta(){
   cerrarModal();
-  if(!rest||!mesaActual)return;
+  if(!rest||!mesaActual){notif("Error: sin mesa activa","rgba(239,68,68,0.8)");return;}
+  notif("Enviando solicitud...","rgba(245,158,11,0.6)");
+  var btn=document.getElementById("cuentaBarBtn");
+  if(btn)btn.style.opacity="0.5";
   try{
-    await fetch(SU+"/rest/v1/pedidos",{
+    var r=await fetch(SU+"/rest/v1/pedidos",{
       method:"POST",
       headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
       body:JSON.stringify({
@@ -676,7 +702,7 @@ async function pedirCuenta(){
         numero_pedido:Math.floor(Date.now()/1000)%100000,
         cliente_tel:"MESA-"+mesaActual,
         cliente_nombre:"Mesa "+mesaActual,
-        items:["💳 SOLICITUD DE CUENTA"],
+        items:["💳 SOLICITUD DE CUENTA — Mesa "+mesaActual],
         subtotal:0,desechables:0,domicilio:0,servicio:0,total:0,
         direccion:"Mesa "+mesaActual,
         metodo_pago:"cuenta",
@@ -685,11 +711,16 @@ async function pedirCuenta(){
         domiciliario_nombre:mesero?mesero.nombre:null
       })
     });
-    notif("💳 Cuenta enviada al panel","rgba(245,158,11,0.9)");
-    setTimeout(volverSelector,1500);
+    if(r.ok||r.status===201){
+      notif("💳 ¡Cuenta solicitada! Ya avisamos al panel","rgba(245,158,11,0.9)");
+    } else {
+      var err=await r.text();
+      notif("Error "+r.status+": "+err.substring(0,40),"rgba(239,68,68,0.8)");
+    }
   }catch(e){
-    notif("💳 Cuenta solicitada","rgba(245,158,11,0.8)");
+    notif("Error de conexión: "+e.message.substring(0,30),"rgba(239,68,68,0.8)");
   }
+  if(btn)btn.style.opacity="1";
 }
 
 document.getElementById("modalWrap").addEventListener("click",function(e){if(e.target===this)cerrarModal();});
