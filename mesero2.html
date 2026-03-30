@@ -51,6 +51,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Plus J
 .mesa-card:active{transform:scale(0.92);}
 .mesa-card.libre{border-color:var(--border);}
 .mesa-card.ocupada{background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.4);box-shadow:0 0 16px rgba(16,185,129,0.1);}
+.mesa-card.otro-mesero{background:rgba(124,58,237,0.08);border-color:rgba(124,58,237,0.4);box-shadow:0 0 16px rgba(124,58,237,0.1);cursor:not-allowed;}
 .mesa-card.cuenta{background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.5);animation:mesaPulse 1.4s ease-in-out infinite;}
 @keyframes mesaPulse{0%,100%{box-shadow:0 0 10px rgba(245,158,11,0.2)}50%{box-shadow:0 0 24px rgba(245,158,11,0.45)}}
 .mesa-num{font-size:24px;font-weight:900;line-height:1;}
@@ -321,7 +322,7 @@ function entrarApp(){
   // Load menu AND mesas in parallel, show mesas only when menu is ready
   Promise.all([
     api("menu_items","restaurante_id=eq."+rest.id+"&order=categoria,orden&select=*"),
-    api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,en_preparacion,listo,cuenta)&select=direccion,estado,metodo_pago")
+    api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,en_preparacion,listo,cuenta)&select=direccion,estado,metodo_pago,domiciliario_nombre")
   ]).then(function(results){
     menuItems=results[0]||[];
     var pedidos=results[1]||[];
@@ -335,7 +336,13 @@ function entrarApp(){
         else if(mesas[num]!=="cuenta")mesas[num]="ocupada";
       }
     });
-    renderMesas(Number(rest.numero_mesas)||8,mesas);
+    var mPorMesa={};
+    pedidos.forEach(function(p){
+      if(!p.direccion)return;
+      var m=p.direccion.toLowerCase().replace("mesa ","").trim();
+      if(!isNaN(m)&&p.domiciliario_nombre)mPorMesa[Number(m)]=p.domiciliario_nombre;
+    });
+    renderMesas(Number(rest.numero_mesas)||8,mesas,mPorMesa);
   }).catch(function(e){
     console.error("Init error:",e);
     document.getElementById("mesesGrid").innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:#fca5a5;font-size:13px">Error cargando. Recarga la página.</div>';
@@ -345,7 +352,7 @@ function entrarApp(){
 // ── MESAS ──
 function cargarEstadoMesas(){
   var total=8;
-  api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,en_preparacion,listo,cuenta)&select=direccion,estado,metodo_pago").then(function(pedidos){
+  api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,en_preparacion,listo,cuenta)&select=direccion,estado,metodo_pago,domiciliario_nombre").then(function(pedidos){
     var mesas={};
     (pedidos||[]).forEach(function(p){
       if(!p.direccion)return;
@@ -388,8 +395,9 @@ function renderMesas(total,estados,meserosPorMesa){
     var label={libre:"Libre",ocupada:"Activa",cuenta:"Cuenta"}[est];
     var mName=meserosPorMesa[i]||"";
     var clickable=est==="libre"||(mName===mesero.nombre)||(est==="cuenta");
-    var h2=est==="libre"?'onclick="abrirMesa('+i+')"':(mName&&mName!==mesero.nombre?'onclick="notif(\"Mesa de '+mName+'\",\"rgba(245,158,11,0.8)\")"':'onclick="abrirMesa('+i+')"');
-    h+='<div class="mesa-card '+est+'" '+h2+'>'+
+    var esOtro=est!=="libre"&&mName&&mName!==mesero.nombre;
+    var h2=est==="libre"?'onclick="abrirMesa('+i+')"':esOtro?'onclick="notif(\"🚫 Mesa de '+mName+'\",\"rgba(124,58,237,0.8)\")"':'onclick="abrirMesa('+i+')"';
+    h+='<div class="mesa-card '+est+(esOtro?" otro-mesero":"")+'" '+h2+'>'+
       '<div class="mesa-num">'+i+'</div>'+
       '<div class="mesa-est">'+(mName&&est!=="libre"?mName:label)+'</div>'+
       (est!=="libre"?'<div class="mesa-dot"></div>':'')+
@@ -703,7 +711,7 @@ async function pedirCuenta(){
         cliente_tel:"MESA-"+mesaActual,
         cliente_nombre:"Mesa "+mesaActual,
         items:["💳 SOLICITUD DE CUENTA — Mesa "+mesaActual],
-        subtotal:0,desechables:0,domicilio:0,servicio:0,total:0,
+        subtotal:0,desechables:0,domicilio:0,total:0,
         direccion:"Mesa "+mesaActual,
         metodo_pago:"cuenta",
         estado:"cuenta",
