@@ -309,13 +309,15 @@ function loadPedidos(){
       timerEls[p.id]=new Date(p.created_at).getTime();
       var items=Array.isArray(p.items)?p.items:[];
       var esRecoger=(p.direccion||"").toLowerCase().indexOf("recoger")!==-1||JSON.stringify(p.items||[]).toLowerCase().indexOf("recoger")!==-1;
+      var esMesa=p.direccion&&p.direccion.toUpperCase().indexOf("MESA ")===0;
       var total=Number(p.total||0),des=Number(p.desechables||0),dom=Number(p.domicilio||0);
       var itemsEnc=encodeURIComponent(JSON.stringify(items));
       var ms=Date.now()-new Date(p.created_at).getTime();
       var urgent=ms>20*60000;
 
-      h+='<div class="cocina-card estado-'+p.estado+'">';
-      if(esRecoger)h+='<div class="recoger-banner">🏪 PARA RECOGER EN TIENDA</div>';
+      h+='<div class="cocina-card estado-'+p.estado+(esMesa?" cocina-card-mesa":"")+(esRecoger?" cocina-card-recoger":"")+'">';
+      if(esMesa)h+='<div class="mesa-banner">🪑 '+p.direccion.toUpperCase()+(p.domiciliario_nombre?" — Mesero: "+p.domiciliario_nombre:"")+'</div>';
+      else if(esRecoger)h+='<div class="recoger-banner">🏪 PARA RECOGER EN TIENDA</div>';
 
       // Header
       h+='<div class="ccard-header h-'+p.estado+'">';
