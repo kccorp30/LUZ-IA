@@ -179,6 +179,7 @@ body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Plus J
       <div class="tb-mesero" id="tbMesero"></div>
     </div>
     <div class="tb-total" id="tbTotal"></div>
+    <button id="btnCuenta" onclick="pedirCuenta()" style="display:none;padding:8px 14px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:12px;color:#fbbf24;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;flex-shrink:0;">💳 Cuenta</button>
   </div>
 
   <!-- SELECTOR MESAS -->
@@ -453,7 +454,7 @@ function cargarActivosMesa(num){
   api("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,preparando,en_preparacion,listo)&select=numero_pedido,estado,items,total,direccion&order=created_at.desc&limit=20").then(function(todos){
       var activos=(todos||[]).filter(function(p){
         if(!p.direccion)return false;
-        return p.direccion.toLowerCase()==="mesa "+String(num);
+        return p.direccion.toLowerCase()==="mesa "+String(num).toLowerCase();
       });
       if(!activos.length){wrap.innerHTML="";return;}
       var estIcon={confirmado:"🔵",preparando:"🟡",en_preparacion:"🟡",listo:"🟢"};
