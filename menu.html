@@ -581,8 +581,9 @@ function cargarTicker(){
   if(rest&&rest.promos_semanales){
     var dias=["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
     var hoy=dias[new Date().getDay()];
-    var promoHoy=(rest.promos_semanales||"").split("\n").find(function(l){return l.toLowerCase().indexOf(hoy)!==-1;});
-    if(promoHoy)items.push("🔥 Promo de hoy: "+promoHoy.replace(/^[-*]\s*/,""));
+    var promosSource=rest.promos_semanales||"- Lunes: 2x3 Hamburguesas Tradicionales\n- Martes: 2x3 Alitas\n- Jueves: 2x3 Hamburguesas y Angus BBQ\n- Domingos: 2x3 Asados Junior";
+    var promosHoy=promosSource.split("\n").filter(function(l){return l.toLowerCase().indexOf(hoy)!==-1;});
+    promosHoy.forEach(function(p){items.push("🔥 Promo: "+p.replace(/^[-*\s]*/,"").replace(/^(lunes|martes|miercoles|jueves|viernes|sabado|domingo):\s*/i,""));});
   }
   items.push("✅ Pedidos rápidos por WhatsApp — rastrea tu pedido en tiempo real");
   // Duplicar para loop infinito
@@ -681,11 +682,15 @@ function cargarPromos(){
   if(!rest)return;
   var dias=["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
   var diaHoy=dias[new Date().getDay()];
-  var promos=(rest.promos_semanales||"").split("\n").filter(function(l){return l.toLowerCase().indexOf(diaHoy)!==-1||l.toLowerCase().indexOf("todo")!==-1;});
+  // Fallback promos if not configured
+  var promosBase=rest.promos_semanales||"- Lunes: 2x3 Hamburguesas Tradicionales\n- Martes: 2x3 Alitas\n- Jueves: 2x3 Hamburguesas y Angus BBQ\n- Domingos: 2x3 Asados Junior";
+  var promos=promosBase.split("\n").filter(function(l){
+    return l.toLowerCase().indexOf(diaHoy)!==-1||l.toLowerCase().indexOf("todo")!==-1||l.toLowerCase().indexOf("diario")!==-1;
+  });
   if(promos.length>0){
     document.getElementById("promoBanner").style.display="flex";
     document.getElementById("promoBannerTitle").textContent="🔥 Promo de hoy — "+diaHoy.charAt(0).toUpperCase()+diaHoy.slice(1);
-    document.getElementById("promoBannerSub").textContent=promos[0].replace(/^[-\*]\s*/,"");
+    document.getElementById("promoBannerSub").textContent=promos.map(function(p){return p.replace(/^[-*\s]*/,"").replace(/^(lunes|martes|miercoles|jueves|viernes|sabado|domingo):\s*/i,"");}).join(" • ");
   }
 }
 
