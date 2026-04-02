@@ -366,7 +366,7 @@ function loadPedidos(){
       if(p.estado==="listo"){
         h+='<div style="display:flex;gap:8px">';
         h+='<div class="ccard-btn" style="flex:1;background:rgba(16,185,129,0.06);color:#34d399;border-color:rgba(16,185,129,0.2);cursor:default;">'+(esMesa?'🪑 '+(p.domiciliario_nombre?'Mesero: '+p.domiciliario_nombre:'Esperando mesero'):'🛵 Esperando domi')+'</div>';
-        h+='<button class="ccard-btn" style="flex:0;min-width:80px;background:rgba(239,68,68,0.15);color:#fca5a5;border-color:rgba(239,68,68,0.4);font-weight:800;" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||'')+'" data-n="'+p.numero_pedido+'">🔴 Cerrar</button>';
+        h+='<button class="ccard-btn" style="flex:0;min-width:80px;background:rgba(239,68,68,0.15);color:#fca5a5;border-color:rgba(239,68,68,0.4);font-weight:800;" data-id="'+p.id+'" data-e="listo_entrega" data-t="'+(p.cliente_tel||'')+'" data-n="'+p.numero_pedido+'">🔴 Cerrar</button>';
         h+='</div>';
       }
       h+='<button class="ccard-btn btn-print" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+des+'" data-pdom="'+dom+'" data-pitems="'+itemsEnc+'">🖨️</button>';
