@@ -248,9 +248,14 @@ function cambiarEstado(pid,estado,tel,num){
   .then(function(r){return r.json();})
   .then(function(){
     if(estado==="listo"){playSound("listo");notif("✅ Pedido #"+num+" LISTO!","rgba(16,185,129,0.5)");}
+    else if(estado==="listo_entrega"){
+      notif("🔴 Pedido #"+num+" cerrado en cocina","rgba(239,68,68,0.5)");
+      setTimeout(loadPedidos,800);
+      return;
+    }
     else if(estado==="en_camino"||estado==="entregado"){
-      notif("🚗 Pedido #"+num+" en camino — cerrando","rgba(16,185,129,0.5)");
-      setTimeout(loadPedidos,1200);
+      notif("🚗 Pedido #"+num+" cerrando","rgba(16,185,129,0.5)");
+      setTimeout(loadPedidos,800);
       return;
     }
     else{notif("🔥 Preparando #"+num,"rgba(245,158,11,0.5)");}
