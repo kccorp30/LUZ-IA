@@ -1,417 +1,1417 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Cocina — LUZ IA</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{
-  --p1:#7c3aed;--p2:#4f46e5;--a1:#f97316;--g1:#10b981;--r1:#ef4444;
-  --glass-bg:rgba(255,255,255,0.07);--glass-border:rgba(255,255,255,0.14);
-  --text:#f1f0ff;--text2:rgba(241,240,255,0.6);--text3:rgba(241,240,255,0.35);
-  --blur:blur(24px);--shadow:0 8px 32px rgba(0,0,0,0.4);
-}
-body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+process.on("uncaughtException", function(err) {
+  console.error("UNCAUGHT EXCEPTION:", err.message, err.stack);
+});
+process.on("unhandledRejection", function(reason) {
+  console.error("UNHANDLED REJECTION:", reason);
+});
 
-.blobs{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
-.blob{position:absolute;border-radius:50%;filter:blur(90px);animation:blobFloat 10s ease-in-out infinite;}
-.blob-1{width:600px;height:600px;background:radial-gradient(circle,rgba(124,58,237,0.35),transparent 70%);top:-200px;left:-150px;}
-.blob-2{width:500px;height:500px;background:radial-gradient(circle,rgba(37,99,235,0.3),transparent 70%);bottom:-150px;right:-100px;animation-delay:-4s}
-.blob-3{width:350px;height:350px;background:radial-gradient(circle,rgba(249,115,22,0.2),transparent 70%);top:40%;left:35%;animation-delay:-7s}
-@keyframes blobFloat{0%,100%{transform:translate(0,0)}33%{transform:translate(25px,-35px)}66%{transform:translate(-20px,25px)}}
+const express = require("express");
+const axios   = require("axios");
+const path    = require("path");
+const webpush = require("web-push");
+const app     = express();
 
-/* TOPBAR */
-.topbar{position:fixed;top:0;left:0;right:0;z-index:100;height:64px;background:rgba(10,7,22,0.9);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:1px solid rgba(124,58,237,0.25);box-shadow:0 1px 0 rgba(124,58,237,0.1),0 4px 32px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:space-between;padding:0 20px;overflow:hidden;}
-.topbar::after{content:'';position:absolute;top:0;left:-60%;width:60%;height:1px;background:linear-gradient(90deg,transparent,rgba(196,181,253,0.6),transparent);animation:shimmer 5s ease-in-out infinite}
-@keyframes shimmer{0%{left:-60%}100%{left:140%}}
-.tb-left{display:flex;align-items:center;gap:12px;}
-.tb-orb-wrap{position:relative;flex-shrink:0}
-.tb-orb{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#6d28d9,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:white;font-family:'JetBrains Mono',monospace;animation:orbGlow 3s ease-in-out infinite;position:relative;z-index:1}
-@keyframes orbGlow{0%,100%{box-shadow:0 0 0 2px rgba(124,58,237,0.3),0 0 20px rgba(124,58,237,0.7)}50%{box-shadow:0 0 0 4px rgba(124,58,237,0.15),0 0 40px rgba(167,139,250,0.9)}}
-.tb-ring{position:absolute;inset:-4px;border-radius:18px;border:1.5px solid rgba(124,58,237,0.5);animation:ringPulse 3s ease-in-out infinite}
-@keyframes ringPulse{0%,100%{transform:scale(1);opacity:0.5}50%{transform:scale(1.2);opacity:0}}
-.tb-brand{font-size:17px;font-weight:900;line-height:1;display:flex;align-items:baseline;gap:1px}
-.tb-luz{background:linear-gradient(135deg,#fff,#e0d7ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.tb-ia{background:linear-gradient(135deg,#a78bfa,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:15px}
-.tb-page{font-size:11px;color:rgba(196,181,253,0.5);font-weight:600;margin-top:2px;letter-spacing:0.05em;text-transform:uppercase;}
-.tb-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
-.live-pill{display:flex;align-items:center;gap:5px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:20px;padding:5px 12px;font-size:10px;font-weight:800;color:#fb923c;letter-spacing:0.1em}
-.live-dot{width:7px;height:7px;border-radius:50%;background:#fb923c;box-shadow:0 0 8px #fb923c;animation:lp 1.5s infinite;flex-shrink:0}
-@keyframes lp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
-.sound-btn{display:flex;align-items:center;gap:5px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px;padding:6px 11px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;transition:all 0.15s;font-family:'Plus Jakarta Sans',sans-serif;}
-.sound-btn:hover{background:rgba(255,255,255,0.12);color:var(--text)}
-.sound-btn.muted{background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.25);color:#fca5a5}
-
-/* CONTENT */
-.content{padding-top:80px;padding-bottom:24px;position:relative;z-index:1;}
-.page-header{padding:12px 16px 8px;}
-.page-title{font-size:28px;font-weight:900;letter-spacing:-0.03em;background:linear-gradient(135deg,#fff,rgba(255,255,255,0.7));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.page-sub{font-size:12px;color:var(--text3);margin-top:3px;}
-
-/* STATS */
-.stats-strip{display:flex;gap:8px;padding:10px 16px 14px;overflow-x:auto;scrollbar-width:none;}
-.stats-strip::-webkit-scrollbar{display:none}
-.sstat{background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:16px;padding:12px 18px;display:flex;align-items:center;gap:12px;white-space:nowrap;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);position:relative;overflow:hidden;}
-.sstat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--sg,linear-gradient(90deg,#7c3aed,#4f46e5));}
-.sstat:nth-child(1)::before{--sg:linear-gradient(90deg,#f97316,#fb923c)}
-.sstat:nth-child(2)::before{--sg:linear-gradient(90deg,#ef4444,#f97316)}
-.sstat:nth-child(3)::before{--sg:linear-gradient(90deg,#10b981,#34d399)}
-.sstat:nth-child(4)::before{--sg:linear-gradient(90deg,#7c3aed,#818cf8)}
-.sstat-emoji{font-size:24px;line-height:1;}
-.sstat-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;line-height:1;}
-.sstat-val.orange{background:linear-gradient(135deg,#fb923c,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.sstat-val.red{background:linear-gradient(135deg,#fca5a5,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.sstat-val.green{background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.sstat-val.purple{background:linear-gradient(135deg,#c4b5fd,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.sstat-label{font-size:11px;color:var(--text3);margin-top:2px;font-weight:500;}
-
-/* GRID */
-.pedidos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:0 16px;}
-
-/* CARD */
-.cocina-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:24px;overflow:hidden;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow);transition:transform 0.2s;animation:fadeUp 0.3s ease both;}
-.cocina-card:hover{transform:translateY(-3px);}
-@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-.cocina-card.estado-confirmado{border-color:rgba(124,58,237,0.35);}
-.cocina-card.estado-en_preparacion{border-color:rgba(245,158,11,0.5);box-shadow:0 0 0 1px rgba(245,158,11,0.2),0 8px 32px rgba(245,158,11,0.15);animation:fadeUp 0.3s ease both,preparandoGlow 2.5s ease-in-out infinite;}
-@keyframes preparandoGlow{0%,100%{box-shadow:0 0 0 1px rgba(245,158,11,0.2),0 8px 32px rgba(245,158,11,0.12)}50%{box-shadow:0 0 0 2px rgba(245,158,11,0.35),0 8px 40px rgba(245,158,11,0.28)}}
-.cocina-card.estado-listo{border-color:rgba(16,185,129,0.5);box-shadow:0 0 0 1px rgba(16,185,129,0.2),0 8px 32px rgba(16,185,129,0.12);}
-
-/* HEADER */
-.ccard-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 12px;border-bottom:1px solid rgba(255,255,255,0.06);}
-.ccard-header.h-confirmado{background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(79,70,229,0.08));}
-.ccard-header.h-en_preparacion{background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(251,146,60,0.08));}
-.ccard-header.h-listo{background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(5,150,105,0.06));}
-.ccard-left{display:flex;align-items:center;gap:10px;}
-.ccard-estado-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.estado-confirmado .ccard-estado-dot{background:#818cf8;box-shadow:0 0 8px #818cf8;animation:dotPulse 2s infinite}
-.estado-en_preparacion .ccard-estado-dot{background:#f59e0b;box-shadow:0 0 8px #f59e0b;animation:dotPulse 1.2s infinite}
-.estado-listo .ccard-estado-dot{background:#34d399;box-shadow:0 0 8px #34d399}
-@keyframes dotPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.3;transform:scale(0.5)}}
-.ccard-num{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;}
-.n-confirmado{background:linear-gradient(135deg,#c4b5fd,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.n-en_preparacion{background:linear-gradient(135deg,#fde68a,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.n-listo{background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.ccard-ago{font-size:10px;color:var(--text3);margin-top:2px;font-weight:500;}
-.ccard-right{text-align:right;}
-.ccard-timer{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--text2);line-height:1;}
-.ccard-timer.urgent{color:#fca5a5!important;animation:timerBlink 0.8s infinite;}
-@keyframes timerBlink{0%,100%{opacity:1}50%{opacity:0.3}}
-.ccard-time-label{font-size:10px;color:var(--text3);margin-top:3px;}
-
-/* BODY */
-.ccard-body{padding:14px 16px;}
-.recoger-banner{background:linear-gradient(90deg,rgba(245,158,11,0.25),rgba(245,158,11,0.08));border-bottom:1px solid rgba(245,158,11,0.2);padding:9px 16px;font-size:12px;font-weight:800;color:#fcd34d;display:flex;align-items:center;gap:8px;letter-spacing:0.04em;}
-.mesa-banner{background:linear-gradient(90deg,rgba(16,185,129,0.25),rgba(16,185,129,0.08));border-bottom:1px solid rgba(16,185,129,0.25);padding:9px 16px;font-size:12px;font-weight:800;color:#34d399;}
-.cocina-card-mesa{border-color:rgba(16,185,129,0.5)!important;box-shadow:0 0 20px rgba(16,185,129,0.12)!important;}
-.cocina-card-recoger{border-color:rgba(245,158,11,0.4)!important;}
-.ccard-items{margin-bottom:12px;}
-.ccard-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
-.ccard-item:last-child{border:none}
-.ccard-qty{min-width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.2));border:1px solid rgba(124,58,237,0.3);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:#c4b5fd;flex-shrink:0;}
-.ccard-name{font-size:14px;font-weight:700;color:var(--text);line-height:1.35;}
-.ccard-nota{display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:3px 8px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:6px;font-size:11px;color:#fcd34d;font-weight:600;}
-.ccard-notas{background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-left:3px solid #818cf8;border-radius:12px;padding:9px 13px;margin-bottom:12px;font-size:12px;color:#c4b5fd;display:flex;gap:8px;align-items:flex-start;}
-.ccard-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:13px;}
-.cmeta-chip{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--text2);font-weight:500;display:flex;align-items:center;gap:5px;}
-.cmeta-chip.recoger{background:rgba(245,158,11,0.1);color:#fcd34d;border-color:rgba(245,158,11,0.25);}
-.ccard-btns{display:flex;gap:8px;}
-.ccard-btn{flex:1;padding:12px 10px;border-radius:14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:all 0.15s;border:1px solid;display:flex;align-items:center;justify-content:center;gap:6px;}
-.ccard-btn:active{transform:scale(0.93);}
-.btn-preparar{background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(251,146,60,0.15));color:#fde68a;border-color:rgba(245,158,11,0.4);}
-.btn-preparar:hover{background:linear-gradient(135deg,rgba(245,158,11,0.3),rgba(251,146,60,0.25));box-shadow:0 0 20px rgba(245,158,11,0.2);}
-.btn-listo{background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.15));color:#6ee7b7;border-color:rgba(16,185,129,0.4);}
-.btn-listo:hover{background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(5,150,105,0.25));box-shadow:0 0 20px rgba(16,185,129,0.2);}
-.btn-print{background:rgba(99,102,241,0.1);color:#a5b4fc;border-color:rgba(99,102,241,0.25);flex:0;padding:12px 14px;font-size:16px;}
-.empty{text-align:center;padding:80px 20px;}
-.ei{font-size:64px;margin-bottom:16px;opacity:0.4;}
-.et{color:var(--text3);font-size:15px;line-height:1.7;}
-.notif{position:fixed;top:74px;left:50%;transform:translateX(-50%) translateY(-20px);background:rgba(10,7,22,0.97);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(124,58,237,0.4);box-shadow:0 0 30px rgba(124,58,237,0.2),0 8px 32px rgba(0,0,0,0.6);color:var(--text);padding:10px 24px;border-radius:24px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center;}
-.notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
-</style>
-</head>
-<body>
-<div class="blobs">
-  <div class="blob blob-1"></div>
-  <div class="blob blob-2"></div>
-  <div class="blob blob-3"></div>
-</div>
-
-<div class="topbar">
-  <div class="tb-left">
-    <div class="tb-orb-wrap">
-      <div class="tb-orb">LZ</div>
-      <div class="tb-ring"></div>
-    </div>
-    <div>
-      <div class="tb-brand"><span class="tb-luz">LUZ</span><span class="tb-ia"> IA</span></div>
-      <div class="tb-page">🍳 Pantalla Cocina</div>
-    </div>
-  </div>
-  <div class="tb-right">
-    <button class="sound-btn" id="soundBtn" onclick="toggleSound()">🔊 Sonido</button>
-    <div class="live-pill"><div class="live-dot"></div>EN VIVO</div>
-  </div>
-</div>
-
-<div class="content">
-  <div class="page-header">
-    <div class="page-title">Pedidos activos</div>
-    <div class="page-sub">La Curva Street Food · Actualiza cada 6 seg</div>
-  </div>
-
-  <div class="stats-strip">
-    <div class="sstat"><div class="sstat-emoji">⏳</div><div><div class="sstat-val orange" id="statNuevos">0</div><div class="sstat-label">Nuevos</div></div></div>
-    <div class="sstat"><div class="sstat-emoji">🔥</div><div><div class="sstat-val red" id="statPrep">0</div><div class="sstat-label">Preparando</div></div></div>
-    <div class="sstat"><div class="sstat-emoji">✅</div><div><div class="sstat-val green" id="statListos">0</div><div class="sstat-label">Listos</div></div></div>
-    <div class="sstat"><div class="sstat-emoji">📦</div><div><div class="sstat-val purple" id="statTotal">0</div><div class="sstat-label">Total hoy</div></div></div>
-  </div>
-
-  <div class="pedidos-grid" id="pedidosGrid">
-    <div class="empty" style="grid-column:1/-1"><div class="ei">🍳</div><div class="et">Cargando pedidos...</div></div>
-  </div>
-</div>
-
-<div class="notif" id="notif"></div>
-
-<script>
-var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
-var rest=null,pedidosConocidos={},soundOn=true,updateTimer=null,timerEls={};
-
-function get(t,f){
-  return fetch(SU+"/rest/v1/"+t+"?"+(f||""),{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json();});
+// ── WEB PUSH SETUP ────────────────────────────────────────────────────────────
+// Generate VAPID keys once: node -e "const wp=require('web-push');const k=wp.generateVAPIDKeys();console.log(k)"
+// Then set as env vars VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY
+var VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || "";
+var VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "";
+if (VAPID_PUBLIC && VAPID_PRIVATE) {
+  webpush.setVapidDetails("mailto:admin@luzia.app", VAPID_PUBLIC, VAPID_PRIVATE);
+  console.log("Web Push configurado OK");
+} else {
+  console.warn("VAPID keys no configuradas — notificaciones push desactivadas");
 }
 
-function notif(m,bc){
-  var e=document.getElementById("notif");
-  e.textContent=m;
-  e.style.borderColor=bc||"rgba(124,58,237,0.4)";
-  e.classList.add("show");
-  setTimeout(function(){e.classList.remove("show");},3000);
+async function enviarPushSuscripcion(sub, payload) {
+  if (!VAPID_PUBLIC || !VAPID_PRIVATE) return;
+  try {
+    await webpush.sendNotification(sub, JSON.stringify(payload));
+  } catch (e) {
+    if (e.statusCode === 410) return "expired";
+    console.error("Push error:", e.message);
+  }
 }
 
-function toggleSound(){
-  soundOn=!soundOn;
-  var btn=document.getElementById("soundBtn");
-  btn.textContent=soundOn?"🔊 Sonido":"🔇 Mudo";
-  btn.className="sound-btn"+(soundOn?"":" muted");
+async function enviarPushPorRol(restauranteId, rol, payload) {
+  if (!VAPID_PUBLIC) return;
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/push_subscriptions?restaurante_id=eq." + restauranteId + "&rol=eq." + rol + "&activo=eq.true&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    var subs = r.data || [];
+    for (var sub of subs) {
+      var result = await enviarPushSuscripcion(JSON.parse(sub.subscription), payload);
+      if (result === "expired") {
+        await axios.patch(
+          SUPABASE_URL + "/rest/v1/push_subscriptions?id=eq." + sub.id,
+          { activo: false },
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" } }
+        );
+      }
+    }
+  } catch (e) { console.error("enviarPush error:", e.message); }
+}
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+// Forzar HTTPS en Railway
+app.use((req, res, next) => {
+  if (req.headers['x-forwarded-proto'] === 'http') {
+    return res.redirect(301, 'https://' + req.headers.host + req.originalUrl);
+  }
+  next();
+});
+
+const conversations = {};
+const orderState    = {};
+let   orderCounter  = 100;
+
+// ── COLA PARALELA ─────────────────────────────────────────────────────────────
+const colasPorCliente = new Map();
+function procesarEnCola(from, tarea) {
+  if (!colasPorCliente.has(from)) colasPorCliente.set(from, Promise.resolve());
+  var cola = colasPorCliente.get(from);
+  var nueva = cola.then(function() {
+    return tarea().catch(function(err) { console.error("Error cola " + from + ":", err.message); });
+  });
+  colasPorCliente.set(from, nueva);
+  nueva.then(function() { if (colasPorCliente.get(from) === nueva) colasPorCliente.delete(from); });
+  return nueva;
 }
 
-function playSound(tipo){
-  if(!soundOn)return;
-  try{
-    var ctx=new(window.AudioContext||window.webkitAudioContext)();
-    var notas={
-      nuevo:[[880,0,0.4,"square"],[1046,0.12,0.4,"square"],[1318,0.24,0.5,"square"]],
-      listo:[[523,0,0.3,"triangle"],[659,0.15,0.3,"triangle"],[784,0.3,0.3,"triangle"],[1046,0.45,0.5,"triangle"]]
+function nextOrderNumber() { return ++orderCounter; }
+
+function limpiarNumero(str) {
+  if (!str) return "0";
+  var s = String(str).toLowerCase().trim();
+  if (s === "pendiente") return "0";
+  return s.replace(/[^0-9]/g, "") || "0";
+}
+
+// ── HORA COLOMBIA UTC-5 ───────────────────────────────────────────────────────
+function getHoraColombia() {
+  var ahora = new Date();
+  return new Date(ahora.getTime() + ahora.getTimezoneOffset() * 60000 - 5 * 60 * 60 * 1000);
+}
+function getDiaColombiaStr() {
+  return ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"][getHoraColombia().getDay()];
+}
+
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://vbxuwzcfzfjwhllkppkg.supabase.co";
+const SUPABASE_KEY = process.env.SUPABASE_KEY || "sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
+
+function sbH(svc) {
+  var k = svc ? (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY) : SUPABASE_KEY;
+  return { "apikey": k, "Authorization": "Bearer " + k };
+}
+
+// ── RESTAURANTE ───────────────────────────────────────────────────────────────
+async function getRestaurante(phoneNumberId) {
+  try {
+    if (phoneNumberId) {
+      var r = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?whatsapp_phone_id=eq." + phoneNumberId + "&select=*", { headers: sbH(false) });
+      if (r.data && r.data.length > 0) return r.data[0];
+    }
+    var fb = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=*&limit=1", { headers: sbH(false) });
+    return fb.data && fb.data.length > 0 ? fb.data[0] : null;
+  } catch (e) { console.error("getRestaurante:", e.message); return null; }
+}
+
+// ── SILENCIO ──────────────────────────────────────────────────────────────────
+async function estaEnSilencio(restauranteId, telefono) {
+  try {
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/silencio_conversacion?restaurante_id=eq." + restauranteId + "&telefono=eq." + encodeURIComponent(telefono) + "&activo=eq.true&select=id", { headers: sbH(true) });
+    return r.data && r.data.length > 0;
+  } catch (e) { return false; }
+}
+
+// ── DIRECCIÓN FRECUENTE ───────────────────────────────────────────────────────
+async function getDireccionFrecuente(restauranteId, telefono) {
+  try {
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restauranteId + "&telefono=eq." + encodeURIComponent(telefono) + "&select=ultima_direccion", { headers: sbH(true) });
+    if (r.data && r.data.length > 0 && r.data[0].ultima_direccion) return r.data[0].ultima_direccion;
+    return null;
+  } catch (e) { return null; }
+}
+
+function stripCountryCode(tel) {
+  // Remove country codes to get local number
+  var t = String(tel).replace(/[^0-9]/g, "");
+  if (t.startsWith("57") && t.length === 12) return t.substring(2); // Colombia
+  if (t.startsWith("1") && t.length === 11) return t.substring(1);  // USA
+  return t;
+}
+
+async function guardarDireccionFrecuente(restauranteId, telefono, direccion) {
+  if (!direccion || direccion === "Por confirmar") return;
+  try {
+    var telLocal = stripCountryCode(telefono);
+    await axios.post(SUPABASE_URL + "/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",
+      { restaurante_id: restauranteId, telefono: telLocal, ultima_direccion: direccion, updated_at: new Date().toISOString() },
+      { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } });
+  } catch (e) { console.error("guardarDireccion:", e.message); }
+}
+
+// ── MENÚ DINÁMICO ─────────────────────────────────────────────────────────────
+async function getMenuDinamico(restauranteId) {
+  try {
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restauranteId + "&disponible=eq.true&order=categoria,orden&select=*", { headers: sbH(false) });
+    var items = r.data || [];
+    if (!items.length) return "(Sin productos cargados en el sistema. Informa al cliente que el menu esta siendo actualizado.)";
+    var grupos = {};
+    items.forEach(function(i) { if (!grupos[i.categoria]) grupos[i.categoria] = []; grupos[i.categoria].push(i); });
+    var lines = ["\nMENU ACTIVO (solo estos productos disponibles hoy):\n"];
+    Object.keys(grupos).forEach(function(cat) {
+      lines.push("\n" + cat.toUpperCase() + ":");
+      grupos[cat].forEach(function(i) {
+        var precio = "$" + Number(i.precio).toLocaleString("es-CO");
+        var desc = i.descripcion ? " (" + i.descripcion + ")" : "";
+        var tipo = i.es_bebida ? " [bebida]" : (i.es_arepa ? " [arepa]" : "");
+        lines.push("- " + i.nombre + ": " + precio + desc + tipo);
+      });
+    });
+    lines.push("\nSi el cliente pide algo que NO esta en esta lista, dile que hoy no esta disponible y ofrece alternativas.\n");
+    // Detectar combos - solo los que estan explicitamente en el menu
+    var combos = items.filter(function(i){ return (i.nombre||"").toLowerCase().includes("combo") || (i.categoria||"").toLowerCase().includes("combo"); });
+    if(combos.length > 0){
+      lines.push("\nREGLA COMBOS IMPORTANTE:");
+      lines.push("Solo puedes ofrecer los combos que aparecen EXACTAMENTE en este menu.");
+      lines.push("NO puedes armar combos personalizados con productos que no sean combo.");
+      lines.push("Si el cliente pide 'combo de X' y X no tiene combo en el menu, dile que solo tienes los combos listados arriba.");
+    }
+    var menuFinal = lines.join("\n");
+    console.log("Menu cargado: " + items.length + " productos, " + Object.keys(grupos).length + " categorias. Items: " + items.map(function(i){return i.nombre;}).join(", "));
+    return menuFinal;
+  } catch (e) { console.error("getMenuDinamico:", e.message); return "(Error cargando menu. Indica al cliente que escriba lo que desea y lo atiendes manualmente.)"; }
+}
+
+// ── SYSTEM PROMPT DINÁMICO POR RESTAURANTE ────────────────────────────────────
+function buildSystemPrompt(restaurante) {
+  var nombreRest     = restaurante ? (restaurante.nombre || "el restaurante") : "el restaurante";
+  var nombreLuz      = restaurante ? (restaurante.nombre_luz || "Luz") : "Luz";
+  var ciudad         = restaurante ? (restaurante.ciudad || "Colombia") : "Colombia";
+  var direccion      = restaurante ? (restaurante.direccion || "") : "";
+  var personalidad   = restaurante ? (restaurante.personalidad_luz || "") : "";
+  if (!personalidad) {
+    personalidad = "Eres una persona real, calida y cercana. NUNCA admitas ser IA. Hablas natural: con gusto, a listo, claro que si, digame, con mucho gusto. NUNCA uses amigo, amiga, Dama ni Caballero. Si necesitas dirigirte al cliente usa: mi amor, corazon, o simplemente habla sin apelativo.";
+  }
+
+  var nequi      = restaurante ? (restaurante.metodo_pago_nequi  || "@NEQUIJOS126")     : "@NEQUIJOS126";
+  var banco      = restaurante ? (restaurante.metodo_pago_banco  || "0089102980")     : "0089102980";
+  var bancoNombre= restaurante ? (restaurante.metodo_pago_nombre || "Jose Gregorio Charris") : "Jose Gregorio Charris";
+
+  var zonasText  = restaurante ? (restaurante.zonas_domicilio || "") : "";
+  if (!zonasText) {
+    zonasText =
+`- $2.000: zona inmediata al local (menos de 5 minutos)
+- $3.000: barrios cercanos
+- $4.000: barrios a 15-20 minutos
+- $5.000: barrios a 25-30 minutos
+- $6.000: extremos de la ciudad`;
+  }
+
+  var promosText = restaurante ? (restaurante.promos_semanales || "") : "";
+  if (!promosText) {
+    promosText =
+`- Lunes: Pague 2 lleve 3 hamburguesas tradicionales
+- Martes: Pague 2 lleve 3 Alitas (cualquier presentacion)
+- Jueves: Pague 2 lleve 3 hamburguesas tradicionales y Angus BBQ King o Celestina
+- Domingos: Pague 2 lleve 3 asados junior`;
+  }
+
+  var infoAdicional = restaurante ? (restaurante.info_adicional || "") : "";
+
+  return `Eres ${nombreLuz}, la encargada de atencion al cliente de ${nombreRest} en ${ciudad}.${direccion ? " Direccion: " + direccion + "." : ""}
+
+PERSONALIDAD:
+${personalidad}
+- Solo presentate LA PRIMERA VEZ. Si ya hubo mensajes anteriores, NO te presentes de nuevo.
+- SIEMPRE un solo mensaje. Corto y al grano.
+- NUNCA mandes el link del menu dos veces seguidas.
+
+MENSAJES DE VOZ: responde "Hola! Por favor escribeme tu pedido, no puedo escuchar audios. Con gusto te atiendo."
+
+${infoAdicional ? "INFORMACION ADICIONAL DEL NEGOCIO:\n" + infoAdicional + "\n" : ""}
+PROGRAMA DE FIDELIDAD (explica si te preguntan):
+- Este sistema se implemento el FECHA_INICIO_PLACEHOLDER. Los pedidos cuentan desde esa fecha.
+- Los clientes acumulan niveles segun cuantos pedidos han hecho desde FECHA_INICIO_PLACEHOLDER.
+- BRONCE (1-9 pedidos): acceso al menu completo, sin descuento adicional.
+- PLATA (10-24 pedidos): 5% de descuento en todos los productos automaticamente en el menu web.
+- ORO (25+ pedidos): 10% de descuento en todos los productos automaticamente en el menu web.
+- Los descuentos se aplican AUTOMATICAMENTE cuando el cliente entra al menu web. El cliente NO necesita mencionar su nivel ni descuento — el sistema ya lo aplica solo.
+- Si un cliente menciona su nivel en el chat (ej: "soy cliente Oro"): NO apliques ningun descuento manualmente. El descuento ya fue aplicado en el menu antes de que enviara el pedido, o no le corresponde.
+- Si el cliente pregunta como subir de nivel: "Cada pedido cuenta. Con 10 pedidos llegas a Plata con 5% de descuento, y con 25 pedidos llegas a Oro con 10% en todo."
+- Si preguntan donde ver su nivel: "En nuestro menu online puedes ver tu nivel al registrarte con tu numero."
+- Cuando un cliente confirme un pedido, puedes felicitarlo si subio de nivel o esta cerca: ej: "Por cierto, ya llevas X pedidos con nosotros — te faltan Y para llegar a nivel Plata con 5% de descuento en todo!"
+
+HORARIO_PLACEHOLDER
+
+METODOS DE PAGO:
+- Nequi: llave ${nequi}. Es una LLAVE de Nequi. Si el cliente pregunta como pagar, di: "Busca la llave ${nequi} en tu app Nequi en la opcion transferir".
+- Bancolombia: llave ${banco} a nombre de ${bancoNombre}. NUNCA des el numero de celular como dato Bancolombia, SIEMPRE la llave.
+- Efectivo: el domiciliario lleva cambio (pregunta con que valor cancela)
+- Datafono: el domiciliario lo lleva
+- Pago mixto: acepta parte digital + parte efectivo
+- NUNCA esperes a que el cliente pida los datos. Dalos SIEMPRE primero.
+
+IMPORTANTE - PEDIDOS DE MESA:
+- Si el mensaje empieza con "🪑 *PEDIDO DE MESA X*", es un pedido fisico de la mesa X del restaurante.
+- Para pedidos de mesa: NO preguntes direccion ni domicilio. El cliente esta en el local.
+- Confirma el pedido y di: "Perfecto, tu pedido para la Mesa X ya entro a preparacion. Te lo llevamos enseguida."
+- Escribe DIRECCION_LISTA:MESA X (con el numero de mesa correspondiente).
+- El pago se hace en el local, no pidas comprobante de transferencia salvo que digan Nequi.
+
+IMPORTANTE - METODO DE PAGO DESDE EL MENU WEB:
+- Si el cliente llega con un mensaje que incluye "Metodo de pago elegido:" al inicio, ya eligio su metodo desde la pagina del menu.
+- En ese caso NO preguntes como quiere pagar. Procede directamente segun el metodo indicado.
+- CRITICO: El mensaje del menu ya trae el TOTAL calculado con todos los descuentos aplicados (cupones, nivel de fidelidad). USA ESE TOTAL exactamente como viene en el mensaje. NO recalcules los precios. NO uses los precios del menu para calcular de nuevo. El total que el cliente envia ES el total correcto.
+- Al escribir PEDIDO_LISTO, el TOTAL debe ser el SUBTOTAL del mensaje del cliente (sin domicilio) mas el domicilio que corresponda a su zona. NO sumes desechables nuevamente si ya vienen en el mensaje.
+- Si el mensaje del cliente incluye una linea "Subtotal: $X" y "Desechables: $Y" y "TOTAL: $Z", usa esos valores exactos. El TOTAL del PEDIDO_LISTO = $Z + domicilio.
+- NUNCA recalcules multiplicando precios del menu. El cliente ya hizo ese calculo en el menu web.
+- Si dijo Nequi: llave ${nequi} (busca en la app Nequi → transferir → llave). Pide comprobante.
+- Si dijo Bancolombia: llave ${banco} a nombre de ${bancoNombre}. Pide comprobante.
+- Si dijo Efectivo: pregunta con que billete cancela y escribe PAGO_EFECTIVO:[valor].
+- Si el cliente dice "sencilla", "exacto", "con el valor exacto", "pago completo", "sin cambio", "justo", "con lo justo" o similar: el cliente paga el total exacto, NO necesita cambio. Escribe directamente PAGO_EFECTIVO:exacto y confirma el pedido sin pedir mas informacion.
+- Si dijo Datafono: confirma que el domiciliario lo lleva y escribe PAGO_DATAFONO.
+
+PROMOCIONES (hoy es DIA_PLACEHOLDER):
+IMPORTANTE: Si hay promocion activa HOY debes mencionarla proactivamente cuando el cliente pida ese producto. Ejemplo: si es martes y piden alitas, di "Por cierto, hoy martes tenemos promo de Alitas: paga 2 lleva 3!"
+Lista de promos por dia:
+${promosText}
+
+MENU_PLACEHOLDER
+
+MENU VISUAL: cuando pidan menu di: "Te comparto el menu MENU_URL_PLACEHOLDER - ahi armas y me lo mandas. O dime aqui con gusto."
+
+REGLA ESTRICTA DE COMBOS:
+- Solo puedes vender los combos que aparecen EXACTAMENTE en el menu activo.
+- Si el cliente pide "combo de hamburguesa clasica" y en el menu solo hay "Combo Especial", dile: "El unico combo disponible es [nombre del combo]. Las hamburguesas se venden individuales."
+- NUNCA armes combos que no esten en el menu. No puedes combinar productos para hacer un "combo" si no esta listado como tal.
+
+DESECHABLES: $500 por cada COMIDA. Bebidas y arepas NO cobran desechable.
+
+DOMICILIO (valores internos, NO menciones zonas al cliente):
+${zonasText}
+- Barrio desconocido o que no reconoces: NO preguntes al cliente en que zona queda ni le pidas que confirme la zona. Simplemente dile: "El valor del domicilio te lo confirmamos antes de que salga el pedido, depende de la distancia." Y continua con el flujo normalmente.
+- NUNCA menciones "zona 1", "zona 2" ni nombres de zonas al cliente. Solo usa los valores en pesos. El cliente no sabe ni le interesa en que zona queda.
+
+CALCULO - muestra siempre el desglose:
+Productos:    $XX.XXX
+Desechables:  $XXX
+Domicilio:    $X.XXX
+TOTAL:        $XX.XXX
+
+CLIENTE:
+NOMBRE_CLIENTE_PLACEHOLDER
+NIVEL_CLIENTE_PLACEHOLDER
+
+DIRECCION FRECUENTE:
+DIRECCION_FRECUENTE_PLACEHOLDER
+
+CUPONES:
+CUPONES_PLACEHOLDER
+
+RECOMENDACIONES Y NOTAS ESPECIALES DEL CLIENTE:
+- Si el cliente pide algo especial como salsas extras, sin ingrediente, doble porcion, instruccion de preparacion o cualquier preferencia: incluirlo en los ITEMS del pedido entre parentesis.
+- Ejemplo: "La Especial $18.900 (sin cebolla, extra chimichurri)"
+
+PEDIDO ADICIONAL A ORDEN YA CONFIRMADA:
+- Si el cliente ya tiene un pedido confirmado y quiere agregar algo mas, NO crees un pedido nuevo.
+- Confirma los nuevos items con precio. Calcula el nuevo total sumando lo anterior mas lo nuevo.
+- Escribe MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[descripcion de los nuevos items y precios]
+- Ejemplo: cliente tenia pedido #123 por $30.000 y agrega una gaseosa $4.000. Di "Claro, agrego una Gaseosa $4.000. El nuevo total de tu pedido #123 es $34.000." y escribe MODIFICAR_PEDIDO:123|AGREGAR:Gaseosa $4.000
+- NUNCA uses PEDIDO_LISTO ni PEDIDO_ADICIONAL_DE para pedidos ya confirmados. Solo MODIFICAR_PEDIDO.
+
+IMAGENES:
+- Si el cliente envia una imagen Y tiene un pedido activo esperando pago: es probablemente un comprobante. Confirma el pedido.
+- Si el cliente envia una imagen SIN pedido activo: responde "Hola! Vi que enviaste una imagen. Puedes contarme que necesitas?"
+- NUNCA confirmes un pedido por una imagen si no hay pedido activo pendiente de pago.
+
+PREGUNTAS SIN RESPUESTA:
+- Si no puedes responder con certeza: "Un momento, ya te confirmo ese detalle." y escribe: ALERTA_PREGUNTA:[la pregunta]
+
+FLUJO:
+1. Saludo -> mensaje amable + link menu
+2. Cliente pide -> confirma con precios. Incluye notas especiales en los items.
+3. Pregunta direccion COMPLETA: calle, numero, barrio. Si tiene direccion frecuente, pregunta si es la misma. Si el cliente menciona conjunto, edificio, urbanizacion o unidad residencial: pide OBLIGATORIAMENTE numero de apartamento y bloque/torre para facilitar la entrega.
+   - SOLO escribe DIRECCION_LISTA:[direccion] cuando el cliente te haya dado una direccion real y completa. SIEMPRE escribe DIRECCION_LISTA en el MISMO mensaje donde confirmas la direccion, no en un mensaje separado.
+   - Si el cliente dice solo "ahi mismo", "la misma", "igual que antes": confirma la direccion frecuente en voz alta y luego escribe DIRECCION_LISTA con esa direccion.
+   - NUNCA escribas DIRECCION_LISTA si el cliente no ha dado ninguna direccion todavia.
+   - Si no tienes direccion del cliente NO confirmes el pedido, sigue preguntando.
+   EXCEPCION RECOGER: Si el cliente dice que va a recoger, pasa a buscar, lo recojo, para llevar, voy por el:
+   - NO preguntes direccion
+   - Responde: "Perfecto! Te esperamos. No hay costo de domicilio."
+   - Escribe OBLIGATORIO: DIRECCION_LISTA:RECOGER EN TIENDA
+   - En el PEDIDO_LISTO escribe DOMICILIO: 0
+4. Con direccion -> calcula domicilio y muestra desglose
+5. Confirma -> si el cliente NO indico metodo de pago desde el menu, pregunta como quiere pagar y da datos
+6. Pago:
+   - Nequi o Bancolombia: da los datos.
+     * Si el cliente dice que paga AHORA: pide comprobante, cuando lo mande escribe PAGO_CONFIRMADO
+     * Si el cliente dice "cuando llegue el pedido", "al recibirlo", "a la entrega":
+       Responde confirmando y escribe PAGO_DATAFONO
+   - Efectivo: pregunta valor -> escribe PAGO_EFECTIVO:[valor del billete]
+   - Datafono: confirma que el domiciliario lo lleva -> escribe PAGO_DATAFONO
+7. Comprobante recibido -> di EXACTAMENTE: "Listo! Recibimos tu comprobante, tu pedido entra a preparacion ahora mismo. Te avisamos cuando este listo y cuando salga el domiciliario." -> escribe PAGO_CONFIRMADO
+8. NUNCA digas "el domiciliario ya va en camino" al confirmar. El pedido va a PREPARACION primero, luego LISTO, luego EN CAMINO.
+9. NUNCA inventes tiempos. Si el cliente pregunta cuanto demora ANTES de confirmar: "Normalmente entre 30 y 50 minutos desde que confirmamos." Si ya confirmo: "Tu pedido esta en preparacion, te avisamos cada paso."
+
+POST-CONFIRMACION:
+- Respuestas cortas y calidas.
+- Si el cliente pregunta cuanto demora: di "Tu pedido esta en preparacion, en cuanto este listo te avisamos y el domiciliario sale de inmediato. Normalmente entre 30 y 50 minutos desde que confirmas."
+- NUNCA digas "va en camino" o "el domiciliario ya salio" a menos que el sistema te haya enviado el mensaje de estado "en_camino". Solo el sistema puede confirmar ese estado.
+- NUNCA inventes tiempos exactos. Si insisten: "Dependera del trafico y la preparacion, pero te avisamos cada paso."
+- NO reinicies el flujo ni tomes un nuevo pedido si el cliente ya tiene un pedido activo confirmado. Si el cliente saluda de nuevo o pregunta algo, responde en contexto del pedido activo.
+- Si el cliente quiere AGREGAR productos a su pedido activo: di "Claro, que quieres agregar?" y cuando lo diga escribe MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[producto y precio]
+- Si el cliente quiere CANCELAR su pedido: di "Entendido, voy a avisar al equipo para cancelar tu pedido #[numero]. Ten en cuenta que si ya esta en preparacion puede que no sea posible." y escribe CANCELAR_PEDIDO:[numero_pedido]
+- Si el cliente quiere cambiar la direccion de entrega: toma la nueva direccion y escribe MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
+
+OBLIGATORIO - escribe estos tags al final de tu respuesta (el cliente NO los ve):
+
+Al confirmar productos:
+PEDIDO_LISTO:
+ITEMS: [producto1 $precio (notas)|producto2 $precio]
+DESECHABLES: [valor total en pesos, ej: 500 si hay 1 comida, 1000 si hay 2]
+DOMICILIO: [numero sin puntos ni signos, o 0]
+TOTAL: [numero sin puntos ni signos]
+
+Al confirmar direccion: DIRECCION_LISTA:[direccion completa]
+Telefono adicional: TELEFONO_ADICIONAL:[numero]
+Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
+Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
+Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
+Cancelar pedido: CANCELAR_PEDIDO:[numero_pedido]
+
+PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
+- Cliente MANDA UNA IMAGEN (comprobante de transferencia): PAGO_CONFIRMADO
+- Cliente dice que va a pagar en EFECTIVO y da el valor del billete: PAGO_EFECTIVO:[valor]
+- Cliente dice que va a pagar con DATAFONO o paga al recibir: PAGO_DATAFONO
+
+MUY IMPORTANTE:
+- Si el cliente solo dice "Nequi" o "Bancolombia" = NO escribas ningun tag. Solo dale los datos y pide el comprobante.
+- PAGO_CONFIRMADO solo va cuando el cliente MANDA LA IMAGEN del comprobante, nunca antes.
+- Aplica promos del dia. Si no existe el producto, ofrece alternativas.
+
+SI EL CLIENTE PREGUNTA SI ERES IA O UN BOT:
+- Responde con honestidad y calidez. Ejemplo: "Si, soy una IA. Me llamo ${nombreLuz}, fui creada por KCCorp para hacer tu experiencia de pedido mas rapida y agradable. Puedo tomar tu pedido, resolver tus dudas y avisarte en cada paso. Y si prefieres hablar con alguien del equipo, con mucho gusto te comunico."
+- NO niegues ser IA si te preguntan directamente. La honestidad genera mas confianza.
+- Puedes destacar que eres IA de KCCorp pero con intencion genuina de ayudar, no como disculpa.
+- Si preguntan quien te creo o quien esta detras: "Fui desarrollada por KCCorp, una empresa estadounidense especializada en soluciones de IA para negocios."`;
+}
+
+// ── GUARDAR PEDIDO ────────────────────────────────────────────────────────────
+async function guardarPedidoSupabase(restauranteId, pedidoData) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var subtotal = Number(pedidoData.total) - Number(pedidoData.desechables||0) - Number(pedidoData.domicilio||0);
+    // Buscar nombre y nivel del cliente
+    var nombreClientePedido = null, nivelClientePedido = null;
+    try {
+      var telLocalPedido = stripCountryCode(pedidoData.phone);
+      var cfResp = await axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restauranteId + "&telefono=eq." + telLocalPedido + "&select=nombre_cliente,nivel_fidelidad,total_pedidos", { headers: sbH(true) });
+      if (cfResp.data && cfResp.data.length) {
+        nombreClientePedido = cfResp.data[0].nombre_cliente || null;
+        nivelClientePedido = cfResp.data[0].nivel_fidelidad || null;
+      }
+    } catch(e) {}
+    var payload = {
+      restaurante_id: restauranteId, numero_pedido: pedidoData.orderNumber,
+      cliente_tel: pedidoData.phone, items: pedidoData.items,
+      subtotal, desechables: pedidoData.desechables, domicilio: pedidoData.domicilio,
+      total: pedidoData.total, direccion: pedidoData.address,
+      metodo_pago: pedidoData.paymentMethod, estado: "confirmado",
+      notas_especiales: pedidoData.notasEspeciales || null,
+      pedido_adicional_de: pedidoData.pedidoAdicionalDe || null,
+      comprobante_url: pedidoData.comprobanteUrl || null,
+      comprobante_media_id: pedidoData.comprobanteMediaId || null,
+      cliente_nombre: nombreClientePedido,
+      cliente_nivel: nivelClientePedido
     };
-    (notas[tipo]||notas.nuevo).forEach(function(n){
-      var o=ctx.createOscillator(),g=ctx.createGain(),ts=ctx.currentTime+n[1];
-      o.type=n[3];o.frequency.setValueAtTime(n[0],ts);
-      g.gain.setValueAtTime(0,ts);g.gain.linearRampToValueAtTime(n[2],ts+0.02);
-      g.gain.exponentialRampToValueAtTime(0.001,ts+0.5);
-      o.connect(g);g.connect(ctx.destination);o.start(ts);o.stop(ts+0.6);
+    var response = await axios.post(SUPABASE_URL + "/rest/v1/pedidos", payload, {
+      headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
     });
-  }catch(e){}
-}
-
-function fmtTimer(ms){
-  var m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000);
-  return m+":"+(s<10?"0":"")+s;
-}
-function ago(d){
-  var diff=Math.floor((Date.now()-new Date(d))/60000);
-  return diff<1?"ahora":diff<60?diff+" min":Math.floor(diff/60)+"h";
-}
-
-function startTimers(){
-  setInterval(function(){
-    Object.keys(timerEls).forEach(function(pid){
-      var el=document.getElementById("timer_"+pid);
-      if(el){
-        var ms=Date.now()-timerEls[pid];
-        el.textContent=fmtTimer(ms);
-        el.className="ccard-timer"+(ms>20*60000?" urgent":"");
+    console.log("Pedido #" + pedidoData.orderNumber + " guardado. ID:", response.data[0]?.id || "?");
+    if (pedidoData.address && pedidoData.address !== "Por confirmar") {
+      guardarDireccionFrecuente(restauranteId, pedidoData.phone, pedidoData.address);
+    }
+    // Actualizar conteo de pedidos en clientes_frecuentes
+    try {
+      var svcKey2 = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+      // Contar pedidos reales de este cliente
+      var countResp = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId + "&cliente_tel=eq." + encodeURIComponent(pedidoData.phone) + "&select=id", { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2 } });
+      var totalPedidos = (countResp.data || []).length;
+      var nivel = totalPedidos >= 25 ? "oro" : totalPedidos >= 10 ? "plata" : "bronce";
+      var telLocal = stripCountryCode(pedidoData.phone);
+      await axios.post(SUPABASE_URL + "/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",
+        { restaurante_id: restauranteId, telefono: telLocal, total_pedidos: totalPedidos, nivel_fidelidad: nivel, updated_at: new Date().toISOString() },
+        { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } });
+      console.log("Cliente " + pedidoData.phone + " -> " + totalPedidos + " pedidos, nivel: " + nivel);
+      // Guardar nivel en orderState para que Luz pueda felicitar
+      if (pedidoData.phone) {
+        if (!global.clienteNiveles) global.clienteNiveles = {};
+        global.clienteNiveles[pedidoData.phone] = { total: totalPedidos, nivel };
       }
-    });
-  },1000);
+    } catch(e) { console.error("updateClienteNivel:", e.message); }
+  } catch (err) {
+    console.error("Error guardando pedido:", err.response ? JSON.stringify(err.response.data) : err.message);
+  }
 }
 
-function cambiarEstado(pid,estado,tel,num){
-  notif("Actualizando...");
-  fetch("/api/pedido-estado",{
-    method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({id:pid,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null})
-  })
-  .then(function(r){return r.json();})
-  .then(function(){
-    if(estado==="listo"){playSound("listo");notif("✅ Pedido #"+num+" LISTO!","rgba(16,185,129,0.5)");}
-    else if(estado==="en_camino"||estado==="entregado"){
-      notif("🚗 Pedido #"+num+" en camino — cerrando","rgba(16,185,129,0.5)");
-      setTimeout(loadPedidos,1200);
+async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo, comprobanteMediaId) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(SUPABASE_URL + "/rest/v1/mensajes",
+      { restaurante_id: restauranteId, telefono, mensaje, tipo, comprobante_media_id: comprobanteMediaId || null },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+  } catch (e) { console.error("guardarMensaje:", e.message); }
+}
+
+async function getOrderState(telefono) {
+  try {
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/order_state?telefono=eq." + encodeURIComponent(telefono) + "&select=*", { headers: sbH(true) });
+    return r.data && r.data.length > 0 ? r.data[0].estado : null;
+  } catch (e) { return null; }
+}
+async function setOrderState(telefono, estado) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(SUPABASE_URL + "/rest/v1/order_state?on_conflict=telefono",
+      { telefono, estado, updated_at: new Date().toISOString() },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } });
+  } catch (e) { console.error("setOrderState:", e.message); }
+}
+async function deleteOrderState(telefono) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.delete(SUPABASE_URL + "/rest/v1/order_state?telefono=eq." + encodeURIComponent(telefono), { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+  } catch (e) { console.error("deleteOrderState:", e.message); }
+}
+
+function getMenuUrl(restaurante) {
+  var base = process.env.MENU_PAGE_URL || "https://luz-ia-production-4cff.up.railway.app/menu";
+  if (restaurante && restaurante.id) return base + "?rest=" + restaurante.id;
+  return base;
+}
+
+async function descargarImagenMeta(mediaId) {
+  try {
+    var token = process.env.WHATSAPP_TOKEN;
+    if (!token) return null;
+    var urlRes = await axios.get("https://graph.facebook.com/v19.0/" + mediaId, { headers: { "Authorization": "Bearer " + token } });
+    var mediaUrl = urlRes.data?.url;
+    if (!mediaUrl) return null;
+    var imgRes = await axios.get(mediaUrl, { headers: { "Authorization": "Bearer " + token }, responseType: "arraybuffer" });
+    return "data:" + (imgRes.headers["content-type"] || "image/jpeg") + ";base64," + Buffer.from(imgRes.data).toString("base64");
+  } catch (e) { console.error("descargarImagen:", e.message); return null; }
+}
+
+async function sendWhatsAppImage(to, imageUrl, caption, phoneId) {
+  var pid = phoneId || process.env.WHATSAPP_PHONE_ID;
+  var token = process.env.WHATSAPP_TOKEN;
+  var payload = {
+    messaging_product: "whatsapp",
+    to: to,
+    type: "image",
+    image: { link: imageUrl, caption: caption || "" }
+  };
+  var r = await axios.post("https://graph.facebook.com/v19.0/" + pid + "/messages", payload, {
+    headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" }
+  });
+  return r.data;
+}
+
+async function sendWhatsAppMessage(to, message, phoneNumberId) {
+  var token = process.env.WHATSAPP_TOKEN;
+  var pid   = phoneNumberId || process.env.WHATSAPP_PHONE_ID;
+  if (!token || !pid) { console.error("Faltan WHATSAPP_TOKEN o PHONE_ID"); return; }
+  var toNum = to.replace(/[^0-9]/g, "");
+  if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
+  try {
+    await axios.post("https://graph.facebook.com/v19.0/" + pid + "/messages",
+      { messaging_product: "whatsapp", to: toNum, type: "text", text: { body: message } },
+      { headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } });
+    console.log("Enviado a " + toNum);
+  } catch (e) { console.error("sendWA:", e.response ? JSON.stringify(e.response.data) : e.message); }
+}
+
+function estaEnHorario(restaurante) {
+  try {
+    var col = getHoraColombia();
+    var hora = col.getHours() * 60 + col.getMinutes();
+    var ap = (restaurante.hora_apertura || "16:00:00").split(":").map(Number);
+    var ci = (restaurante.hora_cierre   || "00:00:00").split(":").map(Number);
+    var minAp = ap[0] * 60 + ap[1], minCi = ci[0] * 60 + ci[1];
+    var dias = ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
+    var diaHoy = dias[col.getDay()];
+    var diasAct = (restaurante.dias_activos || "lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
+    if (!diasAct.includes(diaHoy)) return false;
+    if (minCi <= minAp) return hora >= minAp || hora <= minCi;
+    return hora >= minAp && hora <= minCi;
+  } catch (e) { return true; }
+}
+
+function getMenuConfig(restaurante) {
+  var modoDia = restaurante.modo_dia || false;
+  if (modoDia && restaurante.menu_dia && restaurante.menu_dia.trim().length > 10) return restaurante.menu_dia;
+  if (!modoDia && restaurante.menu_noche && restaurante.menu_noche.trim().length > 10) return restaurante.menu_noche;
+  return null;
+}
+
+function getMensaje(restaurante, clave, fallback) {
+  return (restaurante && restaurante[clave] && restaurante[clave].trim()) ? restaurante[clave].trim() : fallback;
+}
+
+// ── PRINT TICKET ──────────────────────────────────────────────────────────────
+async function printTicket(orderData) {
+  var subtotal = Number(orderData.total) - Number(orderData.desechables||0) - Number(orderData.domicilio||0);
+  var pagoLabel =
+    orderData.paymentMethod === "efectivo"    ? "Efectivo - cancela con: " + (orderData.cashDenomination || "?") :
+    orderData.paymentMethod === "datafono"    ? "Datafono (llevar)" :
+    orderData.paymentMethod === "bancolombia" ? "Bancolombia llave: " + (orderData.bancoCuenta || "0089102980") :
+    "Nequi " + (orderData.nequiNum || "3177269578");
+
+  var restNombre = orderData.restauranteNombre || "LA CURVA STREET FOOD";
+  var restCiudad = orderData.restauranteCiudad || "Cali";
+
+  var lines = [
+    "================================",
+    "  " + restNombre.toUpperCase().substring(0, 30),
+    "  " + restCiudad,
+    "================================",
+    "Pedido #" + orderData.orderNumber + (orderData.pedidoAdicionalDe ? " [ADICIONAL a #"+orderData.pedidoAdicionalDe+"]" : ""),
+    "Hora: " + orderData.timestamp,
+    "Tel: " + orderData.phone.replace(/[^0-9]/g, ""),
+    orderData.extraPhone ? "Tel adicional: " + orderData.extraPhone : null,
+    "--------------------------------",
+    "PRODUCTOS:"
+  ].filter(Boolean);
+
+  orderData.items.forEach(function(i) { lines.push("  " + i); });
+
+  if (orderData.notasEspeciales) {
+    lines.push("--------------------------------");
+    lines.push("NOTAS: " + orderData.notasEspeciales);
+  }
+
+  lines = lines.concat([
+    "--------------------------------",
+    "Subtotal:    $" + subtotal.toLocaleString("es-CO"),
+    "Desechables: $" + Number(orderData.desechables||0).toLocaleString("es-CO"),
+    "Domicilio:   $" + Number(orderData.domicilio||0).toLocaleString("es-CO"),
+    "--------------------------------",
+    "TOTAL:       $" + Number(orderData.total).toLocaleString("es-CO"),
+    "--------------------------------",
+    "Direccion: " + orderData.address,
+    "Pago: " + pagoLabel,
+    "================================",
+    "     GRACIAS POR SU PEDIDO     ",
+    "================================", ""
+  ]);
+
+  var ticketText = lines.join("\n");
+  console.log("\nTICKET:\n" + ticketText);
+
+  axios.post(process.env.PRINT_SERVER_URL || "http://localhost:3001/print", {
+    secret: process.env.PRINT_SECRET || "lacurva2024",
+    orderNumber: orderData.orderNumber, timestamp: orderData.timestamp,
+    phone: orderData.phone.replace(/[^0-9]/g, ""), extraPhone: orderData.extraPhone || null,
+    items: orderData.items, subtotal,
+    desechables: Number(orderData.desechables||0), domicilio: Number(orderData.domicilio||0),
+    total: Number(orderData.total), address: orderData.address,
+    paymentMethod: orderData.paymentMethod, cashDenomination: orderData.cashDenomination || null,
+    notasEspeciales: orderData.notasEspeciales || null,
+    pedidoAdicionalDe: orderData.pedidoAdicionalDe || null,
+    restauranteNombre: restNombre, restauranteCiudad: restCiudad
+  }, { timeout: 6000 })
+    .then(function() { console.log("Ticket #" + orderData.orderNumber + " enviado a impresora"); })
+    .catch(function(e) { console.error("Error impresora:", e.message); });
+
+  return ticketText;
+}
+
+// ── PARSE REPLY ───────────────────────────────────────────────────────────────
+function parseReply(reply, from) {
+  var cleanReply = reply;
+  var sideEffect = null;
+
+  var preParsedDir = null;
+  if (reply.indexOf("DIRECCION_LISTA:") !== -1) {
+    var preDir = reply.match(/DIRECCION_LISTA:(.+)/);
+    if (preDir) preParsedDir = preDir[1].trim();
+  }
+
+  if (reply.indexOf("PEDIDO_LISTO:") !== -1) {
+    var itemsMatch  = reply.match(/ITEMS:\s*(.+)/);
+    var totalMatch  = reply.match(/TOTAL:\s*([^\n]+)/);
+    var desechMatch = reply.match(/DESECHABLES:\s*([^\n]+)/);
+    var domMatch    = reply.match(/DOMICILIO:\s*([^\n]+)/);
+
+    if (itemsMatch && totalMatch) {
+      var items = itemsMatch[1].split("|").map(function(i) { return i.trim(); });
+      var total = limpiarNumero(totalMatch[1]);
+      var desechRaw = limpiarNumero(desechMatch ? desechMatch[1] : "0");
+      var desech = Number(desechRaw) < 50 ? String(Number(desechRaw) * 500) : desechRaw;
+      var domicilio = limpiarNumero(domMatch ? domMatch[1] : "0");
+
+      var notasArr = [];
+      items.forEach(function(item) {
+        var m = item.match(/\(([^)]+)\)/);
+        if (m) notasArr.push(m[1]);
+      });
+
+      var prevAddress = (orderState[from] ? orderState[from].address : null) || preParsedDir;
+      var prevPayment = orderState[from] ? orderState[from].paymentMethod : null;
+      orderState[from] = {
+        status: prevAddress ? "esperando_pago" : "esperando_direccion",
+        orderNumber: nextOrderNumber(),
+        items, desechables: desech, domicilio, total,
+        notasEspeciales: notasArr.length > 0 ? notasArr.join(" | ") : null,
+        address: prevAddress || null,
+        paymentMethod: prevPayment || null
+      };
+      console.log("orderState #" + orderState[from].orderNumber + " creado para:", from);
+      sideEffect = "pedido_registrado";
+    }
+    cleanReply = cleanReply.replace(/PEDIDO_LISTO:[\s\S]*?(?=DIRECCION_LISTA:|TELEFONO_ADICIONAL:|PAGO_|PEDIDO_ADICIONAL_DE:|ALERTA_PREGUNTA:|$)/g, "").trim();
+  }
+
+  if (reply.indexOf("DIRECCION_LISTA:") !== -1) {
+    var dirMatch = reply.match(/DIRECCION_LISTA:(.+)/);
+    if (dirMatch && orderState[from]) {
+      orderState[from].address = dirMatch[1].trim();
+      orderState[from].status = "esperando_pago";
+      sideEffect = "direccion_registrada";
+    }
+    cleanReply = cleanReply.replace(/DIRECCION_LISTA:.+/g, "").trim();
+  }
+
+  if (reply.indexOf("TELEFONO_ADICIONAL:") !== -1) {
+    var telMatch = reply.match(/TELEFONO_ADICIONAL:(.+)/);
+    if (telMatch && orderState[from]) orderState[from].extraPhone = telMatch[1].trim();
+    cleanReply = cleanReply.replace(/TELEFONO_ADICIONAL:.+/g, "").trim();
+  }
+
+  if (reply.indexOf("PEDIDO_ADICIONAL_DE:") !== -1) {
+    var addMatch = reply.match(/PEDIDO_ADICIONAL_DE:(.+)/);
+    if (addMatch) {
+      var numAdicional = addMatch[1].trim();
+      if (orderState[from]) orderState[from].pedidoAdicionalDe = numAdicional;
+      else orderState[from] = { pedidoAdicionalDe: numAdicional, status: "esperando_direccion" };
+    }
+    cleanReply = cleanReply.replace(/PEDIDO_ADICIONAL_DE:.+/g, "").trim();
+  }
+
+  if (reply.indexOf("ALERTA_PREGUNTA:") !== -1) {
+    var pregMatch = reply.match(/ALERTA_PREGUNTA:(.+)/);
+    if (pregMatch) {
+      sideEffect = "alerta_pregunta";
+      if (orderState[from]) orderState[from].alertaPregunta = pregMatch[1].trim();
+      else orderState[from] = { alertaPregunta: pregMatch[1].trim() };
+    }
+    cleanReply = cleanReply.replace(/ALERTA_PREGUNTA:.+/g, "").trim();
+  }
+
+  if (reply.indexOf("MODIFICAR_PEDIDO:") !== -1) {
+    var modMatch = reply.match(/MODIFICAR_PEDIDO:([^|]+)\|(.+)/);
+    if (modMatch) {
+      sideEffect = "modificar_pedido";
+      if (!orderState[from]) orderState[from] = {};
+      orderState[from].modificarPedido = { numero: modMatch[1].trim(), accion: modMatch[2].trim() };
+    }
+    cleanReply = cleanReply.replace(/MODIFICAR_PEDIDO:.+/g, "").trim();
+  }
+
+  if (reply.indexOf("CANCELAR_PEDIDO:") !== -1) {
+    var cancelMatch = reply.match(/CANCELAR_PEDIDO:(.+)/);
+    if (cancelMatch) {
+      sideEffect = "cancelar_pedido";
+      if (!orderState[from]) orderState[from] = {};
+      orderState[from].cancelarPedido = cancelMatch[1].trim();
+    }
+    cleanReply = cleanReply.replace(/CANCELAR_PEDIDO:.+/g, "").trim();
+  }
+
+  if (reply.indexOf("PAGO_EFECTIVO:") !== -1) {
+    var cashMatch = reply.match(/PAGO_EFECTIVO:(.+)/);
+    if (cashMatch && orderState[from]) {
+      orderState[from].paymentMethod = "efectivo";
+      orderState[from].cashDenomination = cashMatch[1].trim();
+      orderState[from].status = "confirmado";
+      sideEffect = "pago_confirmado";
+    }
+    cleanReply = cleanReply.replace(/PAGO_EFECTIVO:.+/g, "").trim();
+  }
+
+  if (reply.indexOf("PAGO_DATAFONO") !== -1) {
+    if (orderState[from]) {
+      orderState[from].paymentMethod = "datafono";
+      orderState[from].status = "confirmado";
+      sideEffect = "pago_confirmado";
+    }
+    cleanReply = cleanReply.replace("PAGO_DATAFONO", "").trim();
+  }
+
+  if (reply.indexOf("PAGO_CONFIRMADO") !== -1) {
+    if (orderState[from]) {
+      orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
+      orderState[from].status = "confirmado";
+      sideEffect = "pago_confirmado";
+    }
+    cleanReply = cleanReply.replace("PAGO_CONFIRMADO", "").trim();
+  }
+
+  return { cleanReply, sideEffect };
+}
+
+// ── RUTAS ─────────────────────────────────────────────────────────────────────
+app.get("/menu",        function(req, res) { res.sendFile(path.join(__dirname, "menu.html")); });
+app.get("/mapa",        function(req, res) { res.sendFile(path.join(__dirname, "mapa_zonas.html")); });
+app.get("/admin",       function(req, res) { res.sendFile(path.join(__dirname, "admin.html")); });
+app.get("/restaurante", function(req, res) { res.sendFile(path.join(__dirname, "restaurante.html")); });
+app.get("/cocina",      function(req, res) { res.sendFile(path.join(__dirname, "cocina.html")); });
+app.get("/domi",        function(req, res) { res.sendFile(path.join(__dirname, "domiciliario.html")); });
+app.get("/mesero",      function(req, res) { res.sendFile(path.join(__dirname, "mesero2.html")); });
+app.get("/sw.js",       function(req, res) { res.setHeader("Content-Type","application/javascript"); res.setHeader("Service-Worker-Allowed","/"); res.sendFile(path.join(__dirname, "sw.js")); });
+app.get("/offline.html",function(req, res) { res.sendFile(path.join(__dirname, "offline.html")); });
+app.get("/manifest-cocina.json",  function(req, res) { res.sendFile(path.join(__dirname, "manifest-cocina.json")); });
+app.get("/manifest-mesero.json",  function(req, res) { res.sendFile(path.join(__dirname, "manifest-mesero.json")); });
+app.get("/manifest-domi.json",    function(req, res) { res.sendFile(path.join(__dirname, "manifest-domi.json")); });
+app.get("/vapid-public-key",      function(req, res) { res.json({ key: VAPID_PUBLIC }); });
+
+// ── PUSH SUBSCRIPTIONS ───────────────────────────────────────────────────────
+app.post("/api/push-subscribe", async function(req, res) {
+  var { restaurante_id, rol, subscription, nombre } = req.body;
+  if (!restaurante_id || !rol || !subscription) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(
+      SUPABASE_URL + "/rest/v1/push_subscriptions?on_conflict=restaurante_id,endpoint",
+      { restaurante_id, rol, nombre: nombre || rol, subscription: JSON.stringify(subscription), endpoint: subscription.endpoint, activo: true, updated_at: new Date().toISOString() },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } }
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/push-test", async function(req, res) {
+  var { restaurante_id, rol, title, body } = req.body;
+  if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
+  await enviarPushPorRol(restaurante_id, rol || "cocina", {
+    title: title || "🔔 LUZ IA",
+    body: body || "Notificación de prueba",
+    icon: "/icons/icon-192.png",
+    url: "/" + (rol || "cocina")
+  });
+  res.json({ ok: true });
+});
+
+app.post("/api/pedido-estado", async function(req, res) {
+  var { id, estado, telefono_cliente, numero_pedido, restaurante_id } = req.body;
+  if (!id || !estado) return res.status(400).json({ error: "Faltan datos" });
+  var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+  // listo_entrega = cocina cerró su vista, pero el panel de restaurante lo sigue viendo
+  var estadoReal = estado === "listo_entrega" ? "listo_entrega" : estado;
+  try {
+    await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id, { estado: estadoReal },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    if (estado === "listo_entrega") { return res.json({ ok: true }); } // no WhatsApp, no panel sound
+    if (telefono_cliente) {
+      var restaurante = null;
+      if (restaurante_id) {
+        try { var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=*", { headers: sbH(false) }); if (rr.data?.length) restaurante = rr.data[0]; } catch(e) {}
+      }
+      var numStr = numero_pedido ? " #" + numero_pedido : "";
+      var pid = restaurante?.whatsapp_phone_id || process.env.WHATSAPP_PHONE_ID;
+      if (estado === "en_preparacion") {
+        var msg = getMensaje(restaurante, "msg_en_preparacion", "Tu pedido" + numStr + " ya esta en preparacion! En breve estara listo.");
+        await sendWhatsAppMessage(telefono_cliente, msg, pid);
+        if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
+        // Push a meseros: pedido en preparacion
+        if (restaurante_id) enviarPushPorRol(restaurante_id, "mesero", { title: "🟡 Preparando", body: "Pedido" + numStr + " en preparacion", icon: "/icons/icon-192.png", vibrate: [100,50,100], tag: "pedido-" + id, url: "/mesero" });
+      }
+      if (estado === "listo") {
+        var esMesaPedido = req.body.direccion && req.body.direccion.toUpperCase().indexOf("MESA") !== -1;
+        var meseroNombre = req.body.domiciliario_nombre || null;
+        var msgListoDefault = esMesaPedido
+          ? "Tu pedido" + numStr + " esta listo!" + (meseroNombre ? " " + meseroNombre + " te lo lleva enseguida." : " Ya te lo llevamos.")
+          : "Tu pedido" + numStr + " esta listo y esperando al domiciliario!";
+        var msg = getMensaje(restaurante, "msg_listo", msgListoDefault);
+        await sendWhatsAppMessage(telefono_cliente, msg, pid);
+        if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
+        // Push a meseros y domis: pedido listo
+        var esMesaStr = req.body.direccion && req.body.direccion.toUpperCase().indexOf("MESA") !== -1;
+        if (restaurante_id && esMesaStr) {
+          enviarPushPorRol(restaurante_id, "mesero", { title: "✅ ¡Listo para servir!", body: "Pedido" + numStr + " está listo — llévalo a la mesa", icon: "/icons/icon-192.png", vibrate: [200,100,200,100,200], tag: "listo-" + id, url: "/mesero" });
+        } else if (restaurante_id) {
+          enviarPushPorRol(restaurante_id, "domiciliario", { title: "✅ Pedido listo", body: "Pedido" + numStr + " listo para entregar", icon: "/icons/icon-192.png", vibrate: [200,100,200], tag: "listo-" + id, url: "/domi" });
+        }
+      }
+      if (estado === "en_camino") {
+        var msg = getMensaje(restaurante, "msg_en_camino", "Tu pedido" + numStr + " ya va en camino. Que lo disfrutes!");
+        await sendWhatsAppMessage(telefono_cliente, msg, pid);
+        if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
+      }
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ ok: false, error: err.response ? JSON.stringify(err.response.data) : err.message }); }
+});
+
+app.post("/api/menu-toggle", async function(req, res) {
+  if (!req.body.id) return res.status(400).json({ error: "Falta id" });
+  try {
+    await axios.patch(SUPABASE_URL + "/rest/v1/menu_items?id=eq." + req.body.id, { disponible: req.body.disponible },
+      { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/menu-add", async function(req, res) {
+  try {
+    await axios.post(SUPABASE_URL + "/rest/v1/menu_items", req.body, { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/restaurante-config", async function(req, res) {
+  if (!req.body.restaurante_id || !req.body.config) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id, req.body.config,
+      { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message }); }
+});
+
+app.post("/enviar-imagen-cliente", async function(req, res) {
+  var { telefono, restaurante_id, imagen, mime } = req.body;
+  if (!telefono || !imagen) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var token = process.env.WHATSAPP_TOKEN;
+    var pid = process.env.WHATSAPP_PHONE_ID;
+    if (!token || !pid) return res.status(500).json({ error: "Sin credenciales WA" });
+    var buf = Buffer.from(imagen, "base64");
+    var FormData = require("form-data");
+    var form = new FormData();
+    form.append("file", buf, { filename: "imagen.jpg", contentType: mime || "image/jpeg" });
+    form.append("messaging_product", "whatsapp");
+    var uploadRes = await axios.post(
+      "https://graph.facebook.com/v19.0/" + pid + "/media",
+      form, { headers: { "Authorization": "Bearer " + token, ...form.getHeaders() } }
+    );
+    var mediaId = uploadRes.data?.id;
+    if (!mediaId) return res.status(500).json({ error: "No se pudo subir imagen" });
+    var toNum = telefono.replace(/[^0-9]/g, "");
+    if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
+    await axios.post("https://graph.facebook.com/v19.0/" + pid + "/messages",
+      { messaging_product: "whatsapp", to: toNum, type: "image", image: { id: mediaId } },
+      { headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } }
+    );
+    if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono, "📷 Imagen enviada desde el panel", "restaurante", null);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("enviarImagen:", e.response ? JSON.stringify(e.response.data) : e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/enviar-mensaje-cliente", async function(req, res) {
+  if (!req.body.telefono || !req.body.mensaje) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var pid = process.env.WHATSAPP_PHONE_ID;
+    if (req.body.restaurante_id) {
+      try {
+        var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id + "&select=whatsapp_phone_id", { headers: sbH(false) });
+        if (rr.data?.length && rr.data[0].whatsapp_phone_id) pid = rr.data[0].whatsapp_phone_id;
+      } catch(e) {}
+    }
+    await sendWhatsAppMessage(req.body.telefono, req.body.mensaje, pid);
+    if (req.body.restaurante_id) guardarMensajeSupabase(req.body.restaurante_id, req.body.telefono, req.body.mensaje, "restaurante", null);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/pedido-manual", async function(req, res) {
+  var { restaurante_id, telefono, items, total, desechables, domicilio, direccion, metodo_pago, notas_especiales } = req.body;
+  if (!restaurante_id || !telefono || !items || !total) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var num = ++orderCounter;
+    var subtotal = Number(total) - Number(desechables||0) - Number(domicilio||0);
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var payload = {
+      restaurante_id, numero_pedido: num,
+      cliente_tel: telefono,
+      items: Array.isArray(items) ? items : items.split("\n").filter(function(l){return l.trim();}),
+      subtotal, desechables: Number(desechables||0), domicilio: Number(domicilio||0),
+      total: Number(total), direccion: direccion || "Por confirmar",
+      metodo_pago: metodo_pago || "digital", estado: "confirmado",
+      notas_especiales: notas_especiales || null
+    };
+    var response = await axios.post(SUPABASE_URL + "/rest/v1/pedidos", payload, {
+      headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
+    });
+    if (direccion) guardarDireccionFrecuente(restaurante_id, telefono, direccion);
+    res.json({ ok: true, numero_pedido: num, id: response.data[0]?.id });
+  } catch (e) { res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message }); }
+});
+
+app.post("/notificar-cliente", async function(req, res) {
+  if (!req.body.telefono) return res.status(400).json({ error: "Telefono requerido" });
+  var restaurante = null;
+  if (req.body.restaurante_id) {
+    try { var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id + "&select=*", { headers: sbH(false) }); if (rr.data?.length) restaurante = rr.data[0]; } catch(e) {}
+  }
+  var numStr = req.body.numero_pedido ? " #" + req.body.numero_pedido : "";
+  try {
+    var msg = getMensaje(restaurante, "msg_en_camino", "Tu pedido" + numStr + " ya va en camino. Que lo disfrutes!");
+    var pid = restaurante?.whatsapp_phone_id || process.env.WHATSAPP_PHONE_ID;
+    await sendWhatsAppMessage(req.body.telefono, msg, pid);
+    if (req.body.restaurante_id) guardarMensajeSupabase(req.body.restaurante_id, req.body.telefono, msg, "estado_luz", null);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/enviar-promo", async function(req, res) {
+  if (!req.body.restaurante_id || !req.body.mensaje) return res.status(400).json({ ok: false, error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var hace30 = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+    var resp = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + req.body.restaurante_id + "&created_at=gte." + hace30 + "&select=cliente_tel",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    var unicos = {};
+    (resp.data||[]).forEach(function(p) { if (p.cliente_tel) unicos[p.cliente_tel] = true; });
+    var telefonos = Object.keys(unicos);
+    if (!telefonos.length) return res.json({ ok: true, enviados: 0, fallidos: 0, total: 0 });
+    // Obtener phone_id del restaurante
+    var pid = process.env.WHATSAPP_PHONE_ID;
+    try {
+      var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id + "&select=whatsapp_phone_id", { headers: sbH(false) });
+      if (rr.data?.length && rr.data[0].whatsapp_phone_id) pid = rr.data[0].whatsapp_phone_id;
+    } catch(e) {}
+    var enviados = 0, fallidos = 0;
+    for (var i = 0; i < telefonos.length; i++) {
+      try {
+          if (req.body.imagen_url) {
+            // Send image first then text
+            await sendWhatsAppImage(telefonos[i], req.body.imagen_url, req.body.mensaje, pid);
+          } else {
+            await sendWhatsAppMessage(telefonos[i], req.body.mensaje, pid);
+          }
+          enviados++;
+        }
+      catch (e) { fallidos++; }
+      if (i < telefonos.length - 1) await new Promise(function(r) { setTimeout(r, 300); });
+    }
+    res.json({ ok: true, enviados, fallidos, total: telefonos.length });
+  } catch (e) { res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message }); }
+});
+
+app.get("/api/comprobante/:mediaId", async function(req, res) {
+  try {
+    var imgData = await descargarImagenMeta(req.params.mediaId);
+    if (!imgData) return res.status(404).json({ error: "No se pudo obtener imagen" });
+    var matches = imgData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches) return res.status(500).json({ error: "Formato invalido" });
+    res.setHeader("Content-Type", matches[1]);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.send(Buffer.from(matches[2], "base64"));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/chat/:telefono", async function(req, res) {
+  if (!req.query.restaurante_id) return res.json({ ok: true, mensajes: [] });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + req.query.restaurante_id + "&telefono=eq." + encodeURIComponent(req.params.telefono) + "&order=created_at.asc&limit=150",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    res.json({ ok: true, mensajes: r.data || [] });
+  } catch (e) { res.json({ ok: true, mensajes: [] }); }
+});
+
+app.get("/api/cliente/:telefono", async function(req, res) {
+  if (!req.query.restaurante_id) return res.json({ ok: true, cliente: null });
+  try {
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + req.query.restaurante_id + "&telefono=eq." + encodeURIComponent(req.params.telefono) + "&select=*",
+      { headers: sbH(true) });
+    res.json({ ok: true, cliente: r.data && r.data.length > 0 ? r.data[0] : null });
+  } catch (e) { res.json({ ok: true, cliente: null }); }
+});
+
+app.delete("/api/pedido/:id", async function(req, res) {
+  var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+  try {
+    await axios.delete(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + req.params.id, { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/alerta-pregunta", async function(req, res) {
+  var { restaurante_id, telefono, pregunta } = req.body;
+  if (!restaurante_id || !pregunta) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(SUPABASE_URL + "/rest/v1/mensajes",
+      { restaurante_id, telefono, mensaje: "ALERTA_PREGUNTA: " + pregunta, tipo: "alerta_pregunta" },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get("/webhook", function(req, res) {
+  var mode = req.query["hub.mode"], token = req.query["hub.verify_token"], challenge = req.query["hub.challenge"];
+  var VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "luz_verify_token_2026";
+  if (mode === "subscribe" && token === VERIFY_TOKEN) { console.log("Webhook verificado"); return res.status(200).send(challenge); }
+  if (!mode) return res.send("LUZ esta activa");
+  res.sendStatus(403);
+});
+
+app.post("/webhook", function(req, res) {
+  res.sendStatus(200);
+  try {
+    var body = req.body;
+    if (!body.object || body.object !== "whatsapp_business_account") return;
+    var entry = body.entry?.[0], changes = entry?.changes?.[0], value = changes?.value;
+    if (!value?.messages?.length) return;
+    var msg = value.messages[0];
+    var from = msg.from;
+    var phoneNumberId = value.metadata?.phone_number_id;
+    procesarEnCola(from, function() { return procesarMensaje(msg, from, phoneNumberId); });
+  } catch (e) { console.error("Error webhook:", e.message); }
+});
+
+async function procesarMensaje(msg, from, phoneNumberId) {
+  try {
+    var msgType = msg.type;
+
+    if (msgType === "audio") {
+      await sendWhatsAppMessage(from, "Hola! Por favor escribeme tu pedido, no puedo escuchar audios. Con gusto te atiendo.", phoneNumberId);
       return;
     }
-    else{notif("🔥 Preparando #"+num,"rgba(245,158,11,0.5)");}
-    loadPedidos();
-  })
-  .catch(function(){notif("Error de conexión","rgba(239,68,68,0.4)");});
-}
 
-function imprimirTicket(btn){
-  var num=btn.getAttribute("data-pnum"),tel=btn.getAttribute("data-ptel")||"";
-  var dir=decodeURIComponent(btn.getAttribute("data-pdir")||""),met=btn.getAttribute("data-pmet")||"";
-  var total=Number(btn.getAttribute("data-ptot")||0),des=Number(btn.getAttribute("data-pdes")||0),dom=Number(btn.getAttribute("data-pdom")||0);
-  var items=[];try{items=JSON.parse(decodeURIComponent(btn.getAttribute("data-pitems")||"[]"));}catch(ex){}
-  var v=window.open("","_blank","width=400,height=600");if(!v)return;
-  var t="<html><head><meta charset='UTF-8'><title>Ticket #"+num+"</title><style>body{font-family:monospace;font-size:14px;margin:12px}hr{border:1px dashed #ccc}h3{text-align:center;margin:4px 0}.r{display:flex;justify-content:space-between}.b{font-weight:700;font-size:15px}</style></head><body>";
-  t+="<h3>LA CURVA STREET FOOD</h3><h3>Canaveral - Cali</h3><hr><div class='r'><span>Pedido #"+num+"</span><span>"+tel+"</span></div><hr><b>PRODUCTOS:</b><br>";
-  items.forEach(function(i){t+="* "+i+"<br>";});
-  t+="<hr><div class='r'><span>Subtotal</span><span>$"+Number(total-des-dom).toLocaleString("es-CO")+"</span></div><div class='r'><span>Desechables</span><span>$"+Number(des).toLocaleString("es-CO")+"</span></div><div class='r'><span>Domicilio</span><span>$"+Number(dom).toLocaleString("es-CO")+"</span></div><hr><div class='r b'><span>TOTAL</span><span>$"+Number(total).toLocaleString("es-CO")+"</span></div><hr><div>Dir: "+dir+"</div><div>Pago: "+met+"</div><hr><h3>GRACIAS!</h3>";
-  t+="<sc"+"ript>window.onload=function(){window.print();window.close();}</sc"+"ript></html>";
-  v.document.write(t);v.document.close();
-}
+    var userText = "", mediaId = null, esImagen = false;
 
-function loadPedidos(){
-  if(!rest)return;
-  get("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(confirmado,en_preparacion,listo)&order=created_at.asc&limit=30")
-  .then(function(pedidos){
-    var isFirst=Object.keys(pedidosConocidos).length===0;
-    var nuevos=0;
-    pedidos.forEach(function(p){
-      if(!pedidosConocidos[p.id]){if(!isFirst)nuevos++;pedidosConocidos[p.id]=true;}
-    });
-    if(nuevos>0){playSound("nuevo");notif("🍔 "+nuevos+" pedido"+(nuevos>1?"s nuevos":" nuevo")+" llegó!","rgba(249,115,22,0.5)");}
+    if (msgType === "text") {
+      userText = msg.text?.body?.trim() || "";
+    } else if (msgType === "image" || msgType === "document" || msgType === "sticker") {
+      mediaId = msg.image?.id || msg.document?.id || null;
+      esImagen = true;
+      var caption = msg.image?.caption || msg.document?.caption || "";
+      userText = caption ? caption + " [El cliente envio una imagen]" : "[El cliente envio una imagen]";
+    } else if (msgType === "location") {
+      var loc = msg.location;
+      userText = "Mi ubicacion es: lat " + loc.latitude + ", lng " + loc.longitude + (loc.name ? " (" + loc.name + ")" : "");
+    } else if (msgType === "interactive") {
+      userText = msg.interactive?.button_reply?.title || msg.interactive?.list_reply?.title || "";
+    } else if (msgType === "reaction") {
+      return;
+    } else {
+      console.log("Tipo no soportado: " + msgType); return;
+    }
 
-    var statN=0,statP=0,statL=0;
-    pedidos.forEach(function(p){
-      if(p.estado==="confirmado")statN++;
-      else if(p.estado==="en_preparacion")statP++;
-      else if(p.estado==="listo")statL++;
-    });
-    document.getElementById("statNuevos").textContent=statN;
-    document.getElementById("statPrep").textContent=statP;
-    document.getElementById("statListos").textContent=statL;
+    if (!userText) return;
 
-    var col=new Date();
-    var desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
-    get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+desde+"&select=id")
-      .then(function(all){document.getElementById("statTotal").textContent=all.length;})
-      .catch(function(){});
+    if (!orderState[from]) {
+      var saved = await getOrderState(from);
+      if (saved) { orderState[from] = saved; console.log("orderState recuperado para:", from); }
+    }
 
-    var grid=document.getElementById("pedidosGrid");
-    if(!pedidos.length){
-      grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">🎉</div><div class="et">Todo al dia!<br>No hay pedidos pendientes.</div></div>';
+    var restaurante = await getRestaurante(phoneNumberId);
+    if (restaurante) {
+      if (restaurante.estado !== "activo") { console.log("Restaurante inactivo"); return; }
+      if (!estaEnHorario(restaurante)) {
+        console.log("Fuera de horario - avisando cliente");
+        var horaAp = (restaurante.hora_apertura||"16:00:00").substring(0,5);
+        var horaCi = (restaurante.hora_cierre||"00:00:00").substring(0,5);
+        var diasAct = (restaurante.dias_activos||"lunes a domingo").replace(/,/g," | ");
+        var msgFuera = getMensaje(restaurante, "msg_fuera_horario",
+          "Hola! En este momento estamos cerrados. Nuestro horario de atencion es de " + horaAp + " a " + horaCi + " (" + diasAct + "). Con mucho gusto te atendemos en ese horario!");
+        await sendWhatsAppMessage(from, msgFuera, phoneNumberId);
+        if (restaurante) guardarMensajeSupabase(restaurante.id, from, userText, "cliente", null).catch(function(){});
+        if (restaurante) guardarMensajeSupabase(restaurante.id, from, msgFuera, "restaurante", null).catch(function(){});
+        return;
+      }
+      var silencio = await estaEnSilencio(restaurante.id, from);
+      if (silencio) {
+        console.log("SILENCIO para:", from);
+        guardarMensajeSupabase(restaurante.id, from, userText, "cliente", esImagen ? mediaId : null).catch(function(){});
+        return;
+      }
+    }
+
+    var esComprobante = false;
+    if (esImagen && mediaId) {
+      var hayPedidoActivo = orderState[from] && (
+        orderState[from].status === "esperando_pago" ||
+        orderState[from].status === "confirmado" ||
+        orderState[from].status === "esperando_direccion"
+      );
+      if (hayPedidoActivo) {
+        esComprobante = true;
+        userText = "[El cliente envio una imagen, posiblemente comprobante de pago]";
+      }
+    }
+
+    if (!conversations[from]) conversations[from] = [];
+    conversations[from].push({ role: "user", content: userText });
+    if (conversations[from].length > 20) conversations[from] = conversations[from].slice(-20);
+
+    var menuParaPrompt;
+    if (restaurante) {
+      var menuConfig = getMenuConfig(restaurante);
+      menuParaPrompt = menuConfig || await getMenuDinamico(restaurante.id);
+    } else {
+      menuParaPrompt = "(Sin menu configurado. Atiende al cliente manualmente.)";
+    }
+
+    var ubicacion = restaurante?.direccion || "";
+    var horaCol = getHoraColombia();
+    var horaStr = horaCol.getHours().toString().padStart(2,"0") + ":" + horaCol.getMinutes().toString().padStart(2,"0");
+    var diaHoy = getDiaColombiaStr();
+
+    var dirFrecuente = null;
+    var nombreCliente = null;
+    var nivelCliente = null;
+    if (restaurante) {
+      dirFrecuente = await getDireccionFrecuente(restaurante.id, from);
+      // Obtener nombre y nivel del cliente
+      try {
+        var clienteInfo = await axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante.id + "&telefono=eq." + encodeURIComponent(from) + "&select=nombre_cliente,nivel_fidelidad,total_pedidos", { headers: sbH(true) });
+        if (clienteInfo.data && clienteInfo.data.length > 0) {
+          nombreCliente = clienteInfo.data[0].nombre_cliente || null;
+          nivelCliente = clienteInfo.data[0].nivel_fidelidad || null;
+        }
+      } catch(e) {}
+    }
+    var dirFrecuenteTexto = dirFrecuente
+      ? "Este cliente ya ha pedido antes. Su ultima direccion fue: " + dirFrecuente + ". Si pide de nuevo, preguntale: '¿Te lo mando a " + dirFrecuente + " igual que la vez anterior?' Espera confirmacion antes de asumir."
+      : "No hay direccion previa registrada para este cliente.";
+    var nombreClienteTexto = nombreCliente
+      ? "El cliente se llama " + nombreCliente + ". Usalo naturalmente en la conversacion cuando sea apropiado, no en cada mensaje."
+      : "No tenemos el nombre de este cliente registrado.";
+
+    var nivelClienteTexto = nivelCliente && nivelCliente !== "bronce"
+      ? "Este cliente es nivel " + nivelCliente.toUpperCase() + " en el programa de fidelidad."
+      : "";
+
+    var cuponesTexto = "No hay cupones activos en este momento.";
+    if (restaurante && restaurante.cupones_activos) {
+      try {
+        var cupones = JSON.parse(restaurante.cupones_activos);
+        if (cupones && cupones.length > 0) {
+          cuponesTexto = "Cupones activos:\n" + cupones.map(function(c) {
+            var desc = c.tipo === "porcentaje" ? c.valor + "% de descuento" : "$" + Number(c.valor).toLocaleString("es-CO") + " de descuento";
+            return "- Codigo: " + c.codigo + " -> " + desc + (c.descripcion ? " (" + c.descripcion + ")" : "");
+          }).join("\n");
+          cuponesTexto += "\nSi el cliente menciona un codigo valido, aplica el descuento al total y mencionalo en los items del PEDIDO_LISTO.";
+        }
+      } catch(e) {}
+    }
+
+    var bienvenidaExtra = "";
+    var msgBienvenida = getMensaje(restaurante, "msg_bienvenida", "");
+    if (msgBienvenida && conversations[from].length === 1) {
+      bienvenidaExtra = "\n\nMENSAJE DE BIENVENIDA PERSONALIZADO:\n" + msgBienvenida;
+    }
+
+    // Check if closing soon (within 20 minutes)
+  var cierreProximo = false;
+  try {
+    var horaColNow = getHoraColombia();
+    var horaActMin = horaColNow.getHours() * 60 + horaColNow.getMinutes();
+    var ciParts = (restaurante.hora_cierre||"00:00:00").split(":").map(Number);
+    var minCierre = ciParts[0] * 60 + ciParts[1];
+    var diff = minCierre - horaActMin;
+    if (diff < 0) diff += 1440;
+    cierreProximo = diff <= 20 && diff >= 0;
+  } catch(e) {}
+  var horarioInfo = restaurante
+      ? "Atiendes de " + (restaurante.hora_apertura||"16:00").substring(0,5) + " a " + (restaurante.hora_cierre||"00:00").substring(0,5) + ". Hora actual en Colombia: " + horaStr + "." + (cierreProximo ? " IMPORTANTE: Cierras en menos de 20 minutos. Si el cliente esta pidiendo, avisale amablemente que cierras pronto y que su pedido debe confirmarse rapido para alcanzar. Si ya no es posible tomar el pedido, disculpate y di el horario de manana." : " Estas en horario activo.")
+      : "Hora actual: " + horaStr;
+
+    // ── BUILD SYSTEM PROMPT DINAMICO ──────────────────────────────────────────
+    var fechaInicioFidelidad = restaurante.fecha_inicio_fidelidad
+      ? new Date(restaurante.fecha_inicio_fidelidad).toLocaleDateString("es-CO", {day:"numeric",month:"long",year:"numeric"})
+      : "29 de marzo de 2025";
+    var systemFinal = buildSystemPrompt(restaurante)
+      .replace(/MENU_URL_PLACEHOLDER/g, getMenuUrl(restaurante))
+      .replace(/MENU_PLACEHOLDER/g, "MENU ACTIVO:\n" + menuParaPrompt)
+      .replace(/HORARIO_PLACEHOLDER/g, "HORARIO: " + horarioInfo)
+      .replace(/DIA_PLACEHOLDER/g, diaHoy)
+      .replace(/DIRECCION_FRECUENTE_PLACEHOLDER/g, dirFrecuenteTexto)
+      .replace(/CUPONES_PLACEHOLDER/g, cuponesTexto)
+      .replace(/NOMBRE_CLIENTE_PLACEHOLDER/g, nombreClienteTexto)
+      .replace(/NIVEL_CLIENTE_PLACEHOLDER/g, nivelClienteTexto)
+      .replace(/FECHA_INICIO_PLACEHOLDER/g, fechaInicioFidelidad)
+      + bienvenidaExtra;
+
+    var claudeResponse = await axios.post(
+      "https://api.anthropic.com/v1/messages",
+      { model: "claude-haiku-4-5-20251001", max_tokens: 2000, system: systemFinal, messages: conversations[from] },
+      { headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" } }
+    );
+
+    if (!claudeResponse.data?.content?.[0]) {
+      await sendWhatsAppMessage(from, "Hola! Tengo un problemita tecnico. Escribeme en un momento.", phoneNumberId);
       return;
     }
 
-    timerEls={};
-    var h="";
-    pedidos.forEach(function(p){
-      timerEls[p.id]=new Date(p.created_at).getTime();
-      var items=Array.isArray(p.items)?p.items:[];
-      var esRecoger=(p.direccion||"").toLowerCase().indexOf("recoger")!==-1||JSON.stringify(p.items||[]).toLowerCase().indexOf("recoger")!==-1;
-      var esMesa=p.direccion&&p.direccion.toUpperCase().indexOf("MESA ")===0;
-      var total=Number(p.total||0),des=Number(p.desechables||0),dom=Number(p.domicilio||0);
-      var itemsEnc=encodeURIComponent(JSON.stringify(items));
-      var ms=Date.now()-new Date(p.created_at).getTime();
-      var urgent=ms>20*60000;
+    var rawReply = claudeResponse.data.content[0].text;
+    console.log("RAW:", rawReply.substring(0, 400));
+    var parsed = parseReply(rawReply, from);
+    var cleanReply = parsed.cleanReply;
+    var sideEffect = parsed.sideEffect;
 
-      h+='<div class="cocina-card estado-'+p.estado+(esMesa?" cocina-card-mesa":"")+(esRecoger?" cocina-card-recoger":"")+'">';
-      if(esMesa)h+='<div class="mesa-banner">🪑 '+p.direccion.toUpperCase()+(p.domiciliario_nombre?" — Mesero: "+p.domiciliario_nombre:"")+'</div>';
-      else if(esRecoger)h+='<div class="recoger-banner">🏪 PARA RECOGER EN TIENDA</div>';
+    if (esComprobante && mediaId && orderState[from]) {
+      orderState[from].comprobanteMediaId = mediaId;
+      orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
+      orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
+      orderState[from].status = "confirmado";
+      sideEffect = "pago_confirmado";
+    }
 
-      // Header
-      h+='<div class="ccard-header h-'+p.estado+'">';
-      h+='<div class="ccard-left">';
-      h+='<div class="ccard-estado-dot"></div>';
-      h+='<div><div class="ccard-num n-'+p.estado+'">#'+p.numero_pedido+'</div>';
-      h+='<div class="ccard-ago">'+ago(p.created_at)+'</div></div>';
-      h+='</div>';
-      h+='<div class="ccard-right">';
-      h+='<div class="ccard-timer'+(urgent?" urgent":"")+'" id="timer_'+p.id+'">'+fmtTimer(ms)+'</div>';
-      h+='<div class="ccard-time-label">tiempo</div>';
-      h+='</div></div>';
+    if (sideEffect === "alerta_pregunta" && restaurante && orderState[from]?.alertaPregunta) {
+      guardarMensajeSupabase(restaurante.id, from, "ALERTA_PREGUNTA: " + orderState[from].alertaPregunta, "alerta_pregunta", null).catch(function(){});
+    }
 
-      // Body
-      h+='<div class="ccard-body">';
+    if (sideEffect === "modificar_pedido" && orderState[from]?.modificarPedido && restaurante) {
+      var mod = orderState[from].modificarPedido;
+      try {
+        var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        var pedResp = await axios.get(
+          SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id + "&numero_pedido=eq." + mod.numero + "&select=id,items,total,subtotal,desechables,domicilio",
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+        );
+        if (pedResp.data && pedResp.data.length > 0) {
+          var ped = pedResp.data[0];
+          var patch = {};
+          if (mod.accion.startsWith("AGREGAR:")) {
+            var nuevoItem = mod.accion.replace("AGREGAR:", "").trim();
+            var itemsActuales = Array.isArray(ped.items) ? [...ped.items] : [];
+            itemsActuales.push("➕ " + nuevoItem);
+            // Extract price from item string e.g. "Gaseosa $4.000"
+            var precioMatch = nuevoItem.match(/\$([0-9.,]+)/);
+            var precioExtra = precioMatch ? Number(precioMatch[1].replace(/[.,]/g, "").replace(/(\d+)(\d{3})$/, "$1$2")) : 0;
+            // Fix: handle Colombian format like $4.000 = 4000
+            if (precioExtra > 100000) precioExtra = Math.round(precioExtra / 1000); // fix if parsed wrong
+            var nuevoTotal = Number(ped.total || 0) + precioExtra;
+            patch.items = itemsActuales;
+            patch.total = nuevoTotal;
+            patch.subtotal = nuevoTotal - Number(ped.desechables || 0) - Number(ped.domicilio || 0);
+            patch.notas_especiales = "✏️ MODIFICADO: +" + nuevoItem;
+          } else if (mod.accion.startsWith("DIRECCION:")) {
+            patch.direccion = mod.accion.replace("DIRECCION:", "").trim();
+          }
+          await axios.patch(
+            SUPABASE_URL + "/rest/v1/pedidos?id=eq." + ped.id, patch,
+            { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+          );
+          console.log("Pedido #" + mod.numero + " modificado en Supabase:", mod.accion);
+          guardarMensajeSupabase(restaurante.id, from, "✏️ Pedido #" + mod.numero + " modificado: +" + mod.accion.replace("AGREGAR:",""), "alerta_pregunta", null).catch(function(){});
+        }
+      } catch(e) { console.error("modificar_pedido error:", e.message); }
+    }
 
-      h+='<div class="ccard-items">';
-      items.forEach(function(it){
-        var parts=it.match(/^(\d+)x\s*(.+?)(\s*\$[\d.,]+)?$/);
-        var qty=parts?parts[1]:"1";
-        var nombre=parts?parts[2]:it;
-        var notaMatch=nombre.match(/\(([^)]+)\)/);
-        var nombreLimpio=nombre.split("(")[0].trim();
-        h+='<div class="ccard-item">';
-        h+='<div class="ccard-qty">'+qty+'</div>';
-        h+='<div><div class="ccard-name">'+nombreLimpio+'</div>';
-        if(notaMatch)h+='<div class="ccard-nota">📝 '+notaMatch[1]+'</div>';
-        h+='</div></div>';
+    if (sideEffect === "cancelar_pedido" && orderState[from]?.cancelarPedido && restaurante) {
+      var numCancel = orderState[from].cancelarPedido;
+      guardarMensajeSupabase(restaurante.id, from, "⚠️ CLIENTE SOLICITA CANCELAR PEDIDO #" + numCancel, "alerta_pregunta", null).catch(function(){});
+      console.log("Solicitud cancelacion pedido #" + numCancel + " de:", from);
+    }
+
+    conversations[from].push({ role: "assistant", content: rawReply });
+    await sendWhatsAppMessage(from, cleanReply, phoneNumberId);
+
+    console.log("De " + from + ": " + userText.substring(0, 80));
+    console.log("Luz: " + cleanReply.substring(0, 100));
+
+    if (restaurante) {
+      guardarMensajeSupabase(restaurante.id, from, esComprobante ? "📎 Comprobante de pago" : userText, "cliente", esImagen ? mediaId : null).catch(function(){});
+      guardarMensajeSupabase(restaurante.id, from, cleanReply, "restaurante", null).catch(function(){});
+    }
+
+    if (orderState[from] && sideEffect !== "pago_confirmado") {
+      await setOrderState(from, orderState[from]);
+    }
+
+    console.log("sideEffect:", sideEffect, "| orderState:", !!orderState[from]);
+
+    if (sideEffect === "pago_confirmado" && orderState[from]) {
+      var state = orderState[from];
+      var timestamp = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+
+      await printTicket({
+        orderNumber: state.orderNumber, items: state.items,
+        desechables: state.desechables, domicilio: state.domicilio, total: state.total,
+        address: state.address || "Por confirmar",
+        paymentMethod: state.paymentMethod || "digital",
+        cashDenomination: state.cashDenomination || null,
+        extraPhone: state.extraPhone || null,
+        phone: from, timestamp,
+        notasEspeciales: state.notasEspeciales || null,
+        pedidoAdicionalDe: state.pedidoAdicionalDe || null,
+        restauranteNombre: restaurante?.nombre || "Restaurante",
+        restauranteCiudad: restaurante?.ciudad || "Colombia",
+        nequiNum: restaurante?.metodo_pago_nequi || "3177269578",
+        bancoCuenta: restaurante?.metodo_pago_banco || "0089102980"
       });
-      h+='</div>';
 
-      if(p.notas_especiales)h+='<div class="ccard-notas"><span>📋</span><div>'+p.notas_especiales+'</div></div>';
-
-      h+='<div class="ccard-meta">';
-      if(p.metodo_pago)h+='<div class="cmeta-chip">💳 '+p.metodo_pago+'</div>';
-      if(esRecoger)h+='<div class="cmeta-chip recoger">🏪 Recoger</div>';
-      else if(p.direccion)h+='<div class="cmeta-chip">📍 '+p.direccion.substring(0,28)+'</div>';
-      h+='</div>';
-
-      h+='<div class="ccard-btns">';
-      if(p.estado==="confirmado")h+='<button class="ccard-btn btn-preparar" data-id="'+p.id+'" data-e="en_preparacion" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">🔥 Preparando</button>';
-      if(p.estado==="en_preparacion")h+='<button class="ccard-btn btn-listo" data-id="'+p.id+'" data-e="listo" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">✅ Listo</button>';
-      if(p.estado==="listo"){
-        h+='<div style="display:flex;gap:8px">';
-        h+='<div class="ccard-btn" style="flex:1;background:rgba(16,185,129,0.06);color:#34d399;border-color:rgba(16,185,129,0.2);cursor:default;">'+(esMesa?'🪑 '+(p.domiciliario_nombre?'Mesero: '+p.domiciliario_nombre:'Esperando mesero'):'🛵 Esperando domi')+'</div>';
-        h+='<button class="ccard-btn" style="flex:0;min-width:80px;background:rgba(239,68,68,0.15);color:#fca5a5;border-color:rgba(239,68,68,0.4);font-weight:800;" data-id="'+p.id+'" data-e="listo_entrega" data-t="'+(p.cliente_tel||'')+'" data-n="'+p.numero_pedido+'">🔴 Cerrar</button>';
-        h+='</div>';
+      var restId = restaurante?.id || null;
+      if (!restId) {
+        try {
+          var svcKey2 = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+          var rf = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=id&limit=1",
+            { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2 } });
+          if (rf.data?.length) restId = rf.data[0].id;
+        } catch (e) {}
       }
-      h+='<button class="ccard-btn btn-print" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+des+'" data-pdom="'+dom+'" data-pitems="'+itemsEnc+'">🖨️</button>';
-      h+='</div>';
-      h+='</div></div>';
-    });
 
-    grid.innerHTML=h;
-    grid.querySelectorAll(".ccard-btn[data-e]").forEach(function(b){
-      b.addEventListener("click",function(){
-        cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"),this.getAttribute("data-n"));
-      });
-    });
-    grid.querySelectorAll("[data-print='1']").forEach(function(b){
-      b.addEventListener("click",function(){imprimirTicket(this);});
-    });
-  })
-  .catch(function(e){console.error(e);});
+      if (restId) {
+        // Try to recover address from conversation if missing
+      if (!state.address || state.address === "Por confirmar") {
+        var convText = (conversations[from]||[]).map(function(m){return m.content;}).join(" ");
+        var dirMatch2 = convText.match(/DIRECCION_LISTA:([^\n]+)/);
+        if (dirMatch2) state.address = dirMatch2[1].trim();
+      }
+      await guardarPedidoSupabase(restId, {
+          orderNumber: state.orderNumber, phone: from, items: state.items,
+          subtotal: Number(state.total) - Number(state.desechables||0) - Number(state.domicilio||0),
+          desechables: Number(state.desechables||0), domicilio: Number(state.domicilio||0),
+          total: Number(state.total), address: state.address || "Por confirmar",
+          paymentMethod: state.paymentMethod || "digital",
+          comprobanteUrl: state.comprobanteUrl || null,
+          comprobanteMediaId: state.comprobanteMediaId || null,
+          notasEspeciales: state.notasEspeciales || null,
+          pedidoAdicionalDe: state.pedidoAdicionalDe || null
+        });
+      }
+
+      delete orderState[from];
+      await deleteOrderState(from);
+    }
+
+  } catch (err) {
+    console.error("Error procesando " + from + ":", err.response ? JSON.stringify(err.response.data) : err.message);
+  }
 }
 
-function iniciar(){
-  var rid=localStorage.getItem("luzRestId");
-  if(rid){
-    get("restaurantes","id=eq."+rid+"&select=*").then(function(d){
-      if(d&&d.length){rest=d[0];arrancar();}
-      else{buscarPrimerRest();}
-    }).catch(function(){buscarPrimerRest();});
-  } else {buscarPrimerRest();}
-}
+app.get("/pedidos", function(req, res) {
+  res.json({ activos: Object.keys(orderState).length, pedidos: orderState, colas_activas: colasPorCliente.size });
+});
 
-function buscarPrimerRest(){
-  get("restaurantes","estado=eq.activo&select=*&limit=1").then(function(d){
-    if(d&&d.length){rest=d[0];localStorage.setItem("luzRestId",rest.id);arrancar();}
-    else{document.getElementById("pedidosGrid").innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">⚠️</div><div class="et">No se encontro restaurante activo.<br>Abre primero el panel principal.</div></div>';}
-  }).catch(function(){});
-}
+app.get("/", function(req, res) {
+  res.json({
+    status: "LUZ IA activa",
+    hora_colombia: getHoraColombia().toLocaleString("es-CO"),
+    dia_colombia: getDiaColombiaStr(),
+    conversaciones: Object.keys(conversations).length,
+    pedidos_activos: Object.keys(orderState).length,
+    colas: colasPorCliente.size
+  });
+});
 
-function arrancar(){
-  loadPedidos();
-  startTimers();
-  updateTimer=setInterval(loadPedidos,6000);
-}
-
-iniciar();
-</script>
-
-
-</body>
+var PORT = process.env.PORT || 3000;
+app.listen(PORT, function() {
+  console.log("LUZ IA corriendo en puerto " + PORT);
+  console.log("Dia Colombia:", getDiaColombiaStr(), "| Hora:", getHoraColombia().toLocaleTimeString("es-CO"));
+});
