@@ -285,10 +285,16 @@ MENU_PLACEHOLDER
 
 MENU VISUAL: cuando pidan menu di: "Te comparto el menu MENU_URL_PLACEHOLDER - ahi armas y me lo mandas. O dime aqui con gusto."
 
-REGLA ESTRICTA DE COMBOS:
-- Solo puedes vender los combos que aparecen EXACTAMENTE en el menu activo.
-- Si el cliente pide "combo de hamburguesa clasica" y en el menu solo hay "Combo Especial", dile: "El unico combo disponible es [nombre del combo]. Las hamburguesas se venden individuales."
-- NUNCA armes combos que no esten en el menu. No puedes combinar productos para hacer un "combo" si no esta listado como tal.
+COMBOS (disponibles TODOS LOS DIAS):
+- Combo Aplastado Especial: $21.900 (aplastado + papas + gaseosa)
+- Combo Hamburguesa Tradicional: $22.900 (hamburguesa tradicional + papas + gaseosa)
+- Combo Perro Italiano: $20.900 (perro italiano + papas + gaseosa)
+- Tres Angus Especiales + Coca-Cola 1.5L: $79.900
+
+REGLA COMBOS:
+- Cuando el cliente pregunte por combos, ofrece ESTOS combos primero. Son todos los dias.
+- Solo puedes vender los combos listados arriba o los que aparezcan en el menu activo.
+- NUNCA armes combos personalizados que no esten listados.
 
 DESECHABLES: $500 por cada COMIDA. Bebidas y arepas NO cobran desechable.
 
@@ -1147,7 +1153,9 @@ async function procesarMensaje(msg, from, phoneNumberId) {
         orderState[from].status === "confirmado" ||
         orderState[from].status === "esperando_direccion"
       );
-      if (hayPedidoActivo) {
+      // Also treat as comprobante if client has had recent conversation (may have lost state)
+      var hayConversacion = conversations[from] && conversations[from].length > 2;
+      if (hayPedidoActivo || hayConversacion) {
         esComprobante = true;
         userText = "[El cliente envio una imagen, posiblemente comprobante de pago]";
       }
@@ -1335,6 +1343,32 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     }
 
     console.log("sideEffect:", sideEffect, "| orderState:", !!orderState[from]);
+
+    // If pago_confirmado but no orderState, try to recover from Supabase
+    if (sideEffect === "pago_confirmado" && !orderState[from] && restaurante) {
+      try {
+        var svcRec = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        // Look for recent pedido from this client that has no comprobante yet
+        var recResp = await axios.get(
+          SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id +
+          "&cliente_tel=eq." + encodeURIComponent(from) +
+          "&estado=eq.confirmado&order=created_at.desc&limit=1&select=*",
+          { headers: { "apikey": svcRec, "Authorization": "Bearer " + svcRec } }
+        );
+        if (recResp.data && recResp.data.length > 0) {
+          var recPed = recResp.data[0];
+          // Update with comprobante if we have it
+          if (mediaId) {
+            await axios.patch(
+              SUPABASE_URL + "/rest/v1/pedidos?id=eq." + recPed.id,
+              { comprobante_media_id: mediaId, comprobante_url: "/api/comprobante/" + mediaId },
+              { headers: { "apikey": svcRec, "Authorization": "Bearer " + svcRec, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+            );
+          }
+          console.log("Pedido #" + recPed.numero_pedido + " ya existia en Supabase - comprobante actualizado");
+        }
+      } catch(e) { console.error("recover pedido:", e.message); }
+    }
 
     if (sideEffect === "pago_confirmado" && orderState[from]) {
       var state = orderState[from];
