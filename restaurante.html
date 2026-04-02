@@ -915,7 +915,7 @@ select.finput{cursor:pointer}
 <script>
 var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 var rest=null,pin="",known={},timer=null;
-var ESTADOS={confirmado:{l:"Recibido",c:"tr",n:"en_preparacion",bl:"Preparando",bc:"bp"},en_preparacion:{l:"Preparando",c:"tp",n:"listo",bl:"Listo",bc:"bl"},listo:{l:"Listo",c:"tl2",n:"en_camino",bl:"En camino",bc:"bc"},en_camino:{l:"En camino",c:"tc",n:"entregado",bl:"Entregado",bc:"be"},cuenta:{l:"💳 Cuenta",c:"tp",n:"entregado",bl:"✅ Cuenta cobrada",bc:"be"},entregado:{l:"Entregado",c:"te",n:null,bl:null,bc:null}};
+var ESTADOS={confirmado:{l:"Recibido",c:"tr",n:"en_preparacion",bl:"Preparando",bc:"bp"},en_preparacion:{l:"Preparando",c:"tp",n:"listo",bl:"Listo",bc:"bl"},listo:{l:"Listo",c:"tl2",n:"en_camino",bl:"En camino",bc:"bc"},en_camino:{l:"En camino",c:"tc",n:"entregado",bl:"Entregado",bc:"be"},cuenta:{l:"💳 Cuenta",c:"tp",n:"entregado",bl:"✅ Cuenta cobrada",bc:"be"},listo_entrega:{l:"Listo",c:"tl2",n:"entregado",bl:"💳 Cobrar y cerrar",bc:"bcerrar"},entregado:{l:"Entregado",c:"te",n:null,bl:null,bc:null}};
 var filtroActual="hoy",pedidoAEliminar=null,editPedidoId=null;
 var chatBadgeCount=0,pedidosBadgeCount=0,ultimoMensajeTs={};
 var chatUniversalFiltro="todos",chatUniversalData=[];
