@@ -8,7 +8,52 @@ process.on("unhandledRejection", function(reason) {
 const express = require("express");
 const axios   = require("axios");
 const path    = require("path");
+const webpush = require("web-push");
 const app     = express();
+
+// ── WEB PUSH SETUP ────────────────────────────────────────────────────────────
+// Generate VAPID keys once: node -e "const wp=require('web-push');const k=wp.generateVAPIDKeys();console.log(k)"
+// Then set as env vars VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY
+var VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || "";
+var VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "";
+if (VAPID_PUBLIC && VAPID_PRIVATE) {
+  webpush.setVapidDetails("mailto:admin@luzia.app", VAPID_PUBLIC, VAPID_PRIVATE);
+  console.log("Web Push configurado OK");
+} else {
+  console.warn("VAPID keys no configuradas — notificaciones push desactivadas");
+}
+
+async function enviarPushSuscripcion(sub, payload) {
+  if (!VAPID_PUBLIC || !VAPID_PRIVATE) return;
+  try {
+    await webpush.sendNotification(sub, JSON.stringify(payload));
+  } catch (e) {
+    if (e.statusCode === 410) return "expired";
+    console.error("Push error:", e.message);
+  }
+}
+
+async function enviarPushPorRol(restauranteId, rol, payload) {
+  if (!VAPID_PUBLIC) return;
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/push_subscriptions?restaurante_id=eq." + restauranteId + "&rol=eq." + rol + "&activo=eq.true&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    var subs = r.data || [];
+    for (var sub of subs) {
+      var result = await enviarPushSuscripcion(JSON.parse(sub.subscription), payload);
+      if (result === "expired") {
+        await axios.patch(
+          SUPABASE_URL + "/rest/v1/push_subscriptions?id=eq." + sub.id,
+          { activo: false },
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" } }
+        );
+      }
+    }
+  } catch (e) { console.error("enviarPush error:", e.message); }
+}
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 // Forzar HTTPS en Railway
@@ -170,9 +215,9 @@ function buildSystemPrompt(restaurante) {
   var promosText = restaurante ? (restaurante.promos_semanales || "") : "";
   if (!promosText) {
     promosText =
-`- Lunes y Jueves: Pague 2 lleve 3 hamburguesas tradicionales
-- Martes: Pague 2 lleve 3 hot dogs y perros
-- Jueves: Pague 2 lleve 3 Angus BBQ King o Celestina
+`- Lunes: Pague 2 lleve 3 hamburguesas tradicionales
+- Martes: Pague 2 lleve 3 Alitas (cualquier presentacion)
+- Jueves: Pague 2 lleve 3 hamburguesas tradicionales y Angus BBQ King o Celestina
 - Domingos: Pague 2 lleve 3 asados junior`;
   }
 
@@ -231,7 +276,9 @@ IMPORTANTE - METODO DE PAGO DESDE EL MENU WEB:
 - Si el cliente dice "sencilla", "exacto", "con el valor exacto", "pago completo", "sin cambio", "justo", "con lo justo" o similar: el cliente paga el total exacto, NO necesita cambio. Escribe directamente PAGO_EFECTIVO:exacto y confirma el pedido sin pedir mas informacion.
 - Si dijo Datafono: confirma que el domiciliario lo lleva y escribe PAGO_DATAFONO.
 
-PROMOCIONES (hoy es DIA_PLACEHOLDER - solo menciona si aplica hoy):
+PROMOCIONES (hoy es DIA_PLACEHOLDER):
+IMPORTANTE: Si hay promocion activa HOY debes mencionarla proactivamente cuando el cliente pida ese producto. Ejemplo: si es martes y piden alitas, di "Por cierto, hoy martes tenemos promo de Alitas: paga 2 lleva 3!"
+Lista de promos por dia:
 ${promosText}
 
 MENU_PLACEHOLDER
@@ -271,9 +318,11 @@ RECOMENDACIONES Y NOTAS ESPECIALES DEL CLIENTE:
 - Ejemplo: "La Especial $18.900 (sin cebolla, extra chimichurri)"
 
 PEDIDO ADICIONAL A ORDEN YA CONFIRMADA:
-- Si el cliente ya tiene un pedido confirmado y quiere agregar algo mas, es un PEDIDO ADICIONAL.
-- Toma el nuevo pedido normalmente con precios.
-- Escribe PEDIDO_LISTO: con los nuevos items y PEDIDO_ADICIONAL_DE:[numero del pedido original].
+- Si el cliente ya tiene un pedido confirmado y quiere agregar algo mas, NO crees un pedido nuevo.
+- Confirma los nuevos items con precio. Calcula el nuevo total sumando lo anterior mas lo nuevo.
+- Escribe MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[descripcion de los nuevos items y precios]
+- Ejemplo: cliente tenia pedido #123 por $30.000 y agrega una gaseosa $4.000. Di "Claro, agrego una Gaseosa $4.000. El nuevo total de tu pedido #123 es $34.000." y escribe MODIFICAR_PEDIDO:123|AGREGAR:Gaseosa $4.000
+- NUNCA uses PEDIDO_LISTO ni PEDIDO_ADICIONAL_DE para pedidos ya confirmados. Solo MODIFICAR_PEDIDO.
 
 IMAGENES:
 - Si el cliente envia una imagen Y tiene un pedido activo esperando pago: es probablemente un comprobante. Confirma el pedido.
@@ -724,6 +773,39 @@ app.get("/restaurante", function(req, res) { res.sendFile(path.join(__dirname, "
 app.get("/cocina",      function(req, res) { res.sendFile(path.join(__dirname, "cocina.html")); });
 app.get("/domi",        function(req, res) { res.sendFile(path.join(__dirname, "domiciliario.html")); });
 app.get("/mesero",      function(req, res) { res.sendFile(path.join(__dirname, "mesero2.html")); });
+app.get("/sw.js",       function(req, res) { res.setHeader("Content-Type","application/javascript"); res.setHeader("Service-Worker-Allowed","/"); res.sendFile(path.join(__dirname, "sw.js")); });
+app.get("/offline.html",function(req, res) { res.sendFile(path.join(__dirname, "offline.html")); });
+app.get("/manifest-cocina.json",  function(req, res) { res.sendFile(path.join(__dirname, "manifest-cocina.json")); });
+app.get("/manifest-mesero.json",  function(req, res) { res.sendFile(path.join(__dirname, "manifest-mesero.json")); });
+app.get("/manifest-domi.json",    function(req, res) { res.sendFile(path.join(__dirname, "manifest-domi.json")); });
+app.get("/vapid-public-key",      function(req, res) { res.json({ key: VAPID_PUBLIC }); });
+
+// ── PUSH SUBSCRIPTIONS ───────────────────────────────────────────────────────
+app.post("/api/push-subscribe", async function(req, res) {
+  var { restaurante_id, rol, subscription, nombre } = req.body;
+  if (!restaurante_id || !rol || !subscription) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(
+      SUPABASE_URL + "/rest/v1/push_subscriptions?on_conflict=restaurante_id,endpoint",
+      { restaurante_id, rol, nombre: nombre || rol, subscription: JSON.stringify(subscription), endpoint: subscription.endpoint, activo: true, updated_at: new Date().toISOString() },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } }
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/push-test", async function(req, res) {
+  var { restaurante_id, rol, title, body } = req.body;
+  if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
+  await enviarPushPorRol(restaurante_id, rol || "cocina", {
+    title: title || "🔔 LUZ IA",
+    body: body || "Notificación de prueba",
+    icon: "/icons/icon-192.png",
+    url: "/" + (rol || "cocina")
+  });
+  res.json({ ok: true });
+});
 
 app.post("/api/pedido-estado", async function(req, res) {
   var { id, estado, telefono_cliente, numero_pedido, restaurante_id } = req.body;
@@ -743,6 +825,8 @@ app.post("/api/pedido-estado", async function(req, res) {
         var msg = getMensaje(restaurante, "msg_en_preparacion", "Tu pedido" + numStr + " ya esta en preparacion! En breve estara listo.");
         await sendWhatsAppMessage(telefono_cliente, msg, pid);
         if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
+        // Push a meseros: pedido en preparacion
+        if (restaurante_id) enviarPushPorRol(restaurante_id, "mesero", { title: "🟡 Preparando", body: "Pedido" + numStr + " en preparacion", icon: "/icons/icon-192.png", vibrate: [100,50,100], tag: "pedido-" + id, url: "/mesero" });
       }
       if (estado === "listo") {
         var esMesaPedido = req.body.direccion && req.body.direccion.toUpperCase().indexOf("MESA") !== -1;
@@ -753,6 +837,13 @@ app.post("/api/pedido-estado", async function(req, res) {
         var msg = getMensaje(restaurante, "msg_listo", msgListoDefault);
         await sendWhatsAppMessage(telefono_cliente, msg, pid);
         if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
+        // Push a meseros y domis: pedido listo
+        var esMesaStr = req.body.direccion && req.body.direccion.toUpperCase().indexOf("MESA") !== -1;
+        if (restaurante_id && esMesaStr) {
+          enviarPushPorRol(restaurante_id, "mesero", { title: "✅ ¡Listo para servir!", body: "Pedido" + numStr + " está listo — llévalo a la mesa", icon: "/icons/icon-192.png", vibrate: [200,100,200,100,200], tag: "listo-" + id, url: "/mesero" });
+        } else if (restaurante_id) {
+          enviarPushPorRol(restaurante_id, "domiciliario", { title: "✅ Pedido listo", body: "Pedido" + numStr + " listo para entregar", icon: "/icons/icon-192.png", vibrate: [200,100,200], tag: "listo-" + id, url: "/domi" });
+        }
       }
       if (estado === "en_camino") {
         var msg = getMensaje(restaurante, "msg_en_camino", "Tu pedido" + numStr + " ya va en camino. Que lo disfrutes!");
@@ -1185,9 +1276,8 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       var mod = orderState[from].modificarPedido;
       try {
         var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-        // Find the pedido by numero_pedido
         var pedResp = await axios.get(
-          SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id + "&numero_pedido=eq." + mod.numero + "&select=id,items,total,direccion",
+          SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id + "&numero_pedido=eq." + mod.numero + "&select=id,items,total,subtotal,desechables,domicilio",
           { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
         );
         if (pedResp.data && pedResp.data.length > 0) {
@@ -1195,10 +1285,18 @@ async function procesarMensaje(msg, from, phoneNumberId) {
           var patch = {};
           if (mod.accion.startsWith("AGREGAR:")) {
             var nuevoItem = mod.accion.replace("AGREGAR:", "").trim();
-            var itemsActuales = Array.isArray(ped.items) ? ped.items : [];
-            itemsActuales.push(nuevoItem);
+            var itemsActuales = Array.isArray(ped.items) ? [...ped.items] : [];
+            itemsActuales.push("➕ " + nuevoItem);
+            // Extract price from item string e.g. "Gaseosa $4.000"
+            var precioMatch = nuevoItem.match(/\$([0-9.,]+)/);
+            var precioExtra = precioMatch ? Number(precioMatch[1].replace(/[.,]/g, "").replace(/(\d+)(\d{3})$/, "$1$2")) : 0;
+            // Fix: handle Colombian format like $4.000 = 4000
+            if (precioExtra > 100000) precioExtra = Math.round(precioExtra / 1000); // fix if parsed wrong
+            var nuevoTotal = Number(ped.total || 0) + precioExtra;
             patch.items = itemsActuales;
-            patch.notas_especiales = "MODIFICADO: se agrego " + nuevoItem;
+            patch.total = nuevoTotal;
+            patch.subtotal = nuevoTotal - Number(ped.desechables || 0) - Number(ped.domicilio || 0);
+            patch.notas_especiales = "✏️ MODIFICADO: +" + nuevoItem;
           } else if (mod.accion.startsWith("DIRECCION:")) {
             patch.direccion = mod.accion.replace("DIRECCION:", "").trim();
           }
@@ -1206,8 +1304,8 @@ async function procesarMensaje(msg, from, phoneNumberId) {
             SUPABASE_URL + "/rest/v1/pedidos?id=eq." + ped.id, patch,
             { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
           );
-          guardarMensajeSupabase(restaurante.id, from, "MODIFICACION PEDIDO #" + mod.numero + ": " + mod.accion, "alerta_pregunta", null).catch(function(){});
-          console.log("Pedido #" + mod.numero + " modificado:", mod.accion);
+          console.log("Pedido #" + mod.numero + " modificado en Supabase:", mod.accion);
+          guardarMensajeSupabase(restaurante.id, from, "✏️ Pedido #" + mod.numero + " modificado: +" + mod.accion.replace("AGREGAR:",""), "alerta_pregunta", null).catch(function(){});
         }
       } catch(e) { console.error("modificar_pedido error:", e.message); }
     }
