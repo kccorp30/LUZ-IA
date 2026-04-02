@@ -538,10 +538,11 @@ select.finput{cursor:pointer}
       <div style="padding:4px 12px">
         <div class="aform">
           <div class="aft">Agregar producto</div>
-          <div class="frow"><div class="ffield"><label class="flabel">Categoria</label><input class="finput" id="mi-cat" placeholder="Hamburguesas"></div><div class="ffield"><label class="flabel">Nombre</label><input class="finput" id="mi-nombre" placeholder="La Especial"></div></div>
-          <div class="ffield"><label class="flabel">Descripcion</label><input class="finput" id="mi-desc" placeholder="Ingredientes..."></div>
-          <div class="frow"><div class="ffield"><label class="flabel">Precio</label><input class="finput" id="mi-precio" type="number" placeholder="18900"></div><div class="ffield"><label class="flabel">Tipo</label><select class="finput" id="mi-tipo"><option value="comida">Comida</option><option value="bebida">Bebida</option><option value="arepa">Arepa</option></select></div></div>
-          <button class="badd" id="btnAdd">Guardar producto</button>
+          <div class="frow"><div class="ffield" style="max-width:72px"><label class="flabel">Emoji</label><input class="finput" id="mi-emoji" placeholder="🍔" style="font-size:20px;text-align:center;"></div><div class="ffield"><label class="flabel">Nombre</label><input class="finput" id="mi-nombre" placeholder="La Especial"></div></div>
+          <div class="frow"><div class="ffield"><label class="flabel">Categoría</label><input class="finput" id="mi-cat" placeholder="Hamburguesas" list="cats-list"><datalist id="cats-list"></datalist></div><div class="ffield"><label class="flabel">Tipo</label><select class="finput" id="mi-tipo"><option value="comida">🍟 Comida</option><option value="bebida">🥤 Bebida</option><option value="arepa">🫓 Arepa</option></select></div></div>
+          <div class="ffield"><label class="flabel">Descripción</label><input class="finput" id="mi-desc" placeholder="Carne, queso, lechuga..."></div>
+          <div class="frow"><div class="ffield"><label class="flabel">Precio</label><input class="finput" id="mi-precio" type="number" placeholder="18900"></div><div class="ffield"><label class="flabel">En oferta</label><select class="finput" id="mi-oferta"><option value="false">No</option><option value="true">🔥 Sí</option></select></div></div>
+          <button class="badd" id="btnAdd">✓ Guardar producto</button>
         </div>
       </div>
       <div class="menu-pad" id="menuLista"></div>
@@ -1294,7 +1295,7 @@ function loadMenu(){
     var h="";
     Object.keys(g).forEach(function(cat){
       h+='<div class="mcat"><div class="mct">'+cat+'</div>';
-      g[cat].forEach(function(i){h+='<div class="mitem"><div style="flex:1"><div class="mname">'+i.nombre+'</div><div class="mdesc">'+(i.descripcion||"")+'</div></div><div class="mprice">'+fmt(i.precio)+'</div><button class="tog '+(i.disponible?"on":"off")+'" data-iid="'+i.id+'" data-d="'+i.disponible+'"></button></div>';});
+      g[cat].forEach(function(i){h+='<div class="mitem"><div style="font-size:26px;margin-right:10px;flex-shrink:0">'+(i.emoji||'🍔')+' </div><div style="flex:1"><div class="mname">'+i.nombre+(i.en_oferta?' 🔥':'')+'</div><div class="mdesc">'+(i.descripcion||'')+'</div></div><div class="mprice">'+fmt(i.precio)+'</div><button class="tog '+(i.disponible?"on":"off")+'" data-iid="'+i.id+'" data-d="'+i.disponible+'"></button></div>';});
       h+='</div>';
     });
     l.innerHTML=h;
@@ -1672,12 +1673,17 @@ document.getElementById("cfgGuardar").addEventListener("click",function(){
     .catch(function(){notif("Error de conexion");})
     .finally(function(){btn.textContent="Guardar configuracion";btn.disabled=false;});
 });
+function eliminarMenuItem(id){
+  if(!confirm("¿Eliminar este producto?"))return;
+  fetch(SU+"/rest/v1/menu_items?id=eq."+id,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+  .then(function(){notif("Producto eliminado");loadMenu();}).catch(function(){notif("Error");});
+}
 document.getElementById("btnAdd").addEventListener("click",function(){
   if(!rest)return;
   var n=document.getElementById("mi-nombre").value.trim(),p=parseInt(document.getElementById("mi-precio").value);
   if(!n||!p){notif("Completa nombre y precio");return;}
   var t=document.getElementById("mi-tipo").value;
-  fetch("/api/menu-add",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,categoria:document.getElementById("mi-cat").value||"General",nombre:n,precio:p,descripcion:document.getElementById("mi-desc").value||null,es_bebida:t==="bebida",es_arepa:t==="arepa",disponible:true})})
+  fetch("/api/menu-add",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,categoria:document.getElementById("mi-cat").value||"General",nombre:n,precio:p,descripcion:document.getElementById("mi-desc").value||null,emoji:document.getElementById("mi-emoji").value||null,en_oferta:document.getElementById("mi-oferta")?document.getElementById("mi-oferta").value==="true":false,es_bebida:t==="bebida",es_arepa:t==="arepa",disponible:true})})
     .then(function(r){return r.json();}).then(function(){["mi-cat","mi-nombre","mi-desc","mi-precio"].forEach(function(id){document.getElementById(id).value="";});loadMenu();notif("Producto agregado");})
     .catch(function(e){notif("Error: "+e.message.substring(0,30));});
 });
