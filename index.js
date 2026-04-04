@@ -540,6 +540,32 @@ async function sendWhatsAppImage(to, imageUrl, caption, phoneId) {
   return r.data;
 }
 
+async function verificarComprobante(mediaId, totalEsperado) {
+  try {
+    var imgData = await descargarImagenMeta(mediaId);
+    if (!imgData) return { valido: null, razon: "no se pudo descargar" };
+    var base64 = imgData.toString("base64");
+    var totalFmt = Number(totalEsperado).toLocaleString("es-CO");
+    var resp = await axios.post(
+      "https://api.anthropic.com/v1/messages",
+      { model: "claude-haiku-4-5-20251001", max_tokens: 200,
+        messages: [{ role: "user", content: [
+          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+          { type: "text", text: "¿Esta imagen es un comprobante de pago bancario (Nequi, Bancolombia, transferencia)? Responde SOLO con JSON: {"es_comprobante":true/false,"monto_detectado":0,"valido":true/false,"razon":""} — valido=true solo si claramente muestra una transaccion exitosa con monto cercano a $" + totalFmt + " COP." }
+        ]}] }
+      },
+      { headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" } }
+    );
+    var text = resp.data?.content?.[0]?.text || "{}";
+    var match = text.match(/\{[\s\S]*\}/);
+    if (!match) return { valido: null };
+    return JSON.parse(match[0]);
+  } catch(e) {
+    console.error("verificarComprobante:", e.message);
+    return { valido: null };
+  }
+}
+
 async function sendWhatsAppMessage(to, message, phoneNumberId) {
   var token = process.env.WHATSAPP_TOKEN;
   var pid   = phoneNumberId || process.env.WHATSAPP_PHONE_ID;
@@ -560,12 +586,16 @@ function estaEnHorario(restaurante) {
     var hora = col.getHours() * 60 + col.getMinutes();
     var ap = (restaurante.hora_apertura || "16:00:00").split(":").map(Number);
     var ci = (restaurante.hora_cierre   || "00:00:00").split(":").map(Number);
-    var minAp = ap[0] * 60 + ap[1], minCi = ci[0] * 60 + ci[1];
+    var minAp = ap[0] * 60 + ap[1];
+    var minCi = ci[0] * 60 + ci[1];
+    // FIX: 00:00 means end of day (23:59), not start of day (0)
+    if (minCi === 0) minCi = 1439;
     var dias = ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
     var diaHoy = dias[col.getDay()];
     var diasAct = (restaurante.dias_activos || "lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
     if (!diasAct.includes(diaHoy)) return false;
-    if (minCi <= minAp) return hora >= minAp || hora <= minCi;
+    // Schedule crosses midnight (e.g. 20:00 - 02:00)
+    if (minCi < minAp) return hora >= minAp || hora <= minCi;
     return hora >= minAp && hora <= minCi;
   } catch (e) { return true; }
 }
@@ -1195,23 +1225,17 @@ async function procesarMensaje(msg, from, phoneNumberId) {
 
     var esComprobante = false;
     if (esImagen && mediaId) {
-      // Only treat as comprobante if client is specifically waiting to pay
       var estadoActual = orderState[from] ? orderState[from].status : null;
-      var esperandoPago = estadoActual === "esperando_pago";
       
-      if (esperandoPago) {
-        // Client is at payment step - image is likely a comprobante
+      if (estadoActual === "esperando_pago") {
+        // ONLY here do we verify as comprobante
         esComprobante = true;
-        userText = "[El cliente envio una imagen que podria ser su comprobante de pago. Verificando...]";
-      } else if (estadoActual === "confirmado") {
-        // Already confirmed - might be extra comprobante or random image
-        esComprobante = true;
-        userText = "[El cliente envio una imagen con pedido ya confirmado. Podria ser otro comprobante.]";
+        userText = "[El cliente envio una imagen mientras espera pagar. Probablemente es su comprobante.]";
       } else {
-        // No payment step reached - client is browsing menu or asking questions
-        // Treat image as a menu reference or general photo
+        // Any other state: browsing, asking, confirmed, etc.
+        // Just tell Luz an image was sent and let her respond naturally
         esComprobante = false;
-        userText = "[El cliente envio una imagen. NO es un comprobante de pago — el pedido aun no ha llegado a la etapa de pago. Probablemente esta señalando algo del menu o enviando una foto de referencia. Responde sobre lo que muestra la imagen si es relevante al menu, o pregunta en que puedes ayudar]";
+        userText = "[El cliente envio una imagen. Puede ser una foto del menu, un producto, o referencia visual. Responde con naturalidad segun el contexto de la conversacion.]";
       }
     }
 
@@ -1341,11 +1365,22 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     var sideEffect = parsed.sideEffect;
 
     if (esComprobante && mediaId && orderState[from]) {
-      orderState[from].comprobanteMediaId = mediaId;
-      orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
-      orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
-      orderState[from].status = "confirmado";
-      sideEffect = "pago_confirmado";
+      var totalPedido = orderState[from].total || 0;
+      var verificacion = await verificarComprobante(mediaId, totalPedido);
+      console.log("Verificacion comprobante:", JSON.stringify(verificacion));
+      if (verificacion.valido === false) {
+        // NOT a comprobante - Luz asks again naturally, no aggressive message
+        userText = "[El cliente envio una imagen en la etapa de pago pero no parece ser un comprobante bancario. Sin mencionarlo de forma brusca, dile amablemente que necesitas el comprobante de la transferencia para confirmar su pedido.]";
+        esComprobante = false;
+      } else {
+        // Valid or uncertain - process normally
+        orderState[from].comprobanteMediaId = mediaId;
+        orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
+        orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
+        orderState[from].status = "confirmado";
+        sideEffect = "pago_confirmado";
+        userText = "[El cliente envio su comprobante de pago. Confirma el pedido con calidez.]";
+      }
     }
 
     if (sideEffect === "alerta_pregunta" && restaurante && orderState[from]?.alertaPregunta) {
