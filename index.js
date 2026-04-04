@@ -543,23 +543,32 @@ async function sendWhatsAppImage(to, imageUrl, caption, phoneId) {
 async function verificarComprobante(mediaId, totalEsperado) {
   try {
     var imgData = await descargarImagenMeta(mediaId);
-    if (!imgData) return { valido: null, razon: "no se pudo descargar" };
+    if (!imgData) return { valido: null };
     var base64 = imgData.toString("base64");
     var totalFmt = Number(totalEsperado).toLocaleString("es-CO");
+    var prompt = "Esta imagen es un comprobante de pago bancario (Nequi, Bancolombia)? ";
+    prompt += "Responde SOLO con JSON: {valido:true/false, razon:string} ";
+    prompt += "valido=true SOLO si claramente muestra transferencia exitosa cercana a $" + totalFmt + " COP.";
     var resp = await axios.post(
       "https://api.anthropic.com/v1/messages",
-      { model: "claude-haiku-4-5-20251001", max_tokens: 200,
-        messages: [{ role: "user", content: [
-          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
-          { type: "text", text: "¿Esta imagen es un comprobante de pago bancario (Nequi, Bancolombia, transferencia)? Responde SOLO con JSON: {"es_comprobante":true/false,"monto_detectado":0,"valido":true/false,"razon":""} — valido=true solo si claramente muestra una transaccion exitosa con monto cercano a $" + totalFmt + " COP." }
-        ]}] }
+      {
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 150,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+            { type: "text", text: prompt }
+          ]
+        }]
       },
       { headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" } }
     );
-    var text = resp.data?.content?.[0]?.text || "{}";
-    var match = text.match(/\{[\s\S]*\}/);
-    if (!match) return { valido: null };
-    return JSON.parse(match[0]);
+    var text = (resp.data && resp.data.content && resp.data.content[0]) ? resp.data.content[0].text : "{}";
+    var start = text.indexOf("{");
+    var end2 = text.lastIndexOf("}");
+    if (start === -1 || end2 === -1) return { valido: null };
+    return JSON.parse(text.substring(start, end2 + 1));
   } catch(e) {
     console.error("verificarComprobante:", e.message);
     return { valido: null };
