@@ -341,7 +341,7 @@ PREGUNTAS SIN RESPUESTA:
 FLUJO:
 1. Saludo -> mensaje amable + link menu
 2. Cliente pide -> confirma con precios. Incluye notas especiales en los items.
-3. Pregunta direccion COMPLETA: calle, numero, barrio. Si tiene direccion frecuente, pregunta si es la misma. Si el cliente menciona conjunto, edificio, urbanizacion o unidad residencial: pide OBLIGATORIAMENTE numero de apartamento y bloque/torre para facilitar la entrega.
+3. Pregunta direccion COMPLETA: calle, numero, barrio. Si tiene direccion frecuente, pregunta si es la misma. Si el cliente menciona conjunto, edificio, urbanizacion o unidad residencial: pide apartamento Y bloque/torre SOLO si no lo ha dicho. Si el cliente dice "porteria", "portería", "en portería", "dejalo en porteria" o similar: eso es suficiente como punto de entrega, NO pidas apartamento. Acepta porteria como direccion completa.
    - SOLO escribe DIRECCION_LISTA:[direccion] cuando el cliente te haya dado una direccion real y completa. SIEMPRE escribe DIRECCION_LISTA en el MISMO mensaje donde confirmas la direccion, no en un mensaje separado.
    - Si el cliente dice solo "ahi mismo", "la misma", "igual que antes": confirma la direccion frecuente en voz alta y luego escribe DIRECCION_LISTA con esa direccion.
    - NUNCA escribas DIRECCION_LISTA si el cliente no ha dado ninguna direccion todavia.
@@ -399,6 +399,9 @@ MUY IMPORTANTE:
 - Si el cliente solo dice "Nequi" o "Bancolombia" = NO escribas ningun tag. Solo dale los datos y pide el comprobante.
 - PAGO_CONFIRMADO solo va cuando el cliente MANDA LA IMAGEN del comprobante, nunca antes.
 - Aplica promos del dia. Si no existe el producto, ofrece alternativas.
+- NO seas insistente ni repitas preguntas que el cliente ya respondio. Si dio una respuesta (aunque sea parcial), acéptala y avanza. Ser fastidioso espanta clientes.
+- Si el cliente dice "porteria", "conjunto", "casa", "el mismo de siempre" o cualquier referencia de entrega: acepta y confirma, no sigas preguntando detalles innecesarios.
+- Una sola pregunta por mensaje. Si necesitas barrio Y apartamento, pregunta solo el barrio primero.
 
 SI EL CLIENTE PREGUNTA SI ERES IA O UN BOT:
 - Responde con honestidad y calidez. Ejemplo: "Si, soy una IA. Me llamo ${nombreLuz}, fui creada por KCCorp para hacer tu experiencia de pedido mas rapida y agradable. Puedo tomar tu pedido, resolver tus dudas y avisarte en cada paso. Y si prefieres hablar con alguien del equipo, con mucho gusto te comunico."
@@ -703,6 +706,16 @@ function parseReply(reply, from) {
     var addMatch = reply.match(/PEDIDO_ADICIONAL_DE:(.+)/);
     if (addMatch) {
       var numAdicional = addMatch[1].trim();
+      // Redirect to MODIFICAR_PEDIDO instead of creating new order
+      if (orderState[from] && orderState[from].orderNumber) {
+        // Convert to modification - extract new items from current orderState
+        var itemsNuevos = Array.isArray(orderState[from].items) ? orderState[from].items.filter(function(i){ return i.toString().indexOf('➕') !== 0; }) : [];
+        sideEffect = "modificar_pedido";
+        if (!orderState[from].modificarPedido) {
+          orderState[from].modificarPedido = { numero: numAdicional || orderState[from].orderNumber, accion: "AGREGAR:" + itemsNuevos.slice(-3).join(", ") };
+        }
+        console.log("PEDIDO_ADICIONAL_DE interceptado y convertido a MODIFICAR_PEDIDO");
+      }
       if (orderState[from]) orderState[from].pedidoAdicionalDe = numAdicional;
       else orderState[from] = { pedidoAdicionalDe: numAdicional, status: "esperando_direccion" };
     }
@@ -1148,16 +1161,23 @@ async function procesarMensaje(msg, from, phoneNumberId) {
 
     var esComprobante = false;
     if (esImagen && mediaId) {
-      var hayPedidoActivo = orderState[from] && (
-        orderState[from].status === "esperando_pago" ||
-        orderState[from].status === "confirmado" ||
-        orderState[from].status === "esperando_direccion"
-      );
-      // Also treat as comprobante if client has had recent conversation (may have lost state)
-      var hayConversacion = conversations[from] && conversations[from].length > 2;
-      if (hayPedidoActivo || hayConversacion) {
+      // Only treat as comprobante if client is specifically waiting to pay
+      var estadoActual = orderState[from] ? orderState[from].status : null;
+      var esperandoPago = estadoActual === "esperando_pago";
+      
+      if (esperandoPago) {
+        // Client is at payment step - image is likely a comprobante
         esComprobante = true;
-        userText = "[El cliente envio una imagen, posiblemente comprobante de pago]";
+        userText = "[El cliente envio una imagen que podria ser su comprobante de pago. Verificando...]";
+      } else if (estadoActual === "confirmado") {
+        // Already confirmed - might be extra comprobante or random image
+        esComprobante = true;
+        userText = "[El cliente envio una imagen con pedido ya confirmado. Podria ser otro comprobante.]";
+      } else {
+        // No payment step reached - client is browsing menu or asking questions
+        // Treat image as a menu reference or general photo
+        esComprobante = false;
+        userText = "[El cliente envio una imagen. NO es un comprobante de pago — el pedido aun no ha llegado a la etapa de pago. Probablemente esta señalando algo del menu o enviando una foto de referencia. Responde sobre lo que muestra la imagen si es relevante al menu, o pregunta en que puedes ayudar]";
       }
     }
 
@@ -1242,6 +1262,19 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     var fechaInicioFidelidad = restaurante.fecha_inicio_fidelidad
       ? new Date(restaurante.fecha_inicio_fidelidad).toLocaleDateString("es-CO", {day:"numeric",month:"long",year:"numeric"})
       : "29 de marzo de 2025";
+    // Inject active order info so Luz knows order number for modifications
+    var pedidoActivoTexto = "";
+    if (orderState[from] && orderState[from].orderNumber) {
+      var st = orderState[from];
+      pedidoActivoTexto = "\n\nPEDIDO ACTIVO DE ESTE CLIENTE:\n" +
+        "- Numero: #" + st.orderNumber + "\n" +
+        "- Total: $" + (st.total || 0).toLocaleString("es-CO") + "\n" +
+        "- Estado: " + (st.status || "en proceso") + "\n" +
+        "- Items: " + (Array.isArray(st.items) ? st.items.join(", ") : "") + "\n" +
+        "Si el cliente quiere agregar algo, usa EXACTAMENTE: MODIFICAR_PEDIDO:" + st.orderNumber + "|AGREGAR:[item y precio]\n" +
+        "NO uses PEDIDO_LISTO ni crees un nuevo pedido.";
+    }
+
     var systemFinal = buildSystemPrompt(restaurante)
       .replace(/MENU_URL_PLACEHOLDER/g, getMenuUrl(restaurante))
       .replace(/MENU_PLACEHOLDER/g, "MENU ACTIVO:\n" + menuParaPrompt)
@@ -1252,7 +1285,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       .replace(/NOMBRE_CLIENTE_PLACEHOLDER/g, nombreClienteTexto)
       .replace(/NIVEL_CLIENTE_PLACEHOLDER/g, nivelClienteTexto)
       .replace(/FECHA_INICIO_PLACEHOLDER/g, fechaInicioFidelidad)
-      + bienvenidaExtra;
+      + bienvenidaExtra + pedidoActivoTexto;
 
     var claudeResponse = await axios.post(
       "https://api.anthropic.com/v1/messages",
@@ -1300,9 +1333,17 @@ async function procesarMensaje(msg, from, phoneNumberId) {
             itemsActuales.push("➕ " + nuevoItem);
             // Extract price from item string e.g. "Gaseosa $4.000"
             var precioMatch = nuevoItem.match(/\$([0-9.,]+)/);
-            var precioExtra = precioMatch ? Number(precioMatch[1].replace(/[.,]/g, "").replace(/(\d+)(\d{3})$/, "$1$2")) : 0;
-            // Fix: handle Colombian format like $4.000 = 4000
-            if (precioExtra > 100000) precioExtra = Math.round(precioExtra / 1000); // fix if parsed wrong
+            var precioExtra = 0;
+            if (precioMatch) {
+              var precioStr = precioMatch[1];
+              // Colombian format: $4.000 = 4000, $18.900 = 18900
+              if (precioStr.indexOf('.') !== -1 && precioStr.indexOf(',') === -1) {
+                // Has dots but no comma = Colombian thousands separator
+                precioExtra = Number(precioStr.replace(/\./g, ''));
+              } else {
+                precioExtra = Number(precioStr.replace(/[.,]/g, ''));
+              }
+            }
             var nuevoTotal = Number(ped.total || 0) + precioExtra;
             patch.items = itemsActuales;
             patch.total = nuevoTotal;
