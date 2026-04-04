@@ -513,9 +513,38 @@ select.finput{cursor:pointer}
   <div class="content">
     <!-- PEDIDOS -->
     <div class="page active" id="page-pedidos">
-      <div class="stats-row">
-        <div class="stat-card"><span class="stat-icon">🛒</span><div class="stat-label">Pedidos hoy</div><div class="stat-val purple" id="countHoy">0</div><div class="stat-sub">total hoy</div></div>
-        <div class="stat-card"><span class="stat-icon">💰</span><div class="stat-label">Ventas hoy</div><div class="stat-val green" id="ventasHoy">$0</div><div class="stat-sub">total facturado</div></div>
+      <div class="stats-row" style="cursor:pointer" onclick="toggleResumen()">
+        <div class="stat-card"><span class="stat-icon">🛒</span><div class="stat-label">Pedidos hoy</div><div class="stat-val purple" id="countHoy">0</div><div class="stat-sub" id="subDomMesa">cargando...</div></div>
+        <div class="stat-card"><span class="stat-icon">💰</span><div class="stat-label">Ventas hoy</div><div class="stat-val green" id="ventasHoy">$0</div><div class="stat-sub">toca para ver resumen</div></div>
+      </div>
+      <!-- RESUMEN EXPANDIBLE -->
+      <div id="resumenPanel" style="display:none;margin:0 12px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em">📊 Resumen del día</div>
+        <!-- Domicilios -->
+        <div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="font-size:11px;font-weight:700;color:#818cf8;margin-bottom:6px">🛵 DOMICILIOS</div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">Pedidos</span><span id="rDomCount" style="font-weight:700">0</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">Ventas</span><span id="rDomVentas" style="font-weight:700;color:#6ee7b7">$0</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">💵 Efectivo</span><span id="rDomEfectivo" style="font-weight:700">$0</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">📱 Digital</span><span id="rDomDigital" style="font-weight:700">$0</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text3)">💳 Datáfono</span><span id="rDomDatafono" style="font-weight:700">$0</span></div>
+        </div>
+        <!-- Mesas -->
+        <div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="font-size:11px;font-weight:700;color:#34d399;margin-bottom:6px">🪑 MESAS</div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">Pedidos</span><span id="rMesaCount" style="font-weight:700">0</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">Ventas</span><span id="rMesaVentas" style="font-weight:700;color:#6ee7b7">$0</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">💵 Efectivo</span><span id="rMesaEfectivo" style="font-weight:700">$0</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text3)">💳 Datáfono</span><span id="rMesaDatafono" style="font-weight:700">$0</span></div>
+        </div>
+        <!-- Totales -->
+        <div style="padding:10px 16px;background:rgba(16,185,129,0.05)">
+          <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-bottom:6px">💰 TOTALES</div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">Total pedidos</span><span id="rTotalCount" style="font-weight:700">0</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:3px"><span style="color:var(--text);font-weight:700">Total ventas</span><span id="rTotalVentas" style="font-weight:800;color:#6ee7b7;font-size:16px">$0</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">Domicilios cobrados</span><span id="rTotalDomicilios" style="font-weight:700">$0</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text3)">Ticket promedio</span><span id="rTicketProm" style="font-weight:700;color:#c4b5fd">$0</span></div>
+        </div>
       </div>
       <div class="pedidos-pad" id="pedidosLista"><div class="empty"><div class="ei">🛒</div><div class="et">No hay pedidos activos</div></div></div>
     </div>
@@ -1193,10 +1222,62 @@ function loadStats(){
   if(!rest)return;
   var col=getHoraColombia();
   var desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
-  get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+desde+"&estado=neq.cancelado&metodo_pago=neq.cuenta&select=total").then(function(p){
+  get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+desde+"&estado=not.in.(cancelado,cuenta)&select=total,domicilio,metodo_pago,direccion").then(function(p){
+    if(!p||!p.length){
+      document.getElementById("countHoy").textContent=0;
+      document.getElementById("ventasHoy").textContent="$0";
+      document.getElementById("subDomMesa").textContent="sin pedidos hoy";
+      return;
+    }
+    var domicilios=p.filter(function(x){return !x.direccion||x.direccion.toLowerCase().indexOf("mesa ")===0?false:true;});
+    var mesas=p.filter(function(x){return x.direccion&&x.direccion.toLowerCase().indexOf("mesa ")===0;});
+    // Fix: re-filter properly
+    domicilios=p.filter(function(x){var d=(x.direccion||"").toLowerCase();return d.indexOf("mesa ")!==0&&d.indexOf("recoger")===0||d.indexOf("mesa ")!==0;});
+    mesas=p.filter(function(x){return (x.direccion||"").toLowerCase().indexOf("mesa ")===0;});
+    // Simple split
+    domicilios=[];mesas=[];
+    p.forEach(function(x){
+      if((x.direccion||"").toLowerCase().startsWith("mesa "))mesas.push(x);
+      else domicilios.push(x);
+    });
+
+    var totalVentas=p.reduce(function(s,x){return s+Number(x.total||0);},0);
     document.getElementById("countHoy").textContent=p.length;
-    document.getElementById("ventasHoy").textContent=fmt(p.reduce(function(s,x){return s+Number(x.total);},0));
+    document.getElementById("ventasHoy").textContent=fmt(totalVentas);
+    document.getElementById("subDomMesa").textContent=domicilios.length+" domis · "+mesas.length+" mesas";
+
+    // Domicilios breakdown
+    var domVentas=domicilios.reduce(function(s,x){return s+Number(x.total||0);},0);
+    var domEfectivo=domicilios.filter(function(x){return(x.metodo_pago||"").toLowerCase()==="efectivo";}).reduce(function(s,x){return s+Number(x.total||0);},0);
+    var domDatafono=domicilios.filter(function(x){return(x.metodo_pago||"").toLowerCase()==="datafono";}).reduce(function(s,x){return s+Number(x.total||0);},0);
+    var domDigital=domVentas-domEfectivo-domDatafono;
+    var domDomicilios=domicilios.reduce(function(s,x){return s+Number(x.domicilio||0);},0);
+
+    // Mesas breakdown
+    var mesaVentas=mesas.reduce(function(s,x){return s+Number(x.total||0);},0);
+    var mesaEfectivo=mesas.filter(function(x){return(x.metodo_pago||"").toLowerCase()==="efectivo";}).reduce(function(s,x){return s+Number(x.total||0);},0);
+    var mesaDatafono=mesas.filter(function(x){return(x.metodo_pago||"").toLowerCase()==="datafono";}).reduce(function(s,x){return s+Number(x.total||0);},0);
+
+    // Update resumen panel
+    document.getElementById("rDomCount").textContent=domicilios.length;
+    document.getElementById("rDomVentas").textContent=fmt(domVentas);
+    document.getElementById("rDomEfectivo").textContent=fmt(domEfectivo);
+    document.getElementById("rDomDigital").textContent=fmt(domDigital);
+    document.getElementById("rDomDatafono").textContent=fmt(domDatafono);
+    document.getElementById("rMesaCount").textContent=mesas.length;
+    document.getElementById("rMesaVentas").textContent=fmt(mesaVentas);
+    document.getElementById("rMesaEfectivo").textContent=fmt(mesaEfectivo);
+    document.getElementById("rMesaDatafono").textContent=fmt(mesaDatafono);
+    document.getElementById("rTotalCount").textContent=p.length;
+    document.getElementById("rTotalVentas").textContent=fmt(totalVentas);
+    document.getElementById("rTotalDomicilios").textContent=fmt(domDomicilios);
+    document.getElementById("rTicketProm").textContent=fmt(Math.round(totalVentas/(p.length||1)));
   }).catch(function(){});
+}
+
+function toggleResumen(){
+  var panel=document.getElementById("resumenPanel");
+  panel.style.display=panel.style.display==="none"?"block":"none";
 }
 document.getElementById("editCancelar").addEventListener("click",function(){document.getElementById("editOverlay").classList.remove("open");editPedidoId=null;});
 document.getElementById("editOverlay").addEventListener("click",function(e){if(e.target===this){this.classList.remove("open");editPedidoId=null;}});
