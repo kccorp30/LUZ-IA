@@ -155,9 +155,15 @@ async function guardarDireccionFrecuente(restauranteId, telefono, direccion) {
 }
 
 // ── MENÚ DINÁMICO ─────────────────────────────────────────────────────────────
+var menuCache = {};
 async function getMenuDinamico(restauranteId) {
+  // Cache menu for 5 minutes to avoid repeated DB calls
+  var now = Date.now();
+  if (menuCache[restauranteId] && (now - menuCache[restauranteId].ts) < 5*60*1000) {
+    return menuCache[restauranteId].menu;
+  }
   try {
-    var r = await axios.get(SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restauranteId + "&disponible=eq.true&order=categoria,orden&select=*", { headers: sbH(false) });
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restauranteId + "&disponible=eq.true&order=categoria,orden&select=nombre,precio,categoria,es_bebida,es_arepa", { headers: sbH(false) });
     var items = r.data || [];
     if (!items.length) return "(Sin productos cargados en el sistema. Informa al cliente que el menu esta siendo actualizado.)";
     var grupos = {};
@@ -182,7 +188,8 @@ async function getMenuDinamico(restauranteId) {
       lines.push("Si el cliente pide 'combo de X' y X no tiene combo en el menu, dile que solo tienes los combos listados arriba.");
     }
     var menuFinal = lines.join("\n");
-    console.log("Menu cargado: " + items.length + " productos, " + Object.keys(grupos).length + " categorias. Items: " + items.map(function(i){return i.nombre;}).join(", "));
+    menuCache[restauranteId] = { menu: menuFinal, ts: Date.now() };
+    console.log("Menu cargado y cacheado: " + items.length + " productos");
     return menuFinal;
   } catch (e) { console.error("getMenuDinamico:", e.message); return "(Error cargando menu. Indica al cliente que escriba lo que desea y lo atiendes manualmente.)"; }
 }
@@ -285,16 +292,7 @@ MENU_PLACEHOLDER
 
 MENU VISUAL: cuando pidan menu di: "Te comparto el menu MENU_URL_PLACEHOLDER - ahi armas y me lo mandas. O dime aqui con gusto."
 
-COMBOS (disponibles TODOS LOS DIAS):
-- Combo Aplastado Especial: $21.900 (aplastado + papas + gaseosa)
-- Combo Hamburguesa Tradicional: $22.900 (hamburguesa tradicional + papas + gaseosa)
-- Combo Perro Italiano: $20.900 (perro italiano + papas + gaseosa)
-- Tres Angus Especiales + Coca-Cola 1.5L: $79.900
-
-REGLA COMBOS:
-- Cuando el cliente pregunte por combos, ofrece ESTOS combos primero. Son todos los dias.
-- Solo puedes vender los combos listados arriba o los que aparezcan en el menu activo.
-- NUNCA armes combos personalizados que no esten listados.
+COMBOS: disponibles todos los dias. Estan en el menu activo — ofrecelos cuando pidan combos. NUNCA armes combos que no esten en el menu.
 
 DESECHABLES: $500 por cada COMIDA. Bebidas y arepas NO cobran desechable.
 
@@ -378,7 +376,7 @@ OBLIGATORIO - escribe estos tags al final de tu respuesta (el cliente NO los ve)
 
 Al confirmar productos:
 PEDIDO_LISTO:
-ITEMS: [producto1 $precio (notas)|producto2 $precio]
+ITEMS: [categoria producto1 $precio (notas)|categoria producto2 $precio] — SIEMPRE incluye la categoria antes del nombre. Ejemplo: 'Hamburguesa La Especial $18.900|Bebida Gaseosa $3.000'
 DESECHABLES: [valor total en pesos, ej: 500 si hay 1 comida, 1000 si hay 2]
 DOMICILIO: [numero sin puntos ni signos, o 0]
 TOTAL: [numero sin puntos ni signos]
@@ -1289,15 +1287,12 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       : "29 de marzo de 2025";
     // Inject active order info so Luz knows order number for modifications
     var pedidoActivoTexto = "";
-    if (orderState[from] && orderState[from].orderNumber) {
+    if (orderState[from] && orderState[from].orderNumber && orderState[from].status !== "entregado") {
       var st = orderState[from];
-      pedidoActivoTexto = "\n\nPEDIDO ACTIVO DE ESTE CLIENTE:\n" +
-        "- Numero: #" + st.orderNumber + "\n" +
-        "- Total: $" + (st.total || 0).toLocaleString("es-CO") + "\n" +
-        "- Estado: " + (st.status || "en proceso") + "\n" +
-        "- Items: " + (Array.isArray(st.items) ? st.items.join(", ") : "") + "\n" +
-        "Si el cliente quiere agregar algo, usa EXACTAMENTE: MODIFICAR_PEDIDO:" + st.orderNumber + "|AGREGAR:[item y precio]\n" +
-        "NO uses PEDIDO_LISTO ni crees un nuevo pedido.";
+      // Only inject if relevant (waiting for payment or confirmed - might want to add items)
+      if (st.status === "esperando_pago" || st.status === "confirmado" || st.status === "en_proceso") {
+        pedidoActivoTexto = "\nPEDIDO ACTIVO #" + st.orderNumber + " ($" + (st.total||0).toLocaleString("es-CO") + ", estado:" + (st.status||"?") + "). Si agrega algo: MODIFICAR_PEDIDO:" + st.orderNumber + "|AGREGAR:[item $precio]";
+      }
     }
 
     var systemFinal = buildSystemPrompt(restaurante)
