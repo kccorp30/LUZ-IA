@@ -712,9 +712,25 @@ select.finput{cursor:pointer}
 
     <!-- DOMICILIARIOS -->
     <div class="page" id="page-domis">
-      <div style="padding:16px 12px 4px">
-        <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Domiciliarios</div>
-        <div style="font-size:13px;color:var(--text3);margin-top:2px">Control y estadisticas de tu equipo</div>
+      <div style="padding:16px 12px 4px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Domiciliarios</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:2px">Control y estadisticas de tu equipo</div>
+        </div>
+        <button onclick="toggleCuadreDomis()" style="background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(16,185,129,0.1));border:1px solid rgba(16,185,129,0.3);border-radius:12px;color:#6ee7b7;padding:8px 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">💰 Cuadre</button>
+      </div>
+      <!-- CUADRE MODAL -->
+      <div id="cuadreDomisPanel" style="display:none;margin:0 12px 10px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.2);border-radius:16px;overflow:hidden;">
+        <div style="padding:12px 16px;border-bottom:1px solid rgba(16,185,129,0.15);display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:13px;font-weight:800;color:#6ee7b7">💰 Cuadre del día — Domiciliarios</div>
+          <div style="display:flex;gap:8px">
+            <button onclick="loadCuadreDomis('hoy')" id="cuadreBtn-hoy" style="padding:4px 10px;border-radius:8px;border:1px solid rgba(16,185,129,0.3);background:rgba(16,185,129,0.2);color:#6ee7b7;font-size:11px;font-weight:700;cursor:pointer;">Hoy</button>
+            <button onclick="loadCuadreDomis('semana')" id="cuadreBtn-semana" style="padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;">Semana</button>
+          </div>
+        </div>
+        <div id="cuadreDomisContent" style="padding:12px 16px">
+          <div style="text-align:center;color:var(--text3);font-size:13px;padding:20px">Toca Cuadre para cargar datos</div>
+        </div>
       </div>
       <div style="padding:4px 12px 0">
         <div class="domi-resumen-hero" id="domiResumenHero">
@@ -1050,6 +1066,69 @@ function showTab(n){
 }
 
 // DOMICILIARIOS
+function toggleCuadreDomis(){
+  var p=document.getElementById("cuadreDomisPanel");
+  if(p.style.display==="none"){p.style.display="block";loadCuadreDomis("hoy");}
+  else p.style.display="none";
+}
+function loadCuadreDomis(periodo){
+  if(!rest)return;
+  ["hoy","semana"].forEach(function(k){
+    var b=document.getElementById("cuadreBtn-"+k);
+    if(b){b.style.background=k===periodo?"rgba(16,185,129,0.2)":"transparent";b.style.color=k===periodo?"#6ee7b7":"var(--text3)";b.style.borderColor=k===periodo?"rgba(16,185,129,0.3)":"rgba(255,255,255,0.1)";}
+  });
+  var col=getHoraColombia();
+  var desde;
+  if(periodo==="hoy"){
+    desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
+  } else {
+    var d=new Date(col);d.setDate(d.getDate()-6);
+    desde=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate(),5,0,0)).toISOString();
+  }
+  var content=document.getElementById("cuadreDomisContent");
+  content.innerHTML='<div style="text-align:center;color:var(--text3);font-size:12px;padding:16px">Cargando...</div>';
+  get("pedidos","restaurante_id=eq."+rest.id+"&estado=eq.entregado&created_at=gte."+desde+"&select=domiciliario_nombre,total,domicilio,metodo_pago,numero_pedido,created_at&order=created_at.asc&limit=200").then(function(pedidos){
+    if(!pedidos||!pedidos.length){content.innerHTML='<div style="text-align:center;color:var(--text3);font-size:13px;padding:20px">Sin entregas en este período</div>';return;}
+    // Group by domi
+    var domis={};
+    pedidos.forEach(function(p){
+      var n=p.domiciliario_nombre||"Sin asignar";
+      if(!domis[n])domis[n]={nombre:n,pedidos:[],totalEfectivo:0,totalDigital:0,totalDomicilios:0};
+      domis[n].pedidos.push(p);
+      var met=(p.metodo_pago||"").toLowerCase();
+      var dom=Number(p.domicilio||0);
+      domis[n].totalDomicilios+=dom;
+      if(met==="efectivo")domis[n].totalEfectivo+=Number(p.total||0);
+      else domis[n].totalDigital+=dom;
+    });
+    var h="";
+    Object.values(domis).forEach(function(d){
+      var entregar=Math.max(0,d.totalEfectivo-d.totalDomicilios);
+      h+='<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px 14px;margin-bottom:8px">';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+      h+='<div style="font-size:13px;font-weight:800;color:#f1f0ff">🛵 '+d.nombre+'</div>';
+      h+='<div style="font-size:11px;color:var(--text3);background:rgba(255,255,255,0.06);padding:2px 8px;border-radius:6px">'+d.pedidos.length+' entregas</div></div>';
+      h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px">';
+      h+='<div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">💵 Efectivo</span><span style="font-weight:700">'+fmt(d.totalEfectivo)+'</span></div>';
+      h+='<div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">📱 Digital</span><span style="font-weight:700">'+fmt(d.totalDigital)+'</span></div>';
+      h+='<div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">🏠 Domicilios</span><span style="font-weight:700;color:#6ee7b7">'+fmt(d.totalDomicilios)+'</span></div>';
+      h+='<div style="display:flex;justify-content:space-between"><span style="color:var(--text3)">💳 A entregar</span><span style="font-weight:700;color:#fbbf24">'+fmt(entregar)+'</span></div>';
+      h+='</div></div>';
+    });
+    // Grand total
+    var gt=Object.values(domis);
+    var totalEnt=gt.reduce(function(s,d){return s+d.pedidos.length;},0);
+    var totalDoms=gt.reduce(function(s,d){return s+d.totalDomicilios;},0);
+    var totalEf=gt.reduce(function(s,d){return s+d.totalEfectivo;},0);
+    h+='<div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:12px 14px;margin-top:4px">';
+    h+='<div style="font-size:12px;font-weight:800;color:#6ee7b7;margin-bottom:8px">TOTALES</div>';
+    h+='<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--text3)">Total entregas</span><span style="font-weight:700">'+totalEnt+'</span></div>';
+    h+='<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="color:var(--text3)">Total domicilios</span><span style="font-weight:700;color:#6ee7b7">'+fmt(totalDoms)+'</span></div>';
+    h+='<div style="display:flex;justify-content:space-between;font-size:14px"><span style="color:var(--text);font-weight:700">Total efectivo recibido</span><span style="font-weight:800;color:#fbbf24">'+fmt(totalEf)+'</span></div>';
+    h+='</div>';
+    content.innerHTML=h;
+  }).catch(function(){content.innerHTML='<div style="text-align:center;color:#fca5a5;font-size:13px;padding:16px">Error cargando datos</div>';});
+}
 function cargarDomiciliarios(){
   if(!rest)return;
   get("domiciliarios","restaurante_id=eq."+rest.id+"&activo=eq.true&order=created_at.asc").then(function(ds){
@@ -1178,8 +1257,12 @@ function loadPedidos(){
       h+='<div class="desglose"><div class="desglose-row"><span>Subtotal</span><span>'+fmt(subtotal)+'</span></div><div class="desglose-row"><span>Desechables</span><span>'+fmt(desechables)+'</span></div><div class="desglose-row"><span>Domicilio</span><span>'+fmt(domicilio)+'</span></div><div class="desglose-row total"><span>TOTAL</span><span>'+fmt(total)+'</span></div></div>';
       if(p.comprobante_media_id)h+='<div class="comprobante-box"><div class="comprobante-header">&#129534; Comprobante</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" onerror="this.style.display=\'none\'"></div>';
       h+='<div class="ebtns">';
-      if(cfg.n)h+='<button class="ebtn '+cfg.bc+'" data-id="'+p.id+'" data-e="'+cfg.n+'" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">'+cfg.bl+'</button>';
-      if(p.estado==="listo"||p.estado==="en_camino")h+='<button class="ebtn bcerrar" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">&#128308; Cerrar orden</button>';
+      // For mesa orders: skip en_camino, go directly to cobrar/cerrar
+      var bEstado=cfg.n, bLabel=cfg.bl, bClass=cfg.bc;
+      if(esMesa&&p.estado==='listo'){bEstado='entregado';bLabel='💳 Cobrar y cerrar';bClass='bcerrar';}
+      if(esMesa&&(p.estado==='en_camino'||p.estado==='listo_entrega')){bEstado='entregado';bLabel='💳 Cobrar y cerrar';bClass='bcerrar';}
+      if(bEstado)h+='<button class="ebtn '+bClass+'" data-id="'+p.id+'" data-e="'+bEstado+'" data-t="'+(p.cliente_tel||'')+'\" data-n="'+p.numero_pedido+'">'+ bLabel+'</button>';
+      if((p.estado==="listo"||p.estado==="en_camino")&&!esMesa)h+='<button class="ebtn bcerrar" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">&#128308; Cerrar orden</button>';
       if(p.estado==="listo"&&!esMesa)h+='<button class="ebtn" style="background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.35);flex:0;padding:10px 14px;font-size:16px;" data-domi="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'">🛵</button>';
       if(p.cliente_tel)h+='<button class="btn-msg ebtn be" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">💬</button>';
       h+='<button class="ebtn" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:2px solid rgba(59,130,246,0.3);flex:0;padding:10px 14px;" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+desechables+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">🖨</button>';
