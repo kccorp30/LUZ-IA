@@ -546,9 +546,12 @@ async function verificarComprobante(mediaId, totalEsperado) {
     if (!imgData) return { valido: null };
     var base64 = imgData.toString("base64");
     var totalFmt = Number(totalEsperado).toLocaleString("es-CO");
-    var prompt = "Esta imagen es un comprobante de pago bancario (Nequi, Bancolombia)? ";
-    prompt += "Responde SOLO con JSON: {valido:true/false, razon:string} ";
-    prompt += "valido=true SOLO si claramente muestra transferencia exitosa cercana a $" + totalFmt + " COP.";
+    var prompt = "Analiza esta imagen cuidadosamente. ";
+    prompt += "¿Es un comprobante oficial de transferencia bancaria exitosa de Nequi o Bancolombia? ";
+    prompt += "Para que sea valido DEBE mostrar: (1) interfaz de app bancaria, (2) monto en pesos colombianos, (3) mensaje de transferencia exitosa. ";
+    prompt += "Si es una foto de comida, cocina, personas, objetos, o cualquier cosa que NO sea pantalla de app bancaria, responde valido:false. ";
+    prompt += "Responde SOLO con JSON: {valido:true o false, razon:string breve}. ";
+    prompt += "Monto esperado: aproximadamente $" + totalFmt + " COP.";
     var resp = await axios.post(
       "https://api.anthropic.com/v1/messages",
       {
@@ -1381,14 +1384,18 @@ async function procesarMensaje(msg, from, phoneNumberId) {
         // NOT a comprobante - Luz asks again naturally, no aggressive message
         userText = "[El cliente envio una imagen en la etapa de pago pero no parece ser un comprobante bancario. Sin mencionarlo de forma brusca, dile amablemente que necesitas el comprobante de la transferencia para confirmar su pedido.]";
         esComprobante = false;
-      } else {
-        // Valid or uncertain - process normally
+      } else if (verificacion.valido === true) {
+        // Confirmed valid comprobante
         orderState[from].comprobanteMediaId = mediaId;
         orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
         orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
         orderState[from].status = "confirmado";
         sideEffect = "pago_confirmado";
-        userText = "[El cliente envio su comprobante de pago. Confirma el pedido con calidez.]";
+        userText = "[El cliente envio su comprobante de pago verificado. Confirma el pedido con calidez.]";
+      } else {
+        // null = verification failed/error - ask for comprobante again to be safe
+        userText = "[El cliente envio una imagen en la etapa de pago pero no pudimos verificarla bien. Pidele amablemente que envie el comprobante de la transferencia de forma mas clara.]";
+        esComprobante = false;
       }
     }
 
