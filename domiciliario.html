@@ -194,19 +194,29 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 
   <div class="content">
     <div class="page active" id="page-pedidos">
-      <div class="stats-row">
-        <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-val" id="statAsignados">0</div><div class="stat-label">Listos</div></div>
-        <div class="stat-card"><div class="stat-icon">🛵</div><div class="stat-val" id="statCamino">0</div><div class="stat-label">En camino</div></div>
-        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-val" id="statEntregados">0</div><div class="stat-label">Hoy</div></div>
-      </div>
-      <div class="stats-extra">
-        <div class="stat-extra-card">
-          <div class="stat-extra-icon">⚡</div>
-          <div><div class="stat-extra-val" id="statTiempoPromedio">--</div><div class="stat-extra-label">Tiempo promedio</div></div>
+      <!-- STATS REDESIGNED -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 14px 0">
+        <div style="background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(99,102,241,0.05));border:1px solid rgba(99,102,241,0.25);border-radius:16px;padding:14px 12px;text-align:center">
+          <div style="font-size:26px;font-weight:900;color:#a5b4fc;line-height:1" id="statAsignados">0</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.45);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Listos</div>
         </div>
-        <div class="stat-extra-card">
-          <div class="stat-extra-icon">🏆</div>
-          <div><div class="stat-extra-val" id="statRecord">--</div><div class="stat-extra-label">Mejor tiempo</div></div>
+        <div style="background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(245,158,11,0.05));border:1px solid rgba(245,158,11,0.25);border-radius:16px;padding:14px 12px;text-align:center">
+          <div style="font-size:26px;font-weight:900;color:#fcd34d;line-height:1" id="statCamino">0</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.45);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">En ruta</div>
+        </div>
+        <div style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.25);border-radius:16px;padding:14px 12px;text-align:center">
+          <div style="font-size:26px;font-weight:900;color:#6ee7b7;line-height:1" id="statEntregados">0</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.45);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Hoy</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 14px 0">
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+          <div style="font-size:22px">⚡</div>
+          <div><div style="font-size:18px;font-weight:800;color:#f1f0ff" id="statTiempoPromedio">--</div><div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;text-transform:uppercase;letter-spacing:0.04em">Tiempo prom.</div></div>
+        </div>
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+          <div style="font-size:22px">🏆</div>
+          <div><div style="font-size:18px;font-weight:800;color:#fcd34d" id="statRecord">--</div><div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;text-transform:uppercase;letter-spacing:0.04em">Mejor tiempo</div></div>
         </div>
       </div>
       <div class="pedidos-pad" id="pedidosLista">
@@ -354,13 +364,13 @@ function arrancar(){
 
 function loadPedidos(){
   if(!rest||!domiciliarioId)return;
-  get("pedidos","restaurante_id=eq."+rest.id+"&domiciliario_id=eq."+domiciliarioId+"&estado=in.(listo,en_camino)&order=created_at.asc&limit=20").then(function(pedidos){
+  get("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(listo,en_camino)&or=(domiciliario_id.eq."+domiciliarioId+",domiciliario_nombre.eq."+encodeURIComponent(domiciliarioNombre)+")&order=created_at.asc&limit=20").then(function(pedidos){
     var isFirst=Object.keys(pedidosKnown).length===0;
     pedidos.forEach(function(p){if(!pedidosKnown[p.id]){if(!isFirst)playSound();pedidosKnown[p.id]=true;}});
     document.getElementById("statAsignados").textContent=pedidos.filter(function(p){return p.estado==="listo";}).length;
     document.getElementById("statCamino").textContent=pedidos.filter(function(p){return p.estado==="en_camino";}).length;
     var col=getHoraCol(),desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
-    get("pedidos","restaurante_id=eq."+rest.id+"&domiciliario_id=eq."+domiciliarioId+"&estado=eq.entregado&created_at=gte."+desde+"&select=id,created_at,updated_at").then(function(e){
+    get("pedidos","restaurante_id=eq."+rest.id+"&estado=eq.entregado&or=(domiciliario_id.eq."+domiciliarioId+",domiciliario_nombre.eq."+encodeURIComponent(domiciliarioNombre)+")&created_at=gte."+desde+"&select=id,created_at,updated_at").then(function(e){
       document.getElementById("statEntregados").textContent=e.length;
       var tiempos=e.map(function(p){if(p.updated_at&&p.created_at){return Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);}return null;}).filter(function(t){return t!==null&&t>0&&t<300;});
       if(tiempos.length){
@@ -421,7 +431,7 @@ function loadPedidos(){
 function loadHistorial(){
   if(!rest||!domiciliarioId)return;
   var col=getHoraCol(),desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
-  get("pedidos","restaurante_id=eq."+rest.id+"&domiciliario_id=eq."+domiciliarioId+"&created_at=gte."+desde+"&order=created_at.desc&limit=50").then(function(pedidos){
+  get("pedidos","restaurante_id=eq."+rest.id+"&or=(domiciliario_id.eq."+domiciliarioId+",domiciliario_nombre.eq."+encodeURIComponent(domiciliarioNombre)+")&created_at=gte."+desde+"&order=created_at.desc&limit=50").then(function(pedidos){
     var lista=document.getElementById("historialLista");
     if(!pedidos.length){lista.innerHTML='<div class="empty"><div class="ei">📋</div><div class="et">Aún no tienes pedidos hoy.</div></div>';return;}
     var h="";
@@ -444,7 +454,7 @@ function loadInforme(){
   if(!rest||!domiciliarioId)return;
   var col=getHoraCol(),desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
   document.getElementById("informeGreeting").textContent="Hola, "+domiciliarioNombre+"!";
-  get("pedidos","restaurante_id=eq."+rest.id+"&domiciliario_id=eq."+domiciliarioId+"&created_at=gte."+desde+"&order=created_at.asc&limit=100&select=*").then(function(pedidos){
+  get("pedidos","restaurante_id=eq."+rest.id+"&or=(domiciliario_id.eq."+domiciliarioId+",domiciliario_nombre.eq."+encodeURIComponent(domiciliarioNombre)+")&created_at=gte."+desde+"&order=created_at.asc&limit=100&select=*").then(function(pedidos){
     var entregados=pedidos.filter(function(p){return p.estado==="entregado";});
     var pendientes=pedidos.filter(function(p){return p.estado!=="entregado";});
     var tiempos=entregados.map(function(p){if(p.updated_at&&p.created_at){var m=Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);return(m>0&&m<300)?m:null;}return null;}).filter(function(t){return t!==null;});
