@@ -294,6 +294,17 @@ MENU VISUAL: cuando pidan menu di: "Te comparto el menu MENU_URL_PLACEHOLDER - a
 
 COMBOS: disponibles todos los dias. Estan en el menu activo — ofrecelos cuando pidan combos. NUNCA armes combos que no esten en el menu.
 
+ADICIONALES (cobro extra por ingrediente adicional):
+- Queso (tajado o rallado): $1.600
+- Tocineta: $2.000
+- Jamón: $2.000
+- Maduro calado: $3.000
+- Jalapeños: $2.000
+- Maíz: $6.000
+- Salchicha: $6.000
+- Ranchera (salsa): $4.000
+REGLA ADICIONALES: Si el cliente pide "con queso extra", "con tocineta", etc., cobrar el adicional correspondiente y sumarlo al total. Ejemplo: Hamburguesa $18.900 + Tocineta $2.000 = $20.900. Siempre confirmar el costo extra antes de agregar.
+
 DESECHABLES: $500 por cada COMIDA. Bebidas y arepas NO cobran desechable.
 
 DOMICILIO (valores internos, NO menciones zonas al cliente):
@@ -1280,6 +1291,11 @@ async function procesarMensaje(msg, from, phoneNumberId) {
   var horarioInfo = restaurante
       ? "Atiendes de " + (restaurante.hora_apertura||"16:00").substring(0,5) + " a " + (restaurante.hora_cierre||"00:00").substring(0,5) + ". Hora actual en Colombia: " + horaStr + "." + (cierreProximo ? " IMPORTANTE: Cierras en menos de 20 minutos. Si el cliente esta pidiendo, avisale amablemente que cierras pronto y que su pedido debe confirmarse rapido para alcanzar. Si ya no es posible tomar el pedido, disculpate y di el horario de manana." : " Estas en horario activo.")
       : "Hora actual: " + horaStr;
+    // After-hours with active order - override horarioInfo
+    var fueraConOrden = !estaEnHorario(restaurante) && (orderState[from] || (conversations[from] && conversations[from].length > 0));
+    if (fueraConOrden) {
+      horarioInfo = "Atiendes de " + (restaurante.hora_apertura||"16:00").substring(0,5) + " a " + (restaurante.hora_cierre||"00:00").substring(0,5) + ". Hora actual: " + horaStr + ". IMPORTANTE: El horario ya cerro PERO este cliente tiene un pedido o consulta activa. NO le digas que estas cerrado. Si pregunta por su pedido, dile que vas a verificar con el equipo y que en breve le confirmas. Si tiene pedido activo, atiendelo con normalidad hasta que se resuelva.";
+    }
 
     // ── BUILD SYSTEM PROMPT DINAMICO ──────────────────────────────────────────
     var fechaInicioFidelidad = restaurante.fecha_inicio_fidelidad
