@@ -873,6 +873,31 @@ app.post("/api/pedido-estado", async function(req, res) {
         if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
       }
     }
+
+    // ── ACTUALIZAR FIDELIDAD AL ENTREGAR ─────────────────────────────────────
+    // Runs for ALL pedidos (mesa + domicilio) when marked entregado
+    if (estado === "entregado" && restaurante_id && telefono_cliente) {
+      try {
+        var telFid = stripCountryCode(telefono_cliente);
+        // Count total delivered orders for this client
+        var countR = await axios.get(
+          SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id +
+          "&cliente_tel=eq." + encodeURIComponent(telFid) +
+          "&estado=eq.entregado&select=id",
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+        );
+        var totalPed = (countR.data || []).length;
+        var nivelFid = totalPed >= 25 ? "oro" : totalPed >= 10 ? "plata" : "bronce";
+        // Upsert into clientes_frecuentes
+        await axios.post(
+          SUPABASE_URL + "/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",
+          { restaurante_id: restaurante_id, telefono: telFid, total_pedidos: totalPed, nivel_fidelidad: nivelFid, updated_at: new Date().toISOString() },
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } }
+        );
+        console.log("Fidelidad actualizada:", telFid, "->", totalPed, "pedidos, nivel:", nivelFid);
+      } catch(eFid) { console.error("fidelidad update error:", eFid.message); }
+    }
+
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ ok: false, error: err.response ? JSON.stringify(err.response.data) : err.message }); }
 });
