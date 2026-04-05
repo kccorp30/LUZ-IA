@@ -332,12 +332,12 @@ RECOMENDACIONES Y NOTAS ESPECIALES DEL CLIENTE:
 - Si el cliente pide algo especial como salsas extras, sin ingrediente, doble porcion, instruccion de preparacion o cualquier preferencia: incluirlo en los ITEMS del pedido entre parentesis.
 - Ejemplo: "La Especial $18.900 (sin cebolla, extra chimichurri)"
 
-PEDIDO ADICIONAL A ORDEN YA CONFIRMADA:
-- Si el cliente ya tiene un pedido confirmado y quiere agregar algo mas, NO crees un pedido nuevo.
-- Confirma los nuevos items con precio. Calcula el nuevo total sumando lo anterior mas lo nuevo.
-- Escribe MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[descripcion de los nuevos items y precios]
-- Ejemplo: cliente tenia pedido #123 por $30.000 y agrega una gaseosa $4.000. Di "Claro, agrego una Gaseosa $4.000. El nuevo total de tu pedido #123 es $34.000." y escribe MODIFICAR_PEDIDO:123|AGREGAR:Gaseosa $4.000
-- NUNCA uses PEDIDO_LISTO ni PEDIDO_ADICIONAL_DE para pedidos ya confirmados. Solo MODIFICAR_PEDIDO.
+PEDIDO ADICIONAL O MODIFICACION DE ORDEN YA CONFIRMADA:
+- Si el cliente ya tiene un pedido confirmado y quiere agregar algo, NO crees un pedido nuevo.
+- Escribe MODIFICAR_PEDIDO:[numero]|AGREGAR:[item y precio]
+- Si el cliente pide una preferencia, nota o instruccion especial (salsas aparte, sin cebolla, bien cocido, etc.) escribe MODIFICAR_PEDIDO:[numero]|NOTA:[instruccion exacta del cliente]
+- Ejemplo notas: "salsas aparte" -> MODIFICAR_PEDIDO:123|NOTA:salsas aparte | "sin cebolla" -> MODIFICAR_PEDIDO:123|NOTA:sin cebolla | "bbq y ajo aparte" -> MODIFICAR_PEDIDO:123|NOTA:bbq y ajo aparte
+- SIEMPRE usa MODIFICAR_PEDIDO para cualquier cambio o nota en pedido ya confirmado. NUNCA digas "anotado" sin escribir el tag.
 
 IMAGENES:
 - Si el cliente envia una imagen Y tiene un pedido activo esperando pago: es probablemente un comprobante. Confirma el pedido.
@@ -544,7 +544,17 @@ async function verificarComprobante(mediaId, totalEsperado) {
   try {
     var imgData = await descargarImagenMeta(mediaId);
     if (!imgData) return { valido: null };
-    var base64 = imgData.toString("base64");
+    // descargarImagenMeta returns a data URL like "data:image/jpeg;base64,..."
+    var base64, mediaType;
+    if (typeof imgData === "string" && imgData.startsWith("data:")) {
+      var parts = imgData.split(",");
+      base64 = parts[1];
+      mediaType = (parts[0].split(":")[1] || "image/jpeg").split(";")[0];
+    } else {
+      base64 = Buffer.from(imgData).toString("base64");
+      mediaType = "image/jpeg";
+    }
+    console.log("Verificando comprobante, base64 length:", base64 ? base64.length : 0);
     var totalFmt = Number(totalEsperado).toLocaleString("es-CO");
     var prompt = "Analiza esta imagen cuidadosamente. ";
     prompt += "¿Es un comprobante oficial de transferencia bancaria exitosa de Nequi o Bancolombia? ";
@@ -560,7 +570,7 @@ async function verificarComprobante(mediaId, totalEsperado) {
         messages: [{
           role: "user",
           content: [
-            { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
+            { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
             { type: "text", text: prompt }
           ]
         }]
@@ -784,11 +794,16 @@ function parseReply(reply, from) {
   }
 
   if (reply.indexOf("MODIFICAR_PEDIDO:") !== -1) {
-    var modMatch = reply.match(/MODIFICAR_PEDIDO:([^|]+)\|(.+)/);
+    var modMatch = reply.match(/MODIFICAR_PEDIDO:([^|\n]+)[|]([^\n]+)/);
     if (modMatch) {
       sideEffect = "modificar_pedido";
       if (!orderState[from]) orderState[from] = {};
-      orderState[from].modificarPedido = { numero: modMatch[1].trim(), accion: modMatch[2].trim() };
+      var modNumero = modMatch[1].trim();
+      var modAccion = modMatch[2].trim();
+      // If no order number, use current active order
+      if (!modNumero && orderState[from] && orderState[from].orderNumber) modNumero = String(orderState[from].orderNumber);
+      orderState[from].modificarPedido = { numero: modNumero, accion: modAccion };
+      console.log("MODIFICAR parsed:", modNumero, modAccion);
     }
     cleanReply = cleanReply.replace(/MODIFICAR_PEDIDO:.+/g, "").trim();
   }
@@ -1379,7 +1394,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     if (esComprobante && mediaId && orderState[from]) {
       var totalPedido = orderState[from].total || 0;
       var verificacion = await verificarComprobante(mediaId, totalPedido);
-      console.log("Verificacion comprobante:", JSON.stringify(verificacion));
+      console.log("Verificacion comprobante resultado:", JSON.stringify(verificacion), "| valido:", verificacion.valido);
       if (verificacion.valido === false) {
         // NOT a comprobante - Luz asks again naturally, no aggressive message
         userText = "[El cliente envio una imagen en la etapa de pago pero no parece ser un comprobante bancario. Sin mencionarlo de forma brusca, dile amablemente que necesitas el comprobante de la transferencia para confirmar su pedido.]";
@@ -1403,6 +1418,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       guardarMensajeSupabase(restaurante.id, from, "ALERTA_PREGUNTA: " + orderState[from].alertaPregunta, "alerta_pregunta", null).catch(function(){});
     }
 
+    if (sideEffect === "modificar_pedido") { console.log("MODIFICAR intent:", JSON.stringify(orderState[from]?.modificarPedido)); }
     if (sideEffect === "modificar_pedido" && orderState[from]?.modificarPedido && restaurante) {
       var mod = orderState[from].modificarPedido;
       try {
@@ -1438,6 +1454,10 @@ async function procesarMensaje(msg, from, phoneNumberId) {
             patch.notas_especiales = "✏️ MODIFICADO: +" + nuevoItem;
           } else if (mod.accion.startsWith("DIRECCION:")) {
             patch.direccion = mod.accion.replace("DIRECCION:", "").trim();
+          } else if (mod.accion.startsWith("NOTA:")) {
+            var nota = mod.accion.replace("NOTA:", "").trim();
+            var notaActual = ped.notas_especiales || "";
+            patch.notas_especiales = (notaActual ? notaActual + " | " : "") + "📝 " + nota;
           }
           await axios.patch(
             SUPABASE_URL + "/rest/v1/pedidos?id=eq." + ped.id, patch,
