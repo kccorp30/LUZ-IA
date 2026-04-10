@@ -1048,7 +1048,8 @@ app.post("/api/pedido-manual", async function(req, res) {
     var num = ++orderCounter;
     var subtotal = Number(total) - Number(desechables||0) - Number(domicilio||0);
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-    var payload = {
+    var payload = {cliente_nombre: req.body.nombre_cliente || null,
+comprobante_url: req.body.comprobante_url || null,
       restaurante_id, numero_pedido: num,
       cliente_tel: telefono,
       items: Array.isArray(items) ? items : items.split("\n").filter(function(l){return l.trim();}),
