@@ -901,12 +901,10 @@ async function enviar(){
     var dir=tipoPedido==="domicilio"?document.getElementById("iDir").value.trim():tipoPedido==="mesa"?"Mesa "+document.getElementById("iMesa").value:"RECOGER EN TIENDA";
     var notas=document.getElementById("iNotas").value.trim();
     var tel=document.getElementById("iTel").value.trim().replace(/\D/g,"")||"web-"+Date.now();
-    // Si el comprobante es muy grande, lo comprimimos
-    var compUrl=compB64||null;
-    if(compUrl&&compUrl.length>800000){
-      // Comprime la imagen antes de enviar
-      compUrl=await comprimirImagen(compUrl,800,0.7);
-    }
+    // Comprimir comprobante siempre (fotos de cel son muy pesadas para Supabase)
+    var compUrl=null;
+    if(compB64){try{compUrl=await comprimirImagen(compB64,600,0.65);}catch(e){compUrl=null;}}
+
 
     var payload={
       restaurante_id:rest.id,
@@ -919,7 +917,6 @@ async function enviar(){
       domicilio:dom,
       total:total,
       direccion:dir,
-      tipo_pedido:tipoPedido,
       metodo_pago:pagoSel,
       estado:"confirmado",
       cupon_codigo:document.getElementById("iCupon").value.trim().toUpperCase()||null,
