@@ -921,8 +921,7 @@ async function enviar(){
       estado:"confirmado",
       cupon_codigo:document.getElementById("iCupon").value.trim().toUpperCase()||null,
       notas_especiales:notas||null,
-      comprobante_url:compUrl,
-      canal:"web"
+      comprobante_url:compUrl
     };
 
     var resp=await fetch(SU+"/rest/v1/pedidos",{
