@@ -897,66 +897,48 @@ async function enviar(){
     var dom=tipoPedido==="domicilio"?(rest&&rest.domicilio_base?Number(rest.domicilio_base):4000):0;
     var dsc=0;if(desc>0&&descTipo){dsc=descTipo==="porcentaje"?Math.round(sub*desc/100):desc;}
     var total=sub+des+dom-dsc;
-    var num=Math.floor(Date.now()/1000)%100000;
     var dir=tipoPedido==="domicilio"?document.getElementById("iDir").value.trim():tipoPedido==="mesa"?"Mesa "+document.getElementById("iMesa").value:"RECOGER EN TIENDA";
-    var notas=document.getElementById("iNotas").value.trim();
     var tel=document.getElementById("iTel").value.trim().replace(/\D/g,"")||"web-"+Date.now();
-    // Comprimir comprobante siempre (fotos de cel son muy pesadas para Supabase)
+    var notas=document.getElementById("iNotas").value.trim();
+    var cuponCodigo=document.getElementById("iCupon").value.trim().toUpperCase();
+    var notasFinal=notas||"";
+    if(cuponCodigo&&dsc>0){notasFinal=(notasFinal?notasFinal+" | ":"")+"Cupon: "+cuponCodigo+" (-"+fmt(dsc)+")";}
+    // Comprimir comprobante
     var compUrl=null;
     if(compB64){try{compUrl=await comprimirImagen(compB64,600,0.65);}catch(e){compUrl=null;}}
 
-
-    var payload={
-      restaurante_id:rest.id,
-      numero_pedido:num,
-      cliente_tel:tel,
-      cliente_nombre:nombre,
-      items:items.map(function(i){return i.qty+"x "+i.nombre+" "+fmt(i.precio*i.qty);}),
-      subtotal:sub,
-      desechables:des,
-      domicilio:dom,
-      total:total,
-      direccion:dir,
-      metodo_pago:pagoSel,
-      estado:"confirmado",
-      cupon_codigo:document.getElementById("iCupon").value.trim().toUpperCase()||null,
-      notas_especiales:notas||null,
-      comprobante_url:compUrl
-    };
-
-    var resp=await fetch(SU+"/rest/v1/pedidos",{
+    // Usar la ruta del servidor que ya sabe exactamente qué columnas usar
+    var resp=await fetch("/api/pedido-manual",{
       method:"POST",
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=representation"},
-      body:JSON.stringify(payload)
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        restaurante_id:rest.id,
+        telefono:tel,
+        nombre_cliente:nombre,
+        items:items.map(function(i){return i.qty+"x "+i.nombre+" "+fmt(i.precio*i.qty);}),
+        total:total,
+        desechables:des,
+        domicilio:dom,
+        direccion:dir,
+        metodo_pago:pagoSel,
+        notas_especiales:notasFinal||null,
+        comprobante_url:compUrl
+      })
     });
 
-    // Verificar que el INSERT fue exitoso
     if(!resp.ok){
       var errTxt=await resp.text();
-      console.error("Supabase error:",resp.status,errTxt);
-      // Si falla por el comprobante (payload muy grande), intentar sin imagen
-      if(resp.status===413||(errTxt&&errTxt.includes("too large"))){
-        payload.comprobante_url=null;
-        var resp2=await fetch(SU+"/rest/v1/pedidos",{
-          method:"POST",
-          headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=representation"},
-          body:JSON.stringify(payload)
-        });
-        if(!resp2.ok){throw new Error("Error "+resp2.status);}
-        resp=resp2;
-        showToast("⚠️ Pedido enviado sin imagen (muy pesada)");
-      } else {
-        throw new Error("Error "+resp.status+": "+errTxt);
-      }
+      console.error("Error servidor:",resp.status,errTxt);
+      throw new Error("Error "+resp.status);
     }
 
     var data=await resp.json();
-    var pedidoId=Array.isArray(data)?data[0]&&data[0].id:data&&data.id;
-    if(!pedidoId){
-      // El pedido se insertó pero no retornó ID — igual mostrar éxito
-      console.warn("No se obtuvo pedidoId, data:",data);
-    }
-    // fidelidad
+    if(!data.ok){throw new Error(data.error||"Error desconocido");}
+
+    var pedidoId=data.id||null;
+    var num=data.numero_pedido||Math.floor(Date.now()/1000)%100000;
+
+    // Actualizar fidelidad
     var telFid=tel.replace(/^57/,"");
     if(rest&&telFid.length>=10){
       try{
