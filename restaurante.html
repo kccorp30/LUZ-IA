@@ -2434,7 +2434,7 @@ header.innerHTML='<div class="pei-emoji">'+(i.emoji||autoEmoji(i.nombre))+'</div
 function guardarProdEditor(id,btn){
   if(!rest||!id)return;
   var tipo=document.getElementById("pei-tipo-"+id).value;
-  var payload={nombre:(document.getElementById("pei-nombre-"+id)||{value:""}).value.trim(),categoria:(document.getElementById("pei-cat-"+id)||{value:""}).value.trim(),precio:Number((document.getElementById("pei-precio-"+id)||{value:0}).value)||0,descripcion:(document.getElementById("pei-desc-"+id)||{value:""}).value.trim()||null,emoji:(document.getElementById("pei-emoji-"+id)||{value:""}).value.trim()||null,en_oferta:(document.getElementById("pei-oferta-"+id)||{value:"false"}).value==="true",es_bebida:tipo==="bebida",es_adicional:tipo==="adicional",es_arepa:tipo==="arepa"};
+  var payload={nombre:(document.getElementById("pei-nombre-"+id)||{value:""}).value.trim(),categoria:(document.getElementById("pei-cat-"+id)||{value:""}).value.trim(),precio:Number((document.getElementById("pei-precio-"+id)||{value:0}).value)||0,"descripcion":(document.getElementById("pei-desc-"+id)||{value:""}).value.trim()||null,emoji:(document.getElementById("pei-emoji-"+id)||{value:""}).value.trim()||null,en_oferta:(document.getElementById("pei-oferta-"+id)||{value:"false"}).value==="true"};
   var imgEl=document.getElementById("pei-img-"+id);
   if(imgEl&&imgEl.value.trim())payload.imagen_url=imgEl.value.trim();
   if(!payload.nombre||!payload.precio){notif("Nombre y precio son obligatorios");return;}
@@ -2853,12 +2853,11 @@ document.addEventListener("DOMContentLoaded",function(){
     if(!editProdId)return;
     var imgVal=document.getElementById("ep-img").value.trim();
     var emojiVal=document.getElementById("ep-emoji").value.trim();
-    // Solo campos que sabemos que existen en menu_items
     var payload={
       nombre:document.getElementById("ep-nombre").value.trim(),
       categoria:document.getElementById("ep-cat").value.trim(),
       precio:Number(document.getElementById("ep-precio").value)||0,
-      descripcion:document.getElementById("ep-desc").value.trim()||null,
+      "descripcion":document.getElementById("ep-desc").value.trim()||null,
       en_oferta:document.getElementById("ep-oferta").value==="true",
       disponible:editProdDispo
     };
@@ -2866,10 +2865,9 @@ document.addEventListener("DOMContentLoaded",function(){
     if(emojiVal)payload.emoji=emojiVal;
     if(!payload.nombre||!payload.precio){notif("Nombre y precio son obligatorios");return;}
     var btn=this;btn.textContent="Guardando...";btn.disabled=true;
-    // PATCH directo con header para forzar reload del schema cache
     fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{
       method:"PATCH",
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal","Accept-Profile":"public"},
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
       body:JSON.stringify(payload)
     })
     .then(function(r){
@@ -2880,12 +2878,12 @@ document.addEventListener("DOMContentLoaded",function(){
       } else {
         return r.text().then(function(t){
           console.error("PATCH error:",t);
-          // Si falla por emoji, reintentar sin emoji
-          if(t.indexOf("emoji")!==-1){
-            delete payload.emoji;
+          // Si falla imagen_url (columna no existe aún), reintentar sin ella
+          if(t.indexOf("imagen_url")!==-1){
+            delete payload.imagen_url;
             return fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
             .then(function(r2){
-              if(r2.ok||r2.status===204){notif("✅ Guardado","rgba(16,185,129,0.9)");document.getElementById("epOverlay").classList.remove("open");editProdId=null;loadMenuEditor();loadMenu();cargarProd();}
+              if(r2.ok||r2.status===204){notif("✅ Guardado (sin foto — ejecuta el SQL primero)","rgba(245,158,11,0.9)");document.getElementById("epOverlay").classList.remove("open");editProdId=null;loadMenuEditor();loadMenu();cargarProd();}
               else{return r2.text().then(function(t2){notif("Error: "+t2.substring(0,80));});}
             });
           }
