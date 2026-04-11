@@ -1991,16 +1991,6 @@ function loadDomiPanel(){
       });
       lista.innerHTML=h;
     }).catch(function(){lista.innerHTML='<div class="empty"><div class="et">Error</div></div>';});
-  }).catch(function(){lista.innerHTML='<div class="empty"><div class="et">Error</div></div>';});
-}h+='</div>';
-        var pedidosRecientes=misPedidos.slice(0,5);
-        h+='<div class="domi-panel-pedidos" style="display:none">';
-        if(!pedidosRecientes.length){h+='<div class="domi-panel-empty">Sin pedidos asignados</div>';}
-        else{pedidosRecientes.forEach(function(p){h+='<div class="domi-mini-pedido"><div class="domi-mini-num">#'+p.numero_pedido+'</div><div class="domi-mini-dir">'+(p.direccion||"--")+'</div><div class="domi-mini-estado '+(p.estado||"")+'">'+({en_camino:"En camino",entregado:"Entregado",listo:"Listo"}[p.estado]||p.estado)+'</div></div>';});}
-        h+='</div></div>';
-      });
-      lista.innerHTML=h;
-    }).catch(function(){lista.innerHTML='<div class="empty"><div class="et">Error cargando pedidos</div></div>';});
   }).catch(function(){lista.innerHTML='<div class="empty"><div class="et">Error cargando domiciliarios</div></div>';});
 }
 
