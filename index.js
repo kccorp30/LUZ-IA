@@ -219,15 +219,14 @@ function buildSystemPrompt(restaurante) {
 - $6.000: extremos de la ciudad`;
   }
 
-  var promosText = restaurante ? (restaurante.promos_semanales || "") : "";
+var promosText = restaurante ? (restaurante.promos_semanales || "") : "";
   if (!promosText) {
     promosText =
-`- Lunes: Pague 2 lleve 3 hamburguesas tradicionales
-- Martes: Pague 2 lleve 3 Alitas (cualquier presentacion)
-- Jueves: Pague 2 lleve 3 hamburguesas tradicionales y Angus BBQ King o Celestina
-- Domingos: Pague 2 lleve 3 asados junior`;
+`- Lunes: Pague 2 lleve 3 en Hamburguesa Especial Tradicional ($35.800 pague 2 lleve 3)
+- Martes: Combo especial 12 alitas con papa amarilla, salsas y Coca-Cola 1.5L por $40.000 (pague 1 combo lleve 2)
+- Miercoles: Pague 2 lleve 3 en Perro Italiano ($31.800)
+- Jueves: Pague 2 lleve 3 en Perro Italiano ($31.800) Y pague 2 lleve 3 en Hamburguesa Especial Tradicional ($35.800)`;
   }
-
   var infoAdicional = restaurante ? (restaurante.info_adicional || "") : "";
 
   return `Eres ${nombreLuz}, la encargada de atencion al cliente de ${nombreRest} en ${ciudad}.${direccion ? " Direccion: " + direccion + "." : ""}
