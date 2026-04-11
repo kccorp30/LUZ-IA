@@ -2294,10 +2294,10 @@ function loadMenuEditor(){
     });
     lista.innerHTML=h;
   lista.querySelectorAll(".prod-card-g").forEach(function(c){
-      c.addEventListener("click",function(){editorProdActivo=this.getAttribute("data-pid");loadMenuEditor();setTimeout(function(){togglePeiEdit(editorProdActivo);},50);});
+      c.addEventListener("click",function(){abrirEditProd(this.getAttribute("data-pid"));});
     });
     lista.querySelectorAll(".prod-edit-btn").forEach(function(b){
-      b.addEventListener("click",function(e){e.stopPropagation();editorProdActivo=this.getAttribute("data-id");loadMenuEditor();setTimeout(function(){togglePeiEdit(editorProdActivo);},50);});
+      b.addEventListener("click",function(e){e.stopPropagation();abrirEditProd(this.getAttribute("data-id"));});
     });
     lista.querySelectorAll(".pei-header").forEach(function(hdr){hdr.addEventListener("click",function(){togglePeiEdit(this.closest(".prod-editor-item").id.replace("pei-",""));});});
     lista.querySelectorAll(".pei-save-btn").forEach(function(b){b.addEventListener("click",function(){guardarProdEditor(this.getAttribute("data-id"),this);});});
@@ -2693,6 +2693,172 @@ function previewNuevoProdImg(){
   if(url&&prev){prev.src=url;prev.style.display="block";if(btn)btn.classList.add("tiene-foto");if(ph)ph.style.display="none";nuevoProdImgUrl=url;}
   else{if(prev){prev.src="";prev.style.display="none";}if(btn)btn.classList.remove("tiene-foto");if(ph)ph.style.display="flex";nuevoProdImgUrl=null;}
 }
+
+// ── OVERLAY EDITAR PRODUCTO ──
+var editProdId=null;
+function abrirEditProd(id){
+  if(!rest)return;
+  var item=null;
+  // Buscar en MENU_PROD primero, si no fetch directo
+  if(MENU_PROD&&MENU_PROD.length){item=MENU_PROD.find(function(x){return x.id===id;});}
+  if(item){_llenarEditProd(item);}
+  else{
+    fetch(SU+"/rest/v1/menu_items?id=eq."+id,{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+    .then(function(r){return r.json();})
+    .then(function(d){if(d&&d.length)_llenarEditProd(d[0]);})
+    .catch(function(){notif("Error cargando producto");});
+  }
+}
+function _llenarEditProd(item){
+  editProdId=item.id;
+  document.getElementById("ep-titulo").textContent="Editar: "+item.nombre;
+  document.getElementById("ep-nombre").value=item.nombre||"";
+  document.getElementById("ep-cat").value=item.categoria||"";
+  document.getElementById("ep-precio").value=item.precio||"";
+  document.getElementById("ep-desc").value=item.descripcion||"";
+  document.getElementById("ep-emoji").value=item.emoji||"";
+  document.getElementById("ep-tipo").value=item.es_bebida?"bebida":(item.es_adicional?"adicional":"comida");
+  document.getElementById("ep-oferta").value=item.en_oferta?"true":"false";
+  document.getElementById("ep-img").value=item.imagen_url||"";
+  var prev=document.getElementById("ep-img-prev");
+  if(item.imagen_url){prev.src=item.imagen_url;prev.style.display="block";}
+  else{prev.style.display="none";}
+  document.getElementById("epOverlay").classList.add("open");
+}
+document.addEventListener("DOMContentLoaded",function(){
+  document.getElementById("epCancelar").addEventListener("click",function(){document.getElementById("epOverlay").classList.remove("open");editProdId=null;});
+  document.getElementById("epOverlay").addEventListener("click",function(e){if(e.target===this){this.classList.remove("open");editProdId=null;}});
+  document.getElementById("ep-img").addEventListener("input",function(){
+    var prev=document.getElementById("ep-img-prev");
+    if(this.value.trim()){prev.src=this.value.trim();prev.style.display="block";}
+    else prev.style.display="none";
+  });
+  document.getElementById("epGuardar").addEventListener("click",function(){
+    if(!editProdId)return;
+    var tipo=document.getElementById("ep-tipo").value;
+    var payload={
+      nombre:document.getElementById("ep-nombre").value.trim(),
+      categoria:document.getElementById("ep-cat").value.trim(),
+      precio:Number(document.getElementById("ep-precio").value)||0,
+      descripcion:document.getElementById("ep-desc").value.trim()||null,
+      emoji:document.getElementById("ep-emoji").value.trim()||null,
+      en_oferta:document.getElementById("ep-oferta").value==="true",
+      es_bebida:tipo==="bebida",
+      es_adicional:tipo==="adicional",
+      imagen_url:document.getElementById("ep-img").value.trim()||null
+    };
+    if(!payload.nombre||!payload.precio){notif("Nombre y precio son obligatorios");return;}
+    var btn=this;btn.textContent="Guardando...";btn.disabled=true;
+    fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
+    .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t);});return r.text();})
+    .then(function(){notif("✅ Producto guardado");document.getElementById("epOverlay").classList.remove("open");editProdId=null;loadMenuEditor();loadMenu();cargarProd();})
+    .catch(function(e){notif("Error: "+e.message.substring(0,40));})
+    .finally(function(){btn.textContent="💾 Guardar";btn.disabled=false;});
+  });
+  document.getElementById("epEliminar").addEventListener("click",function(){
+    if(!editProdId||!confirm("¿Eliminar este producto?"))return;
+    fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+    .then(function(r){if(r.ok||r.status===204){notif("Producto eliminado");document.getElementById("epOverlay").classList.remove("open");editProdId=null;loadMenuEditor();loadMenu();cargarProd();}else{notif("Error al eliminar");}})
+    .catch(function(){notif("Error de conexion");});
+  });
+});
+
+// ── GUARDAR BANNERS/PROMOS DIRECTO A SUPABASE ──
+function guardarPromosEditor(){
+  if(!rest)return;
+  var promosText=promoDiasEditorData.filter(function(p){return p.dia&&p.texto.trim();}).map(function(p){return"- "+p.dia+": "+p.texto.trim();}).join("\n");
+  var bannersStr=JSON.stringify(bannersEditorData);
+  var btn=document.querySelector("#metsec-promos .edit-save-btn");
+  if(btn){btn.textContent="Guardando...";btn.disabled=true;}
+  // Guardar promos_semanales y banners_json directo a Supabase
+  fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{
+    method:"PATCH",
+    headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+    body:JSON.stringify({promos_semanales:promosText,banners_json:bannersStr})
+  })
+  .then(function(r){
+    if(r.ok||r.status===204){
+      rest.promos_semanales=promosText;
+      rest.banners_json=bannersStr;
+      notif("✅ Promos y banners guardados!");
+    } else {
+      return r.text().then(function(t){
+        // Si falla por columna inexistente, intentar solo promos_semanales
+        if(t.indexOf("PGRST204")!==-1||t.indexOf("banners_json")!==-1){
+          return fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{
+            method:"PATCH",
+            headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+            body:JSON.stringify({promos_semanales:promosText})
+          }).then(function(r2){
+            if(r2.ok||r2.status===204){
+              rest.promos_semanales=promosText;
+              // Guardar banners en localStorage como fallback
+              localStorage.setItem("luzBanners_"+rest.id,bannersStr);
+              rest.banners_json=bannersStr;
+              notif("✅ Promos guardadas (banners en local)");
+            } else notif("Error guardando promos");
+          });
+        }
+        notif("Error: "+t.substring(0,40));
+      });
+    }
+  })
+  .catch(function(){notif("Error de conexion");})
+  .finally(function(){if(btn){btn.textContent="💾 Guardar promociones";btn.disabled=false;}});
+}
+
+// Parchar cargarPromosEditor para leer banners desde localStorage si no hay en BD
+var _origCargarPromosEditor=cargarPromosEditor;
+function cargarPromosEditor(){
+  if(!rest)return;
+  var promoRaw=rest.promos_semanales||"";
+  promoDiasEditorData=[];
+  promoRaw.split("\n").forEach(function(linea){
+    linea=linea.trim();if(!linea)return;
+    var match=linea.match(/^-\s*([^:]+):\s*(.+)$/);
+    if(match)promoDiasEditorData.push({dia:match[1].trim(),texto:match[2].trim()});
+  });
+  var bannersRaw=rest.banners_json||localStorage.getItem("luzBanners_"+rest.id)||"[]";
+  try{bannersEditorData=JSON.parse(bannersRaw);}catch(e){bannersEditorData=[];}
+  renderPromoDiasEditor();renderBannersEditor();
+}
 </script>
+
+<!-- OVERLAY EDITAR PRODUCTO -->
+<div class="edit-overlay" id="epOverlay">
+  <div class="edit-box">
+    <div class="msg-handle" style="display:block;width:36px;height:4px;background:var(--glass-border2);border-radius:2px;margin:0 auto 18px"></div>
+    <div class="edit-title" id="ep-titulo">Editar producto</div>
+    <img id="ep-img-prev" style="width:100%;height:140px;object-fit:cover;border-radius:14px;margin-bottom:12px;display:none;">
+    <div class="frow">
+      <div class="ffield" style="max-width:72px"><label class="flabel">Emoji</label><input class="finput" id="ep-emoji" style="font-size:20px;text-align:center;" maxlength="4"></div>
+      <div class="ffield"><label class="flabel">Nombre *</label><input class="finput" id="ep-nombre" placeholder="Nombre del producto"></div>
+    </div>
+    <div class="frow">
+      <div class="ffield"><label class="flabel">Categoría</label><input class="finput" id="ep-cat" list="cats-list"></div>
+      <div class="ffield"><label class="flabel">Precio *</label><input class="finput" id="ep-precio" type="number"></div>
+    </div>
+    <div class="ffield"><label class="flabel">Descripción</label><input class="finput" id="ep-desc" placeholder="Descripción..."></div>
+    <div class="frow">
+      <div class="ffield"><label class="flabel">Tipo</label>
+        <select class="finput" id="ep-tipo">
+          <option value="comida">🍟 Comida</option>
+          <option value="bebida">🥤 Bebida</option>
+          <option value="adicional">➕ Adicional</option>
+        </select>
+      </div>
+      <div class="ffield"><label class="flabel">Oferta</label>
+        <select class="finput" id="ep-oferta">
+          <option value="false">No</option>
+          <option value="true">🔥 Sí</option>
+        </select>
+      </div>
+    </div>
+    <div class="ffield"><label class="flabel">Foto URL</label><input class="finput" id="ep-img" placeholder="https://..."></div>
+    <button class="edit-save" id="epGuardar">💾 Guardar</button>
+    <button style="width:100%;padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:14px;color:#fca5a5;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;" id="epEliminar">🗑 Eliminar producto</button>
+    <button class="edit-cancel-btn" id="epCancelar">Cancelar</button>
+  </div>
+</div>
 </body>
 </html>
