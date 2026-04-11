@@ -884,14 +884,47 @@ textarea.fi{resize:none;min-height:66px;}
   </div>
 </div>
 
+<!-- MODAL REGISTRO RAPIDO -->
+<div id="regRapidoOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)" onclick="if(event.target===this)cerrarRegistroRapido()">
+  <div style="background:var(--bg2);border-radius:26px 26px 0 0;padding:24px 20px calc(32px + env(safe-area-inset-bottom));width:100%;max-width:520px;border:1px solid var(--border);border-bottom:none">
+    <div style="width:38px;height:4px;background:var(--s3);border-radius:2px;margin:0 auto 20px"></div>
+    <div style="font-family:var(--font-disp);font-size:28px;font-weight:900;letter-spacing:1px;margin-bottom:4px">⭐ REWARDS</div>
+    <div style="font-size:13px;color:var(--t2);margin-bottom:20px">Ingresa tu WhatsApp para ver tus puntos y canjear recompensas</div>
+    <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:7px">Tu WhatsApp</label>
+    <input id="regRapidoTel" class="fi" type="tel" placeholder="3001234567" style="margin-bottom:12px" oninput="buscarClienteRapido(this.value)">
+    <div id="regRapidoInfo" style="display:none;padding:12px 14px;border-radius:13px;margin-bottom:14px;background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2)">
+      <div id="regRapidoNombre" style="font-size:14px;font-weight:700;color:#f5a623"></div>
+      <div id="regRapidoPts" style="font-size:13px;color:var(--t2);margin-top:3px"></div>
+    </div>
+    <button onclick="confirmarRegistroRapido()" style="width:100%;padding:15px;background:linear-gradient(135deg,#f5a623,#f97316);border:none;border-radius:14px;color:white;font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer">Ver mis puntos ⭐</button>
+  </div>
+</div>
+
 <!-- TIPO -->
-<div class="tipo-wrap">
+<div class="tipo-wrap" style="padding-top:12px">
   <div class="tipo-row">
     <button class="tbtn on" id="t-domicilio" onclick="setTipo('domicilio')"><span class="ti">🛵</span>Domicilio</button>
     <button class="tbtn" id="t-recoger" onclick="setTipo('recoger')"><span class="ti">🏪</span>Recoger</button>
     <button class="tbtn" id="t-mesa" onclick="setTipo('mesa')" style="display:none"><span class="ti">🪑</span>Mesa</button>
   </div>
 </div>
+
+<!-- BANNER REWARDS -->
+<div id="rewardsBanner" style="margin:12px 16px 0;background:linear-gradient(135deg,rgba(245,166,35,0.12),rgba(249,115,22,0.08));border:1px solid rgba(245,166,35,0.25);border-radius:16px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer" onclick="abrirRegistroRapido()">
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:24px">⭐</span>
+    <div>
+      <div id="rwBannerTxt" style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#f5a623">Acumula puntos con cada pedido</div>
+      <div id="rwBannerSub" style="font-size:11px;color:var(--t2);margin-top:1px">Ingresa tu número para ver tus puntos</div>
+    </div>
+  </div>
+  <div id="rwBannerPts" style="display:none;text-align:right">
+    <div style="font-family:var(--font-disp);font-size:22px;font-weight:900;color:#f5a623;line-height:1" id="rwBannerPtsNum">0</div>
+    <div style="font-size:10px;color:var(--t2)">pts</div>
+  </div>
+  <div id="rwBannerArrow" style="color:rgba(245,166,35,0.6);font-size:18px">›</div>
+</div>
+
 
 <!-- PROMOS -->
 <div class="promos-wrap" id="promosWrap">
@@ -1448,7 +1481,7 @@ function checkCliente(){
     if(!rest||tel.length<10)return;
     try{
       var tl=tel.replace(/^57/,"");
-      var r=await api("clientes_frecuentes","restaurante_id=eq."+rest.id+"&telefono=eq."+encodeURIComponent(tl)+"&select=nombre_cliente,nivel_fidelidad,total_pedidos");
+      var r=await api("clientes_frecuentes","restaurante_id=eq."+rest.id+"&telefono=eq."+encodeURIComponent(tl)+"&select=nombre_cliente,nivel_fidelidad,total_pedidos,puntos");
       if(r&&r.length){
         clienteData=r[0];
         var nv=clienteData.nivel_fidelidad||"bronce";
@@ -1475,6 +1508,8 @@ function checkCliente(){
         if(fab){document.getElementById("rewardsFabPts").textContent=pts+" pts";fab.classList.remove("hidden");}
         // mostrar badges pts en tarjetas
         document.querySelectorAll(".pts-badge-v").forEach(function(b){b.style.display="block";});
+        // actualizar banner rewards
+        actualizarBannerRewards({nombre_cliente:clienteData.nombre_cliente,puntos:pts,nivel_fidelidad:nv});
       }
     }catch(e){}
   },600);
@@ -1816,6 +1851,88 @@ async function confirmarCanje(){
   }catch(e){
     showToast("Error al canjear. Intenta de nuevo.");
     btn.disabled=false;btn.textContent="⭐ Confirmar canje";
+  }
+}
+
+/* ── REGISTRO RAPIDO / BANNER REWARDS ── */
+var regRapidoData=null,regRapidoTimer=null;
+
+function abrirRegistroRapido(){
+  // Si ya hay teléfono en el carrito, abrir rewards directo
+  var telCart=document.getElementById("iTel");
+  if(telCart&&telCart.value.trim().replace(/\D/g,"").length>=10){
+    abrirRewards();return;
+  }
+  document.getElementById("regRapidoOv").style.display="flex";
+  setTimeout(function(){document.getElementById("regRapidoTel").focus();},200);
+}
+function cerrarRegistroRapido(){
+  document.getElementById("regRapidoOv").style.display="none";
+}
+function buscarClienteRapido(val){
+  clearTimeout(regRapidoTimer);
+  var tel=val.replace(/\D/g,"");
+  if(tel.length<10){document.getElementById("regRapidoInfo").style.display="none";regRapidoData=null;return;}
+  regRapidoTimer=setTimeout(async function(){
+    var tl=tel.replace(/^57/,"");
+    try{
+      var r=await api("clientes_frecuentes","restaurante_id=eq."+rest.id+"&telefono=eq."+encodeURIComponent(tl)+"&select=nombre_cliente,puntos,nivel_fidelidad,total_pedidos");
+      var info=document.getElementById("regRapidoInfo");
+      if(r&&r.length){
+        regRapidoData=r[0];
+        regRapidoData.telefono=tl;
+        document.getElementById("regRapidoNombre").textContent=(r[0].nombre_cliente||"Cliente")+" · Nivel "+(r[0].nivel_fidelidad||"bronce").toUpperCase();
+        document.getElementById("regRapidoPts").textContent="⭐ "+(r[0].puntos||0)+" puntos acumulados · "+r[0].total_pedidos+" pedidos";
+        info.style.display="block";
+      }else{
+        regRapidoData={telefono:tl,puntos:0,nuevo:true};
+        document.getElementById("regRapidoNombre").textContent="¡Cliente nuevo!";
+        document.getElementById("regRapidoPts").textContent="⭐ Empieza a acumular puntos desde tu primer pedido";
+        info.style.display="block";
+      }
+    }catch(e){}
+  },500);
+}
+function confirmarRegistroRapido(){
+  var tel=document.getElementById("regRapidoTel").value.replace(/\D/g,"");
+  if(tel.length<10){showToast("Ingresa tu número completo");return;}
+  var tl=tel.replace(/^57/,"");
+  // Pasar el tel al carrito
+  var telCart=document.getElementById("iTel");
+  if(telCart)telCart.value=tel;
+  // Actualizar banner
+  actualizarBannerRewards(regRapidoData);
+  cerrarRegistroRapido();
+  // Si tenemos datos, abrir rewards
+  if(regRapidoData&&!regRapidoData.nuevo){
+    puntosCliente=regRapidoData.puntos||0;
+    clienteData=regRapidoData;
+    var fab=document.getElementById("rewardsFab");
+    if(fab){document.getElementById("rewardsFabPts").textContent=puntosCliente+" pts";fab.classList.remove("hidden");}
+    abrirRewards();
+  } else {
+    showToast("¡Listo! Ganarás puntos en tu primer pedido ⭐");
+  }
+}
+function actualizarBannerRewards(data){
+  var banner=document.getElementById("rewardsBanner");
+  var txt=document.getElementById("rwBannerTxt");
+  var sub=document.getElementById("rwBannerSub");
+  var ptsDiv=document.getElementById("rwBannerPts");
+  var ptsNum=document.getElementById("rwBannerPtsNum");
+  var arrow=document.getElementById("rwBannerArrow");
+  if(!banner)return;
+  if(data&&!data.nuevo&&data.puntos!==undefined){
+    var pts=data.puntos||0;
+    txt.textContent=(data.nombre_cliente||"Cliente")+" — Nivel "+(data.nivel_fidelidad||"bronce").toUpperCase();
+    sub.textContent=pts>0?"Toca para ver y canjear tus recompensas ›":"Haz tu primer pedido y empieza a acumular ⭐";
+    ptsNum.textContent=pts;
+    ptsDiv.style.display="block";
+    arrow.style.display="none";
+    banner.style.background="linear-gradient(135deg,rgba(245,166,35,0.18),rgba(249,115,22,0.12))";
+  } else if(data&&data.nuevo){
+    txt.textContent="¡Bienvenido al programa de puntos!";
+    sub.textContent="Cada pedido suma puntos canjeables ⭐";
   }
 }
 
