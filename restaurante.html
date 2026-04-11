@@ -2503,7 +2503,13 @@ function cargarPromosEditor(){
     var match=linea.match(/^-\s*([^:]+):\s*(.+)$/);
     if(match)promoDiasEditorData.push({dia:match[1].trim(),texto:match[2].trim()});
   });
-  try{bannersEditorData=JSON.parse(rest.banners_json||"[]");}catch(e){bannersEditorData=[];}
+  var BANNERS_DEFAULT=[
+    {emoji:"🍔",titulo:"2x1 en Combos",descripcion:"Todos los martes pide dos combos al precio de uno",color1:"#7c1a08",color2:"#3d0d04"},
+    {emoji:"🛵",titulo:"Domicilio Gratis",descripcion:"En pedidos mayores a $30.000 el envío es gratis",color1:"#0a2a1a",color2:"#051409"},
+    {emoji:"⭐",titulo:"Puntos Dobles",descripcion:"Acumula el doble de puntos los fines de semana",color1:"#1a1408",color2:"#0a0904"}
+  ];
+  var bannersRaw=rest.banners_json||localStorage.getItem("luzBanners_"+rest.id)||"";
+  try{bannersEditorData=bannersRaw?JSON.parse(bannersRaw):JSON.parse(JSON.stringify(BANNERS_DEFAULT));}catch(e){bannersEditorData=JSON.parse(JSON.stringify(BANNERS_DEFAULT));}
   renderPromoDiasEditor();renderBannersEditor();
 }
 function renderPromoDiasEditor(){
@@ -2596,18 +2602,6 @@ function eliminarBanner(idx){
 function agregarBannerEditor(){
   bannersEditorData.push({emoji:"🔥",titulo:"Nueva Promo",descripcion:"Descripción de la promo",color1:"#7c1a08",color2:"#3d0d04"});
   renderBannersEditor();
-}
-function guardarPromosEditor(){
-  if(!rest)return;
-  var promosText=promoDiasEditorData.filter(function(p){return p.dia&&p.texto.trim();}).map(function(p){return"- "+p.dia+": "+p.texto.trim();}).join("\n");
-  var config={promos_semanales:promosText,banners_json:JSON.stringify(bannersEditorData)};
-  var btn=document.querySelector("#metsec-promos .edit-save-btn");
-  if(btn){btn.textContent="Guardando...";btn.disabled=true;}
-  fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:config})})
-  .then(function(r){return r.json();})
-  .then(function(d){if(d.ok){rest.promos_semanales=promosText;rest.banners_json=JSON.stringify(bannersEditorData);notif("✅ Promos guardadas!");}else{notif("Error: "+(d.error||"").substring(0,40));}})
-  .catch(function(){notif("Error de conexion");})
-  .finally(function(){if(btn){btn.textContent="💾 Guardar promociones";btn.disabled=false;}});
 }
 
 // FOTO UPLOAD DIRECTO
@@ -2888,27 +2882,6 @@ function guardarPromosEditor(){
   })
   .catch(function(){notif("Error de conexion");})
   .finally(function(){if(btn){btn.textContent="💾 Guardar promociones";btn.disabled=false;}});
-}
-
-// Parchar cargarPromosEditor para leer banners desde localStorage si no hay en BD
-var _origCargarPromosEditor=cargarPromosEditor;
-function cargarPromosEditor(){
-  if(!rest)return;
-  var promoRaw=rest.promos_semanales||"";
-  promoDiasEditorData=[];
-  promoRaw.split("\n").forEach(function(linea){
-    linea=linea.trim();if(!linea)return;
-    var match=linea.match(/^-\s*([^:]+):\s*(.+)$/);
-    if(match)promoDiasEditorData.push({dia:match[1].trim(),texto:match[2].trim()});
-  });
-  var BANNERS_DEFAULT=[
-    {emoji:"🍔",titulo:"2x1 en Combos",descripcion:"Todos los martes pide dos combos al precio de uno",color1:"#7c1a08",color2:"#3d0d04"},
-    {emoji:"🛵",titulo:"Domicilio Gratis",descripcion:"En pedidos mayores a $30.000 el envío es gratis",color1:"#0a2a1a",color2:"#051409"},
-    {emoji:"⭐",titulo:"Puntos Dobles",descripcion:"Acumula el doble de puntos los fines de semana",color1:"#1a1408",color2:"#0a0904"}
-  ];
-  var bannersRaw=rest.banners_json||localStorage.getItem("luzBanners_"+rest.id)||"";
-  try{bannersEditorData=bannersRaw?JSON.parse(bannersRaw):JSON.parse(JSON.stringify(BANNERS_DEFAULT));}catch(e){bannersEditorData=JSON.parse(JSON.stringify(BANNERS_DEFAULT));}
-  renderPromoDiasEditor();renderBannersEditor();
 }
 </script>
 
