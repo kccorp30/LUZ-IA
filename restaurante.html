@@ -2317,8 +2317,7 @@ function loadMenuEditor(){
     });
     lista.querySelectorAll("[id^='pei-img-']").forEach(function(inp){
       inp.addEventListener("input",function(){var prodId=this.id.replace("pei-img-","");if(!this.value.trim())limpiarFotoProdUI(prodId);});
-    });
-  }).catch(function(){});
+  
 }
 function escHtml(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function togglePeiEdit(id){
