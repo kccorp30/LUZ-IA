@@ -2292,7 +2292,6 @@ function loadMenuEditor(){
       });
       h+='</div>';
     });
-    });
     lista.innerHTML=h;
   lista.querySelectorAll(".prod-card-g").forEach(function(c){
       c.addEventListener("click",function(){editorProdActivo=this.getAttribute("data-pid");loadMenuEditor();setTimeout(function(){togglePeiEdit(editorProdActivo);},50);});
@@ -2317,7 +2316,8 @@ function loadMenuEditor(){
     });
     lista.querySelectorAll("[id^='pei-img-']").forEach(function(inp){
       inp.addEventListener("input",function(){var prodId=this.id.replace("pei-img-","");if(!this.value.trim())limpiarFotoProdUI(prodId);});
-  
+    });
+  }).catch(function(){});
 }
 function escHtml(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function togglePeiEdit(id){
@@ -2364,11 +2364,6 @@ function autoEmoji(nombre){
   ];
   for(var j=0;j<mapa.length;j++){if(n.indexOf(mapa[j][0])!==-1)return mapa[j][1];}
   return "🍽️";
-}function autoEmoji(nombre){
-  var n=(nombre||"").toLowerCase();
-  var m=[["hamburgu","🍔"],["burger","🍔"],["especial","🍔"],["angus","🍔"],["bbq","🍔"],["perro","🌭"],["hot dog","🌭"],["italiano","🌭"],["frances","🌭"],["alita","🍗"],["ala","🍗"],["wing","🍗"],["pollo","🍗"],["asado","🥩"],["carne","🥩"],["junior","🥩"],["churrasco","🥩"],["arepa","🫓"],["choclo","🫓"],["papa","🍟"],["frita","🍟"],["pizza","🍕"],["ensalada","🥗"],["sopa","🍲"],["arroz","🍚"],["gaseosa","🥤"],["cola","🥤"],["agua","💧"],["jugo","🧃"],["limonada","🍋"],["cafe","☕"],["tinto","☕"],["helado","🍦"],["postre","🍮"],["brownie","🍫"],["torta","🎂"],["queso","🧀"],["tocineta","🥓"],["bacon","🥓"],["jamon","🥩"],["maduro","🍌"],["aguacate","🥑"],["maiz","🌽"],["salchicha","🌭"],["chorizo","🌭"],["combo","🎁"],["ranchera","🫙"],["salsa","🫙"],["ajo","🫙"],["chimichurri","🫙"],["jalapeno","🌶️"],["picante","🌶️"],["aplastado","🥪"],["chuzo","🍢"],["desgranado","🌽"],["chuzos","🍢"]];
-  for(var j=0;j<m.length;j++){if(n.indexOf(m[j][0])!==-1)return m[j][1];}
-  return"🍽️";
 }function renderEditorProdItem(i){
   var imgUrl=i.imagen_url||"";
   var div=document.createElement("div");
