@@ -1534,7 +1534,7 @@ function loadMenu(){
     var h="";
     Object.keys(g).forEach(function(cat){
       h+='<div class="mcat"><div class="mct">'+cat+'</div>';
-      g[cat].forEach(function(i){h+='<div class="mitem"><div style="font-size:26px;margin-right:10px;flex-shrink:0">'+(i.emoji||"🍔")+'</div><div style="flex:1"><div class="mname">'+i.nombre+(i.en_oferta?" 🔥":"")+'</div><div class="mdesc">'+(i.descripcion||"")+'</div></div><div class="mprice">'+fmt(i.precio)+'</div><button class="tog '+(i.disponible?"on":"off")+'" data-iid="'+i.id+'" data-d="'+i.disponible+'"></button></div>';});
+      g[cat].forEach(function(i){h+='<div class="mitem"><div style="font-size:26px;margin-right:10px;flex-shrink:0">'+(i.emoji||autoEmoji(i.nombre))+'</div><div style="flex:1"><div class="mname">'+i.nombre+(i.en_oferta?" 🔥":"")+'</div><div class="mdesc">'+(i.descripcion||"")+'</div></div><div class="mprice">'+fmt(i.precio)+'</div><button class="tog '+(i.disponible?"on":"off")+'" data-iid="'+i.id+'" data-d="'+i.disponible+'"></button></div>';});
       h+='</div>';
     });
     l.innerHTML=h;
@@ -2300,15 +2300,52 @@ function togglePeiEdit(id){
   document.querySelectorAll(".pei-body.open").forEach(function(b){b.classList.remove("open");b.closest(".prod-editor-item").classList.remove("open");});
   if(!isOpen){body.classList.add("open");item.classList.add("open");}
 }
-function renderEditorProdItem(i){
+function autoEmoji(nombre){
+  var n=(nombre||"").toLowerCase();
+  var mapa=[
+    ["hamburgu","🍔"],["burger","🍔"],["especial","🍔"],["angus","🍔"],["bbq","🍔"],
+    ["perro","🌭"],["hot dog","🌭"],["italiano","🌭"],["frances","🌭"],
+    ["alita","🍗"],["ala","🍗"],["wing","🍗"],
+    ["pollo","🍗"],["chicken","🍗"],
+    ["asado","🥩"],["carne","🥩"],["junior","🥩"],["churrasco","🥩"],
+    ["arepa","🫓"],["choclo","🫓"],
+    ["papa","🍟"],["frita","🍟"],["chips","🍟"],
+    ["pizza","🍕"],
+    ["taco","🌮"],["burrito","🌯"],
+    ["sandwich","🥪"],["sanguche","🥪"],
+    ["ensalada","🥗"],["cesar","🥗"],
+    ["sopa","🍲"],["caldo","🍲"],
+    ["arroz","🍚"],["bandeja","🍛"],
+    ["gaseosa","🥤"],["cola","🥤"],["refresco","🥤"],["soda","🥤"],
+    ["agua","💧"],
+    ["jugo","🧃"],["limonada","🍋"],["naranjada","🍊"],
+    ["cafe","☕"],["tinto","☕"],["capuchino","☕"],
+    ["cerveza","🍺"],["beer","🍺"],
+    ["helado","🍦"],["postre","🍮"],["brownie","🍫"],["torta","🎂"],
+    ["queso","🧀"],["cheese","🧀"],
+    ["tocineta","🥓"],["bacon","🥓"],
+    ["jamon","🥩"],["ham","🥩"],
+    ["maduro","🍌"],["platano","🍌"],
+    ["aguacate","🥑"],["avocado","🥑"],
+    ["maiz","🌽"],["corn","🌽"],
+    ["salchicha","🌭"],["chorizo","🌭"],
+    ["combo","🎁"],["meal","🎁"],
+    ["ranchera","🫙"],["salsa","🫙"],["ajo","🫙"],["chimichurri","🫙"],
+    ["jalapeno","🌶️"],["picante","🌶️"],
+    ["aplastado","🥪"],["chuzos","🍢"],["chuzo","🍢"],
+    ["desgranado","🌽"]
+  ];
+  for(var j=0;j<mapa.length;j++){if(n.indexOf(mapa[j][0])!==-1)return mapa[j][1];}
+  return "🍽️";
+}function renderEditorProdItem(i){
   var imgUrl=i.imagen_url||"";
   var div=document.createElement("div");
   div.className="prod-editor-item";
   div.id="pei-"+i.id;
   var header=document.createElement("div");
   header.className="pei-header";
-  header.innerHTML='<div class="pei-emoji">'+(i.emoji||"🍔")+'</div>'
-    +'<div class="pei-info"><div class="pei-name">'+i.nombre+(i.en_oferta?" 🔥":"")+'</div>'
+header.innerHTML='<div class="pei-emoji">'+(i.emoji||autoEmoji(i.nombre))+'</div>'
+  +'<div class="pei-info"><div class="pei-name">'+i.nombre+(i.en_oferta?" 🔥":"")+'</div>'
     +'<div class="pei-meta">'+i.categoria+' · <span style="color:'+(i.disponible?"#34d399":"#fca5a5")+'">'+(i.disponible?"✓ Activo":"✗ Oculto")+'</span>'
     +(imgUrl?' · <span style="color:#a78bfa">📷 Con foto</span>':'')
     +'</div></div>'
