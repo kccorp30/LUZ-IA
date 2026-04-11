@@ -973,10 +973,10 @@ function cargarPromos(){
     var bg="linear-gradient(140deg,"+p.color1+","+p.color2+")";
     return '<div class="promo-card" style="background:'+bg+'">'
       +'<div class="promo-inner">'
-      +'<span class="promo-emoji">'+p.emoji+'</span>'
+      +'<span class="promo-emoji">'+(p.emoji||"🔥")+'</span>'
       +'<div class="promo-badge">🔥 PROMO</div>'
       +'<div class="promo-title">'+p.titulo+'</div>'
-      +'<div class="promo-desc">'+p.desc+'</div>'
+      +'<div class="promo-desc">'+(p.desc||p.descripcion||"")+'</div>'
       +'</div></div>';
   }).join("");
   document.getElementById("promosScroll").innerHTML=h;
