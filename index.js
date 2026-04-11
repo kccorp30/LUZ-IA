@@ -590,15 +590,19 @@ async function verificarComprobante(mediaId, totalEsperado) {
 async function sendWhatsAppMessage(to, message, phoneNumberId) {
   var token = process.env.WHATSAPP_TOKEN;
   var pid   = phoneNumberId || process.env.WHATSAPP_PHONE_ID;
-  if (!token || !pid) { console.error("Faltan WHATSAPP_TOKEN o PHONE_ID"); return; }
+  if (!token || !pid) { throw new Error("Faltan WHATSAPP_TOKEN o PHONE_ID en variables de entorno"); }
   var toNum = to.replace(/[^0-9]/g, "");
   if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
   try {
-    await axios.post("https://graph.facebook.com/v19.0/" + pid + "/messages",
+    var resp = await axios.post("https://graph.facebook.com/v19.0/" + pid + "/messages",
       { messaging_product: "whatsapp", to: toNum, type: "text", text: { body: message } },
       { headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } });
-    console.log("Enviado a " + toNum);
-  } catch (e) { console.error("sendWA:", e.response ? JSON.stringify(e.response.data) : e.message); }
+    console.log("WA enviado a " + toNum, resp.data);
+  } catch (e) {
+    var errDetail = e.response ? JSON.stringify(e.response.data) : e.message;
+    console.error("sendWA error:", errDetail);
+    throw new Error("WhatsApp API: " + errDetail);
+  }
 }
 
 function estaEnHorario(restaurante) {
@@ -1034,10 +1038,15 @@ app.post("/enviar-mensaje-cliente", async function(req, res) {
         if (rr.data?.length && rr.data[0].whatsapp_phone_id) pid = rr.data[0].whatsapp_phone_id;
       } catch(e) {}
     }
+    if (!pid) return res.status(500).json({ ok: false, error: "WHATSAPP_PHONE_ID no configurado en Railway" });
+    if (!process.env.WHATSAPP_TOKEN) return res.status(500).json({ ok: false, error: "WHATSAPP_TOKEN no configurado en Railway" });
     await sendWhatsAppMessage(req.body.telefono, req.body.mensaje, pid);
     if (req.body.restaurante_id) guardarMensajeSupabase(req.body.restaurante_id, req.body.telefono, req.body.mensaje, "restaurante", null);
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+  } catch (e) {
+    console.error("enviar-mensaje-cliente error:", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 app.post("/api/pedido-manual", async function(req, res) {
