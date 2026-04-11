@@ -669,6 +669,178 @@ textarea.fi{resize:none;min-height:66px;}
 /* datafono option hidden by default */
 #p-datafono{display:none;}
 
+/* ── REWARDS SYSTEM ── */
+/* Floating star button */
+.rewards-fab{
+  position:fixed;bottom:80px;right:16px;z-index:95;
+  display:none;
+  background:linear-gradient(135deg,#f5a623,#f97316);
+  border:none;border-radius:100px;
+  padding:10px 16px 10px 12px;
+  color:white;font-family:var(--font-ui);font-size:13px;font-weight:700;
+  cursor:pointer;letter-spacing:0.02em;
+  box-shadow:0 6px 20px rgba(245,166,35,0.5);
+  display:flex;align-items:center;gap:6px;
+  transition:transform 0.2s;
+}
+.rewards-fab.hidden{display:none!important;}
+.rewards-fab:active{transform:scale(0.93);}
+.rewards-fab-pts{font-family:var(--font-disp);font-size:18px;font-weight:800;line-height:1;}
+
+/* Pts badge on product cards */
+.pts-badge{
+  position:absolute;top:8px;right:8px;z-index:3;
+  background:rgba(245,166,35,0.9);color:white;
+  font-family:var(--font-ui);font-size:9px;font-weight:700;
+  padding:3px 7px;border-radius:6px;letter-spacing:0.05em;
+  display:none;
+}
+
+/* Pts badge in fid box */
+.fid-pts-badge{
+  background:rgba(245,166,35,0.15);
+  border:1px solid rgba(245,166,35,0.35);
+  border-radius:10px;padding:5px 10px;
+  font-family:var(--font-ui);font-size:12px;font-weight:700;
+  color:#f5a623;margin-top:4px;display:inline-block;
+}
+
+/* Pts badge success screen */
+.succ-pts-badge{
+  display:none;
+  background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);
+  border-radius:16px;padding:12px 20px;margin:0 24px 16px;
+  text-align:center;width:calc(100% - 48px);
+}
+.succ-pts-txt{font-family:var(--font-disp);font-size:28px;font-weight:800;color:#f5a623;letter-spacing:1px;}
+.succ-pts-lbl{font-size:12px;color:var(--t2);margin-top:2px;}
+
+/* REWARDS FULL SCREEN */
+#rewardsScreen{
+  display:none;position:fixed;inset:0;background:var(--bg);z-index:300;
+  flex-direction:column;overflow-y:auto;
+}
+#rewardsScreen.show{display:flex;}
+.rw-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  background:var(--bg);position:sticky;top:0;z-index:2;
+}
+.rw-title{font-family:var(--font-disp);font-size:26px;font-weight:800;letter-spacing:1px;}
+.rw-close{
+  width:34px;height:34px;border-radius:11px;
+  background:var(--s2);border:1px solid var(--border);
+  color:var(--t2);cursor:pointer;font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+}
+.rw-hero{
+  padding:24px 20px 20px;
+  background:linear-gradient(135deg,rgba(245,166,35,0.1),rgba(249,115,22,0.06));
+  border-bottom:1px solid rgba(245,166,35,0.15);
+}
+.rw-pts-big{
+  font-family:var(--font-disp);font-size:64px;font-weight:900;
+  color:#f5a623;letter-spacing:2px;line-height:1;
+}
+.rw-pts-lbl{font-size:13px;color:var(--t2);margin-top:4px;font-weight:300;}
+.rw-progress-wrap{margin-top:16px;}
+.rw-progress-labels{
+  display:flex;justify-content:space-between;
+  font-family:var(--font-ui);font-size:10px;color:var(--t3);
+  font-weight:600;letter-spacing:0.08em;margin-bottom:6px;
+}
+.rw-progress-bar{
+  width:100%;height:6px;background:var(--s3);border-radius:3px;overflow:hidden;
+}
+.rw-progress-fill{
+  height:100%;background:linear-gradient(90deg,#f5a623,#f97316);
+  border-radius:3px;transition:width 0.6s cubic-bezier(0.34,1.56,0.64,1);
+}
+.rw-next-txt{font-size:11px;color:var(--t3);margin-top:6px;}
+
+.rw-section-label{
+  padding:16px 20px 8px;
+  font-family:var(--font-ui);font-size:10px;font-weight:700;
+  color:var(--t3);letter-spacing:0.14em;text-transform:uppercase;
+}
+.rw-prods-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 20px 16px;}
+.rw-prod-card{
+  background:var(--s1);border:1.5px solid var(--border);border-radius:16px;
+  overflow:hidden;cursor:pointer;transition:border-color 0.2s,transform 0.15s;
+}
+.rw-prod-card:active{transform:scale(0.96);}
+.rw-prod-img{
+  width:100%;aspect-ratio:1;overflow:hidden;position:relative;
+  background:var(--s2);display:flex;align-items:center;justify-content:center;
+  font-size:40px;
+}
+.rw-prod-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.rw-prod-body{padding:10px 11px 12px;}
+.rw-prod-name{font-family:var(--font-ui);font-size:12px;font-weight:700;margin-bottom:4px;}
+.rw-prod-pts{
+  font-family:var(--font-disp);font-size:17px;font-weight:700;
+  color:#f5a623;
+}
+.rw-prod-pts span{font-size:10px;font-weight:600;color:var(--t3);}
+.rw-prod-locked{opacity:0.45;pointer-events:none;}
+.rw-prod-locked .rw-prod-pts{color:var(--t3);}
+
+.rw-history{padding:0 20px 100px;}
+.rw-hist-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 0;border-bottom:1px solid var(--border);
+}
+.rw-hist-item:last-child{border:none;}
+.rw-hist-ico{font-size:20px;width:36px;text-align:center;}
+.rw-hist-info{flex:1;}
+.rw-hist-desc{font-size:13px;font-weight:600;}
+.rw-hist-date{font-size:11px;color:var(--t3);margin-top:1px;}
+.rw-hist-pts{
+  font-family:var(--font-disp);font-size:18px;font-weight:700;
+  color:#f5a623;
+}
+.rw-hist-pts.neg{color:var(--accent2);}
+
+/* CANJE OVERLAY */
+.canje-ov{
+  position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:400;
+  opacity:0;pointer-events:none;transition:opacity 0.3s;backdrop-filter:blur(4px);
+}
+.canje-ov.on{opacity:1;pointer-events:all;}
+.canje-sheet{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--bg2);border-radius:26px 26px 0 0;
+  z-index:401;transform:translateY(100%);
+  transition:transform 0.38s cubic-bezier(0.32,0.72,0,1);
+  border:1px solid var(--border);border-bottom:none;
+  padding:0 0 calc(24px + env(safe-area-inset-bottom));
+}
+.canje-sheet.on{transform:translateY(0);}
+.canje-sheet-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px 12px;border-bottom:1px solid var(--border);
+}
+.canje-sheet-title{font-family:var(--font-disp);font-size:24px;font-weight:800;letter-spacing:1px;}
+.canje-prod-preview{padding:20px;text-align:center;}
+.canje-prod-img{width:100px;height:100px;border-radius:16px;object-fit:cover;margin:0 auto 12px;display:block;background:var(--s2);}
+.canje-prod-emo{font-size:64px;margin-bottom:12px;}
+.canje-prod-name{font-family:var(--font-ui);font-size:18px;font-weight:700;margin-bottom:6px;}
+.canje-prod-desc{font-size:13px;color:var(--t2);line-height:1.5;margin-bottom:14px;}
+.canje-prod-cost{
+  font-family:var(--font-disp);font-size:32px;font-weight:800;color:#f5a623;
+  margin-bottom:4px;
+}
+.canje-pts-actual{font-size:12px;color:var(--t2);}
+.canje-confirm-btn{
+  width:calc(100% - 40px);margin:16px 20px 0;
+  padding:16px;background:linear-gradient(135deg,#f5a623,#f97316);
+  border:none;border-radius:16px;color:white;
+  font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer;
+  box-shadow:0 8px 24px rgba(245,166,35,0.3);transition:all 0.15s;
+}
+.canje-confirm-btn:active{transform:scale(0.98);}
+.canje-confirm-btn:disabled{background:var(--s2);color:var(--t3);box-shadow:none;}
+
 /* CAT BG utils */
 .catbg-default{background:linear-gradient(140deg,#1c1408,#0d0c08);}
 .catbg-hamburguesa{background:linear-gradient(140deg,#2d1308,#140a04);}
@@ -768,6 +940,7 @@ textarea.fi{resize:none;min-height:66px;}
       <div class="fid-info">
         <div class="fid-name" id="fidName"></div>
         <div class="fid-lvl" id="fidLvl"></div>
+        <span class="fid-pts-badge" id="fidPtsBadge" style="display:none"></span>
       </div>
     </div>
 
@@ -847,6 +1020,10 @@ textarea.fi{resize:none;min-height:66px;}
     <div class="ord-label">Número de pedido</div>
     <div class="ord-num" id="ordNum">#000</div>
   </div>
+  <div class="succ-pts-badge" id="succPtsBadge">
+    <div class="succ-pts-txt" id="succPtsTxt">+10 pts</div>
+    <div class="succ-pts-lbl">puntos ganados ⭐</div>
+  </div>
   <div class="track-wrap">
     <div class="track-title">ESTADO EN TIEMPO REAL</div>
     <div class="tstep act" id="ts-confirmado"><div class="ts-dot"></div><div class="ts-label">✅ Recibido</div></div>
@@ -858,12 +1035,56 @@ textarea.fi{resize:none;min-height:66px;}
   <button class="nuevo-btn" onclick="nuevoPedido()">+ Hacer otro pedido</button>
 </div>
 
-<script>
-var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
+<!-- REWARDS FAB -->
+<button class="rewards-fab hidden" id="rewardsFab" onclick="abrirRewards()">
+  <span>⭐</span><span class="rewards-fab-pts" id="rewardsFabPts">0 pts</span>
+</button>
+
+<!-- REWARDS SCREEN -->
+<div id="rewardsScreen">
+  <div class="rw-header">
+    <div class="rw-title">⭐ REWARDS</div>
+    <button class="rw-close" onclick="cerrarRewards()">✕</button>
+  </div>
+  <div class="rw-hero">
+    <div class="rw-pts-big" id="rwPtsBig">0</div>
+    <div class="rw-pts-lbl">puntos acumulados</div>
+    <div class="rw-progress-wrap">
+      <div class="rw-progress-labels">
+        <span id="rwProgFrom">0 pts</span>
+        <span id="rwProgTo">100 pts para canjear</span>
+      </div>
+      <div class="rw-progress-bar"><div class="rw-progress-fill" id="rwProgFill" style="width:0%"></div></div>
+      <div class="rw-next-txt" id="rwNextTxt"></div>
+    </div>
+  </div>
+  <div class="rw-section-label">Canjea tus puntos</div>
+  <div class="rw-prods-grid" id="rwProdsGrid">
+    <div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--t3);font-size:13px;">Cargando recompensas...</div>
+  </div>
+  <div class="rw-section-label">Historial</div>
+  <div class="rw-history" id="rwHistory">
+    <div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Sin historial aún</div>
+  </div>
+</div>
+
+<!-- CANJE OVERLAY -->
+<div class="canje-ov" id="canjeOv" onclick="cerrarCanjeOv()"></div>
+<div class="canje-sheet" id="canjeSheet">
+  <div class="canje-sheet-head">
+    <div class="canje-sheet-title">Canjear</div>
+    <button class="rw-close" onclick="cerrarCanjeOv()">✕</button>
+  </div>
+  <div class="canje-prod-preview" id="canjePreview"></div>
+  <button class="canje-confirm-btn" id="canjeConfirmBtn" onclick="confirmarCanje()">⭐ Confirmar canje</button>
+</div>
+
+,SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 var rest=null,menuItems=[],carrito={},tipoPedido="domicilio",pagoSel=null;
 var compB64=null,trackId=null,trackTimer=null;
 var descVal=0,descTipo=null,clienteData=null,chkTimer=null;
 var catActiva="todas",adicPend=null,adicSel={},salsaSel=null;
+var puntosCliente=0,canjeActual=null;
 
 var ADICIONALES=[
   {id:"queso",nombre:"Queso tajado",precio:1600,emoji:"🧀"},
@@ -1244,6 +1465,15 @@ function checkCliente(){
         document.getElementById("fidIco").textContent=c.ico;
         document.getElementById("fidName").textContent=clienteData.nombre_cliente;
         document.getElementById("fidLvl").textContent="Nivel "+nv.toUpperCase()+" · "+clienteData.total_pedidos+" pedidos";
+        // puntos
+        var pts=clienteData.puntos||0;
+        puntosCliente=pts;
+        var ptsBadge=document.getElementById("fidPtsBadge");
+        if(ptsBadge){ptsBadge.textContent="⭐ "+pts+" pts acumulados";ptsBadge.style.display="inline-block";}
+        var fab=document.getElementById("rewardsFab");
+        if(fab){document.getElementById("rewardsFabPts").textContent=pts+" pts";fab.classList.remove("hidden");}
+        // mostrar badges pts en tarjetas
+        document.querySelectorAll(".pts-badge-v").forEach(function(b){b.style.display="block";});
       }
     }catch(e){}
   },600);
@@ -1360,14 +1590,17 @@ async function enviar(){
       try{
         var tot=(clienteData?clienteData.total_pedidos:0)+1;
         var nv=tot>=25?"oro":tot>=10?"plata":"bronce";
+        var ptsGanados=(rest&&rest.puntos_por_pedido)||10;
+        var ptsTotales=(clienteData&&clienteData.puntos||0)+ptsGanados;
         await fetch(SU+"/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",{
           method:"POST",
           headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},
-          body:JSON.stringify({restaurante_id:rest.id,telefono:telFid,nombre_cliente:nombre,total_pedidos:tot,nivel_fidelidad:nv,updated_at:new Date().toISOString()})
+          body:JSON.stringify({restaurante_id:rest.id,telefono:telFid,nombre_cliente:nombre,total_pedidos:tot,nivel_fidelidad:nv,puntos:ptsTotales,updated_at:new Date().toISOString()})
         });
-      }catch(e){}
+        puntosCliente=ptsTotales;
+      }catch(e){var ptsGanados=(rest&&rest.puntos_por_pedido)||10;}
     }
-    closeCart();mostrarExito(num,pedidoId,tipoPedido,nombre);
+    closeCart();mostrarExito(num,pedidoId,tipoPedido,nombre,ptsGanados||((rest&&rest.puntos_por_pedido)||10));
   }catch(e){
     console.error(e);showToast("Error al enviar. Intenta de nuevo.");
     btn.disabled=false;btn.innerHTML="Confirmar pedido →";
@@ -1375,13 +1608,19 @@ async function enviar(){
 }
 
 /* ── SUCCESS ── */
-function mostrarExito(num,id,tipo,nombre){
+function mostrarExito(num,id,tipo,nombre,ptsGanados){
   document.getElementById("ordNum").textContent="#"+num;
   var msg=tipo==="domicilio"?"Hola <b>"+nombre+"</b>! Tu pedido está en preparación 🔥 Te avisamos cuando salga."
     :tipo==="mesa"?"<b>"+nombre+"</b>, pedido en cocina. Lo llevamos a tu mesa 🪑"
     :"<b>"+nombre+"</b>, pasa a recoger en unos minutos 🏪";
   document.getElementById("succMsg").innerHTML=msg;
   if(tipo!=="domicilio")document.getElementById("ts-camino").style.display="none";
+  // show pts badge
+  var sb=document.getElementById("succPtsBadge");
+  if(sb&&ptsGanados){
+    document.getElementById("succPtsTxt").textContent="+"+ptsGanados+" pts";
+    sb.style.display="block";
+  }
   document.getElementById("succ").classList.add("show");
   trackId=id;
   if(id)trackTimer=setInterval(function(){actuTracking(id);},5000);
@@ -1406,9 +1645,11 @@ async function actuTracking(id){
 }
 
 function nuevoPedido(){
-  carrito={};pagoSel=null;compB64=null;descVal=0;descTipo=null;clienteData=null;
+  carrito={};pagoSel=null;compB64=null;descVal=0;descTipo=null;clienteData=null;puntosCliente=0;
   trackId=null;if(trackTimer){clearInterval(trackTimer);trackTimer=null;}
   document.getElementById("succ").classList.remove("show");
+  var sb=document.getElementById("succPtsBadge");if(sb)sb.style.display="none";
+  var fab=document.getElementById("rewardsFab");if(fab)fab.classList.add("hidden");
   document.getElementById("ts-camino").style.display="flex";
   updateCartUI();renderProds(catActiva);
 }
@@ -1435,6 +1676,148 @@ function showToast(msg){
   var el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");
   clearTimeout(_toastT);_toastT=setTimeout(function(){el.classList.remove("show");},2600);
 }
+/* ── REWARDS SYSTEM ── */
+function abrirRewards(){
+  document.getElementById("rewardsScreen").classList.add("show");
+  var tel=document.getElementById("iTel").value.trim().replace(/\D/g,"");
+  buscarPuntosCliente(tel);
+  cargarProductosCanje();
+}
+function cerrarRewards(){
+  document.getElementById("rewardsScreen").classList.remove("show");
+}
+async function buscarPuntosCliente(tel){
+  if(!rest||!tel||tel.length<10)return;
+  var tl=tel.replace(/^57/,"");
+  try{
+    var r=await api("clientes_frecuentes","restaurante_id=eq."+rest.id+"&telefono=eq."+encodeURIComponent(tl)+"&select=puntos,puntos_canjeados,nombre_cliente");
+    var pts=0;
+    if(r&&r.length){pts=r[0].puntos||0;puntosCliente=pts;}
+    document.getElementById("rwPtsBig").textContent=pts;
+    // progress bar hacia el primer canje disponible
+    var minReq=100;
+    try{
+      var prods=await api("productos_canje","restaurante_id=eq."+rest.id+"&activo=eq.true&order=puntos_requeridos&limit=1");
+      if(prods&&prods.length)minReq=prods[0].puntos_requeridos;
+    }catch(e){}
+    var pct=Math.min(100,Math.round(pts/minReq*100));
+    document.getElementById("rwProgFill").style.width=pct+"%";
+    document.getElementById("rwProgFrom").textContent=pts+" pts";
+    document.getElementById("rwProgTo").textContent=minReq+" pts para canjear";
+    document.getElementById("rwNextTxt").textContent=pts>=minReq?"¡Ya puedes canjear! 🎉":"Faltan "+(minReq-pts)+" pts para tu primera recompensa";
+    cargarHistorialPuntos(tl);
+  }catch(e){}
+}
+async function cargarProductosCanje(){
+  if(!rest)return;
+  var grid=document.getElementById("rwProdsGrid");
+  try{
+    var prods=await api("productos_canje","restaurante_id=eq."+rest.id+"&activo=eq.true&order=puntos_requeridos");
+    if(!prods||!prods.length){
+      grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--t3);font-size:13px;">No hay recompensas disponibles aún</div>';
+      return;
+    }
+    renderProductosCanje(prods);
+  }catch(e){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--t3);font-size:13px;">Error cargando recompensas</div>';
+  }
+}
+function renderProductosCanje(prods){
+  var grid=document.getElementById("rwProdsGrid");
+  var html=prods.map(function(p){
+    var locked=puntosCliente<p.puntos_requeridos;
+    var imgHtml=p.imagen_url?'<img src="'+p.imagen_url+'" onerror="this.style.display=\'none\'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">':'';
+    return '<div class="rw-prod-card'+(locked?' rw-prod-locked':'')+'" onclick="'+(locked?'showToast(\"Necesitas '+p.puntos_requeridos+' pts para esto ⭐\")':'abrirCanjeOv(\''+p.id+'\')') +'">'
+      +'<div class="rw-prod-img">'+(imgHtml||'<span style="font-size:40px">'+(p.emoji||'🎁')+'</span>')+'</div>'
+      +'<div class="rw-prod-body">'
+      +'<div class="rw-prod-name">'+p.nombre+'</div>'
+      +'<div class="rw-prod-pts">⭐ '+p.puntos_requeridos+' <span>pts</span></div>'
+      +(locked?'<div style="font-size:10px;color:var(--t3);margin-top:2px;">Faltan '+(p.puntos_requeridos-puntosCliente)+' pts</div>':'')
+      +'</div></div>';
+  }).join("");
+  grid.innerHTML=html;
+}
+async function cargarHistorialPuntos(tl){
+  if(!rest)return;
+  var hist=document.getElementById("rwHistory");
+  try{
+    var canjes=await api("canjes","restaurante_id=eq."+rest.id+"&telefono=eq."+encodeURIComponent(tl)+"&order=created_at.desc&limit=10&select=*");
+    if(!canjes||!canjes.length){hist.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Sin canjes aún. ¡Empieza a acumular!</div>';return;}
+    hist.innerHTML=canjes.map(function(c){
+      var fecha=new Date(c.created_at).toLocaleDateString("es-CO",{day:"2-digit",month:"short"});
+      var estado=c.estado==="aprobado"?"✅":c.estado==="rechazado"?"❌":"⏳";
+      return '<div class="rw-hist-item">'
+        +'<div class="rw-hist-ico">'+estado+'</div>'
+        +'<div class="rw-hist-info"><div class="rw-hist-desc">'+(c.producto_nombre||"Canje")+'</div><div class="rw-hist-date">'+fecha+' · '+c.estado+'</div></div>'
+        +'<div class="rw-hist-pts neg">−'+c.puntos_usados+' pts</div>'
+        +'</div>';
+    }).join("");
+  }catch(e){}
+}
+async function abrirCanjeOv(prodId){
+  if(!rest)return;
+  try{
+    var prods=await api("productos_canje","id=eq."+prodId+"&select=*");
+    if(!prods||!prods.length)return;
+    var p=prods[0];
+    canjeActual=p;
+    var imgHtml=p.imagen_url?'<img class="canje-prod-img" src="'+p.imagen_url+'">'
+      :'<div class="canje-prod-emo">'+(p.emoji||'🎁')+'</div>';
+    var puedeCanjear=puntosCliente>=p.puntos_requeridos;
+    document.getElementById("canjePreview").innerHTML=
+      imgHtml
+      +'<div class="canje-prod-name">'+p.nombre+'</div>'
+      +(p.descripcion?'<div class="canje-prod-desc">'+p.descripcion+'</div>':'')
+      +'<div class="canje-prod-cost">⭐ '+p.puntos_requeridos+' pts</div>'
+      +'<div class="canje-pts-actual">Tienes '+puntosCliente+' pts</div>';
+    var btn=document.getElementById("canjeConfirmBtn");
+    btn.disabled=!puedeCanjear;
+    btn.textContent=puedeCanjear?"⭐ Confirmar canje":"Puntos insuficientes";
+    document.getElementById("canjeOv").classList.add("on");
+    document.getElementById("canjeSheet").classList.add("on");
+  }catch(e){}
+}
+function cerrarCanjeOv(){
+  document.getElementById("canjeOv").classList.remove("on");
+  document.getElementById("canjeSheet").classList.remove("on");
+  canjeActual=null;
+}
+async function confirmarCanje(){
+  if(!canjeActual||!rest)return;
+  var tel=document.getElementById("iTel").value.trim().replace(/\D/g,"");
+  var nombre=document.getElementById("iNombre").value.trim();
+  if(!tel||tel.length<10){showToast("Ingresa tu teléfono primero");cerrarCanjeOv();return;}
+  var tl=tel.replace(/^57/,"");
+  var btn=document.getElementById("canjeConfirmBtn");
+  btn.disabled=true;btn.textContent="Enviando...";
+  try{
+    // Registrar canje
+    await fetch(SU+"/rest/v1/canjes",{
+      method:"POST",
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({restaurante_id:rest.id,telefono:tl,nombre_cliente:nombre||"Cliente",producto_canje_id:canjeActual.id,producto_nombre:canjeActual.nombre,puntos_usados:canjeActual.puntos_requeridos,estado:"pendiente"})
+    });
+    // Restar puntos
+    var nuevosPts=Math.max(0,puntosCliente-canjeActual.puntos_requeridos);
+    await fetch(SU+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+rest.id+"&telefono=eq."+encodeURIComponent(tl),{
+      method:"PATCH",
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({puntos:nuevosPts,puntos_canjeados:(puntosCliente-nuevosPts)})
+    });
+    puntosCliente=nuevosPts;
+    cerrarCanjeOv();
+    showToast("¡Canje solicitado! El restaurante lo confirmará ✅");
+    // Refrescar rewards screen
+    document.getElementById("rwPtsBig").textContent=nuevosPts;
+    document.getElementById("rewardsFabPts").textContent=nuevosPts+" pts";
+    var tel2=document.getElementById("iTel").value.trim().replace(/\D/g,"");
+    buscarPuntosCliente(tel2);
+  }catch(e){
+    showToast("Error al canjear. Intenta de nuevo.");
+    btn.disabled=false;btn.textContent="⭐ Confirmar canje";
+  }
+}
+
 </script>
 </body>
 </html>
