@@ -941,7 +941,7 @@ select.finput{cursor:pointer}
     </div>
 
     <!-- OVERLAY: NUEVO/EDITAR PRODUCTO CANJEABLE -->
-    <div class="edit-overlay" id="rewardProdOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:120;align-items:flex-end;justify-content:center">
+    <div class="edit-overlay" id="rewardProdOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;align-items:flex-end;justify-content:center">
       <div style="background:var(--card);border-radius:24px 24px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <div style="font-size:17px;font-weight:900" id="rewardProdOvTitle">Nueva recompensa</div>
@@ -1914,8 +1914,13 @@ document.querySelectorAll(".dia-btn").forEach(function(b){b.addEventListener("cl
 document.getElementById("cfgGuardar").addEventListener("click",function(){
   if(!rest){notif("Error: sin restaurante");return;}
   var diasSel=[];document.querySelectorAll(".dia-btn.activo").forEach(function(b){diasSel.push(b.getAttribute("data-dia"));});
-  var config={modo_dia:modoDiaActual,hora_apertura:document.getElementById("cfg-apertura").value+":00",hora_cierre:document.getElementById("cfg-cierre").value+":00",menu_dia:document.getElementById("cfg-menu-dia").value.trim(),menu_noche:document.getElementById("cfg-menu-noche").value.trim(),dias_activos:diasSel.join(","),direccion:document.getElementById("cfg-direccion").value.trim(),puntos_por_pedido:parseInt(document.getElementById("cfg-puntos-pedido").value)||10,msg_bienvenida:document.getElementById("cfg-msg-bienvenida").value.trim(),msg_en_preparacion:document.getElementById("cfg-msg-preparacion").value.trim(),msg_listo:document.getElementById("cfg-msg-listo").value.trim(),msg_en_camino:document.getElementById("cfg-msg-camino").value.trim()};
+  var puntosVal=parseInt(document.getElementById("cfg-puntos-pedido").value)||10;
+  var config={modo_dia:modoDiaActual,hora_apertura:document.getElementById("cfg-apertura").value+":00",hora_cierre:document.getElementById("cfg-cierre").value+":00",menu_dia:document.getElementById("cfg-menu-dia").value.trim(),menu_noche:document.getElementById("cfg-menu-noche").value.trim(),dias_activos:diasSel.join(","),direccion:document.getElementById("cfg-direccion").value.trim(),msg_bienvenida:document.getElementById("cfg-msg-bienvenida").value.trim(),msg_en_preparacion:document.getElementById("cfg-msg-preparacion").value.trim(),msg_listo:document.getElementById("cfg-msg-listo").value.trim(),msg_en_camino:document.getElementById("cfg-msg-camino").value.trim()};
   var btn=this;btn.textContent="Guardando...";btn.disabled=true;
+  // Guardar puntos_por_pedido directo a Supabase (el endpoint no lo soporta)
+  fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({puntos_por_pedido:puntosVal})})
+  .then(function(){rest.puntos_por_pedido=puntosVal;}).catch(function(){});
+  // Guardar el resto via endpoint
   fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:config})})
     .then(function(r){return r.json();})
     .then(function(d){if(d.ok){Object.keys(config).forEach(function(k){rest[k]=config[k];});notif("Configuracion guardada!");actualizarToggleModoDia(modoDiaActual);}else{notif("Error: "+(d.error||"").substring(0,40));}})
@@ -2554,9 +2559,11 @@ function guardarApariencia(){
   var config={nombre:document.getElementById("ap-nombre").value.trim()||rest.nombre,hero_slogan:document.getElementById("ap-slogan").value.trim(),hero_image_url:document.getElementById("ap-hero-img").value.trim()||null,logo_url:document.getElementById("ap-logo").value.trim()||null,accent_color:accentColorActual};
   var btn=document.querySelector("#metsec-apariencia .edit-save-btn");
   if(btn){btn.textContent="Guardando...";btn.disabled=true;}
-  fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:config})})
-  .then(function(r){return r.json();})
-  .then(function(d){if(d.ok){Object.keys(config).forEach(function(k){rest[k]=config[k];});notif("✅ Apariencia guardada!");}else{notif("Error: "+(d.error||"").substring(0,40));}})
+  fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(config)})
+  .then(function(r){
+    if(r.ok||r.status===204){Object.keys(config).forEach(function(k){rest[k]=config[k];});notif("✅ Apariencia guardada!","rgba(16,185,129,0.9)");}
+    else{return r.text().then(function(t){notif("Error: "+t.substring(0,60));});}
+  })
   .catch(function(){notif("Error de conexion");})
   .finally(function(){if(btn){btn.textContent="💾 Guardar apariencia";btn.disabled=false;}});
 }
