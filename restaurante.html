@@ -2818,19 +2818,38 @@ document.addEventListener("DOMContentLoaded",function(){
       categoria:document.getElementById("ep-cat").value.trim(),
       precio:Number(document.getElementById("ep-precio").value)||0,
       descripcion:document.getElementById("ep-desc").value.trim()||null,
-      emoji:document.getElementById("ep-emoji").value.trim()||null,
       en_oferta:document.getElementById("ep-oferta").value==="true",
       es_bebida:tipo==="bebida",
       es_adicional:tipo==="adicional",
-      imagen_url:document.getElementById("ep-img").value.trim()||null
+      disponible:editProdDispo
     };
+    var imgVal=document.getElementById("ep-img").value.trim();
+    if(imgVal)payload.imagen_url=imgVal;
+    var emojiVal=document.getElementById("ep-emoji").value.trim();
+    if(emojiVal)payload.emoji=emojiVal;
     if(!payload.nombre||!payload.precio){notif("Nombre y precio son obligatorios");return;}
     var btn=this;btn.textContent="Guardando...";btn.disabled=true;
     fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
-    .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t);});return r.text();})
-    .then(function(){notif("✅ Producto guardado");document.getElementById("epOverlay").classList.remove("open");editProdId=null;loadMenuEditor();loadMenu();cargarProd();})
-    .catch(function(e){notif("Error: "+e.message.substring(0,40));})
-    .finally(function(){btn.textContent="💾 Guardar";btn.disabled=false;});
+    .then(function(r){
+      if(!r.ok)return r.text().then(function(t){
+        console.error("Supabase error:",t);
+        throw new Error(t);
+      });
+      return r.text();
+    })
+    .then(function(){notif("✅ Producto guardado","rgba(16,185,129,0.9)");document.getElementById("epOverlay").classList.remove("open");editProdId=null;loadMenuEditor();loadMenu();cargarProd();})
+    .catch(function(e){
+      var msg=e.message||"";
+      // Si falla por emoji (columna no existe), reintentar sin emoji
+      if(msg.indexOf("emoji")!==-1||msg.indexOf("column")!==-1){
+        delete payload.emoji;
+        fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
+        .then(function(r2){if(r2.ok||r2.status===204){notif("✅ Guardado");document.getElementById("epOverlay").classList.remove("open");editProdId=null;loadMenuEditor();loadMenu();cargarProd();}else{notif("Error al guardar");}});
+      } else {
+        notif("Error: "+msg.substring(0,80));
+      }
+    })
+    .finally(function(){btn.textContent="💾 Guardar cambios";btn.disabled=false;});
   });
   document.getElementById("epEliminar").addEventListener("click",function(){
     if(!editProdId||!confirm("¿Eliminar este producto?"))return;
