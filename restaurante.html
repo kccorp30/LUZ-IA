@@ -2259,6 +2259,7 @@ function loadMenuEditor(){
       filterWrap.innerHTML=cats.map(function(c){return'<button class="cat-fpill'+(c===editorFiltroActual||(!editorFiltroActual&&c==="Todos")?" active":"")+'" data-cat="'+c+'">'+c+'</button>';}).join("");
       filterWrap.querySelectorAll(".cat-fpill").forEach(function(b){b.addEventListener("click",function(){editorFiltroActual=this.getAttribute("data-cat")==="Todos"?"":this.getAttribute("data-cat");loadMenuEditor();});});
     }
+    var editorProdActivo=null;
     var filtered=editorFiltroActual?items.filter(function(i){return i.categoria===editorFiltroActual;}):items;
     var lista=document.getElementById("editorProdList");
     if(!filtered.length){lista.innerHTML='<div class="empty"><div class="et">No hay productos en esta categoría</div></div>';return;}
@@ -2267,11 +2268,38 @@ function loadMenuEditor(){
     var catList=document.getElementById("cats-list");var catOpts="";
     Object.keys(catSet).forEach(function(c){catOpts+='<option value="'+c+'">'+c+'</option>';});
     if(catList)catList.innerHTML=catOpts;
-    Object.keys(cats2).forEach(function(cat){
-      h+='<div style="font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;padding:8px 0 4px;">'+cat+'</div>';
-      cats2[cat].forEach(function(i){h+=renderEditorProdItem(i);});
+ Object.keys(cats2).forEach(function(cat){
+      h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;padding:10px 0 8px">'+cat+'</div>';
+      h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">';
+      cats2[cat].forEach(function(i){
+        var img=i.imagen_url||"";
+        var activo=i.disponible;
+        h+='<div class="prod-card-g" data-pid="'+i.id+'" style="background:rgba(255,255,255,0.06);border:1.5px solid '+(editorProdActivo===i.id?"rgba(124,58,237,0.6)":"rgba(255,255,255,0.1)")+';border-radius:18px;overflow:hidden;cursor:pointer;opacity:'+(activo?1:0.5)+';transition:all 0.15s">';
+        h+='<div style="height:110px;background:#111;position:relative;display:flex;align-items:center;justify-content:center">';
+        if(img)h+='<img src="'+img+'" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.style.display=\'none\'">';
+        h+='<span style="font-size:38px;position:relative;z-index:1;'+(img?"text-shadow:0 2px 10px rgba(0,0,0,0.9)":"")+'">'+(i.emoji||autoEmoji(i.nombre))+'</span>';
+        h+='<div style="position:absolute;top:6px;right:6px;background:'+(activo?"rgba(16,185,129,0.9)":"rgba(107,114,128,0.85)")+';color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;z-index:2">'+(activo?"Activo":"Oculto")+'</div>';
+        if(i.en_oferta)h+='<div style="position:absolute;top:6px;left:6px;background:rgba(249,115,22,0.9);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;z-index:2">🔥</div>';
+        if(img)h+='<div style="position:absolute;bottom:6px;right:6px;background:rgba(16,185,129,0.85);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;z-index:2">📷</div>';
+        h+='</div>';
+        h+='<div style="padding:10px 12px">';
+        h+='<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">'+i.nombre+'</div>';
+        h+='<div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px">'+(i.descripcion||i.categoria||"")+'</div>';
+        h+='<div style="display:flex;align-items:center;justify-content:space-between">';
+        h+='<span style="font-size:14px;font-weight:700;color:#34d399">'+fmt(i.precio)+'</span>';
+        h+='<button class="prod-edit-btn" data-id="'+i.id+'" style="padding:4px 10px;font-size:11px;font-weight:700;border-radius:8px;border:1px solid rgba(124,58,237,0.4);background:rgba(124,58,237,0.1);color:#c4b5fd;cursor:pointer;font-family:inherit">✎ Editar</button>';
+        h+='</div></div></div>';
+      });
+      h+='</div>';
+    });
     });
     lista.innerHTML=h;
+  lista.querySelectorAll(".prod-card-g").forEach(function(c){
+      c.addEventListener("click",function(){editorProdActivo=this.getAttribute("data-pid");loadMenuEditor();setTimeout(function(){togglePeiEdit(editorProdActivo);},50);});
+    });
+    lista.querySelectorAll(".prod-edit-btn").forEach(function(b){
+      b.addEventListener("click",function(e){e.stopPropagation();editorProdActivo=this.getAttribute("data-id");loadMenuEditor();setTimeout(function(){togglePeiEdit(editorProdActivo);},50);});
+    });
     lista.querySelectorAll(".pei-header").forEach(function(hdr){hdr.addEventListener("click",function(){togglePeiEdit(this.closest(".prod-editor-item").id.replace("pei-",""));});});
     lista.querySelectorAll(".pei-save-btn").forEach(function(b){b.addEventListener("click",function(){guardarProdEditor(this.getAttribute("data-id"),this);});});
     lista.querySelectorAll(".pei-dispo-btn").forEach(function(b){b.addEventListener("click",function(){toggleDispoProd(this.getAttribute("data-id"),this.getAttribute("data-val"));});});
@@ -2337,6 +2365,11 @@ function autoEmoji(nombre){
   ];
   for(var j=0;j<mapa.length;j++){if(n.indexOf(mapa[j][0])!==-1)return mapa[j][1];}
   return "🍽️";
+}function autoEmoji(nombre){
+  var n=(nombre||"").toLowerCase();
+  var m=[["hamburgu","🍔"],["burger","🍔"],["especial","🍔"],["angus","🍔"],["bbq","🍔"],["perro","🌭"],["hot dog","🌭"],["italiano","🌭"],["frances","🌭"],["alita","🍗"],["ala","🍗"],["wing","🍗"],["pollo","🍗"],["asado","🥩"],["carne","🥩"],["junior","🥩"],["churrasco","🥩"],["arepa","🫓"],["choclo","🫓"],["papa","🍟"],["frita","🍟"],["pizza","🍕"],["ensalada","🥗"],["sopa","🍲"],["arroz","🍚"],["gaseosa","🥤"],["cola","🥤"],["agua","💧"],["jugo","🧃"],["limonada","🍋"],["cafe","☕"],["tinto","☕"],["helado","🍦"],["postre","🍮"],["brownie","🍫"],["torta","🎂"],["queso","🧀"],["tocineta","🥓"],["bacon","🥓"],["jamon","🥩"],["maduro","🍌"],["aguacate","🥑"],["maiz","🌽"],["salchicha","🌭"],["chorizo","🌭"],["combo","🎁"],["ranchera","🫙"],["salsa","🫙"],["ajo","🫙"],["chimichurri","🫙"],["jalapeno","🌶️"],["picante","🌶️"],["aplastado","🥪"],["chuzo","🍢"],["desgranado","🌽"],["chuzos","🍢"]];
+  for(var j=0;j<m.length;j++){if(n.indexOf(m[j][0])!==-1)return m[j][1];}
+  return"🍽️";
 }function renderEditorProdItem(i){
   var imgUrl=i.imagen_url||"";
   var div=document.createElement("div");
@@ -2496,22 +2529,59 @@ function renderPromoDiasEditor(){
 function agregarPromoDiaEditor(){promoDiasEditorData.push({dia:"lunes",texto:""});renderPromoDiasEditor();}
 function renderBannersEditor(){
   var lista=document.getElementById("bannerEditorList");if(!lista)return;
-  if(!bannersEditorData.length){lista.innerHTML='<div style="color:var(--text3);font-size:12px;padding:6px 0">No hay banners.</div>';return;}
+  if(!bannersEditorData.length){lista.innerHTML='<div style="color:var(--text3);font-size:12px;padding:6px 0">No hay banners. Agrega uno abajo.</div>';return;}
   var h="";
   bannersEditorData.forEach(function(b,idx){
-    h+='<div class="banner-card">';
-    h+='<div class="banner-preview" style="background:linear-gradient(135deg,'+(b.color1||"#7c3aed")+','+(b.color2||"#2563eb")+')">';
-    h+='<div class="banner-prev-title">'+(b.titulo||"Banner")+'</div>';
-    h+='<div class="banner-prev-desc">'+(b.descripcion||"")+'</div></div>';
-    h+='<div class="ffield" style="margin-bottom:6px"><label class="flabel">Título</label><input class="finput" data-bidx="'+idx+'" data-bf="titulo" value="'+escHtml(b.titulo||"")+'"></div>';
-    h+='<div class="ffield" style="margin-bottom:6px"><label class="flabel">Descripción</label><input class="finput" data-bidx="'+idx+'" data-bf="descripcion" value="'+escHtml(b.descripcion||"")+'"></div>';
-    h+='<div class="frow" style="margin-bottom:6px"><div class="ffield"><label class="flabel">Color 1</label><input type="color" class="finput" data-bidx="'+idx+'" data-bf="color1" value="'+(b.color1||"#7c3aed")+'" style="height:40px;padding:4px;"></div><div class="ffield"><label class="flabel">Color 2</label><input type="color" class="finput" data-bidx="'+idx+'" data-bf="color2" value="'+(b.color2||"#2563eb")+'" style="height:40px;padding:4px;"></div></div>';
-    h+='<button style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#fca5a5;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;" data-bandelidx="'+idx+'">🗑 Eliminar banner</button>';
+    var c1=b.color1||"#7c3aed",c2=b.color2||"#2563eb";
+    var tieneImg=b.imagen_url&&b.imagen_url.trim();
+    h+='<div style="background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px;margin-bottom:14px;overflow:hidden">';
+    h+='<div style="position:relative;height:120px;background:linear-gradient(135deg,'+c1+','+c2+');display:flex;flex-direction:column;justify-content:flex-end;padding:14px 16px" id="bprev-'+idx+'">';
+    if(tieneImg)h+='<img src="'+b.imagen_url+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:0" onerror="this.style.display=\'none\'">';
+    h+='<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.65),transparent)"></div>';
+    h+='<div style="position:relative;z-index:1"><div style="font-size:17px;font-weight:900;color:#fff;margin-bottom:3px" id="bprev-titulo-'+idx+'">'+(b.titulo||"Título del banner")+'</div>';
+    h+='<div style="font-size:11px;color:rgba(255,255,255,0.8)" id="bprev-desc-'+idx+'">'+(b.descripcion||"Descripción")+'</div></div>';
+    h+='<div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.4);color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;z-index:2">Preview</div>';
     h+='</div>';
+    h+='<div style="padding:12px">';
+    h+='<div class="frow" style="margin-bottom:8px"><div class="ffield"><label class="flabel">Título</label><input class="finput" style="font-size:13px" placeholder="Ej: 2x3 Hamburguesas" value="'+escHtml(b.titulo||"")+'" data-bidx="'+idx+'" data-bf="titulo" oninput="liveUpdateBanner(this)"></div></div>';
+    h+='<div class="ffield" style="margin-bottom:8px"><label class="flabel">Descripción</label><input class="finput" style="font-size:13px" placeholder="Ej: Todos los lunes" value="'+escHtml(b.descripcion||"")+'" data-bidx="'+idx+'" data-bf="descripcion" oninput="liveUpdateBanner(this)"></div>';
+    h+='<div class="ffield" style="margin-bottom:8px"><label class="flabel">Imagen URL (opcional)</label><input class="finput" style="font-size:12px" placeholder="https://i.imgur.com/..." value="'+escHtml(b.imagen_url||"")+'" data-bidx="'+idx+'" data-bf="imagen_url" oninput="liveUpdateBanner(this)"></div>';
+    h+='<div style="display:flex;gap:8px;margin-bottom:4px"><div class="ffield" style="flex:1"><label class="flabel">Color 1</label><input type="color" class="finput" style="height:38px;padding:3px" value="'+c1+'" data-bidx="'+idx+'" data-bf="color1" oninput="liveUpdateBanner(this)"></div><div class="ffield" style="flex:1"><label class="flabel">Color 2</label><input type="color" class="finput" style="height:38px;padding:3px" value="'+c2+'" data-bidx="'+idx+'" data-bf="color2" oninput="liveUpdateBanner(this)"></div></div>';
+    h+='<div style="display:flex;gap:8px;margin-top:8px">';
+    h+='<button onclick="moverBanner('+idx+',-1)" style="padding:6px 10px;background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:8px;color:var(--text2);cursor:pointer;font-size:13px">↑</button>';
+    h+='<button onclick="moverBanner('+idx+',1)" style="padding:6px 10px;background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:8px;color:var(--text2);cursor:pointer;font-size:13px">↓</button>';
+    h+='<button onclick="eliminarBanner('+idx+')" style="flex:1;padding:7px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#fca5a5;cursor:pointer;font-size:12px;font-weight:700">🗑 Eliminar</button>';
+    h+='</div></div></div>';
   });
   lista.innerHTML=h;
-  lista.querySelectorAll("[data-bf]").forEach(function(el){el.addEventListener("input",function(){var idx=Number(this.getAttribute("data-bidx")),field=this.getAttribute("data-bf");if(bannersEditorData[idx])bannersEditorData[idx][field]=this.value;renderBannersEditor();});});
-  lista.querySelectorAll("[data-bandelidx]").forEach(function(b){b.addEventListener("click",function(){var idx=Number(this.getAttribute("data-bandelidx"));bannersEditorData.splice(idx,1);renderBannersEditor();});});
+}
+function liveUpdateBanner(el){
+  var idx=Number(el.getAttribute("data-bidx")),field=el.getAttribute("data-bf"),val=el.value;
+  if(bannersEditorData[idx])bannersEditorData[idx][field]=val;
+  var prev=document.getElementById("bprev-"+idx);
+  if(!prev)return;
+  if(field==="titulo"){var t=document.getElementById("bprev-titulo-"+idx);if(t)t.textContent=val||"Título del banner";}
+  if(field==="descripcion"){var d=document.getElementById("bprev-desc-"+idx);if(d)d.textContent=val||"Descripción";}
+  if(field==="color1"||field==="color2"){
+    var c1=bannersEditorData[idx].color1||"#7c3aed",c2=bannersEditorData[idx].color2||"#2563eb";
+    prev.style.background="linear-gradient(135deg,"+c1+","+c2+")";
+  }
+  if(field==="imagen_url"&&val.trim()){
+    var existing=prev.querySelector("img");
+    if(existing)existing.src=val;
+    else{var img=document.createElement("img");img.src=val;img.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:cover";img.onerror=function(){this.style.display="none";};prev.insertBefore(img,prev.firstChild);}
+  }
+}
+function moverBanner(idx,dir){
+  var nuevo=idx+dir;
+  if(nuevo<0||nuevo>=bannersEditorData.length)return;
+  var tmp=bannersEditorData[idx];bannersEditorData[idx]=bannersEditorData[nuevo];bannersEditorData[nuevo]=tmp;
+  renderBannersEditor();
+}
+function eliminarBanner(idx){
+  if(!confirm("¿Eliminar este banner?"))return;
+  bannersEditorData.splice(idx,1);
+  renderBannersEditor();
 }
 function agregarBannerEditor(){bannersEditorData.push({titulo:"Nueva Promo",descripcion:"Descripcion",color1:"#7c3aed",color2:"#2563eb"});renderBannersEditor();}
 function guardarPromosEditor(){
