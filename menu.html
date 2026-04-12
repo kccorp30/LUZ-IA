@@ -1128,6 +1128,14 @@ textarea.fi{resize:none;min-height:66px;}
   </div>
   <button onclick="pedirPermisoNotif();document.getElementById('notifBanner').style.display='none'" style="padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Activar</button>
 </div>
+<!-- Mapa tracking domiciliario -->
+<div id="trackingMapWrap" style="display:none;margin:0 24px 16px;border-radius:16px;overflow:hidden;border:1px solid rgba(59,130,246,0.3)">
+  <div style="padding:10px 14px;background:rgba(59,130,246,0.1);display:flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;color:#60a5fa">
+    <span style="width:8px;height:8px;border-radius:50%;background:#60a5fa;display:inline-block;animation:gpsPulse 1.5s ease-in-out infinite"></span>
+    Domiciliario en camino — ubicación en tiempo real
+  </div>
+  <div id="trackingMapEl" style="width:100%;height:220px;background:#1a1520"></div>
+</div>
 <button class="nuevo-btn" onclick="nuevoPedido()">+ Hacer otro pedido</button>
 </div>
 
@@ -1756,21 +1764,108 @@ function mostrarExito(num,id,tipo,nombre,ptsGanados){
   if(id)trackTimer=setInterval(function(){actuTracking(id);},5000);
 }
 
+var trackingMap=null,trackingMarker=null,trackingLoaded=false;
+
+function cargarGoogleMapsMenu(cb){
+  if(trackingLoaded&&typeof google!=="undefined"&&google.maps){cb();return;}
+  window._menuMapCb=cb;
+  if(document.querySelector('script[src*="maps.googleapis.com"]')){
+    if(typeof google!=="undefined"&&google.maps){trackingLoaded=true;cb();}
+    return;
+  }
+  window._menuMapReady=function(){trackingLoaded=true;if(window._menuMapCb){window._menuMapCb();window._menuMapCb=null;}};
+  var s=document.createElement("script");
+  s.src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAGeM9Ct-7O4yXQ7uOyFCDlY5Fgii0O0RA&callback=_menuMapReady";
+  document.head.appendChild(s);
+}
+
+function initTrackingMap(lat,lng){
+  var el=document.getElementById("trackingMapEl");
+  if(!el)return;
+  if(!trackingMap){
+    var darkStyle=[
+      {elementType:"geometry",stylers:[{color:"#1a1520"}]},
+      {elementType:"labels.text.fill",stylers:[{color:"#746855"}]},
+      {featureType:"road",elementType:"geometry",stylers:[{color:"#38414e"}]},
+      {featureType:"road.highway",elementType:"geometry",stylers:[{color:"#746855"}]},
+      {featureType:"water",elementType:"geometry",stylers:[{color:"#17263c"}]},
+      {featureType:"poi",elementType:"labels",stylers:[{visibility:"off"}]}
+    ];
+    trackingMap=new google.maps.Map(el,{
+      center:{lat:lat,lng:lng},zoom:15,
+      styles:darkStyle,
+      disableDefaultUI:true,zoomControl:true
+    });
+  }
+  if(!trackingMarker){
+    trackingMarker=new google.maps.Marker({
+      map:trackingMap,
+      position:{lat:lat,lng:lng},
+      title:"Domiciliario",
+      icon:{
+        path:google.maps.SymbolPath.CIRCLE,
+        scale:10,
+        fillColor:"#3b82f6",
+        fillOpacity:1,
+        strokeColor:"#ffffff",
+        strokeWeight:2
+      }
+    });
+  } else {
+    trackingMarker.setPosition({lat:lat,lng:lng});
+  }
+  trackingMap.setCenter({lat:lat,lng:lng});
+}
+
+async function obtenerUbicacionDomiciliario(pedidoId){
+  try{
+    var r=await fetch("https://vbxuwzcfzfjwhllkppkg.supabase.co/rest/v1/domiciliario_ubicacion?pedido_id=eq."+pedidoId+"&select=lat,lng,updated_at",{
+      headers:{"apikey":"sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5","Authorization":"Bearer sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5"}
+    });
+    var d=await r.json();
+    if(d&&d.length&&d[0].lat){
+      var wrap=document.getElementById("trackingMapWrap");
+      if(wrap)wrap.style.display="block";
+      cargarGoogleMapsMenu(function(){initTrackingMap(d[0].lat,d[0].lng);});
+    }
+  }catch(e){}
+}
+
 async function actuTracking(id){
   try{
-    var d=await api("pedidos","id=eq."+id+"&select=estado");
+    var d=await api("pedidos","id=eq."+id+"&select=estado,numero_pedido");
     if(!d||!d.length)return;
     var est=d[0].estado;
-    var map={confirmado:"confirmado",en_preparacion:"preparando",listo:"listo",en_camino:"camino",entregado:"entregado"};
+    var num=d[0].numero_pedido;
+    // Notificar cambio de estado
+    if(_ultimoEstado[id]&&_ultimoEstado[id]!==est){
+      notificarEstadoLocal(est,num);
+      var btn=document.getElementById("btnMisPedidos");
+      if(btn&&btn.style.display!=="none"){
+        btn.textContent="📦 Ver pedido";
+        btn.style.background="rgba(249,115,22,0.2)";
+        btn.style.borderColor="rgba(249,115,22,0.4)";
+        btn.style.color="#fb923c";
+      }
+    }
+    _ultimoEstado[id]=est;
+    // Mostrar mapa si está en camino
+    if(est==="en_camino"){obtenerUbicacionDomiciliario(id);}
+    // Actualizar pasos UI
+    var stmap={confirmado:"confirmado",en_preparacion:"preparando",listo:"listo",en_camino:"camino",entregado:"entregado"};
     var order=["confirmado","en_preparacion","listo","en_camino","entregado"];
-    var idx=order.indexOf(est);
+    var idx2=order.indexOf(est);
     order.forEach(function(s,i){
-      var key=map[s];var el=document.getElementById("ts-"+key);if(!el)return;
+      var key=stmap[s];var el=document.getElementById("ts-"+key);if(!el)return;
       el.classList.remove("done","act");
-      if(i<idx)el.classList.add("done");
-      else if(i===idx)el.classList.add("act");
+      if(i<idx2)el.classList.add("done");
+      else if(i===idx2)el.classList.add("act");
     });
-    if(est==="entregado")clearInterval(trackTimer);
+    if(est==="entregado"){
+      clearInterval(trackTimer);
+      var wrap=document.getElementById("trackingMapWrap");
+      if(wrap)wrap.style.display="none";
+    }
   }catch(e){}
 }
 
