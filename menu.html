@@ -380,7 +380,7 @@ body::before{
 .ov.on{opacity:1;pointer-events:all;}
 .sheet{
   position:fixed;bottom:0;left:0;right:0;
-  max-height:92vh;background:var(--bg2);
+  max-height:92vh;background:#16131f;
   border-radius:26px 26px 0 0;z-index:201;
   transform:translateY(100%);
   transition:transform 0.38s cubic-bezier(0.32,0.72,0,1);
@@ -414,8 +414,8 @@ body::before{
 .ci-row:last-child{border:none;}
 .ci-emo{font-size:24px;width:38px;text-align:center;flex-shrink:0;}
 .ci-info{flex:1;min-width:0;}
-.ci-name{font-family:var(--font-ui);font-size:13px;font-weight:600;margin-bottom:2px;line-height:1.3;}
-.ci-unit{font-size:11px;color:var(--t2);}
+.ci-name{font-family:var(--font-ui);font-size:13px;font-weight:700;margin-bottom:2px;line-height:1.3;color:#f0ecf8;}
+.ci-unit{font-size:12px;color:rgba(240,236,248,0.65);font-weight:600;}
 .ci-ctrl{display:flex;align-items:center;gap:6px;flex-shrink:0;}
 .cib{
   width:28px;height:28px;border-radius:9px;border:none;
@@ -432,7 +432,7 @@ body::before{
 .fsec{padding:14px 20px;}
 .fl{
   font-family:var(--font-ui);font-size:10px;font-weight:700;
-  color:var(--t3);text-transform:uppercase;letter-spacing:0.1em;
+  color:rgba(240,236,248,0.55);text-transform:uppercase;letter-spacing:0.1em;
   margin-bottom:7px;display:block;
 }
 .fi{
@@ -510,8 +510,8 @@ textarea.fi{resize:none;min-height:66px;}
   padding:10px 15px;font-size:13px;border-bottom:1px solid var(--border);
 }
 .tot-row:last-child{border:none;}
-.tot-l{color:var(--t2);}
-.tot-v{font-family:var(--font-ui);font-weight:600;}
+.tot-l{color:rgba(240,236,248,0.7);font-weight:500;}
+.tot-v{font-family:var(--font-ui);font-weight:700;color:#f0ecf8;}
 .tot-grand{
   display:flex;justify-content:space-between;align-items:center;
   padding:14px 20px;
@@ -865,12 +865,15 @@ textarea.fi{resize:none;min-height:66px;}
 <!-- HEADER -->
 <header class="header" id="header">
   <div class="hd-logo" id="hdLogo">LA<span>CURVA</span></div>
-  <button class="hd-cart" id="cartBtn" onclick="openCart()">
+  <div style="display:flex;align-items:center;gap:8px">
+    <button onclick="abrirMisPedidos()" id="btnMisPedidos" style="display:none;padding:7px 12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:100px;color:#34d399;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.2s">📦 Mis pedidos</button>
+    <button class="hd-cart" id="cartBtn" onclick="openCart()">
     <div class="cart-pulse"></div>
     <span>🛒</span>
     <span class="hd-cart-n" id="cartN">0</span>
     <span class="hd-cart-t" id="cartT"></span>
-  </button>
+    </button>
+  </div>
 </header>
 
 <!-- HERO -->
@@ -959,7 +962,7 @@ textarea.fi{resize:none;min-height:66px;}
       <img id="prodDetImgEl" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none" onerror="this.style.display='none'">
       <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 50%,rgba(8,7,9,0.95))"></div>
     </div>
-    <button onclick="cerrarProdDetalle()" style="position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.15);color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)">✕</button>
+    <button onclick="cerrarProdDetalle()" style="position:absolute;top:16px;right:16px;z-index:10;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.75);border:2px solid rgba(255,255,255,0.25);color:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(12px);box-shadow:0 2px 12px rgba(0,0,0,0.5)">✕</button>
     <div style="position:absolute;bottom:14px;left:20px;right:20px">
       <div id="prodDetNombre" style="font-family:var(--font-disp);font-size:28px;font-weight:900;letter-spacing:1px;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.8)"></div>
       <div id="prodDetPrecio" style="font-family:var(--font-disp);font-size:22px;font-weight:700;color:var(--orange);margin-top:2px"></div>
@@ -1009,7 +1012,7 @@ textarea.fi{resize:none;min-height:66px;}
     <input class="fi" id="iNombre" placeholder="¿Cómo te llamas?" oninput="checkCliente()">
 
     <label class="fl">WhatsApp</label>
-    <input class="fi" id="iTel" placeholder="3001234567" type="tel" oninput="checkCliente()">
+    <input class="fi" id="iTel" placeholder="3001234567" type="tel" oninput="checkCliente();actualizarBtnMisPedidos()">
 
     <div class="fid-box" id="fidBox">
       <span class="fid-ico" id="fidIco"></span>
@@ -1126,6 +1129,24 @@ textarea.fi{resize:none;min-height:66px;}
   <button onclick="pedirPermisoNotif();document.getElementById('notifBanner').style.display='none'" style="padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Activar</button>
 </div>
 <button class="nuevo-btn" onclick="nuevoPedido()">+ Hacer otro pedido</button>
+</div>
+
+<!-- MIS PEDIDOS SCREEN -->
+<div id="misPedidosScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:350;flex-direction:column">
+  <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;background:var(--bg);position:sticky;top:0">
+    <button onclick="cerrarMisPedidos()" style="width:34px;height:34px;border-radius:11px;background:var(--s2);border:1px solid var(--border);color:var(--t2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center">←</button>
+    <div style="flex:1">
+      <div style="font-family:var(--font-disp);font-size:22px;font-weight:900;letter-spacing:1px">Mis Pedidos</div>
+      <div style="font-size:11px;color:var(--t3)">Estado en tiempo real</div>
+    </div>
+    <button onclick="cargarMisPedidos()" style="padding:7px 13px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">↻ Actualizar</button>
+  </div>
+  <div style="overflow-y:auto;padding:16px 20px;flex:1" id="misPedidosLista">
+    <div style="text-align:center;padding:40px 0;color:var(--t3)">
+      <div style="font-size:40px;margin-bottom:12px">📦</div>
+      <div style="font-size:14px">Ingresa tu WhatsApp en el carrito<br>para ver tus pedidos activos</div>
+    </div>
+  </div>
 </div>
 
 <!-- REWARDS FAB -->
@@ -1542,6 +1563,7 @@ function handleComp(e){
 /* ── FIDELIDAD ── */
 function checkCliente(){
   clearTimeout(chkTimer);
+  actualizarBtnMisPedidos();
   chkTimer=setTimeout(async function(){
     var tel=document.getElementById("iTel").value.trim().replace(/\D/g,"");
     if(!rest||tel.length<10)return;
@@ -2118,7 +2140,7 @@ var prodDetActual=null, prodDetCant=1, prodDetAdicSel={}, prodDetSalsaSel=null;
 function abrirProdDetalle(id){
   var item=menuItems.find(function(x){return x.id===id;});
   if(!item)return;
-  prodDetActual=item; prodDetCant=1; prodDetAdicSel={}; prodDetSalsaSel=null;
+  prodDetActual=item; prodDetCant=1; prodDetAdicSel={}; prodDetSalsaSel=[];
   // Foto o emoji
   var imgEl=document.getElementById("prodDetImgEl");
   var emoEl=document.getElementById("prodDetEmoji");
@@ -2163,9 +2185,9 @@ function abrirProdDetalle(id){
       var btn=document.createElement("button");
       btn.className="sopt";btn.textContent=s;
       btn.onclick=function(){
-        prodDetSalsaSel=prodDetSalsaSel===s?null:s;
-        row.querySelectorAll(".sopt").forEach(function(b){b.classList.remove("on");});
-        if(prodDetSalsaSel)btn.classList.add("on");
+        var idx=prodDetSalsaSel.indexOf(s);
+        if(idx===-1){prodDetSalsaSel.push(s);btn.classList.add("on");}
+        else{prodDetSalsaSel.splice(idx,1);btn.classList.remove("on");}
       };
       row.appendChild(btn);
     });
@@ -2201,7 +2223,7 @@ function agregarDesdeDet(){
   var extraPrecio=selArr.reduce(function(s,k){var a=ADICIONALES.find(function(x){return x.id===k;});return s+(a?a.precio:0);},0);
   var extraNoms=selArr.map(function(k){var a=ADICIONALES.find(function(x){return x.id===k;});return a?a.nombre:"";}).filter(Boolean);
   var totalPrecio=prodDetActual.precio+extraPrecio;
-  var nomCompleto=prodDetActual.nombre+(extraNoms.length?" + "+extraNoms.join(", "):"")+(prodDetSalsaSel?" 🌶️ "+prodDetSalsaSel:"");
+  var nomCompleto=prodDetActual.nombre+(extraNoms.length?" + "+extraNoms.join(", "):"")+(prodDetSalsaSel.length?" 🌶️ "+prodDetSalsaSel.join(" + "):"");
   // Agregar cantidad
   for(var q=0;q<prodDetCant;q++){
     setQty(prodDetActual.id,totalPrecio,nomCompleto,(carrito[prodDetActual.id]?carrito[prodDetActual.id].qty:0)+1);
@@ -2265,11 +2287,179 @@ function mostrarBannerNotif(){
   if(banner)banner.style.display="flex";
 }
 
-// Registrar Service Worker
+// Registrar Service Worker para notificaciones
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("/sw.js").then(function(reg){
-    console.log("SW registrado");
-  }).catch(function(){});
+  navigator.serviceWorker.register("/sw.js")
+    .then(function(reg){console.log("SW registrado:",reg.scope);})
+    .catch(function(e){console.log("SW no disponible:",e.message);});
+}
+
+// ── MIS PEDIDOS ──
+var misPedidosTimer=null;
+
+function abrirMisPedidos(){
+  var screen=document.getElementById("misPedidosScreen");
+  screen.style.display="flex";
+  cargarMisPedidos();
+  // Actualizar cada 10 segundos
+  misPedidosTimer=setInterval(cargarMisPedidos,10000);
+}
+
+function cerrarMisPedidos(){
+  document.getElementById("misPedidosScreen").style.display="none";
+  if(misPedidosTimer){clearInterval(misPedidosTimer);misPedidosTimer=null;}
+}
+
+async function cargarMisPedidos(){
+  var tel=document.getElementById("iTel")?document.getElementById("iTel").value.trim().replace(/\D/g,""):"";
+  var lista=document.getElementById("misPedidosLista");
+  if(!tel||tel.length<10||!rest){
+    lista.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">📱</div><div style="font-size:14px">Ingresa tu WhatsApp en el carrito<br>para ver tus pedidos activos</div></div>';
+    return;
+  }
+  var telLimpio=tel.replace(/^57/,"");
+  try{
+    var r=await fetch("/api/mis-pedidos/"+telLimpio+"?restaurante_id="+rest.id);
+    var data=await r.json();
+    var pedidos=data.pedidos||[];
+    if(!pedidos.length){
+      lista.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">✅</div><div style="font-size:14px">No tienes pedidos activos en este momento</div></div>';
+      return;
+    }
+    var estadoInfo={
+      confirmado:{ico:"✅",label:"Confirmado",color:"rgba(16,185,129,0.15)",border:"rgba(16,185,129,0.3)",txt:"#34d399"},
+      en_preparacion:{ico:"🔥",label:"En preparación",color:"rgba(249,115,22,0.12)",border:"rgba(249,115,22,0.3)",txt:"#fb923c"},
+      listo:{ico:"🎉",label:"¡Listo!",color:"rgba(234,179,8,0.12)",border:"rgba(234,179,8,0.3)",txt:"#fbbf24"},
+      en_camino:{ico:"🛵",label:"En camino",color:"rgba(59,130,246,0.12)",border:"rgba(59,130,246,0.3)",txt:"#60a5fa"},
+      listo_entrega:{ico:"📦",label:"Para recoger",color:"rgba(124,58,237,0.12)",border:"rgba(124,58,237,0.3)",txt:"#c4b5fd"}
+    };
+    lista.innerHTML=pedidos.map(function(p){
+      var ei=estadoInfo[p.estado]||{ico:"⏳",label:p.estado,color:"rgba(255,255,255,0.05)",border:"rgba(255,255,255,0.1)",txt:"var(--t2)"};
+      var items=Array.isArray(p.items)?p.items:(p.items||"").split("\n").filter(Boolean);
+      var fecha=new Date(p.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});
+      return '<div style="background:'+ei.color+';border:1px solid '+ei.border+';border-radius:18px;padding:16px;margin-bottom:12px">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="font-size:24px">'+ei.ico+'</span>'
+        +'<div><div style="font-family:var(--font-disp);font-size:18px;font-weight:800;color:'+ei.txt+'">'+ei.label+'</div>'
+        +'<div style="font-size:11px;color:var(--t3)">Pedido #'+p.numero_pedido+' · '+fecha+'</div></div>'
+        +'</div>'
+        +'<div style="font-family:var(--font-disp);font-size:20px;font-weight:800;color:var(--orange)">$'+Number(p.total).toLocaleString("es-CO")+'</div>'
+        +'</div>'
+        +'<div style="background:rgba(0,0,0,0.2);border-radius:12px;padding:10px 12px;margin-bottom:10px">'
+        +items.slice(0,4).map(function(it){return '<div style="font-size:12px;color:var(--t2);padding:2px 0">'+it+'</div>';}).join("")
+        +(items.length>4?'<div style="font-size:11px;color:var(--t3);margin-top:2px">+'+( items.length-4)+' más...</div>':'')
+        +'</div>'
+        +(p.direccion?'<div style="font-size:11px;color:var(--t3)">📍 '+p.direccion+'</div>':'')
+        +'<div style="margin-top:10px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">'
+        +["confirmado","en_preparacion","listo","en_camino"].map(function(est,i){
+          var done=["confirmado","en_preparacion","listo","en_camino"].indexOf(p.estado)>=i;
+          var labels=["✅ Recibido","🔥 Prep","🎉 Listo","🛵 Camino"];
+          return '<div style="flex-shrink:0;padding:4px 8px;border-radius:8px;font-size:10px;font-weight:700;background:'+(done?"rgba(16,185,129,0.2)":"rgba(255,255,255,0.05)")+';color:'+(done?"#34d399":"var(--t3)")+'">'+labels[i]+'</div>';
+        }).join("")
+        +'</div>'
+        +'</div>';
+    }).join("");
+  }catch(e){
+    lista.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">Error cargando pedidos. Intenta de nuevo.</div>';
+  }
+}
+
+// Mostrar botón mis pedidos cuando hay teléfono
+function actualizarBtnMisPedidos(){
+  var tel=document.getElementById("iTel")?document.getElementById("iTel").value.trim().replace(/\D/g,""):"";
+  var btn=document.getElementById("btnMisPedidos");
+  if(btn)btn.style.display=tel&&tel.length>=10?"flex":"none";
+}
+
+// ── NOTIFICACIONES PUSH ──
+// Pedir permiso explícitamente con UI amigable
+function mostrarBannerNotif(){
+  if(!("Notification" in window))return;
+  if(Notification.permission==="granted"){suscribirPush();return;}
+  if(Notification.permission==="denied")return;
+  var banner=document.getElementById("notifBanner");
+  if(banner)banner.style.display="flex";
+}
+
+async function pedirPermisoNotif(){
+  try{
+    var perm=await Notification.requestPermission();
+    if(perm==="granted"){
+      suscribirPush();
+      showToast("🔔 ¡Notificaciones activadas!");
+    } else {
+      showToast("Notificaciones no activadas");
+    }
+  }catch(e){showToast("Tu navegador no soporta notificaciones");}
+  var banner=document.getElementById("notifBanner");
+  if(banner)banner.style.display="none";
+}
+
+async function suscribirPush(){
+  if(!("serviceWorker" in navigator))return;
+  try{
+    var reg=await navigator.serviceWorker.ready;
+    // Suscripción simple sin VAPID externo por ahora
+    var sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      // Solo activar notificaciones locales por ahora
+      console.log("Push: listo para notificaciones");
+    }
+    pushSub=sub;
+  }catch(e){console.log("Push no disponible");}
+}
+
+// Notificación local cuando cambia el estado del pedido
+function notificarEstadoLocal(estado,numeroPedido){
+  if(!("Notification" in window)||Notification.permission!=="granted")return;
+  var msgs={
+    en_preparacion:{titulo:"🔥 Pedido en preparación",body:"Tu pedido #"+numeroPedido+" ya está en la cocina"},
+    listo:{titulo:"🎉 ¡Tu pedido está listo!",body:"Pedido #"+numeroPedido+" listo para entrega"},
+    en_camino:{titulo:"🛵 ¡Tu pedido va en camino!",body:"El domiciliario ya salió con tu pedido #"+numeroPedido}
+  };
+  var m=msgs[estado];
+  if(!m)return;
+  try{
+    var notif=new Notification(m.titulo,{body:m.body,icon:"/favicon.ico",badge:"/favicon.ico"});
+    setTimeout(function(){notif.close();},5000);
+  }catch(e){}
+}
+
+// Override actuTracking para incluir notificación local
+var _ultimoEstado={};
+var _actuTrackingOrig=actuTracking;
+async function actuTracking(id){
+  try{
+    var d=await api("pedidos","id=eq."+id+"&select=estado,numero_pedido");
+    if(!d||!d.length)return;
+    var est=d[0].estado;
+    var num=d[0].numero_pedido;
+    // Notificar solo si cambió el estado
+    if(_ultimoEstado[id]&&_ultimoEstado[id]!==est){
+      notificarEstadoLocal(est,num);
+      // Actualizar botón mis pedidos
+      var btn=document.getElementById("btnMisPedidos");
+      if(btn&&btn.style.display!=="none"){
+        btn.textContent="📦 Ver pedido";
+        btn.style.background="rgba(249,115,22,0.2)";
+        btn.style.borderColor="rgba(249,115,22,0.4)";
+        btn.style.color="#fb923c";
+      }
+    }
+    _ultimoEstado[id]=est;
+    // Actualizar UI de tracking en pantalla de éxito
+    var map={confirmado:"confirmado",en_preparacion:"preparando",listo:"listo",en_camino:"camino",entregado:"entregado"};
+    var order=["confirmado","en_preparacion","listo","en_camino","entregado"];
+    var idx2=order.indexOf(est);
+    order.forEach(function(s,i){
+      var key=map[s];var el=document.getElementById("ts-"+key);if(!el)return;
+      el.classList.remove("done","act");
+      if(i<idx2)el.classList.add("done");
+      else if(i===idx2)el.classList.add("act");
+    });
+    if(est==="entregado")clearInterval(trackTimer);
+  }catch(e){}
 }
 
 </script>
