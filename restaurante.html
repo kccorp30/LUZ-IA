@@ -512,7 +512,7 @@ select.finput{cursor:pointer}
   .hcard-btns,.btn-imprimir,.btn-borrar-hist,.filtros-row{display:none!important}
 }
 </style>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAGeM9Ct-7O4yXQ7uOyFCDlY5Fgii0O0RA&libraries=places,geometry&callback=initMapaCallback" async defer></script>
+<!-- Google Maps se carga dinámicamente al abrir el tab mapa -->
 </head>
 <body>
 <div class="blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div><div class="blob blob-4"></div></div>
@@ -1038,6 +1038,7 @@ select.finput{cursor:pointer}
             <textarea class="finput" id="zona-barrios" rows="2" placeholder="Canaveral, Granada, Santa Monica, San Judas, Guadalupe..."></textarea>
           </div>
           <button class="badd" id="btnAgregarZona">Guardar zona</button>
+          <button onclick="cargarZonasPredefinidas()" style="width:100%;margin-top:8px;padding:11px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);border-radius:13px;color:#c4b5fd;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer">⚡ Cargar zonas predefinidas de Cali</button>
         </div>
       </div>
 
@@ -2286,19 +2287,33 @@ var mapaGM=null, mapaIniciado=false;
 var zonasShapes=[], zonasInfoWindows=[];
 var geocoder=null;
 
-// Callback de Google Maps cuando carga
-function initMapaCallback(){
-  geocoder=new google.maps.Geocoder();
-  if(document.getElementById("page-mapa") && document.getElementById("page-mapa").classList.contains("active")){
-    initMapa();
-  }
+// Cargar Google Maps dinámicamente (evita problema de timing con async)
+var gmapsLoaded=false;
+function cargarGoogleMaps(cb){
+  if(gmapsLoaded&&typeof google!=="undefined"&&google.maps){cb();return;}
+  window._gmapsCb=cb;
+  if(document.querySelector('script[src*="maps.googleapis.com"]'))return;
+  var s=document.createElement("script");
+  s.src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAGeM9Ct-7O4yXQ7uOyFCDlY5Fgii0O0RA&libraries=places,geometry&callback=_gmapsReady";
+  document.head.appendChild(s);
 }
+window._gmapsReady=function(){
+  gmapsLoaded=true;
+  geocoder=new google.maps.Geocoder();
+  if(window._gmapsCb){window._gmapsCb();window._gmapsCb=null;}
+};
+// initMapaCallback por si se llama desde otro lado
+function initMapaCallback(){_gmapsReady();}
 
 function initMapa(){
   if(mapaIniciado)return;
   var container=document.getElementById("mapaContainer");
   if(!container)return;
-  if(typeof google==="undefined"||!google.maps)return;
+  // Cargar Google Maps si no está listo
+  if(typeof google==="undefined"||!google.maps){
+    cargarGoogleMaps(function(){initMapa();});
+    return;
+  }
   mapaIniciado=true;
   document.getElementById("mapaLoading").style.display="none";
 
@@ -2474,6 +2489,36 @@ function dibujarTodasZonas(zonas){
       leg.insertAdjacentHTML("beforeend",chip);
     }
   });
+}
+
+// Zonas predefinidas de Cali para La Curva Canaveral
+var ZONAS_PREDEFINIDAS=[
+  {nombre:"Zona 1 - Inmediata",precio:2000,barrios:"Canaveral, Versalles, Los Ángeles, Normandía, Samanes, Villa del Rey, Ciudad Modelo"},
+  {nombre:"Zona 2 - Cercana",precio:3000,barrios:"Granada, Santa Mónica, Álamos, Capri, Tequendama, El Ingenio, Pasoancho, La Flora, Prados del Norte"},
+  {nombre:"Zona 3 - Media",precio:4000,barrios:"San Judas, Guadalupe, Popular, Terrón Colorado, Siloé, Belén, Guabal, Salomia, Floralia, Alfonso López"},
+  {nombre:"Zona 4 - Lejana",precio:5000,barrios:"Aguablanca, Marroquín, El Retiro, Villacolombia, Comuneros, Desepaz, Potrero Grande, Ciudad Córdoba"},
+  {nombre:"Zona 5 - Extrema",precio:6000,barrios:"Pance, Cañaveralejo, La Buitrera, Andes, Nápoles, Meléndez, Los Chorros, La Reforma"}
+];
+
+async function cargarZonasPredefinidas(){
+  if(!rest){notif("Sin restaurante cargado");return;}
+  if(!confirm("Esto agregará las zonas predefinidas de Cali. ¿Continuar?"))return;
+  notif("⏳ Cargando zonas...");
+  var errores=0;
+  for(var i=0;i<ZONAS_PREDEFINIDAS.length;i++){
+    var z=ZONAS_PREDEFINIDAS[i];
+    try{
+      var r=await fetch(SU+"/rest/v1/zonas_domicilio",{
+        method:"POST",
+        headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+        body:JSON.stringify({restaurante_id:rest.id,nombre:z.nombre,precio:z.precio,barrios:z.barrios})
+      });
+      if(!r.ok&&r.status!==201)errores++;
+    }catch(e){errores++;}
+  }
+  if(errores===0)notif("✅ Zonas cargadas!","rgba(16,185,129,0.9)");
+  else notif("Cargadas con "+errores+" errores");
+  cargarZonas();
 }
 
 // Guardar nueva zona
