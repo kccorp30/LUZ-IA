@@ -167,6 +167,9 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 </style>
 </head>
 <body>
+<!-- Indicador GPS -->
+<div id="gpsIndicador" style="display:none;position:fixed;top:12px;right:12px;z-index:999;background:rgba(16,185,129,0.95);border-radius:100px;padding:8px 14px;align-items:center;gap:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;color:white;box-shadow:0 4px 16px rgba(16,185,129,0.4)"><span style="width:8px;height:8px;border-radius:50%;background:white;display:inline-block;animation:gpsPulse 1.5s ease-in-out infinite;margin-right:4px"></span>GPS activo</div>
+<style>@keyframes gpsPulse{0%,100%{opacity:1}50%{opacity:0.4}}</style>
 <div class="blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
 
 <div id="loginScreen">
@@ -423,7 +426,7 @@ function loadPedidos(){
     });
     lista.innerHTML=h;
     lista.querySelectorAll(".dcard-btn-maps[data-dir]").forEach(function(b){b.addEventListener("click",function(){window.open("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(decodeURIComponent(this.getAttribute("data-dir"))+", Cali, Colombia"),"_blank");});});
-    lista.querySelectorAll(".dcard-btn[data-e='en_camino']").forEach(function(b){b.addEventListener("click",function(){cambiarEstado(this.getAttribute("data-id"),"en_camino",this.getAttribute("data-t"),this.getAttribute("data-n"));});});
+    lista.querySelectorAll(".dcard-btn[data-e='en_camino']").forEach(function(b){b.addEventListener("click",function(){var pid=this.getAttribute("data-id");cambiarEstado(pid,"en_camino",this.getAttribute("data-t"),this.getAttribute("data-n"));iniciarGPSTracking(pid);});});
     lista.querySelectorAll(".btn-entregado[data-id]").forEach(function(b){b.addEventListener("click",function(){pedidoAEntregar=this.getAttribute("data-id");pedidoAEntregarNum=this.getAttribute("data-n");document.getElementById("confirmNum").textContent="#"+pedidoAEntregarNum;document.getElementById("confirmEntregado").classList.add("open");});});
   }).catch(function(){});
 }
@@ -508,8 +511,43 @@ document.getElementById("confirmOk").addEventListener("click",function(){
   pedidoAEntregar=null;
 });
 
+// ── GPS TRACKING ──
+var gpsWatchId=null;
+
+function iniciarGPSTracking(pedidoId){
+  if(!navigator.geolocation){notif("GPS no disponible en este dispositivo");return;}
+  if(gpsWatchId!==null){navigator.geolocation.clearWatch(gpsWatchId);}
+  mostrarGPS(true);
+  gpsWatchId=navigator.geolocation.watchPosition(
+    function(pos){enviarUbicacion(pedidoId,pos.coords.latitude,pos.coords.longitude);},
+    function(err){console.log("GPS:",err.message);},
+    {enableHighAccuracy:true,maximumAge:5000,timeout:15000}
+  );
+  notif("📍 GPS activado","rgba(16,185,129,0.9)");
+}
+
+function detenerGPSTracking(){
+  if(gpsWatchId!==null){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}
+  mostrarGPS(false);
+}
+
+function mostrarGPS(on){
+  var el=document.getElementById("gpsIndicador");
+  if(el)el.style.display=on?"flex":"none";
+}
+
+function enviarUbicacion(pedidoId,lat,lng){
+  if(!rest||!pedidoId)return;
+  fetch("https://vbxuwzcfzfjwhllkppkg.supabase.co/rest/v1/domiciliario_ubicacion?on_conflict=pedido_id",{
+    method:"POST",
+    headers:{"apikey":"sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5","Authorization":"Bearer sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5","Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},
+    body:JSON.stringify({restaurante_id:rest.id,pedido_id:pedidoId,domiciliario_id:domiciliarioId||null,lat:lat,lng:lng,updated_at:new Date().toISOString()})
+  }).catch(function(){});
+}
+
 function cambiarEstado(id,estado,tel,num){
   notif("Actualizando...");
+  if(estado==="entregado"){detenerGPSTracking();}
   fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null})})
   .then(function(r){return r.json();})
   .then(function(){
