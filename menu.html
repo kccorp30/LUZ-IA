@@ -950,6 +950,49 @@ textarea.fi{resize:none;min-height:66px;}
   </button>
 </div>
 
+<!-- PRODUCT DETAIL OVERLAY -->
+<div class="ov" id="prodDetOv" onclick="cerrarProdDetalle()"></div>
+<div class="sheet" id="prodDetSheet" style="max-height:95vh;border-radius:26px 26px 0 0">
+  <div style="position:relative">
+    <div id="prodDetImg" style="width:100%;height:240px;background:#1c1928;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center">
+      <span id="prodDetEmoji" style="font-size:80px;opacity:0.5"></span>
+      <img id="prodDetImgEl" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none" onerror="this.style.display='none'">
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 50%,rgba(8,7,9,0.95))"></div>
+    </div>
+    <button onclick="cerrarProdDetalle()" style="position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.15);color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)">✕</button>
+    <div style="position:absolute;bottom:14px;left:20px;right:20px">
+      <div id="prodDetNombre" style="font-family:var(--font-disp);font-size:28px;font-weight:900;letter-spacing:1px;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.8)"></div>
+      <div id="prodDetPrecio" style="font-family:var(--font-disp);font-size:22px;font-weight:700;color:var(--orange);margin-top:2px"></div>
+    </div>
+  </div>
+  <div style="padding:16px 20px 0">
+    <div id="prodDetDesc" style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:16px"></div>
+    <!-- ADICIONALES -->
+    <div id="prodDetAdicSec">
+      <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px">Adicionales</div>
+      <div class="adic-grid" id="prodDetAdicGrid" style="padding:0;margin-bottom:16px"></div>
+    </div>
+    <!-- SALSAS -->
+    <div id="prodDetSalsaSec" style="display:none">
+      <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px">🌶️ Elige tu salsa</div>
+      <div class="salsa-row" id="prodDetSalsaRow" style="padding:0;margin-bottom:16px"></div>
+    </div>
+    <!-- CANTIDAD -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:16px">
+      <div style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--text)">Cantidad</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button onclick="cambiarCantDet(-1)" style="width:34px;height:34px;border-radius:11px;border:1px solid var(--border2);background:var(--s2);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+        <span id="prodDetCant" style="font-family:var(--font-disp);font-size:22px;font-weight:800;min-width:20px;text-align:center">1</span>
+        <button onclick="cambiarCantDet(1)" style="width:34px;height:34px;border-radius:11px;border:none;background:var(--accent);color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+      </div>
+    </div>
+    <button onclick="agregarDesdeDet()" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--accent),#c42912);border:none;border-radius:16px;color:white;font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:calc(24px + env(safe-area-inset-bottom))">
+      <span>Agregar al pedido</span>
+      <span id="prodDetTotalBtn" style="font-family:var(--font-disp);font-size:20px;font-weight:800">$0</span>
+    </button>
+  </div>
+</div>
+
 <!-- CART OVERLAY + SHEET -->
 <div class="ov" id="cartOv" onclick="closeCart()"></div>
 <div class="sheet" id="cartSheet">
@@ -978,8 +1021,16 @@ textarea.fi{resize:none;min-height:66px;}
     </div>
 
     <div id="domFields">
-      <label class="fl">Dirección de entrega</label>
-      <input class="fi" id="iDir" placeholder="Calle, número, barrio, referencias">
+      <label class="fl">Barrio <span style="color:var(--accent)">*</span></label>
+      <div style="position:relative;margin-bottom:8px">
+        <input class="fi" id="iBarrio" placeholder="🔍 Busca tu barrio..." oninput="buscarBarrio(this.value)" autocomplete="off" style="margin:0">
+        <div id="barrioDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1c1928;border:1px solid rgba(232,52,28,0.3);border-radius:13px;margin-top:4px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.5)"></div>
+      </div>
+      <div id="barrioSelInfo" style="display:none;padding:10px 13px;border-radius:12px;margin-bottom:8px;font-size:12px;font-weight:700"></div>
+      <label class="fl">Dirección <span style="color:var(--accent)">*</span></label>
+      <input class="fi" id="iDir" placeholder="Calle y número (ej: Cra 5 #23-10)">
+      <label class="fl">Apartamento / Torre / Casa <span style="color:var(--t3);font-weight:400">(si aplica)</span></label>
+      <input class="fi" id="iApto" placeholder="Apto 301, Torre B, Casa 5...">
     </div>
     <div id="mesaField">
       <label class="fl">Número de mesa</label>
@@ -1065,7 +1116,16 @@ textarea.fi{resize:none;min-height:66px;}
     <div class="tstep" id="ts-camino"><div class="ts-dot"></div><div class="ts-label">🛵 En camino</div></div>
     <div class="tstep" id="ts-entregado"><div class="ts-dot"></div><div class="ts-label">🏠 Entregado</div></div>
   </div>
-  <button class="nuevo-btn" onclick="nuevoPedido()">+ Hacer otro pedido</button>
+  <!-- BANNER NOTIFICACIONES -->
+<div id="notifBanner" style="display:none;margin:0 24px 16px;padding:14px 18px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);border-radius:16px;align-items:center;gap:12px;width:calc(100% - 48px)">
+  <span style="font-size:24px">🔔</span>
+  <div style="flex:1">
+    <div style="font-size:13px;font-weight:700;color:#c4b5fd">¿Recibir alertas de tu pedido?</div>
+    <div style="font-size:11px;color:var(--t2);margin-top:2px">Te avisamos cuando esté listo y en camino</div>
+  </div>
+  <button onclick="pedirPermisoNotif();document.getElementById('notifBanner').style.display='none'" style="padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Activar</button>
+</div>
+<button class="nuevo-btn" onclick="nuevoPedido()">+ Hacer otro pedido</button>
 </div>
 
 <!-- REWARDS FAB -->
@@ -1119,6 +1179,7 @@ var compB64=null,trackId=null,trackTimer=null;
 var descVal=0,descTipo=null,clienteData=null,chkTimer=null;
 var catActiva="todas",adicPend=null,adicSel={},salsaSel=null;
 var puntosCliente=0,canjeActual=null;
+var zonasData=[],domCalculado=null;
 
 var ADICIONALES=[
   {id:"queso",nombre:"Queso tajado",precio:1600,emoji:"🧀"},
@@ -1216,6 +1277,7 @@ function aplicarRest(){
     }
   }
   cargarPromos();
+  cargarZonasMenu();
 }
 
 function cargarPromos(){
@@ -1290,10 +1352,10 @@ function renderVCard(i){
   var ctrl=qty>0
     ?'<div class="qty-ctrl"><button class="qb" onclick="event.stopPropagation();qDec(\''+i.id+'\')">−</button><span class="qn">'+qty+'</span><button class="qb p" onclick="event.stopPropagation();addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">+</button></div>'
     :'<button class="add-btn" onclick="event.stopPropagation();addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">+</button>';
-  return '<div class="pcard-v'+(qty>0?" incart":"")+'" id="pc-'+i.id+'" onclick="addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">'
+  return '<div class="pcard-v'+(qty>0?" incart":"")+'" id="pc-'+i.id+'" onclick="abrirProdDetalle(\''+i.id+'\')">'
     +'<div class="pcv-img '+bgCls+'">'
     +imgHtml
-    +'<div class="pcv-emoji">'+(i.emoji||"🍔")+'</div>'
+    +(i.imagen_url?'':'<div class="pcv-emoji">'+(i.emoji||"🍔")+'</div>')
     +(i.en_oferta?'<div class="oferta-tag">OFERTA</div>':'')
     +'<div class="pcv-qty-wrap">'+ctrl+'</div>'
     +'</div>'
@@ -1431,13 +1493,17 @@ function updateTotales(){
     var m=menuItems.find(function(x){return x.id===i.id;});
     return m&&!m.es_bebida;
   }).length*500:0;
-  var dom=tipoPedido==="domicilio"?(rest&&rest.domicilio_base?Number(rest.domicilio_base):4000):0;
+  var dom=tipoPedido==="domicilio"?(domCalculado!==null?domCalculado:(rest&&rest.domicilio_base?Number(rest.domicilio_base):4000)):0;
   var dsc=0;if(descVal>0&&descTipo){dsc=descTipo==="porcentaje"?Math.round(sub*descVal/100):descVal;}
   var total=sub+des+dom-dsc;
   var h="";
   if(sub>0)h+='<div class="tot-row"><span class="tot-l">Subtotal</span><span class="tot-v">'+fmt(sub)+'</span></div>';
   if(des>0)h+='<div class="tot-row"><span class="tot-l">Desechables</span><span class="tot-v">'+fmt(des)+'</span></div>';
-  if(dom>0)h+='<div class="tot-row"><span class="tot-l">Domicilio</span><span class="tot-v">'+fmt(dom)+'</span></div>';
+  if(tipoPedido==="domicilio"){
+    var domLabel=domCalculado!==null?fmt(domCalculado):'<span style="color:#f5a623">Por confirmar</span>';
+    var domZona=window._domZona?(' <span style="font-size:10px;color:var(--t2)">('+window._domZona+')</span>'):'';
+    h+='<div class="tot-row"><span class="tot-l">Domicilio'+domZona+'</span><span class="tot-v">'+domLabel+'</span></div>';
+  }
   if(dsc>0)h+='<div class="tot-row"><span class="tot-l" style="color:var(--green)">🎟 Descuento</span><span class="tot-v" style="color:var(--green)">−'+fmt(dsc)+'</span></div>';
   document.getElementById("totBox").innerHTML=h;
   document.getElementById("totTotal").textContent=fmt(total);
@@ -1586,7 +1652,12 @@ async function enviar(){
   var nombre=document.getElementById("iNombre").value.trim();
   if(!nombre){showToast("¿Cómo te llamas? 😊");document.getElementById("iNombre").focus();return;}
   if(!pagoSel){showToast("Elige cómo vas a pagar");return;}
-  if(tipoPedido==="domicilio"&&!document.getElementById("iDir").value.trim()){showToast("Dinos dónde entregamos 📍");document.getElementById("iDir").focus();return;}
+  if(tipoPedido==="domicilio"){
+    var barrioCheck=document.getElementById("iBarrio")?document.getElementById("iBarrio").value.trim():"";
+    var dirCheck=document.getElementById("iDir").value.trim();
+    if(!barrioCheck){showToast("Ingresa tu barrio 📍");document.getElementById("iBarrio").focus();return;}
+    if(!dirCheck){showToast("Ingresa tu dirección completa 📍");document.getElementById("iDir").focus();return;}
+  }
   if((pagoSel==="nequi"||pagoSel==="bancolombia")&&!compB64){showToast("Sube tu comprobante 📎");return;}
   var btn=document.getElementById("ctaBtn");
   btn.disabled=true;btn.innerHTML='<span class="sp"></span>Enviando...';
@@ -1596,7 +1667,7 @@ async function enviar(){
     var dom=tipoPedido==="domicilio"?(rest&&rest.domicilio_base?Number(rest.domicilio_base):4000):0;
     var dsc=0;if(descVal>0&&descTipo){dsc=descTipo==="porcentaje"?Math.round(sub*descVal/100):descVal;}
     var total=sub+des+dom-dsc;
-    var dir=tipoPedido==="domicilio"?document.getElementById("iDir").value.trim():tipoPedido==="mesa"?"Mesa "+document.getElementById("iMesa").value:"RECOGER EN TIENDA";
+    var barrioVal=document.getElementById("iBarrio")?document.getElementById("iBarrio").value.trim():"";var dirVal=document.getElementById("iDir").value.trim();var aptoVal=document.getElementById("iApto")?document.getElementById("iApto").value.trim():"";var dirParts=[barrioVal,dirVal,aptoVal].filter(Boolean);var dir=tipoPedido==="domicilio"?(dirParts.length?dirParts.join(", "):"Por confirmar"):tipoPedido==="mesa"?"Mesa "+document.getElementById("iMesa").value:"RECOGER EN TIENDA";
     var tel=document.getElementById("iTel").value.trim().replace(/\D/g,"")||"web-"+Date.now();
     var notas=document.getElementById("iNotas").value.trim();
     var cuponCod=document.getElementById("iCupon").value.trim().toUpperCase();
@@ -1658,6 +1729,7 @@ function mostrarExito(num,id,tipo,nombre,ptsGanados){
     sb.style.display="block";
   }
   document.getElementById("succ").classList.add("show");
+  setTimeout(mostrarBannerNotif,1500);
   trackId=id;
   if(id)trackTimer=setInterval(function(){actuTracking(id);},5000);
 }
@@ -1681,7 +1753,7 @@ async function actuTracking(id){
 }
 
 function nuevoPedido(){
-  carrito={};pagoSel=null;compB64=null;descVal=0;descTipo=null;clienteData=null;puntosCliente=0;
+  carrito={};pagoSel=null;compB64=null;descVal=0;descTipo=null;clienteData=null;puntosCliente=0;domCalculado=null;window._domZona=null;var bi=document.getElementById("iBarrio");if(bi)bi.value="";var ai=document.getElementById("iApto");if(ai)ai.value="";var bsi=document.getElementById("barrioSelInfo");if(bsi){bsi.style.display="none";}
   trackId=null;if(trackTimer){clearInterval(trackTimer);trackTimer=null;}
   document.getElementById("succ").classList.remove("show");
   var sb=document.getElementById("succPtsBadge");if(sb)sb.style.display="none";
@@ -1934,6 +2006,270 @@ function actualizarBannerRewards(data){
     txt.textContent="¡Bienvenido al programa de puntos!";
     sub.textContent="Cada pedido suma puntos canjeables ⭐";
   }
+}
+
+// ── ZONAS DE DOMICILIO ──
+async function cargarZonasMenu(){
+  if(!rest)return;
+  try{
+    var r=await fetch(SU+"/rest/v1/zonas_domicilio?restaurante_id=eq."+rest.id+"&order=precio.asc",{
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK}
+    });
+    zonasData=await r.json()||[];
+  }catch(e){zonasData=[];}
+}
+
+function buscarBarrio(q){
+  var drop=document.getElementById("barrioDropdown");
+  var info=document.getElementById("barrioSelInfo");
+  if(!q||q.length<2){
+    drop.style.display="none";
+    return;
+  }
+  var ql=q.toLowerCase().trim();
+  // Buscar en todas las zonas
+  var resultados=[];
+  (zonasData||[]).forEach(function(z){
+    var barrios=(z.barrios||"").split(",").map(function(b){return b.trim();}).filter(Boolean);
+    barrios.forEach(function(b){
+      if(b.toLowerCase().includes(ql)){
+        resultados.push({barrio:b,zona:z.nombre,precio:z.precio});
+      }
+    });
+  });
+  if(!resultados.length){
+    // No encontrado — mostrar opción manual
+    drop.style.display="block";
+    drop.innerHTML='';
+    var divManual=document.createElement("div");
+    divManual.style.cssText="padding:12px 15px;font-size:13px;color:var(--t2);line-height:1.5";
+    divManual.innerHTML='<div style="font-weight:700;color:var(--text);margin-bottom:4px">📍 "'+q+'" no está en la lista</div>'
+      +'<div style="font-size:11px">Puedes escribirlo igual — el valor del domicilio te lo confirma el domiciliario al momento de la entrega.</div>';
+    var btnUsar=document.createElement("button");
+    btnUsar.style.cssText="width:calc(100% - 30px);margin:8px 15px 10px;padding:10px;background:rgba(232,52,28,0.15);border:1px solid rgba(232,52,28,0.3);border-radius:10px;color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit";
+    btnUsar.textContent="Usar este barrio (domiciliario confirma valor)";
+    btnUsar.onclick=function(){
+      seleccionarBarrioManual(q);
+    };
+    drop.appendChild(divManual);
+    drop.appendChild(btnUsar);
+    return;
+  }
+  drop.style.display="block";
+  drop.innerHTML="";
+  resultados.forEach(function(r){
+    var div=document.createElement("div");
+    div.style.cssText="display:flex;align-items:center;justify-content:space-between;padding:11px 15px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05)";
+    div.onmouseover=function(){this.style.background="rgba(232,52,28,0.08)";};
+    div.onmouseout=function(){this.style.background="";};
+    div.onclick=function(){seleccionarBarrio(r.barrio,r.zona,r.precio);};
+    var left=document.createElement("div");
+    var nom=document.createElement("div");
+    nom.style.cssText="font-size:13px;font-weight:700;color:#f0ecf8";
+    nom.textContent=r.barrio;
+    var zona=document.createElement("div");
+    zona.style.cssText="font-size:11px;color:rgba(240,236,248,0.45);margin-top:2px";
+    zona.textContent="Zona "+r.zona;
+    left.appendChild(nom);left.appendChild(zona);
+    var precio=document.createElement("div");
+    precio.style.cssText="font-size:14px;font-weight:900;color:#f97316;flex-shrink:0;margin-left:10px";
+    precio.textContent="$"+Number(r.precio).toLocaleString("es-CO");
+    div.appendChild(left);div.appendChild(precio);
+    drop.appendChild(div);
+  });
+}
+
+function seleccionarBarrio(barrio,zona,precio){
+  document.getElementById("barrioDropdown").style.display="none";
+  document.getElementById("iBarrio").value=barrio;
+  domCalculado=precio;
+  window._domZona=zona;
+  var info=document.getElementById("barrioSelInfo");
+  info.style.display="block";
+  info.style.cssText="display:block;padding:10px 13px;border-radius:12px;margin-bottom:10px;font-size:12px;font-weight:700;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);color:#f97316";
+  info.innerHTML='✅ '+barrio+' · Zona '+zona+' · <span style="font-size:14px">$'+Number(precio).toLocaleString("es-CO")+'</span>';
+  updateTotales();
+}
+
+function seleccionarBarrioManual(barrio){
+  document.getElementById("barrioDropdown").style.display="none";
+  document.getElementById("iBarrio").value=barrio;
+  domCalculado=null;
+  window._domZona=null;
+  var info=document.getElementById("barrioSelInfo");
+  info.style.display="block";
+  info.style.cssText="display:block;padding:10px 13px;border-radius:12px;margin-bottom:10px;font-size:12px;font-weight:700;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:#f5a623";
+  info.innerHTML='📍 '+barrio+' — El domiciliario te confirma el valor al entregar';
+  updateTotales();
+}
+
+// Cerrar dropdown al tocar fuera
+document.addEventListener("click",function(e){
+  var drop=document.getElementById("barrioDropdown");
+  var input=document.getElementById("iBarrio");
+  if(drop&&input&&!drop.contains(e.target)&&e.target!==input){
+    drop.style.display="none";
+  }
+});
+
+// ── DETALLE DE PRODUCTO ──
+var prodDetActual=null, prodDetCant=1, prodDetAdicSel={}, prodDetSalsaSel=null;
+
+function abrirProdDetalle(id){
+  var item=menuItems.find(function(x){return x.id===id;});
+  if(!item)return;
+  prodDetActual=item; prodDetCant=1; prodDetAdicSel={}; prodDetSalsaSel=null;
+  // Foto o emoji
+  var imgEl=document.getElementById("prodDetImgEl");
+  var emoEl=document.getElementById("prodDetEmoji");
+  if(item.imagen_url){
+    imgEl.src=item.imagen_url;imgEl.style.display="block";
+    emoEl.style.display="none";
+  } else {
+    imgEl.style.display="none";
+    emoEl.textContent=item.emoji||"🍔";emoEl.style.display="block";
+  }
+  document.getElementById("prodDetNombre").textContent=item.nombre;
+  document.getElementById("prodDetPrecio").textContent=fmt(item.precio);
+  document.getElementById("prodDetDesc").textContent=item.descripcion||"";
+  document.getElementById("prodDetCant").textContent=1;
+  // Adicionales - mostrar solo si no es bebida
+  var adicSec=document.getElementById("prodDetAdicSec");
+  var esAdic=!item.es_bebida&&!esAdicCat(item.categoria||"");
+  adicSec.style.display=esAdic?"block":"none";
+  if(esAdic){
+    var grid=document.getElementById("prodDetAdicGrid");
+    grid.innerHTML="";
+    ADICIONALES.forEach(function(a){
+      var div=document.createElement("div");
+      div.className="adic-opt";div.id="pda-"+a.id;
+      div.innerHTML='<div class="adic-emo">'+a.emoji+'</div><div class="adic-nm">'+a.nombre+'</div><div class="adic-pr">+'+fmt(a.precio)+'</div>';
+      div.onclick=function(){
+        prodDetAdicSel[a.id]=!prodDetAdicSel[a.id];
+        div.classList.toggle("on",prodDetAdicSel[a.id]);
+        actualizarTotalDet();
+      };
+      grid.appendChild(div);
+    });
+  }
+  // Salsas - solo para alitas
+  var salsaSec=document.getElementById("prodDetSalsaSec");
+  var esAlit=esAlitas(item.nombre);
+  salsaSec.style.display=esAlit?"block":"none";
+  if(esAlit){
+    var row=document.getElementById("prodDetSalsaRow");
+    row.innerHTML="";
+    SALSAS.forEach(function(s){
+      var btn=document.createElement("button");
+      btn.className="sopt";btn.textContent=s;
+      btn.onclick=function(){
+        prodDetSalsaSel=prodDetSalsaSel===s?null:s;
+        row.querySelectorAll(".sopt").forEach(function(b){b.classList.remove("on");});
+        if(prodDetSalsaSel)btn.classList.add("on");
+      };
+      row.appendChild(btn);
+    });
+  }
+  actualizarTotalDet();
+  document.getElementById("prodDetOv").classList.add("on");
+  document.getElementById("prodDetSheet").classList.add("on");
+}
+
+function cerrarProdDetalle(){
+  document.getElementById("prodDetOv").classList.remove("on");
+  document.getElementById("prodDetSheet").classList.remove("on");
+  prodDetActual=null;
+}
+
+function cambiarCantDet(delta){
+  prodDetCant=Math.max(1,prodDetCant+delta);
+  document.getElementById("prodDetCant").textContent=prodDetCant;
+  actualizarTotalDet();
+}
+
+function actualizarTotalDet(){
+  if(!prodDetActual)return;
+  var extraPts=Object.keys(prodDetAdicSel).filter(function(k){return prodDetAdicSel[k];})
+    .reduce(function(s,k){var a=ADICIONALES.find(function(x){return x.id===k;});return s+(a?a.precio:0);},0);
+  var total=(prodDetActual.precio+extraPts)*prodDetCant;
+  document.getElementById("prodDetTotalBtn").textContent=fmt(total);
+}
+
+function agregarDesdeDet(){
+  if(!prodDetActual)return;
+  var selArr=Object.keys(prodDetAdicSel).filter(function(k){return prodDetAdicSel[k];});
+  var extraPrecio=selArr.reduce(function(s,k){var a=ADICIONALES.find(function(x){return x.id===k;});return s+(a?a.precio:0);},0);
+  var extraNoms=selArr.map(function(k){var a=ADICIONALES.find(function(x){return x.id===k;});return a?a.nombre:"";}).filter(Boolean);
+  var totalPrecio=prodDetActual.precio+extraPrecio;
+  var nomCompleto=prodDetActual.nombre+(extraNoms.length?" + "+extraNoms.join(", "):"")+(prodDetSalsaSel?" 🌶️ "+prodDetSalsaSel:"");
+  // Agregar cantidad
+  for(var q=0;q<prodDetCant;q++){
+    setQty(prodDetActual.id,totalPrecio,nomCompleto,(carrito[prodDetActual.id]?carrito[prodDetActual.id].qty:0)+1);
+  }
+  cerrarProdDetalle();
+  showToast("✅ "+prodDetActual.nombre+" agregado");
+}
+
+// ── PUSH NOTIFICATIONS ──
+var pushSub=null;
+var VAPID_PUBLIC="BCnuJzLm_Ag3SbOeFOT2VD0c4ISmXGEBe7UcCNyP0RvPJhWCFqF5S4MV5-4j5Oeblq9tWQe9J7DdVH8j2uOv4U";
+
+async function pedirPermisoNotif(){
+  if(!("Notification" in window)||!("serviceWorker" in navigator))return;
+  if(Notification.permission==="granted"){suscribirPush();return;}
+  if(Notification.permission==="denied")return;
+  var perm=await Notification.requestPermission();
+  if(perm==="granted")suscribirPush();
+}
+
+async function suscribirPush(){
+  try{
+    var reg=await navigator.serviceWorker.ready;
+    var sub=await reg.pushManager.subscribe({
+      userVisibleOnly:true,
+      applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC)
+    });
+    pushSub=sub;
+    // Guardar suscripción en Supabase si hay restaurante
+    if(rest){
+      var tel=document.getElementById("iTel")?document.getElementById("iTel").value.trim():"";
+      if(tel)guardarPushSub(tel,sub);
+    }
+  }catch(e){console.log("Push no disponible:",e.message);}
+}
+
+function guardarPushSub(tel,sub){
+  // Guardar en Supabase para que el servidor pueda enviar notificaciones
+  fetch("/api/push-sub",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({telefono:tel.replace(/\D/g,""),restaurante_id:rest?rest.id:null,subscription:sub})
+  }).catch(function(){});
+}
+
+function urlBase64ToUint8Array(base64String){
+  var padding="=".repeat((4-base64String.length%4)%4);
+  var base64=(base64String+padding).replace(/-/g,"+").replace(/_/g,"/");
+  var rawData=window.atob(base64);
+  var outputArray=new Uint8Array(rawData.length);
+  for(var i=0;i<rawData.length;i++){outputArray[i]=rawData.charCodeAt(i);}
+  return outputArray;
+}
+
+// Banner de notificaciones - aparece después de confirmar pedido
+function mostrarBannerNotif(){
+  if(!("Notification" in window))return;
+  if(Notification.permission==="granted")return;
+  if(Notification.permission==="denied")return;
+  var banner=document.getElementById("notifBanner");
+  if(banner)banner.style.display="flex";
+}
+
+// Registrar Service Worker
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("/sw.js").then(function(reg){
+    console.log("SW registrado");
+  }).catch(function(){});
 }
 
 </script>
