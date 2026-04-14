@@ -215,21 +215,12 @@ function buildSystemPrompt(restaurante) {
 
   var zonasText  = restaurante ? (restaurante.zonas_domicilio || "") : "";
   if (!zonasText) {
-    zonasText =
-`- $2.000: zona inmediata al local (menos de 5 minutos)
-- $3.000: barrios cercanos
-- $4.000: barrios a 15-20 minutos
-- $5.000: barrios a 25-30 minutos
-- $6.000: extremos de la ciudad`;
+    zonasText = "El domiciliario confirma el valor del domicilio según la distancia.";
   }
 
 var promosText = restaurante ? (restaurante.promos_semanales || "") : "";
   if (!promosText) {
-    promosText =
-`- Lunes: Pague 2 lleve 3 en Hamburguesa Especial Tradicional ($35.800 pague 2 lleve 3)
-- Martes: Combo especial 12 alitas con papa amarilla, salsas y Coca-Cola 1.5L por $40.000 (pague 1 combo lleve 2)
-- Miercoles: Pague 2 lleve 3 en Perro Italiano ($31.800)
-- Jueves: Pague 2 lleve 3 en Perro Italiano ($31.800) Y pague 2 lleve 3 en Hamburguesa Especial Tradicional ($35.800)`;
+    promosText = "No hay promociones activas en este momento.";
   }
   var infoAdicional = restaurante ? (restaurante.info_adicional || "") : "";
 
@@ -527,7 +518,7 @@ async function descargarImagenMeta(mediaId) {
   try {
     var token = process.env.WHATSAPP_TOKEN;
     if (!token) return null;
-    var urlRes = await axios.get("https://graph.facebook.com/v19.0/" + mediaId, { headers: { "Authorization": "Bearer " + token } });
+    var urlRes = await axios.get("https://graph.facebook.com/v20.0/" + mediaId, { headers: { "Authorization": "Bearer " + token } });
     var mediaUrl = urlRes.data?.url;
     if (!mediaUrl) return null;
     var imgRes = await axios.get(mediaUrl, { headers: { "Authorization": "Bearer " + token }, responseType: "arraybuffer" });
@@ -544,7 +535,7 @@ async function sendWhatsAppImage(to, imageUrl, caption, phoneId) {
     type: "image",
     image: { link: imageUrl, caption: caption || "" }
   };
-  var r = await axios.post("https://graph.facebook.com/v19.0/" + pid + "/messages", payload, {
+  var r = await axios.post("https://graph.facebook.com/v20.0/" + pid + "/messages", payload, {
     headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" }
   });
   return r.data;
@@ -1027,14 +1018,14 @@ app.post("/enviar-imagen-cliente", async function(req, res) {
     form.append("file", buf, { filename: "imagen.jpg", contentType: mime || "image/jpeg" });
     form.append("messaging_product", "whatsapp");
     var uploadRes = await axios.post(
-      "https://graph.facebook.com/v19.0/" + pid + "/media",
+      "https://graph.facebook.com/v20.0/" + pid + "/media",
       form, { headers: { "Authorization": "Bearer " + token, ...form.getHeaders() } }
     );
     var mediaId = uploadRes.data?.id;
     if (!mediaId) return res.status(500).json({ error: "No se pudo subir imagen" });
     var toNum = telefono.replace(/[^0-9]/g, "");
     if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
-    await axios.post("https://graph.facebook.com/v19.0/" + pid + "/messages",
+    await axios.post("https://graph.facebook.com/v20.0/" + pid + "/messages",
       { messaging_product: "whatsapp", to: toNum, type: "image", image: { id: mediaId } },
       { headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } }
     );
