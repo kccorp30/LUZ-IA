@@ -512,7 +512,8 @@ select.finput{cursor:pointer}
   .hcard-btns,.btn-imprimir,.btn-borrar-hist,.filtros-row{display:none!important}
 }
 </style>
-<!-- Google Maps se carga dinámicamente al abrir el tab mapa -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 <div class="blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div><div class="blob blob-4"></div></div>
@@ -664,9 +665,9 @@ select.finput{cursor:pointer}
           <div class="ffield"><label class="flabel">Eslogan</label><input class="finput" id="ap-slogan" placeholder="Street Food · Sabor inigualable" oninput="updateHeroPrev()"></div>
           <div class="ffield">
             <label class="flabel">Imagen hero</label>
-            <input type="file" accept="image/*" id="ap-hero-file" style="display:none" onchange="if(this.files&&this.files[0])subirAparienciaImg(this.files[0],'ap-hero-img','ap-hero-uploading')">
+            <input type="file" accept="image/*" id="ap-hero-file" style="display:none">
             <div style="display:flex;gap:8px;margin-bottom:6px">
-              <button type="button" onclick="document.getElementById('ap-hero-file').click()" style="flex:0 0 auto;padding:9px 14px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.35);border-radius:12px;color:#c4b5fd;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit">📷 Subir foto</button>
+              <label for="ap-hero-file" style="flex:0 0 auto;padding:9px 14px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.35);border-radius:12px;color:#c4b5fd;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">📷 Subir foto</label>
               <input class="finput" id="ap-hero-img" placeholder="o pega URL..." oninput="updateHeroPrev()" style="margin:0;flex:1;">
               <button onclick="updateHeroPrev()" style="padding:0 12px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.35);border-radius:12px;color:#c4b5fd;cursor:pointer;font-size:13px;">Ver</button>
             </div>
@@ -674,9 +675,9 @@ select.finput{cursor:pointer}
           </div>
           <div class="ffield">
             <label class="flabel">Logo</label>
-            <input type="file" accept="image/*" id="ap-logo-file" style="display:none" onchange="if(this.files&&this.files[0])subirAparienciaImg(this.files[0],'ap-logo','ap-logo-uploading')">
+            <input type="file" accept="image/*" id="ap-logo-file" style="display:none">
             <div style="display:flex;gap:8px">
-              <button type="button" onclick="document.getElementById('ap-logo-file').click()" style="flex:0 0 auto;padding:9px 14px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.35);border-radius:12px;color:#c4b5fd;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit">📷 Subir logo</button>
+              <label for="ap-logo-file" style="flex:0 0 auto;padding:9px 14px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.35);border-radius:12px;color:#c4b5fd;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">📷 Subir logo</label>
               <input class="finput" id="ap-logo" placeholder="o pega URL..." style="margin:0;flex:1;">
             </div>
             <div id="ap-logo-uploading" style="font-size:12px;color:#c4b5fd;font-weight:600;margin-top:4px;display:none">⏳ Subiendo...</div>
@@ -841,10 +842,6 @@ select.finput{cursor:pointer}
             <a href="/domi" target="_blank" style="flex:1;padding:12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:13px;color:#34d399;font-size:13px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">🛵 App Domiciliario</a>
           </div>
         </div>
-        <div class="cfg-section">
-          <div class="cfg-title">⭐ Programa de puntos</div>
-          <div class="cfg-row"><div><div class="cfg-label">Puntos por pedido</div><div class="cfg-sub">Cuántos puntos gana el cliente al confirmar un pedido</div></div><input type="number" id="cfg-puntos-pedido" min="1" max="999" value="10" style="width:70px;padding:8px 10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:12px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:800;outline:none;text-align:center;"></div>
-        </div>
         <button class="cfg-save" id="cfgGuardar">Guardar configuracion</button>
       </div>
     </div>
@@ -887,16 +884,7 @@ select.finput{cursor:pointer}
         <div><div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Clientes</div><div style="font-size:13px;color:var(--text3);margin-top:2px">Base de clientes y programa de fidelidad</div></div>
         <button onclick="mostrarResetFidelidad()" style="padding:8px 14px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:12px;color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:'Plus Jakarta Sans',sans-serif">🔄 Reiniciar rangos</button>
       </div>
-      <!-- TABS CLIENTES/REWARDS/CANJES -->
-      <div style="display:flex;gap:8px;padding:0 12px 10px;overflow-x:auto;scrollbar-width:none;">
-        <button class="filtro-btn active" id="ctab-clientes" onclick="showClienteTab('clientes')" style="white-space:nowrap">👥 Clientes</button>
-        <button class="filtro-btn" id="ctab-rewards" onclick="showClienteTab('rewards')" style="white-space:nowrap">⭐ Recompensas</button>
-        <button class="filtro-btn" id="ctab-canjes" onclick="showClienteTab('canjes')" style="white-space:nowrap;position:relative">🎁 Canjes <span id="canjesBadge" style="display:none;background:#ef4444;color:white;border-radius:99px;font-size:10px;font-weight:800;padding:1px 5px;margin-left:3px" id="canjesBadge">0</span></button>
-      </div>
-
-      <!-- SUB-PANEL: CLIENTES -->
-      <div id="cpanel-clientes" style="">
-      <div style="padding:0 12px 0">
+      <div style="padding:4px 12px 0">
         <div class="clientes-resumen" id="clientesResumen">
           <div style="font-size:12px;font-weight:700;color:rgba(196,181,253,0.7);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px">Resumen</div>
           <div style="font-size:20px;font-weight:900">Tu base de clientes</div>
@@ -917,79 +905,7 @@ select.finput{cursor:pointer}
         </div>
         <div id="clientesLista"><div class="empty"><div class="ei">👥</div><div class="et">Cargando clientes...</div></div></div>
       </div>
-      </div>
-
-      <!-- SUB-PANEL: RECOMPENSAS (productos canjeables) -->
-      <div id="cpanel-rewards" style="display:none;padding:0 12px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div style="font-size:15px;font-weight:800;color:var(--text)">Productos canjeables</div>
-          <button onclick="abrirNuevoCanje()" style="padding:8px 14px;background:linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.2));border:1px solid rgba(124,58,237,0.4);border-radius:12px;color:#c4b5fd;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">+ Agregar</button>
-        </div>
-        <div id="rewardsAdminLista"><div class="empty"><div class="et">Cargando...</div></div></div>
-      </div>
-
-      <!-- SUB-PANEL: CANJES PENDIENTES -->
-      <div id="cpanel-canjes" style="display:none;padding:0 12px">
-        <div style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none;">
-          <button class="filtro-btn active" id="cfCanjesPend" onclick="filtrarCanjes('pendiente')">⏳ Pendientes</button>
-          <button class="filtro-btn" id="cfCanjesApro" onclick="filtrarCanjes('aprobado')">✅ Aprobados</button>
-          <button class="filtro-btn" id="cfCanjesRech" onclick="filtrarCanjes('rechazado')">❌ Rechazados</button>
-        </div>
-        <div id="canjesLista"><div class="empty"><div class="ei">🎁</div><div class="et">Cargando canjes...</div></div></div>
-      </div>
     </div>
-
-    <!-- OVERLAY: PRODUCTOS CANJEABLES (conectado al menú) -->
-    <div id="rewardProdOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:600;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px)" onclick="if(event.target===this)cerrarRewardProdOv()">
-      <div style="background:#1a1625;border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;border:1px solid rgba(124,58,237,0.3);border-bottom:none;padding-bottom:calc(20px + env(safe-area-inset-bottom))">
-        <!-- Header -->
-        <div style="position:sticky;top:0;background:#1a1625;z-index:2;padding:16px 20px 12px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between">
-          <div style="font-size:17px;font-weight:900" id="rewardProdOvTitle">Nueva recompensa</div>
-          <button onclick="cerrarRewardProdOv()" style="background:rgba(255,255,255,0.08);border:none;border-radius:10px;color:var(--text3);width:32px;height:32px;cursor:pointer;font-size:16px;font-family:inherit">✕</button>
-        </div>
-        <div style="padding:16px 20px 0">
-          <!-- Buscador de producto del menú -->
-          <div id="rpMenuSelector" style="margin-bottom:14px">
-            <label class="flabel">Elige un producto del menú</label>
-            <div style="position:relative">
-              <input class="finput" id="rpMenuSearch" placeholder="🔍 Buscar producto..." oninput="filtrarMenuParaCanje(this.value)" style="margin:0" autocomplete="off">
-              <div id="rpMenuDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1a1625;border:1px solid rgba(124,58,237,0.35);border-radius:14px;margin-top:4px;max-height:200px;overflow-y:auto;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,0.5)"></div>
-            </div>
-            <!-- Preview producto seleccionado -->
-            <div id="rpProdPreview" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);border-radius:13px;display:none;align-items:center;gap:12px">
-              <img id="rpProdImg" style="width:44px;height:44px;border-radius:9px;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'">
-              <span id="rpProdEmoji" style="font-size:28px;flex-shrink:0;display:none"></span>
-              <div style="flex:1;min-width:0">
-                <div id="rpProdNombre" style="font-size:14px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-                <div id="rpProdCat" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
-              </div>
-              <button onclick="limpiarSeleccionMenuCanje()" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);border-radius:8px;color:#fca5a5;padding:4px 8px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0">✕</button>
-            </div>
-          </div>
-          <!-- Puntos requeridos -->
-          <div class="ffield">
-            <label class="flabel">Puntos requeridos para canjear</label>
-            <input class="finput" type="number" id="rp-puntos" placeholder="100" min="1" style="font-size:18px;font-weight:800;text-align:center">
-          </div>
-          <!-- Estado activo -->
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid rgba(255,255,255,0.07);margin-top:4px">
-            <div>
-              <div style="font-size:13px;font-weight:700;color:var(--text)">Visible para clientes</div>
-              <div style="font-size:11px;color:var(--text3);margin-top:2px">Si está activo aparece en la pantalla de rewards</div>
-            </div>
-            <button id="rpActivoBtn" onclick="toggleActivoReward()" style="width:46px;height:26px;border-radius:13px;border:none;cursor:pointer;position:relative;transition:background 0.2s;background:rgba(16,185,129,0.8)">
-              <div id="rpActivoDot" style="position:absolute;top:3px;left:3px;width:20px;height:20px;background:white;border-radius:50%;transition:left 0.2s;left:23px"></div>
-            </button>
-          </div>
-          <!-- Botones acción -->
-          <div style="display:flex;gap:8px;margin-top:8px;padding-bottom:8px">
-            <button id="rpEliminar" onclick="eliminarRewardProd()" style="display:none;padding:13px 18px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:13px;color:#fca5a5;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🗑 Eliminar</button>
-            <button onclick="guardarRewardProd()" style="flex:1;padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:13px;color:white;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit" id="rpGuardar">💾 Guardar recompensa</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
 
     <!-- MESAS -->
     <div class="page" id="page-mesas">
@@ -1017,15 +933,10 @@ select.finput{cursor:pointer}
 
     <!-- MAPA -->
     <div class="page" id="page-mapa">
-      <div style="padding:16px 12px 8px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-        <div>
-          <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Zonas de domicilio</div>
-          <div style="font-size:13px;color:var(--text3);margin-top:2px">Barrios por zona · mapa en tiempo real</div>
-        </div>
-        <button onclick="centrarMapaCali()" style="padding:8px 12px;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.3);border-radius:12px;color:#60a5fa;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">📍 Centrar</button>
+      <div style="padding:16px 12px 8px">
+        <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Zonas de domicilio</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:2px">Define barrios por zona y el mapa los muestra automaticamente</div>
       </div>
-
-      <!-- Formulario nueva zona -->
       <div style="padding:0 12px 8px">
         <div class="aform">
           <div class="aft">&#43; Nueva zona</div>
@@ -1035,32 +946,23 @@ select.finput{cursor:pointer}
           </div>
           <div class="ffield">
             <label class="flabel">Barrios (separados por coma)</label>
-            <textarea class="finput" id="zona-barrios" rows="2" placeholder="Canaveral, Granada, Santa Monica, San Judas, Guadalupe..."></textarea>
+            <textarea class="finput" id="zona-barrios" rows="2" placeholder="Canaveral, Granada, Santa Monica..."></textarea>
           </div>
           <button class="badd" id="btnAgregarZona">Guardar zona</button>
           <button onclick="cargarZonasPredefinidas()" style="width:100%;margin-top:8px;padding:11px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);border-radius:13px;color:#c4b5fd;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer">⚡ Cargar zonas predefinidas de Cali</button>
         </div>
       </div>
-
-      <!-- Lista de zonas -->
       <div style="padding:0 12px 8px" id="zonasTabla"></div>
-
-      <!-- Mapa Google Maps -->
       <div style="padding:0 12px 8px">
-        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">🗺️ Mapa de zonas</div>
+        <div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">🗺️ Mapa visual</div>
         <div id="mapaWrapper" style="border-radius:18px;overflow:hidden;border:1px solid var(--glass-border);position:relative;background:#1a1520;">
-          <div id="mapaContainer" style="width:100%;height:420px;"></div>
+          <div id="mapaContainer" style="width:100%;height:360px;"></div>
           <div id="mapaLoading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1a1520;gap:10px;">
             <div style="font-size:32px">🗺️</div>
             <div style="font-size:13px;color:var(--text3)">Cargando mapa...</div>
           </div>
         </div>
         <div id="mapaLeyenda" style="padding:10px 0;display:flex;flex-wrap:wrap;gap:7px"></div>
-      </div>
-
-      <!-- Stats zonas -->
-      <div style="padding:0 12px 16px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="zonasStats"></div>
       </div>
     </div>
 
@@ -1294,7 +1196,7 @@ function showTab(n){
   if(n==="chat")loadChatUniversal();if(n==="cupones")renderCupones();
   if(n==="mapa"){setTimeout(function(){cargarZonas();initMapa();},80);}
   if(n==="config")cargarDomiciliarios();if(n==="domis")loadDomiPanel();
-  if(n==="clientes"){loadClientes();cargarBadgeCanjes();}if(n==="mesas"){loadMesas();cargarMeseros();}
+  if(n==="clientes")loadClientes();if(n==="mesas"){loadMesas();cargarMeseros();}
 }
 
 // DOMICILIARIOS
@@ -1936,7 +1838,6 @@ function cargarConfig(){
   document.getElementById("cfg-menu-dia").value=rest.menu_dia||"";
   document.getElementById("cfg-menu-noche").value=rest.menu_noche||"";
   document.getElementById("cfg-direccion").value=rest.direccion||"";
-  var cfgPts=document.getElementById("cfg-puntos-pedido");if(cfgPts)cfgPts.value=rest.puntos_por_pedido||10;
   document.getElementById("cfg-msg-bienvenida").value=rest.msg_bienvenida||"";
   document.getElementById("cfg-msg-preparacion").value=rest.msg_en_preparacion||"";
   document.getElementById("cfg-msg-listo").value=rest.msg_listo||"";
@@ -1954,13 +1855,8 @@ document.querySelectorAll(".dia-btn").forEach(function(b){b.addEventListener("cl
 document.getElementById("cfgGuardar").addEventListener("click",function(){
   if(!rest){notif("Error: sin restaurante");return;}
   var diasSel=[];document.querySelectorAll(".dia-btn.activo").forEach(function(b){diasSel.push(b.getAttribute("data-dia"));});
-  var puntosVal=parseInt(document.getElementById("cfg-puntos-pedido").value)||10;
   var config={modo_dia:modoDiaActual,hora_apertura:document.getElementById("cfg-apertura").value+":00",hora_cierre:document.getElementById("cfg-cierre").value+":00",menu_dia:document.getElementById("cfg-menu-dia").value.trim(),menu_noche:document.getElementById("cfg-menu-noche").value.trim(),dias_activos:diasSel.join(","),direccion:document.getElementById("cfg-direccion").value.trim(),msg_bienvenida:document.getElementById("cfg-msg-bienvenida").value.trim(),msg_en_preparacion:document.getElementById("cfg-msg-preparacion").value.trim(),msg_listo:document.getElementById("cfg-msg-listo").value.trim(),msg_en_camino:document.getElementById("cfg-msg-camino").value.trim()};
   var btn=this;btn.textContent="Guardando...";btn.disabled=true;
-  // Guardar puntos_por_pedido directo a Supabase (el endpoint no lo soporta)
-  fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({puntos_por_pedido:puntosVal})})
-  .then(function(){rest.puntos_por_pedido=puntosVal;}).catch(function(){});
-  // Guardar el resto via endpoint
   fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:config})})
     .then(function(r){return r.json();})
     .then(function(d){if(d.ok){Object.keys(config).forEach(function(k){rest[k]=config[k];});notif("Configuracion guardada!");actualizarToggleModoDia(modoDiaActual);}else{notif("Error: "+(d.error||"").substring(0,40));}})
@@ -2281,619 +2177,785 @@ function eliminarMesero(id){
 }
 
 // MAPA DE ZONAS
-// ── GOOGLE MAPS ──────────────────────────────────────────────────────────────
+var mapaIniciado=false,mapaObj=null,zonasLayers=[];
 var ZONA_COLORES=["#ef4444","#f97316","#eab308","#22c55e","#3b82f6","#8b5cf6","#ec4899","#14b8a6"];
-var mapaGM=null, mapaIniciado=false;
-var zonasShapes=[], zonasInfoWindows=[];
-var geocoder=null;
-
-// Cargar Google Maps dinámicamente (evita problema de timing con async)
-var gmapsLoaded=false;
-function cargarGoogleMaps(cb){
-  if(gmapsLoaded&&typeof google!=="undefined"&&google.maps){cb();return;}
-  window._gmapsCb=cb;
-  if(document.querySelector('script[src*="maps.googleapis.com"]'))return;
-  var s=document.createElement("script");
-  s.src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAGeM9Ct-7O4yXQ7uOyFCDlY5Fgii0O0RA&libraries=places,geometry&callback=_gmapsReady";
-  document.head.appendChild(s);
-}
-window._gmapsReady=function(){
-  gmapsLoaded=true;
-  geocoder=new google.maps.Geocoder();
-  if(window._gmapsCb){window._gmapsCb();window._gmapsCb=null;}
-};
-// initMapaCallback por si se llama desde otro lado
-function initMapaCallback(){_gmapsReady();}
-
 function initMapa(){
   if(mapaIniciado)return;
-  var container=document.getElementById("mapaContainer");
-  if(!container)return;
-  // Cargar Google Maps si no está listo
-  if(typeof google==="undefined"||!google.maps){
-    cargarGoogleMaps(function(){initMapa();});
-    return;
-  }
+  var container=document.getElementById("mapaContainer");if(!container)return;
+  if(typeof L==="undefined")return;
   mapaIniciado=true;
   document.getElementById("mapaLoading").style.display="none";
-
-  // Estilo oscuro para Google Maps
-  var darkStyle=[
-    {elementType:"geometry",stylers:[{color:"#1a1520"}]},
-    {elementType:"labels.text.stroke",stylers:[{color:"#1a1520"}]},
-    {elementType:"labels.text.fill",stylers:[{color:"#746855"}]},
-    {featureType:"administrative.locality",elementType:"labels.text.fill",stylers:[{color:"#d59563"}]},
-    {featureType:"road",elementType:"geometry",stylers:[{color:"#38414e"}]},
-    {featureType:"road",elementType:"geometry.stroke",stylers:[{color:"#212a37"}]},
-    {featureType:"road",elementType:"labels.text.fill",stylers:[{color:"#9ca5b3"}]},
-    {featureType:"road.highway",elementType:"geometry",stylers:[{color:"#746855"}]},
-    {featureType:"road.highway",elementType:"geometry.stroke",stylers:[{color:"#1f2835"}]},
-    {featureType:"road.highway",elementType:"labels.text.fill",stylers:[{color:"#f3d19c"}]},
-    {featureType:"water",elementType:"geometry",stylers:[{color:"#17263c"}]},
-    {featureType:"water",elementType:"labels.text.fill",stylers:[{color:"#515c6d"}]},
-    {featureType:"poi",elementType:"labels",stylers:[{visibility:"off"}]},
-    {featureType:"transit",elementType:"labels",stylers:[{visibility:"off"}]}
-  ];
-
-  mapaGM=new google.maps.Map(container,{
-    center:{lat:3.4516,lng:-76.5320},
-    zoom:13,
-    styles:darkStyle,
-    disableDefaultUI:false,
-    zoomControl:true,
-    mapTypeControl:false,
-    streetViewControl:false,
-    fullscreenControl:true
-  });
-
+  mapaObj=L.map("mapaContainer",{center:[3.4516,-76.5320],zoom:13,zoomControl:true});
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{attribution:"© OpenStreetMap © CartoDB",maxZoom:19,subdomains:"abcd"}).addTo(mapaObj);
+  document.getElementById("mapaContainer").classList.add("mapa-leaflet-dark");
   if(rest)cargarZonas();
 }
-
-function centrarMapaCali(){
-  if(mapaGM)mapaGM.setCenter({lat:3.4516,lng:-76.5320});
-  if(mapaGM)mapaGM.setZoom(13);
-}
-
 function cargarZonas(){
   if(!rest)return;
   fetch(SU+"/rest/v1/zonas_domicilio?restaurante_id=eq."+rest.id+"&order=precio.asc",{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
   .then(function(r){return r.json();})
-  .then(function(zonas){
-    renderZonasTabla(zonas);
-    renderZonasStats(zonas);
-    if(mapaGM)dibujarTodasZonas(zonas);
-  })
+  .then(function(zonas){renderZonasTabla(zonas);if(mapaObj)dibujarTodasZonas(zonas);})
   .catch(function(){});
 }
-
-function renderZonasStats(zonas){
-  var stats=document.getElementById("zonasStats");if(!stats)return;
-  if(!zonas||!zonas.length){stats.innerHTML="";return;}
-  stats.innerHTML=zonas.map(function(z,i){
-    var color=ZONA_COLORES[i%ZONA_COLORES.length];
-    var barrios=typeof z.barrios==="string"?z.barrios.split(",").map(function(b){return b.trim();}).filter(Boolean):(z.barrios||[]);
-    return '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;border-left:3px solid '+color+'">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
-      +'<div style="font-size:13px;font-weight:800;color:var(--text)">'+z.nombre+'</div>'
-      +'<div style="font-size:14px;font-weight:900;color:'+color+'">'+fmt(z.precio)+'</div>'
-      +'</div>'
-      +'<div style="font-size:11px;color:var(--text3);line-height:1.6">'+barrios.slice(0,5).join(" · ")+(barrios.length>5?" +"+( barrios.length-5)+" más":"")+'</div>'
-      +'</div>';
-  }).join("");
-}
-
 function renderZonasTabla(zonas){
   var tabla=document.getElementById("zonasTabla");if(!tabla)return;
-  if(!zonas||!zonas.length){
-    tabla.innerHTML='<div style="color:var(--text3);font-size:13px;padding:10px 0">No hay zonas configuradas aún.</div>';
-    return;
-  }
+  if(!zonas||!zonas.length){tabla.innerHTML='<div style="color:var(--text3);font-size:13px;padding:10px 0">No hay zonas configuradas aún.</div>';return;}
   var h="";
   zonas.forEach(function(z,idx){
     var color=ZONA_COLORES[idx%ZONA_COLORES.length];
     var barrios=Array.isArray(z.barrios)?z.barrios.join(", "):(z.barrios||"");
-    h+='<div class="mapa-zona-card"><div style="width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;box-shadow:0 0 6px '+color+'"></div>'
-      +'<div style="flex:1"><div class="mapa-zona-name">'+z.nombre+'</div>'
-      +'<div class="mapa-zona-barrios">'+barrios.substring(0,80)+(barrios.length>80?"...":"")+'</div></div>'
-      +'<div class="mapa-zona-price">'+fmt(z.precio)+'</div>'
-      +'<button data-zid="'+z.id+'" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#fca5a5;border-radius:8px;padding:4px 9px;font-size:11px;cursor:pointer">🗑</button></div>';
+    h+='<div class="mapa-zona-card"><div style="width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;box-shadow:0 0 6px '+color+'"></div><div style="flex:1"><div class="mapa-zona-name">'+z.nombre+'</div><div class="mapa-zona-barrios">'+barrios.substring(0,80)+(barrios.length>80?"...":"")+'</div></div><div class="mapa-zona-price">'+fmt(z.precio)+'</div><button data-zid="'+z.id+'" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#fca5a5;border-radius:8px;padding:4px 9px;font-size:11px;cursor:pointer">🗑</button></div>';
   });
   tabla.innerHTML=h;
-  tabla.querySelectorAll("button[data-zid]").forEach(function(btn){
-    btn.addEventListener("click",function(){
-      var zid=this.getAttribute("data-zid");
-      if(!confirm("¿Eliminar esta zona?"))return;
-      fetch(SU+"/rest/v1/zonas_domicilio?id=eq."+zid,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
-      .then(function(){cargarZonas();notif("Zona eliminada");}).catch(function(){});
-    });
-  });
+  tabla.querySelectorAll("[data-zid]").forEach(function(b){b.addEventListener("click",function(){var zid=this.getAttribute("data-zid");if(confirm("Eliminar zona?"))fetch(SU+"/rest/v1/zonas_domicilio?id=eq."+zid,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(){cargarZonas();notif("Zona eliminada");}).catch(function(){});});});
 }
-
 function dibujarTodasZonas(zonas){
-  if(!mapaGM)return;
-  // Limpiar shapes anteriores
-  zonasShapes.forEach(function(s){s.setMap(null);});
-  zonasShapes=[];
-  zonasInfoWindows.forEach(function(w){w.close();});
-  zonasInfoWindows=[];
+  if(!mapaObj)return;
+  zonasLayers.forEach(function(l){mapaObj.removeLayer(l);});zonasLayers=[];
   var leg=document.getElementById("mapaLeyenda");if(leg)leg.innerHTML="";
-  var bounds=new google.maps.LatLngBounds();
-  var hasPoints=false;
-
-  zonas.forEach(function(z,zi){
-    var color=ZONA_COLORES[zi%ZONA_COLORES.length];
-    var barrios=typeof z.barrios==="string"?z.barrios.split(",").map(function(b){return b.trim();}).filter(Boolean):(z.barrios||[]);
-
-    barrios.forEach(function(barrio){
-      if(!barrio)return;
-      geocoder.geocode({address:barrio+", Cali, Colombia"}, function(results,status){
-        if(status!=="OK"||!results||!results.length)return;
-        var loc=results[0].geometry.location;
-        bounds.extend(loc);
-        hasPoints=true;
-
-        // Círculo con relleno semitransparente
-        var circle=new google.maps.Circle({
-          map:mapaGM,
-          center:loc,
-          radius:650,
-          strokeColor:color,
-          strokeOpacity:0.8,
-          strokeWeight:2,
-          fillColor:color,
-          fillOpacity:0.22
-        });
-
-        // Marker con label
-        var marker=new google.maps.Marker({
-          map:mapaGM,
-          position:loc,
-          title:barrio,
-          icon:{
-            path:google.maps.SymbolPath.CIRCLE,
-            scale:5,
-            fillColor:color,
-            fillOpacity:1,
-            strokeColor:"#ffffff",
-            strokeWeight:1.5
-          }
-        });
-
-        // InfoWindow al click
-        var iw=new google.maps.InfoWindow({
-          content:'<div style="color:#111;font-family:sans-serif;padding:4px 6px">'
-            +'<b style="color:'+color+'">'+barrio+'</b><br>'
-            +'<span style="font-size:12px">'+z.nombre+' · $'+Number(z.precio).toLocaleString("es-CO")+'</span>'
-            +'</div>'
-        });
-        marker.addListener("click",function(){
-          zonasInfoWindows.forEach(function(w){w.close();});
-          iw.open(mapaGM,marker);
-        });
-        zonasShapes.push(circle);
-        zonasShapes.push(marker);
-        zonasInfoWindows.push(iw);
-
-        // Ajustar bounds cuando hay suficientes puntos
-        if(hasPoints&&bounds.getNorthEast().lat()!==bounds.getSouthWest().lat()){
-          try{mapaGM.fitBounds(bounds,{top:40,right:40,bottom:40,left:40});}catch(e){}
-        }
-      });
+  var bounds=[];
+  zonas.forEach(function(z,idx){
+    var color=ZONA_COLORES[idx%ZONA_COLORES.length];
+    var barrios=Array.isArray(z.barrios)?z.barrios:(typeof z.barrios==="string"?z.barrios.split(",").map(function(b){return b.trim();}):[]); 
+    barrios.forEach(function(barrio,bi){
+      if(!barrio.trim())return;
+      setTimeout(function(){
+      geocodificarBarrio(barrio.trim()+", Cali, Colombia").then(function(coords){
+        if(!coords||!mapaObj)return;
+        var circle=L.circle(coords,{color:color,fillColor:color,fillOpacity:0.25,radius:600,weight:2}).addTo(mapaObj);
+        circle.bindPopup('<b>'+barrio+'</b><br>'+z.nombre+' · '+fmt(z.precio));
+        zonasLayers.push(circle);
+        bounds.push(coords);
+        if(bounds.length===1)mapaObj.setView(coords,13);
+        if(leg){var chip='<div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.07);border-radius:8px;padding:3px 9px;font-size:11px"><div style="width:8px;height:8px;border-radius:50%;background:'+color+'"></div>'+z.nombre+'</div>';leg.innerHTML+=chip;}
+      }).catch(function(){});
+      },bi*350);
     });
-
-    // Leyenda
-    if(leg){
-      var chip='<div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.07);border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700;color:var(--text)">'
-        +'<div style="width:8px;height:8px;border-radius:50%;background:'+color+';box-shadow:0 0 4px '+color+'"></div>'
-        +z.nombre+' · '+fmt(z.precio)+'</div>';
-      leg.insertAdjacentHTML("beforeend",chip);
-    }
   });
 }
+var geoCache={};
+function geocodificarBarrio(query){
+  if(!window._geocache)window._geocache={};
+  var key=query.toLowerCase();
+  if(window._geocache[key])return Promise.resolve(window._geocache[key]);
+  return fetch("https://nominatim.openstreetmap.org/search?format=json&q="+encodeURIComponent(query)+"&limit=1",{
+    headers:{"Accept-Language":"es","User-Agent":"LuzIA/1.0"}
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d&&d.length){var c=[parseFloat(d[0].lat),parseFloat(d[0].lon)];window._geocache[key]=c;return c;}
+    return null;
+  })
+  .catch(function(){return null;});
+}
+document.getElementById("btnAgregarZona").addEventListener("click",function(){
+  if(!rest)return;
+  var nombre=document.getElementById("zona-nombre").value.trim();
+  var precio=parseInt(document.getElementById("zona-precio").value);
+  var barriosRaw=document.getElementById("zona-barrios").value.trim();
+  if(!nombre||!precio||!barriosRaw){notif("Completa todos los campos");return;}
+  var barrios=barriosRaw.split(",").map(function(b){return b.trim();}).filter(function(b){return b;});
+  var btn=this;btn.textContent="Guardando...";btn.disabled=true;
+  fetch(SU+"/rest/v1/zonas_domicilio",{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({restaurante_id:rest.id,nombre:nombre,precio:precio,barrios:barrios.split(",").map(function(b){return b.trim();})})})
+  .then(function(r){if(r.ok||r.status===201){notif("Zona guardada!");["zona-nombre","zona-precio","zona-barrios"].forEach(function(id){document.getElementById(id).value="";});cargarZonas();}else{notif("Error al guardar zona");}})
+  .catch(function(){notif("Error de conexion");})
+  .finally(function(){btn.textContent="Guardar zona";btn.disabled=false;});
+});
 
-// Zonas predefinidas de Cali para La Curva Canaveral
-var ZONAS_PREDEFINIDAS=[
-  {nombre:"Zona 1 - Inmediata",precio:2000,barrios:"Canaveral, Versalles, Los Ángeles, Normandía, Samanes, Villa del Rey, Ciudad Modelo"},
-  {nombre:"Zona 2 - Cercana",precio:3000,barrios:"Granada, Santa Mónica, Álamos, Capri, Tequendama, El Ingenio, Pasoancho, La Flora, Prados del Norte"},
-  {nombre:"Zona 3 - Media",precio:4000,barrios:"San Judas, Guadalupe, Popular, Terrón Colorado, Siloé, Belén, Guabal, Salomia, Floralia, Alfonso López"},
-  {nombre:"Zona 4 - Lejana",precio:5000,barrios:"Aguablanca, Marroquín, El Retiro, Villacolombia, Comuneros, Desepaz, Potrero Grande, Ciudad Córdoba"},
-  {nombre:"Zona 5 - Extrema",precio:6000,barrios:"Pance, Cañaveralejo, La Buitrera, Andes, Nápoles, Meléndez, Los Chorros, La Reforma"}
-];
-
-async function cargarZonasPredefinidas(){
-  if(!rest){notif("Sin restaurante cargado");return;}
-  if(!confirm("Esto agregará las zonas predefinidas de Cali. ¿Continuar?"))return;
-  notif("⏳ Cargando zonas...");
-  var errores=0;
-  for(var i=0;i<ZONAS_PREDEFINIDAS.length;i++){
-    var z=ZONAS_PREDEFINIDAS[i];
-    try{
-      var r=await fetch(SU+"/rest/v1/zonas_domicilio",{
-        method:"POST",
-        headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
-        body:JSON.stringify({restaurante_id:rest.id,nombre:z.nombre,precio:z.precio,barrios:z.barrios})
+// EDITOR DE MENU
+var editorFiltroActual="";
+function showMetTab(tab){
+  document.querySelectorAll(".met-tab").forEach(function(t){t.classList.remove("active");});
+  document.querySelectorAll(".met-section").forEach(function(s){s.classList.remove("active");});
+  var tabEl=document.getElementById("met-"+tab),secEl=document.getElementById("metsec-"+tab);
+  if(tabEl)tabEl.classList.add("active");if(secEl)secEl.classList.add("active");
+  if(tab==="apariencia")cargarAparienciaEditor();
+  if(tab==="promos")cargarPromosEditor();
+  if(tab==="productos")loadMenuEditor();
+}
+function loadMenuEditor(){
+  if(!rest)return;
+  fetch(SU+"/rest/v1/menu_items?restaurante_id=eq."+rest.id+"&order=categoria,orden",{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+  .then(function(r){return r.json();})
+  .then(function(items){
+    var cats=["Todos"];var catSet={};
+    items.forEach(function(i){if(!catSet[i.categoria]){catSet[i.categoria]=true;cats.push(i.categoria);}});
+    var filterWrap=document.getElementById("editorCatFilter");
+    if(filterWrap){
+      filterWrap.innerHTML=cats.map(function(c){return'<button class="cat-fpill'+(c===editorFiltroActual||(!editorFiltroActual&&c==="Todos")?" active":"")+'" data-cat="'+c+'">'+c+'</button>';}).join("");
+      filterWrap.querySelectorAll(".cat-fpill").forEach(function(b){b.addEventListener("click",function(){editorFiltroActual=this.getAttribute("data-cat")==="Todos"?"":this.getAttribute("data-cat");loadMenuEditor();});});
+    }
+    var editorProdActivo=null;
+    var filtered=editorFiltroActual?items.filter(function(i){return i.categoria===editorFiltroActual;}):items;
+    var lista=document.getElementById("editorProdList");
+    if(!filtered.length){lista.innerHTML='<div class="empty"><div class="et">No hay productos en esta categoría</div></div>';return;}
+    var cats2={};filtered.forEach(function(i){if(!cats2[i.categoria])cats2[i.categoria]=[];cats2[i.categoria].push(i);});
+    var h="";
+    var catList=document.getElementById("cats-list");var catOpts="";
+    Object.keys(catSet).forEach(function(c){catOpts+='<option value="'+c+'">'+c+'</option>';});
+    if(catList)catList.innerHTML=catOpts;
+ Object.keys(cats2).forEach(function(cat){
+      h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;padding:10px 0 8px">'+cat+'</div>';
+      h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">';
+      cats2[cat].forEach(function(i){
+        var img=i.imagen_url||"";
+        var activo=i.disponible;
+        h+='<div class="prod-card-g" data-pid="'+i.id+'" style="background:rgba(255,255,255,0.06);border:1.5px solid '+(editorProdActivo===i.id?"rgba(124,58,237,0.6)":"rgba(255,255,255,0.1)")+';border-radius:18px;overflow:hidden;cursor:pointer;opacity:'+(activo?1:0.5)+';transition:all 0.15s">';
+        h+='<div style="height:110px;background:#111;position:relative;display:flex;align-items:center;justify-content:center">';
+        if(img)h+='<img src="'+img+'" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0" onerror="this.style.display=\'none\'">';
+        h+='<span style="font-size:38px;position:relative;z-index:1;'+(img?"text-shadow:0 2px 10px rgba(0,0,0,0.9)":"")+'">'+(i.emoji||autoEmoji(i.nombre))+'</span>';
+        h+='<div style="position:absolute;top:6px;right:6px;background:'+(activo?"rgba(16,185,129,0.9)":"rgba(107,114,128,0.85)")+';color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;z-index:2">'+(activo?"Activo":"Oculto")+'</div>';
+        if(i.en_oferta)h+='<div style="position:absolute;top:6px;left:6px;background:rgba(249,115,22,0.9);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;z-index:2">🔥</div>';
+        if(img)h+='<div style="position:absolute;bottom:6px;right:6px;background:rgba(16,185,129,0.85);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;z-index:2">📷</div>';
+        h+='</div>';
+        h+='<div style="padding:10px 12px">';
+        h+='<div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">'+i.nombre+'</div>';
+        h+='<div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px">'+(i.descripcion||i.categoria||"")+'</div>';
+        h+='<div style="display:flex;align-items:center;justify-content:space-between">';
+        h+='<span style="font-size:14px;font-weight:700;color:#34d399">'+fmt(i.precio)+'</span>';
+        h+='<button class="prod-edit-btn" data-id="'+i.id+'" style="padding:4px 10px;font-size:11px;font-weight:700;border-radius:8px;border:1px solid rgba(124,58,237,0.4);background:rgba(124,58,237,0.1);color:#c4b5fd;cursor:pointer;font-family:inherit">✎ Editar</button>';
+        h+='</div></div></div>';
       });
-      if(!r.ok&&r.status!==201)errores++;
-    }catch(e){errores++;}
-  }
-  if(errores===0)notif("✅ Zonas cargadas!","rgba(16,185,129,0.9)");
-  else notif("Cargadas con "+errores+" errores");
-  cargarZonas();
+      h+='</div>';
+    });
+    lista.innerHTML=h;
+  lista.querySelectorAll(".prod-card-g").forEach(function(c){
+      c.addEventListener("click",function(){abrirEditProd(this.getAttribute("data-pid"));});
+    });
+    lista.querySelectorAll(".prod-edit-btn").forEach(function(b){
+      b.addEventListener("click",function(e){e.stopPropagation();abrirEditProd(this.getAttribute("data-id"));});
+    });
+    lista.querySelectorAll(".pei-header").forEach(function(hdr){hdr.addEventListener("click",function(){togglePeiEdit(this.closest(".prod-editor-item").id.replace("pei-",""));});});
+    lista.querySelectorAll(".pei-save-btn").forEach(function(b){b.addEventListener("click",function(){guardarProdEditor(this.getAttribute("data-id"),this);});});
+    lista.querySelectorAll(".pei-dispo-btn").forEach(function(b){b.addEventListener("click",function(){toggleDispoProd(this.getAttribute("data-id"),this.getAttribute("data-val"));});});
+    lista.querySelectorAll(".pei-del-btn").forEach(function(b){b.addEventListener("click",function(){confirmarBorrarProd(this.getAttribute("data-id"),this.getAttribute("data-nombre"));});});
+    lista.querySelectorAll("input[type=file][id^='fui-']").forEach(function(inp){
+      if(inp.id==="fui-nuevo")return;
+      inp.addEventListener("change",function(){if(this.files&&this.files[0]){var prodId=this.id.replace("fui-","");subirFotoProd(prodId,this.files[0]);}});
+    });
+    lista.querySelectorAll("[id^='fuc-']").forEach(function(btn){
+      if(btn.id==="fuc-nuevo")return;
+      btn.addEventListener("click",function(e){e.stopPropagation();var prodId=this.id.replace("fuc-","");limpiarFotoProd(prodId);});
+    });
+    lista.querySelectorAll("[id^='fuv-']").forEach(function(btn){
+      btn.addEventListener("click",function(){var prodId=this.id.replace("fuv-","");var urlInput=document.getElementById("pei-img-"+prodId);if(urlInput)setFotoProdUI(prodId,urlInput.value.trim());});
+    });
+    lista.querySelectorAll("[id^='pei-img-']").forEach(function(inp){
+      inp.addEventListener("input",function(){var prodId=this.id.replace("pei-img-","");if(!this.value.trim())limpiarFotoProdUI(prodId);});
+    });
+  }).catch(function(){});
+}
+function escHtml(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function togglePeiEdit(id){
+  var item=document.getElementById("pei-"+id);if(!item)return;
+  var body=document.getElementById("pei-body-"+id);if(!body)return;
+  var isOpen=body.classList.contains("open");
+  document.querySelectorAll(".pei-body.open").forEach(function(b){b.classList.remove("open");b.closest(".prod-editor-item").classList.remove("open");});
+  if(!isOpen){body.classList.add("open");item.classList.add("open");}
+}
+function autoEmoji(nombre){
+  var n=(nombre||"").toLowerCase();
+  var mapa=[
+    ["hamburgu","🍔"],["burger","🍔"],["especial","🍔"],["angus","🍔"],["bbq","🍔"],
+    ["perro","🌭"],["hot dog","🌭"],["italiano","🌭"],["frances","🌭"],
+    ["alita","🍗"],["ala","🍗"],["wing","🍗"],
+    ["pollo","🍗"],["chicken","🍗"],
+    ["asado","🥩"],["carne","🥩"],["junior","🥩"],["churrasco","🥩"],
+    ["arepa","🫓"],["choclo","🫓"],
+    ["papa","🍟"],["frita","🍟"],["chips","🍟"],
+    ["pizza","🍕"],
+    ["taco","🌮"],["burrito","🌯"],
+    ["sandwich","🥪"],["sanguche","🥪"],
+    ["ensalada","🥗"],["cesar","🥗"],
+    ["sopa","🍲"],["caldo","🍲"],
+    ["arroz","🍚"],["bandeja","🍛"],
+    ["gaseosa","🥤"],["cola","🥤"],["refresco","🥤"],["soda","🥤"],
+    ["agua","💧"],
+    ["jugo","🧃"],["limonada","🍋"],["naranjada","🍊"],
+    ["cafe","☕"],["tinto","☕"],["capuchino","☕"],
+    ["cerveza","🍺"],["beer","🍺"],
+    ["helado","🍦"],["postre","🍮"],["brownie","🍫"],["torta","🎂"],
+    ["queso","🧀"],["cheese","🧀"],
+    ["tocineta","🥓"],["bacon","🥓"],
+    ["jamon","🥩"],["ham","🥩"],
+    ["maduro","🍌"],["platano","🍌"],
+    ["aguacate","🥑"],["avocado","🥑"],
+    ["maiz","🌽"],["corn","🌽"],
+    ["salchicha","🌭"],["chorizo","🌭"],
+    ["combo","🎁"],["meal","🎁"],
+    ["ranchera","🫙"],["salsa","🫙"],["ajo","🫙"],["chimichurri","🫙"],
+    ["jalapeno","🌶️"],["picante","🌶️"],
+    ["aplastado","🥪"],["chuzos","🍢"],["chuzo","🍢"],
+    ["desgranado","🌽"]
+  ];
+  for(var j=0;j<mapa.length;j++){if(n.indexOf(mapa[j][0])!==-1)return mapa[j][1];}
+  return "🍽️";
+}function renderEditorProdItem(i){
+  var imgUrl=i.imagen_url||"";
+  var div=document.createElement("div");
+  div.className="prod-editor-item";
+  div.id="pei-"+i.id;
+  var header=document.createElement("div");
+  header.className="pei-header";
+header.innerHTML='<div class="pei-emoji">'+(i.emoji||autoEmoji(i.nombre))+'</div>'
+  +'<div class="pei-info"><div class="pei-name">'+i.nombre+(i.en_oferta?" 🔥":"")+'</div>'
+    +'<div class="pei-meta">'+i.categoria+' · <span style="color:'+(i.disponible?"#34d399":"#fca5a5")+'">'+(i.disponible?"✓ Activo":"✗ Oculto")+'</span>'
+    +(imgUrl?' · <span style="color:#a78bfa">📷 Con foto</span>':'')
+    +'</div></div>'
+    +'<div class="pei-price">'+fmt(i.precio)+'</div>';
+  header.addEventListener("click",function(){togglePeiEdit(i.id);});
+  div.appendChild(header);
+  var body=document.createElement("div");
+  body.className="pei-body";
+  body.id="pei-body-"+i.id;
+  body.innerHTML='<div style="padding-top:12px">'
+    +'<div class="frow" style="margin-bottom:8px"><div class="ffield" style="max-width:72px"><label class="flabel">Emoji</label><input class="finput" id="pei-emoji-'+i.id+'" value="'+escHtml(i.emoji||"")+'" style="font-size:18px;text-align:center;" maxlength="4"></div>'
+    +'<div class="ffield"><label class="flabel">Nombre</label><input class="finput" id="pei-nombre-'+i.id+'" value="'+escHtml(i.nombre)+'"></div></div>'
+    +'<div class="frow" style="margin-bottom:8px"><div class="ffield"><label class="flabel">Categoría</label><input class="finput" id="pei-cat-'+i.id+'" value="'+escHtml(i.categoria||"")+'" list="cats-list"></div>'
+    +'<div class="ffield"><label class="flabel">Precio</label><input class="finput" id="pei-precio-'+i.id+'" type="number" value="'+(i.precio||0)+'"></div></div>'
+    +'<div class="ffield" style="margin-bottom:8px"><label class="flabel">Descripción</label><input class="finput" id="pei-desc-'+i.id+'" value="'+escHtml(i.descripcion||"")+'" placeholder="Descripción..."></div>'
+    +'<div class="frow" style="margin-bottom:8px"><div class="ffield"><label class="flabel">Tipo</label><select class="finput" id="pei-tipo-'+i.id+'">'
+    +'<option value="comida"'+((!i.es_bebida&&!i.es_adicional)?" selected":"")+'">🍟 Comida</option>'
+    +'<option value="bebida"'+(i.es_bebida?" selected":"")+'">🥤 Bebida</option>'
+    +'<option value="adicional"'+(i.es_adicional?" selected":"")+'">➕ Adicional</option>'
+    +'</select></div>'
+    +'<div class="ffield"><label class="flabel">Oferta</label><select class="finput" id="pei-oferta-'+i.id+'">'
+    +'<option value="false"'+((!i.en_oferta)?" selected":"")+'">No</option>'
+    +'<option value="true"'+((i.en_oferta)?" selected":"")+'">🔥 Sí</option>'
+    +'</select></div></div>'
+    +'<div class="ffield" style="margin-bottom:12px"><label class="flabel">Foto del producto</label>'
+    +'<div class="foto-upload-wrap">'
+    +'<div class="foto-upload-btn'+(imgUrl?" tiene-foto":"")+'" id="fub-'+i.id+'">'
+    +'<input type="file" accept="image/*" capture="environment" id="fui-'+i.id+'">'
+    +'<button class="foto-clear-btn" id="fuc-'+i.id+'" type="button">✕</button>'
+    +'<img class="foto-upload-preview" id="fup-'+i.id+'"'+(imgUrl?' src="'+escHtml(imgUrl)+'" style="display:block"':'')+'>'
+    +'<div class="foto-upload-placeholder" id="fupl-'+i.id+'" style="'+(imgUrl?"display:none":"")+'"><div class="foto-upload-ico">📷</div><div class="foto-upload-txt">Toca para tomar foto o elegir de galería</div><div class="foto-upload-sub">JPG · PNG · máx 8MB</div></div>'
+    +'<div class="foto-uploading-bar" id="fubar-'+i.id+'"></div>'
+    +'</div>'
+    +'<div class="foto-url-row"><input class="finput" id="pei-img-'+i.id+'" value="'+escHtml(imgUrl)+'" placeholder="o pega URL externa..."><button class="foto-url-toggle" id="fuv-'+i.id+'">Ver</button></div>'
+    +'</div></div>'
+    +'<div style="display:flex;gap:7px;">'
+    +'<button class="pei-save-btn edit-save-btn" data-id="'+i.id+'" style="flex:2;margin:0;">💾 Guardar</button>'
+    +'<button class="pei-dispo-btn" data-id="'+i.id+'" data-val="'+(i.disponible?"false":"true")+'" style="flex:1;padding:11px;background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:12px;color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">'+(i.disponible?"🙈":"👁")+'</button>'
+    +'<button class="pei-del-btn" data-id="'+i.id+'" data-nombre="'+escHtml(i.nombre)+'" style="padding:11px 13px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:12px;color:#fca5a5;cursor:pointer;font-size:14px;">🗑</button>'
+    +'</div></div>';
+  div.appendChild(body);
+  return div.outerHTML;
+}
+function guardarProdEditor(id,btn){
+  if(!rest||!id)return;
+  var tipo=document.getElementById("pei-tipo-"+id).value;
+  var payload={nombre:(document.getElementById("pei-nombre-"+id)||{value:""}).value.trim(),categoria:(document.getElementById("pei-cat-"+id)||{value:""}).value.trim(),precio:Number((document.getElementById("pei-precio-"+id)||{value:0}).value)||0,"descripcion":(document.getElementById("pei-desc-"+id)||{value:""}).value.trim()||null,emoji:(document.getElementById("pei-emoji-"+id)||{value:""}).value.trim()||null,en_oferta:(document.getElementById("pei-oferta-"+id)||{value:"false"}).value==="true"};
+  var imgEl=document.getElementById("pei-img-"+id);
+  if(imgEl&&imgEl.value.trim())payload.imagen_url=imgEl.value.trim();
+  if(!payload.nombre||!payload.precio){notif("Nombre y precio son obligatorios");return;}
+  var orig=btn.textContent;btn.textContent="Guardando...";btn.disabled=true;
+  fetch(SU+"/rest/v1/menu_items?id=eq."+id,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
+  .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t);});return r.text();})
+  .then(function(){notif("✅ Guardado");loadMenuEditor();loadMenu();})
+  .catch(function(e){notif("Error: "+e.message.substring(0,40));})
+  .finally(function(){btn.textContent=orig;btn.disabled=false;});
+}
+function toggleDispoProd(id,val){
+  fetch("/api/menu-toggle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,disponible:val==="true"})})
+  .then(function(r){return r.json();}).then(function(){notif(val==="true"?"✅ Activado":"🙈 Ocultado");loadMenuEditor();loadMenu();}).catch(function(e){notif("Error: "+e.message.substring(0,30));});
+}
+function confirmarBorrarProd(id,nombre){
+  if(!confirm("¿Eliminar "+nombre+"? Esta acción no se puede deshacer."))return;
+  fetch(SU+"/rest/v1/menu_items?id=eq."+id,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+  .then(function(r){if(r.ok||r.status===204){notif("Producto eliminado");loadMenuEditor();loadMenu();}else{notif("Error al eliminar");}})
+  .catch(function(){notif("Error de conexion");});
 }
 
-// Guardar nueva zona
+// APARIENCIA
+var accentColorActual="#e8341c";
+function cargarAparienciaEditor(){
+  if(!rest)return;
+  var prevName=document.getElementById("heroPrevName"),prevSub=document.getElementById("heroPrevSub");
+  if(prevName)prevName.textContent=(rest.nombre||"LA CURVA").toUpperCase();
+  if(prevSub)prevSub.textContent=rest.hero_slogan||"Street Food · Sabor inigualable";
+  var apNombre=document.getElementById("ap-nombre"),apSlogan=document.getElementById("ap-slogan");
+  var apHero=document.getElementById("ap-hero-img"),apLogo=document.getElementById("ap-logo");
+  if(apNombre)apNombre.value=rest.nombre||"";
+  if(apSlogan)apSlogan.value=rest.hero_slogan||"";
+  if(apHero)apHero.value=rest.hero_image_url||"";
+  if(apLogo)apLogo.value=rest.logo_url||"";
+  if(rest.accent_color){accentColorActual=rest.accent_color;document.querySelectorAll(".cpick").forEach(function(c){c.classList.toggle("sel",c.getAttribute("data-c")===rest.accent_color);});var cc=document.getElementById("ap-custom-color");if(cc)cc.value=rest.accent_color;}
+  updateHeroPrev();
+}
+function updateHeroPrev(){
+  var imgUrl=(document.getElementById("ap-hero-img")||{value:""}).value.trim();
+  var nombre=(document.getElementById("ap-nombre")||{value:""}).value||rest.nombre||"LA CURVA";
+  var slogan=(document.getElementById("ap-slogan")||{value:""}).value||"Street Food";
+  var prevBg=document.getElementById("heroPrevBg");
+  var prevName=document.getElementById("heroPrevName");
+  var prevSub=document.getElementById("heroPrevSub");
+  if(prevBg){if(imgUrl){prevBg.style.backgroundImage="url("+imgUrl+")";prevBg.style.backgroundSize="cover";prevBg.style.backgroundPosition="center";prevBg.innerHTML="";}else{prevBg.style.backgroundImage="";prevBg.innerHTML='<span style="font-size:50px;opacity:0.3">🍔</span>';}}
+  if(prevName)prevName.textContent=nombre.toUpperCase();
+  if(prevSub)prevSub.textContent=slogan;
+}
+function pickAccent(el){
+  accentColorActual=el.getAttribute("data-c");
+  document.querySelectorAll(".cpick").forEach(function(c){c.classList.remove("sel");});
+  el.classList.add("sel");
+}
+function pickAccentCustom(val){accentColorActual=val;document.querySelectorAll(".cpick").forEach(function(c){c.classList.remove("sel");});}
+function guardarApariencia(){
+  if(!rest)return;
+  var config={nombre:document.getElementById("ap-nombre").value.trim()||rest.nombre,hero_slogan:document.getElementById("ap-slogan").value.trim(),hero_image_url:document.getElementById("ap-hero-img").value.trim()||null,logo_url:document.getElementById("ap-logo").value.trim()||null,accent_color:accentColorActual};
+  var btn=document.querySelector("#metsec-apariencia .edit-save-btn");
+  if(btn){btn.textContent="Guardando...";btn.disabled=true;}
+  fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:config})})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.ok){Object.keys(config).forEach(function(k){rest[k]=config[k];});notif("✅ Apariencia guardada!");}else{notif("Error: "+(d.error||"").substring(0,40));}})
+  .catch(function(){notif("Error de conexion");})
+  .finally(function(){if(btn){btn.textContent="💾 Guardar apariencia";btn.disabled=false;}});
+}
+function abrirMenuPreview(){
+  if(rest)window.open("/menu?rest="+rest.id,"_blank");
+  else notif("Sin restaurante cargado");
+}
+
+// PROMOS EDITOR
+var promoDiasEditorData=[],bannersEditorData=[];
+var DIAS_SEMANA=["lunes","martes","miercoles","jueves","viernes","sabado","domingo"];
+function cargarPromosEditor(){
+  if(!rest)return;
+  var promoRaw=rest.promos_semanales||"";
+  promoDiasEditorData=[];
+  promoRaw.split("\n").forEach(function(linea){
+    linea=linea.trim();if(!linea)return;
+    var match=linea.match(/^-\s*([^:]+):\s*(.+)$/);
+    if(match)promoDiasEditorData.push({dia:match[1].trim(),texto:match[2].trim()});
+  });
+  var BANNERS_DEFAULT=[
+    {emoji:"🍔",titulo:"2x1 en Combos",descripcion:"Todos los martes pide dos combos al precio de uno",color1:"#7c1a08",color2:"#3d0d04"},
+    {emoji:"🛵",titulo:"Domicilio Gratis",descripcion:"En pedidos mayores a $30.000 el envío es gratis",color1:"#0a2a1a",color2:"#051409"},
+    {emoji:"⭐",titulo:"Puntos Dobles",descripcion:"Acumula el doble de puntos los fines de semana",color1:"#1a1408",color2:"#0a0904"}
+  ];
+  var bannersRaw=rest.banners_json||localStorage.getItem("luzBanners_"+rest.id)||"";
+  try{bannersEditorData=bannersRaw?JSON.parse(bannersRaw):JSON.parse(JSON.stringify(BANNERS_DEFAULT));}catch(e){bannersEditorData=JSON.parse(JSON.stringify(BANNERS_DEFAULT));}
+  renderPromoDiasEditor();renderBannersEditor();
+}
+function renderPromoDiasEditor(){
+  var lista=document.getElementById("promoDiasList");if(!lista)return;
+  if(!promoDiasEditorData.length){lista.innerHTML='<div style="color:var(--text3);font-size:12px;padding:6px 0">No hay promos configuradas.</div>';return;}
+  lista.innerHTML=promoDiasEditorData.map(function(p,idx){
+    return'<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;">'
+      +'<select class="finput" style="width:110px;flex-shrink:0;font-size:12px;padding:7px 8px;" data-idx="'+idx+'" data-field="dia">'
+      +DIAS_SEMANA.map(function(d){return'<option value="'+d+'"'+(p.dia===d?" selected":"")+'>'+d.charAt(0).toUpperCase()+d.slice(1)+'</option>';}).join("")
+      +'</select>'
+      +'<input class="finput" style="flex:1;font-size:12px;" value="'+escHtml(p.texto)+'" placeholder="Descripcion de la promo..." data-idx="'+idx+'" data-field="texto">'
+      +'<button style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#fca5a5;border-radius:8px;padding:7px 10px;cursor:pointer;" data-delidx="'+idx+'">🗑</button>'
+      +'</div>';
+  }).join("");
+  lista.querySelectorAll("[data-field]").forEach(function(el){el.addEventListener("change",function(){var idx=Number(this.getAttribute("data-idx")),field=this.getAttribute("data-field");if(promoDiasEditorData[idx])promoDiasEditorData[idx][field]=this.value;});el.addEventListener("input",function(){var idx=Number(this.getAttribute("data-idx")),field=this.getAttribute("data-field");if(promoDiasEditorData[idx])promoDiasEditorData[idx][field]=this.value;});});
+  lista.querySelectorAll("[data-delidx]").forEach(function(b){b.addEventListener("click",function(){var idx=Number(this.getAttribute("data-delidx"));promoDiasEditorData.splice(idx,1);renderPromoDiasEditor();});});
+}
+function agregarPromoDiaEditor(){promoDiasEditorData.push({dia:"lunes",texto:""});renderPromoDiasEditor();}
+function renderBannersEditor(){
+  var lista=document.getElementById("bannerEditorList");if(!lista)return;
+  if(!bannersEditorData.length){lista.innerHTML='<div style="color:var(--text3);font-size:12px;padding:6px 0">No hay banners. Agrega uno abajo.</div>';return;}
+  var h="";
+  bannersEditorData.forEach(function(b,idx){
+    var c1=b.color1||"#7c1a08",c2=b.color2||"#3d0d04";
+    var emoji=b.emoji||"🔥";
+    var titulo=b.titulo||"Nueva Promo";
+    var desc=b.descripcion||"Descripción de la promo";
+    var tieneImg=b.imagen_url&&b.imagen_url.trim();
+    // Preview EXACTO al diseño del menú
+    h+='<div style="background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:18px;margin-bottom:16px;overflow:hidden">';
+    // Tarjeta preview idéntica a menu.html
+    h+='<div id="bprev-'+idx+'" style="flex-shrink:0;width:100%;border-radius:0;overflow:hidden;background:linear-gradient(140deg,'+c1+','+c2+');position:relative;min-height:130px">';
+    if(tieneImg)h+='<img id="bprev-img-'+idx+'" src="'+b.imagen_url+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none" onerror="this.style.display=\'none\'">';
+    h+='<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.5) 0%,transparent 60%);pointer-events:none"></div>';
+    h+='<div style="padding:16px;position:relative;z-index:1">';
+    h+='<span id="bprev-emoji-'+idx+'" style="font-size:26px;margin-bottom:8px;display:block">'+emoji+'</span>';
+    h+='<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.12);backdrop-filter:blur(8px);border-radius:100px;padding:3px 9px;font-size:9px;font-weight:700;color:white;margin-bottom:8px;letter-spacing:0.08em;text-transform:uppercase">🔥 PROMO</div>';
+    h+='<div id="bprev-titulo-'+idx+'" style="font-size:20px;font-weight:800;letter-spacing:1px;color:white;line-height:1.1;margin-bottom:5px">'+titulo+'</div>';
+    h+='<div id="bprev-desc-'+idx+'" style="font-size:11px;color:rgba(255,255,255,0.65);line-height:1.45">'+desc+'</div>';
+    h+='</div></div>';
+    // Campos de edición
+    h+='<div style="padding:14px">';
+    h+='<div class="frow" style="margin-bottom:8px">';
+    h+='<div class="ffield" style="max-width:72px"><label class="flabel">Emoji</label><input class="finput" style="font-size:20px;text-align:center" value="'+escHtml(emoji)+'" data-bidx="'+idx+'" data-bf="emoji" oninput="liveUpdateBanner(this)"></div>';
+    h+='<div class="ffield"><label class="flabel">Título</label><input class="finput" style="font-size:13px" placeholder="2x3 Hamburguesas" value="'+escHtml(b.titulo||"")+'" data-bidx="'+idx+'" data-bf="titulo" oninput="liveUpdateBanner(this)"></div>';
+    h+='</div>';
+    h+='<div class="ffield" style="margin-bottom:8px"><label class="flabel">Descripción</label><input class="finput" style="font-size:13px" placeholder="Todos los lunes..." value="'+escHtml(b.descripcion||"")+'" data-bidx="'+idx+'" data-bf="descripcion" oninput="liveUpdateBanner(this)"></div>';
+    h+='<div class="ffield" style="margin-bottom:10px"><label class="flabel">Foto (URL opcional)</label><input class="finput" style="font-size:12px" placeholder="https://i.imgur.com/..." value="'+escHtml(b.imagen_url||"")+'" data-bidx="'+idx+'" data-bf="imagen_url" oninput="liveUpdateBanner(this)"></div>';
+    h+='<div style="display:flex;gap:8px;margin-bottom:10px">';
+    h+='<div class="ffield" style="flex:1"><label class="flabel">Color oscuro</label><input type="color" class="finput" style="height:38px;padding:3px" value="'+c1+'" data-bidx="'+idx+'" data-bf="color1" oninput="liveUpdateBanner(this)"></div>';
+    h+='<div class="ffield" style="flex:1"><label class="flabel">Color claro</label><input type="color" class="finput" style="height:38px;padding:3px" value="'+c2+'" data-bidx="'+idx+'" data-bf="color2" oninput="liveUpdateBanner(this)"></div>';
+    h+='</div>';
+    h+='<div style="display:flex;gap:8px">';
+    h+='<button onclick="moverBanner('+idx+',-1)" style="padding:8px 12px;background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:10px;color:var(--text2);cursor:pointer;font-size:14px">↑</button>';
+    h+='<button onclick="moverBanner('+idx+',1)" style="padding:8px 12px;background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:10px;color:var(--text2);cursor:pointer;font-size:14px">↓</button>';
+    h+='<button onclick="eliminarBanner('+idx+')" style="flex:1;padding:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:10px;color:#fca5a5;cursor:pointer;font-size:12px;font-weight:700">🗑 Eliminar</button>';
+    h+='</div></div></div>';
+  });
+  lista.innerHTML=h;
+}
+function liveUpdateBanner(el){
+  var idx=Number(el.getAttribute("data-bidx")),field=el.getAttribute("data-bf"),val=el.value;
+  if(bannersEditorData[idx])bannersEditorData[idx][field]=val;
+  if(field==="titulo"){var t=document.getElementById("bprev-titulo-"+idx);if(t)t.textContent=val||"Nueva Promo";}
+  if(field==="descripcion"){var d=document.getElementById("bprev-desc-"+idx);if(d)d.textContent=val||"Descripción";}
+  if(field==="emoji"){var e=document.getElementById("bprev-emoji-"+idx);if(e)e.textContent=val||"🔥";}
+  if(field==="color1"||field==="color2"){
+    var prev=document.getElementById("bprev-"+idx);
+    if(prev){var c1=bannersEditorData[idx].color1||"#7c1a08",c2=bannersEditorData[idx].color2||"#3d0d04";prev.style.background="linear-gradient(140deg,"+c1+","+c2+")";}
+  }
+  if(field==="imagen_url"){
+    var img=document.getElementById("bprev-img-"+idx);
+    if(val.trim()){
+      if(img){img.src=val;img.style.display="";}
+      else{var prev2=document.getElementById("bprev-"+idx);if(prev2){var ni=document.createElement("img");ni.id="bprev-img-"+idx;ni.src=val;ni.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none";ni.onerror=function(){this.style.display="none";};prev2.insertBefore(ni,prev2.firstChild);}}
+    }else{if(img)img.style.display="none";}
+  }
+}
+function moverBanner(idx,dir){
+  var nuevo=idx+dir;
+  if(nuevo<0||nuevo>=bannersEditorData.length)return;
+  var tmp=bannersEditorData[idx];bannersEditorData[idx]=bannersEditorData[nuevo];bannersEditorData[nuevo]=tmp;
+  renderBannersEditor();
+}
+function eliminarBanner(idx){
+  if(!confirm("¿Eliminar este banner?"))return;
+  bannersEditorData.splice(idx,1);
+  renderBannersEditor();
+}
+function agregarBannerEditor(){
+  bannersEditorData.push({emoji:"🔥",titulo:"Nueva Promo",descripcion:"Descripción de la promo",color1:"#7c1a08",color2:"#3d0d04"});
+  renderBannersEditor();
+}
+
+// FOTO UPLOAD DIRECTO
+var nuevoProdImgUrl=null;
+async function subirFotoProd(prodId,file){
+  if(!rest)return;
+  if(file.size>8*1024*1024){notif("❌ Imagen muy grande (máx 8MB)");return;}
+  var bar=document.getElementById("fubar-"+prodId);
+  if(bar){bar.style.display="block";bar.style.width="30%";}
+  notif("📷 Subiendo foto...");
+  try{
+    var blob=await comprimirBlob(file,1200,0.82);
+    var ext=file.name.split(".").pop()||"jpg";
+    var path="menu-productos/"+rest.id+"/"+prodId+"-"+Date.now()+"."+ext;
+    if(bar)bar.style.width="60%";
+    var r=await fetch(SU+"/storage/v1/object/media/"+path,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":blob.type||"image/jpeg","x-upsert":"true"},body:blob});
+    if(!r.ok)throw new Error(await r.text());
+    var url=SU+"/storage/v1/object/public/media/"+path;
+    if(bar)bar.style.width="100%";
+    setFotoProdUI(prodId,url);
+    await fetch(SU+"/rest/v1/menu_items?id=eq."+prodId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({imagen_url:url})});
+    notif("✅ Foto guardada!","rgba(16,185,129,0.9)");
+    loadMenuEditor();
+  }catch(e){console.error(e);notif("❌ Error: "+e.message.substring(0,50));}
+  finally{if(bar){bar.style.width="0";setTimeout(function(){if(bar)bar.style.display="none";},400);}}
+}
+function setFotoProdUI(prodId,url){
+  var btn=document.getElementById("fub-"+prodId);
+  var prev=document.getElementById("fup-"+prodId);
+  var ph=document.getElementById("fupl-"+prodId);
+  var inp=document.getElementById("pei-img-"+prodId);
+  if(url&&prev){prev.src=url;prev.style.display="block";if(btn)btn.classList.add("tiene-foto");if(ph)ph.style.display="none";if(inp)inp.value=url;}
+}
+function limpiarFotoProdUI(prodId){
+  var btn=document.getElementById("fub-"+prodId);
+  var prev=document.getElementById("fup-"+prodId);
+  var ph=document.getElementById("fupl-"+prodId);
+  var inp=document.getElementById("pei-img-"+prodId);
+  if(prev){prev.src="";prev.style.display="none";}
+  if(btn)btn.classList.remove("tiene-foto");
+  if(ph)ph.style.display="flex";
+  if(inp)inp.value="";
+}
+function limpiarFotoProd(prodId){
+  limpiarFotoProdUI(prodId);
+  fetch(SU+"/rest/v1/menu_items?id=eq."+prodId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({imagen_url:null})})
+  .then(function(){notif("🗑 Foto eliminada");loadMenuEditor();}).catch(function(){notif("Error");});
+}
+function comprimirBlob(file,maxW,quality){
+  return new Promise(function(resolve){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var img=new Image();
+      img.onload=function(){
+        var canvas=document.createElement("canvas");
+        var ratio=Math.min(maxW/img.width,maxW/img.height,1);
+        canvas.width=Math.round(img.width*ratio);canvas.height=Math.round(img.height*ratio);
+        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+        canvas.toBlob(function(blob){resolve(blob);},file.type==="image/png"?"image/png":"image/jpeg",quality||0.82);
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function subirFotoNuevoProd(input){
+  var file=input.files[0];if(!file)return;
+  if(file.size>8*1024*1024){notif("❌ Imagen muy grande (máx 8MB)");return;}
+  var bar=document.getElementById("fubar-nuevo");
+  if(bar){bar.style.display="block";bar.style.width="30%";}
+  notif("📷 Subiendo foto...");
+  try{
+    var blob=await comprimirBlob(file,1200,0.82);
+    var ext=file.name.split(".").pop()||"jpg";
+    var path="menu-productos/"+(rest?rest.id:"tmp")+"/nuevo-"+Date.now()+"."+ext;
+    if(bar)bar.style.width="70%";
+    var r=await fetch(SU+"/storage/v1/object/media/"+path,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":blob.type||"image/jpeg","x-upsert":"true"},body:blob});
+    if(!r.ok)throw new Error(await r.text());
+    nuevoProdImgUrl=SU+"/storage/v1/object/public/media/"+path;
+    if(bar)bar.style.width="100%";
+    var btn=document.getElementById("fub-nuevo"),prev=document.getElementById("fup-nuevo"),ph=document.getElementById("fupl-nuevo"),inp=document.getElementById("mi-img-url");
+    if(prev){prev.src=nuevoProdImgUrl;prev.style.display="block";}
+    if(btn)btn.classList.add("tiene-foto");
+    if(ph)ph.style.display="none";
+    if(inp)inp.value=nuevoProdImgUrl;
+    notif("✅ Foto lista!","rgba(16,185,129,0.9)");
+  }catch(e){notif("❌ Error: "+e.message.substring(0,50));}
+  finally{if(bar){bar.style.width="0";setTimeout(function(){if(bar)bar.style.display="none";},400);}}
+}
+function limpiarFotoNuevo(){
+  nuevoProdImgUrl=null;
+  var btn=document.getElementById("fub-nuevo"),prev=document.getElementById("fup-nuevo"),ph=document.getElementById("fupl-nuevo"),inp=document.getElementById("mi-img-url");
+  if(prev){prev.src="";prev.style.display="none";}
+  if(btn)btn.classList.remove("tiene-foto");
+  if(ph)ph.style.display="flex";
+  if(inp)inp.value="";
+  var fi=document.getElementById("fui-nuevo");if(fi)fi.value="";
+}
+async function subirAparienciaImg(file, inputId, uploadingId){
+  if(!rest)return;
+  if(file.size>8*1024*1024){notif("❌ Imagen muy grande (máx 8MB)");return;}
+  var upl=document.getElementById(uploadingId);
+  if(upl)upl.style.display="block";
+  notif("📷 Subiendo...");
+  try{
+    var blob=await comprimirBlob(file,1600,0.85);
+    var ext=file.name.split(".").pop()||"jpg";
+    var path="apariencia/"+rest.id+"/"+inputId+"-"+Date.now()+"."+ext;
+    var r=await fetch(SU+"/storage/v1/object/media/"+path,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":blob.type||"image/jpeg","x-upsert":"true"},body:blob});
+    if(!r.ok)throw new Error(await r.text());
+    var url=SU+"/storage/v1/object/public/media/"+path;
+    var inp=document.getElementById(inputId);
+    if(inp){inp.value=url;inp.dispatchEvent(new Event("input"));}
+    notif("✅ Foto lista!","rgba(16,185,129,0.9)");
+  }catch(e){notif("❌ Error: "+e.message.substring(0,50));}
+  finally{if(upl)upl.style.display="none";}
+}
 document.addEventListener("DOMContentLoaded",function(){
-  var btnZona=document.getElementById("btnAgregarZona");
-  if(btnZona)btnZona.addEventListener("click",function(){
-    if(!rest)return;
-    var nombre=document.getElementById("zona-nombre").value.trim();
-    var precio=parseInt(document.getElementById("zona-precio").value)||0;
-    var barrios=document.getElementById("zona-barrios").value.trim();
-    if(!nombre||!precio||!barrios){notif("Completa todos los campos");return;}
-    fetch(SU+"/rest/v1/zonas_domicilio",{
-      method:"POST",
+  var hf=document.getElementById("ap-hero-file");
+  if(hf)hf.addEventListener("change",function(){if(this.files&&this.files[0])subirAparienciaImg(this.files[0],"ap-hero-img","ap-hero-uploading");});
+  var lf=document.getElementById("ap-logo-file");
+  if(lf)lf.addEventListener("change",function(){if(this.files&&this.files[0])subirAparienciaImg(this.files[0],"ap-logo","ap-logo-uploading");});
+});
+function previewNuevoProdImg(){
+  var url=document.getElementById("mi-img-url").value.trim();
+  var prev=document.getElementById("fup-nuevo"),btn=document.getElementById("fub-nuevo"),ph=document.getElementById("fupl-nuevo");
+  if(url&&prev){prev.src=url;prev.style.display="block";if(btn)btn.classList.add("tiene-foto");if(ph)ph.style.display="none";nuevoProdImgUrl=url;}
+  else{if(prev){prev.src="";prev.style.display="none";}if(btn)btn.classList.remove("tiene-foto");if(ph)ph.style.display="flex";nuevoProdImgUrl=null;}
+}
+
+// ── OVERLAY EDITAR PRODUCTO ──
+var editProdId=null, editProdDispo=true;
+function abrirEditProd(id){
+  if(!rest)return;
+  var item=null;
+  // Buscar en MENU_PROD primero, si no fetch directo
+  if(MENU_PROD&&MENU_PROD.length){item=MENU_PROD.find(function(x){return x.id===id;});}
+  if(item){_llenarEditProd(item);}
+  else{
+    fetch(SU+"/rest/v1/menu_items?id=eq."+id,{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+    .then(function(r){return r.json();})
+    .then(function(d){if(d&&d.length)_llenarEditProd(d[0]);})
+    .catch(function(){notif("Error cargando producto");});
+  }
+}
+function epSetFotoUI(url){
+  var prev=document.getElementById("ep-fup");
+  var lbl=document.getElementById("ep-fub-label");
+  var fuc=document.getElementById("ep-fuc");
+  var inp=document.getElementById("ep-img");
+  if(url&&prev){prev.src=url;prev.style.display="block";if(lbl)lbl.style.display="none";if(fuc)fuc.style.display="inline-flex";if(inp)inp.value=url;}
+}
+function epLimpiarFoto(){
+  var prev=document.getElementById("ep-fup");
+  var lbl=document.getElementById("ep-fub-label");
+  var fuc=document.getElementById("ep-fuc");
+  var inp=document.getElementById("ep-img");
+  var fi=document.getElementById("ep-fui");
+  if(prev){prev.src="";prev.style.display="none";}
+  if(lbl)lbl.style.display="flex";
+  if(fuc)fuc.style.display="none";
+  if(inp)inp.value="";
+  if(fi)fi.value="";
+}
+async function epSubirFoto(file){
+  if(!rest)return;
+  if(file.size>8*1024*1024){notif("❌ Imagen muy grande (máx 8MB)");return;}
+  var bar=document.getElementById("ep-fubar");
+  if(bar){bar.style.display="block";bar.style.width="30%";}
+  notif("📷 Subiendo foto...");
+  try{
+    var blob=await comprimirBlob(file,1200,0.82);
+    var ext=file.name.split(".").pop()||"jpg";
+    var path="menu-productos/"+rest.id+"/"+(editProdId||"tmp")+"-"+Date.now()+"."+ext;
+    if(bar)bar.style.width="70%";
+    var r=await fetch(SU+"/storage/v1/object/media/"+path,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":blob.type||"image/jpeg","x-upsert":"true"},body:blob});
+    if(!r.ok)throw new Error(await r.text());
+    var url=SU+"/storage/v1/object/public/media/"+path;
+    if(bar)bar.style.width="100%";
+    epSetFotoUI(url);
+    notif("✅ Foto lista!","rgba(16,185,129,0.9)");
+  }catch(e){notif("❌ Error: "+e.message.substring(0,50));}
+  finally{if(bar){bar.style.width="0";setTimeout(function(){if(bar)bar.style.display="none";},400);}}
+}
+function _llenarEditProd(item){
+  editProdId=item.id;
+  editProdDispo=item.disponible!==false;
+  document.getElementById("ep-titulo").textContent="Editar: "+item.nombre;
+  document.getElementById("ep-nombre").value=item.nombre||"";
+  document.getElementById("ep-cat").value=item.categoria||"";
+  document.getElementById("ep-precio").value=item.precio||"";
+  document.getElementById("ep-desc").value=item.descripcion||"";
+  document.getElementById("ep-emoji").value=item.emoji||"";
+  document.getElementById("ep-tipo").value=item.es_bebida?"bebida":(item.es_adicional?"adicional":"comida");
+  document.getElementById("ep-oferta").value=item.en_oferta?"true":"false";
+  var td=document.getElementById("epToggleDispo");
+  if(td)td.textContent=editProdDispo?"🙈 Ocultar producto":"👁 Activar producto";
+  // Foto
+  epLimpiarFoto();
+  if(item.imagen_url)epSetFotoUI(item.imagen_url);
+  document.getElementById("epOverlay").classList.add("open");
+}
+document.addEventListener("DOMContentLoaded",function(){
+  // Subir foto desde celular en overlay editar producto
+  document.getElementById("ep-fui").addEventListener("change",function(){
+    if(this.files&&this.files[0])epSubirFoto(this.files[0]);
+  });
+  document.getElementById("ep-fuc").addEventListener("click",function(e){
+    e.stopPropagation();epLimpiarFoto();
+  });
+  document.getElementById("epToggleDispo").addEventListener("click",function(){
+    if(!editProdId)return;
+    var nuevoDispo=!editProdDispo;
+    var btn=this;btn.textContent="Guardando...";btn.disabled=true;
+    fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({disponible:nuevoDispo})})
+    .then(function(r){
+      if(r.ok||r.status===204){
+        editProdDispo=nuevoDispo;
+        btn.textContent=editProdDispo?"🙈 Ocultar producto":"👁 Activar producto";
+        notif(nuevoDispo?"✅ Producto activado":"🙈 Producto ocultado",nuevoDispo?"rgba(16,185,129,0.9)":"rgba(124,58,237,0.9)");
+        loadMenuEditor();loadMenu();
+      }else{notif("Error al cambiar estado");}
+    })
+    .catch(function(){notif("Error de conexion");})
+    .finally(function(){btn.disabled=false;});
+  });
+  document.getElementById("epCancelar").addEventListener("click",function(){document.getElementById("epOverlay").classList.remove("open");editProdId=null;});
+  document.getElementById("epOverlay").addEventListener("click",function(e){if(e.target===this){this.classList.remove("open");editProdId=null;}});
+  document.getElementById("ep-img").addEventListener("input",function(){
+    var prev=document.getElementById("ep-img-prev");
+    if(this.value.trim()){prev.src=this.value.trim();prev.style.display="block";}
+    else prev.style.display="none";
+  });
+  document.getElementById("epGuardar").addEventListener("click",function(){
+    if(!editProdId)return;
+    var imgVal=document.getElementById("ep-img").value.trim();
+    var emojiVal=document.getElementById("ep-emoji").value.trim();
+    var payload={
+      nombre:document.getElementById("ep-nombre").value.trim(),
+      categoria:document.getElementById("ep-cat").value.trim(),
+      precio:Number(document.getElementById("ep-precio").value)||0,
+      "descripcion":document.getElementById("ep-desc").value.trim()||null,
+      en_oferta:document.getElementById("ep-oferta").value==="true",
+      disponible:editProdDispo
+    };
+    if(imgVal)payload.imagen_url=imgVal;
+    if(emojiVal)payload.emoji=emojiVal;
+    if(!payload.nombre||!payload.precio){notif("Nombre y precio son obligatorios");return;}
+    var btn=this;btn.textContent="Guardando...";btn.disabled=true;
+    fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{
+      method:"PATCH",
       headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
-      body:JSON.stringify({restaurante_id:rest.id,nombre:nombre,precio:precio,barrios:barrios})
+      body:JSON.stringify(payload)
     })
     .then(function(r){
-      if(r.ok||r.status===201){
-        notif("✅ Zona guardada!");
-        ["zona-nombre","zona-precio","zona-barrios"].forEach(function(id){document.getElementById(id).value="";});
-        cargarZonas();
-      }else notif("Error al guardar zona");
-    }).catch(function(){notif("Error de conexion");});
+      if(r.ok||r.status===204){
+        notif("✅ Producto guardado","rgba(16,185,129,0.9)");
+        document.getElementById("epOverlay").classList.remove("open");
+        editProdId=null;loadMenuEditor();loadMenu();cargarProd();
+      } else {
+        return r.text().then(function(t){
+          console.error("PATCH error:",t);
+          // Si falla imagen_url (columna no existe aún), reintentar sin ella
+          if(t.indexOf("imagen_url")!==-1){
+            delete payload.imagen_url;
+            return fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
+            .then(function(r2){
+              if(r2.ok||r2.status===204){notif("✅ Guardado (sin foto — ejecuta el SQL primero)","rgba(245,158,11,0.9)");document.getElementById("epOverlay").classList.remove("open");editProdId=null;loadMenuEditor();loadMenu();cargarProd();}
+              else{return r2.text().then(function(t2){notif("Error: "+t2.substring(0,80));});}
+            });
+          }
+          notif("Error: "+t.substring(0,80));
+        });
+      }
+    })
+    .catch(function(e){notif("Error: "+e.message.substring(0,80));})
+    .finally(function(){btn.textContent="💾 Guardar cambios";btn.disabled=false;});
+  });
+  document.getElementById("epEliminar").addEventListener("click",function(){
+    if(!editProdId||!confirm("¿Eliminar este producto?"))return;
+    fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+    .then(function(r){if(r.ok||r.status===204){notif("Producto eliminado");document.getElementById("epOverlay").classList.remove("open");editProdId=null;loadMenuEditor();loadMenu();cargarProd();}else{notif("Error al eliminar");}})
+    .catch(function(){notif("Error de conexion");});
   });
 });
 
-
-// ══════════════════════════════════════════════
-// REWARDS ADMIN — tabs, productos canjeables, canjes
-// ══════════════════════════════════════════════
-var clienteTabActual="clientes";
-function showClienteTab(tab){
-  clienteTabActual=tab;
-  ["clientes","rewards","canjes"].forEach(function(t){
-    var btn=document.getElementById("ctab-"+t);
-    var panel=document.getElementById("cpanel-"+t);
-    if(btn)btn.classList.toggle("active",t===tab);
-    if(panel)panel.style.display=t===tab?"block":"none";
-  });
-  if(tab==="clientes"&&(!clientesData||!clientesData.length))loadClientes();
-  if(tab==="rewards")cargarRewardsAdmin();
-  if(tab==="canjes")cargarCanjesAdmin("pendiente");
-}
-
-// ── PRODUCTOS CANJEABLES ──
-var rewardProdEditId=null, rewardActivoActual=true;
-// Cache de items del menú para el buscador
-var menuItemsCache=null;
-var rpMenuItemSel=null; // item del menú seleccionado actualmente
-
-async function cargarMenuCache(){
-  if(menuItemsCache)return menuItemsCache;
-  if(!rest)return [];
-  try{
-    var r=await fetch(SU+"/rest/v1/menu_items?restaurante_id=eq."+rest.id+"&disponible=eq.true&order=categoria,nombre&select=id,nombre,categoria,precio,emoji,imagen_url",{
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK}
-    });
-    menuItemsCache=await r.json();
-    return menuItemsCache||[];
-  }catch(e){return [];}
-}
-
-function filtrarMenuParaCanje(q){
-  var drop=document.getElementById("rpMenuDropdown");
-  if(!q||q.length<1){drop.style.display="none";return;}
-  var items=(menuItemsCache||[]).filter(function(i){
-    return i.nombre.toLowerCase().includes(q.toLowerCase())||
-           (i.categoria||"").toLowerCase().includes(q.toLowerCase());
-  }).slice(0,8);
-  if(!items.length){drop.style.display="none";return;}
-  drop.style.display="block";
-  drop.innerHTML="";
-  items.forEach(function(i){
-    var div=document.createElement("div");
-    div.style.cssText="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05)";
-    div.onmouseover=function(){this.style.background="rgba(124,58,237,0.12)";};
-    div.onmouseout=function(){this.style.background="";};
-    div.onclick=function(){seleccionarMenuItemCanje(i.id);};
-    var imgWrap=document.createElement("div");
-    imgWrap.style.cssText="width:36px;height:36px;border-radius:8px;background:rgba(124,58,237,0.15);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;overflow:hidden";
-    if(i.imagen_url){
-      var img=document.createElement("img");
-      img.src=i.imagen_url;
-      img.style.cssText="width:36px;height:36px;object-fit:cover;border-radius:8px";
-      img.onerror=function(){this.style.display="none";};
-      imgWrap.appendChild(img);
-    } else {
-      imgWrap.textContent=i.emoji||"🍔";
-    }
-    var info=document.createElement("div");
-    info.style.cssText="flex:1;min-width:0";
-    var nom=document.createElement("div");
-    nom.style.cssText="font-size:13px;font-weight:700;color:#f0ecf8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
-    nom.textContent=i.nombre;
-    var cat=document.createElement("div");
-    cat.style.cssText="font-size:11px;color:rgba(240,236,248,0.45);margin-top:1px";
-    cat.textContent=(i.categoria||"")+" · $"+Number(i.precio).toLocaleString("es-CO");
-    info.appendChild(nom);info.appendChild(cat);
-    div.appendChild(imgWrap);div.appendChild(info);
-    drop.appendChild(div);
-  });
-}
-
-function seleccionarMenuItemCanje(id){
-  var items=menuItemsCache||[];
-  var item=items.find(function(i){return i.id===id;});
-  if(!item)return;
-  rpMenuItemSel=item;
-  document.getElementById("rpMenuDropdown").style.display="none";
-  document.getElementById("rpMenuSearch").value=item.nombre;
-  // Mostrar preview
-  var prev=document.getElementById("rpProdPreview");
-  prev.style.display="flex";
-  var img=document.getElementById("rpProdImg");
-  var emo=document.getElementById("rpProdEmoji");
-  if(item.imagen_url){img.src=item.imagen_url;img.style.display="block";emo.style.display="none";}
-  else{img.style.display="none";emo.textContent=item.emoji||"🍔";emo.style.display="inline";}
-  document.getElementById("rpProdNombre").textContent=item.nombre;
-  document.getElementById("rpProdCat").textContent=(item.categoria||"")+" · $"+Number(item.precio).toLocaleString("es-CO");
-}
-
-function limpiarSeleccionMenuCanje(){
-  rpMenuItemSel=null;
-  document.getElementById("rpMenuSearch").value="";
-  document.getElementById("rpProdPreview").style.display="none";
-  document.getElementById("rpMenuDropdown").style.display="none";
-}
-
-function toggleActivoReward(){
-  rewardActivoActual=!rewardActivoActual;
-  var btn=document.getElementById("rpActivoBtn");
-  var dot=document.getElementById("rpActivoDot");
-  btn.style.background=rewardActivoActual?"rgba(16,185,129,0.8)":"rgba(255,255,255,0.15)";
-  dot.style.left=rewardActivoActual?"23px":"3px";
-}
-
-function cargarRewardsAdmin(){
+// ── GUARDAR BANNERS/PROMOS DIRECTO A SUPABASE ──
+function guardarPromosEditor(){
   if(!rest)return;
-  cargarMenuCache(); // precarga el cache
-  var lista=document.getElementById("rewardsAdminLista");
-  if(lista)lista.innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
-  fetch(SU+"/rest/v1/productos_canje?restaurante_id=eq."+rest.id+"&order=puntos_requeridos",{
-    headers:{"apikey":SK,"Authorization":"Bearer "+SK}
-  })
-  .then(function(r){return r.json();})
-  .then(function(prods){
-    if(!lista)return;
-    if(!prods||!prods.length){
-      lista.innerHTML='<div class="empty"><div class="ei">🎁</div><div class="et">Sin recompensas aún.<br><span style="color:#c4b5fd;cursor:pointer" onclick="abrirNuevoCanje()">+ Crear la primera</span></div></div>';
-      return;
-    }
-    // Grid estilo menú con foto
-    // Render grid estilo menú con DOM para evitar conflictos de comillas
-    var grid=document.createElement("div");
-    grid.style.cssText="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 0";
-    prods.forEach(function(p){
-      var activo=p.activo!==false;
-      var card=document.createElement("div");
-      card.style.cssText="background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;cursor:pointer;position:relative"+(activo?"":";opacity:0.5");
-      card.onclick=function(){abrirEditRewardProd(p.id);};
-      // imagen
-      var imgWrap=document.createElement("div");
-      imgWrap.style.cssText="width:100%;aspect-ratio:1/1;background:rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden";
-      if(p.imagen_url){
-        var img=document.createElement("img");
-        img.src=p.imagen_url;
-        img.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:cover";
-        img.onerror=function(){this.style.display="none";};
-        imgWrap.appendChild(img);
-      } else {
-        var emo=document.createElement("div");
-        emo.style.fontSize="36px";emo.textContent=p.emoji||"🎁";
-        imgWrap.appendChild(emo);
-      }
-      // body
-      var body=document.createElement("div");
-      body.style.cssText="padding:9px 10px 11px";
-      var nom=document.createElement("div");
-      nom.style.cssText="font-size:12px;font-weight:800;color:#f0ecf8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px";
-      nom.textContent=p.nombre;
-      var pts=document.createElement("div");
-      pts.style.cssText="font-size:15px;font-weight:900;color:#f5a623";
-      pts.innerHTML="⭐ "+p.puntos_requeridos+' <span style="font-size:10px;color:rgba(240,236,248,0.4);font-weight:600">pts</span>';
-      body.appendChild(nom);body.appendChild(pts);
-      if(!activo){var oculto=document.createElement("div");oculto.style.cssText="font-size:10px;color:#ef4444;margin-top:2px";oculto.textContent="● Oculto";body.appendChild(oculto);}
-      card.appendChild(imgWrap);card.appendChild(body);
-      grid.appendChild(card);
-    });
-    lista.appendChild(grid);
-  })
-  .catch(function(){if(lista)lista.innerHTML='<div class="empty"><div class="et">Error cargando</div></div>';});
-}
-
-function abrirNuevoCanje(){
-  rewardProdEditId=null;rewardActivoActual=true;rpMenuItemSel=null;
-  menuItemsCache=null; // forzar reload
-  cargarMenuCache();
-  document.getElementById("rewardProdOvTitle").textContent="Nueva recompensa";
-  document.getElementById("rpMenuSearch").value="";
-  document.getElementById("rpProdPreview").style.display="none";
-  document.getElementById("rp-puntos").value="100";
-  document.getElementById("rpEliminar").style.display="none";
-  // toggle activo
-  var btn=document.getElementById("rpActivoBtn");var dot=document.getElementById("rpActivoDot");
-  btn.style.background="rgba(16,185,129,0.8)";dot.style.left="23px";
-  document.getElementById("rewardProdOv").style.display="flex";
-}
-
-function abrirEditRewardProd(id){
-  if(!rest)return;
-  cargarMenuCache();
-  fetch(SU+"/rest/v1/productos_canje?id=eq."+id,{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
-  .then(function(r){return r.json();})
-  .then(function(d){
-    if(!d||!d.length)return;
-    var p=d[0];
-    rewardProdEditId=id;
-    rewardActivoActual=p.activo!==false;
-    document.getElementById("rewardProdOvTitle").textContent="Editar recompensa";
-    document.getElementById("rp-puntos").value=p.puntos_requeridos||100;
-    // Si tiene menu_item_id, buscar en cache y mostrar preview
-    if(p.menu_item_id&&menuItemsCache){
-      var item=menuItemsCache.find(function(i){return i.id===p.menu_item_id;});
-      if(item){seleccionarMenuItemCanje(item.id);}
-      else{document.getElementById("rpMenuSearch").value=p.nombre||"";document.getElementById("rpProdPreview").style.display="none";}
-    } else {
-      // Mostrar nombre en el buscador aunque no haya item_id
-      document.getElementById("rpMenuSearch").value=p.nombre||"";
-      document.getElementById("rpProdPreview").style.display="none";
-    }
-    document.getElementById("rpEliminar").style.display="block";
-    var btn=document.getElementById("rpActivoBtn");var dot=document.getElementById("rpActivoDot");
-    btn.style.background=rewardActivoActual?"rgba(16,185,129,0.8)":"rgba(255,255,255,0.15)";
-    dot.style.left=rewardActivoActual?"23px":"3px";
-    document.getElementById("rewardProdOv").style.display="flex";
-  });
-}
-
-function cerrarRewardProdOv(){
-  document.getElementById("rewardProdOv").style.display="none";
-  rewardProdEditId=null;rpMenuItemSel=null;
-  document.getElementById("rpMenuDropdown").style.display="none";
-}
-
-function guardarRewardProd(){
-  if(!rest)return;
-  var pts=parseInt(document.getElementById("rp-puntos").value)||0;
-  if(!rpMenuItemSel&&!rewardProdEditId){notif("Elige un producto del menú primero");return;}
-  if(!pts){notif("Ingresa los puntos requeridos");return;}
-  var payload={
-    restaurante_id:rest.id,
-    puntos_requeridos:pts,
-    activo:rewardActivoActual
-  };
-  if(rpMenuItemSel){
-    payload.nombre=rpMenuItemSel.nombre;
-    payload.imagen_url=rpMenuItemSel.imagen_url||null;
-    payload.emoji=rpMenuItemSel.emoji||null;
-    payload.menu_item_id=rpMenuItemSel.id;
-    payload.descripcion="$"+Number(rpMenuItemSel.precio).toLocaleString("es-CO")+" · "+rpMenuItemSel.categoria;
-  }
-  var btn=document.getElementById("rpGuardar");btn.textContent="Guardando...";btn.disabled=true;
-  var url=SU+"/rest/v1/productos_canje"+(rewardProdEditId?"?id=eq."+rewardProdEditId:"");
-  var method=rewardProdEditId?"PATCH":"POST";
-  fetch(url,{method:method,headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
-  .then(function(r){
-    if(r.ok||r.status===204||r.status===201){
-      notif(rewardProdEditId?"✅ Recompensa actualizada":"✅ Recompensa creada","rgba(16,185,129,0.9)");
-      cerrarRewardProdOv();cargarRewardsAdmin();
-    }else{return r.text().then(function(t){
-      // Si falla por menu_item_id no existir, intentar sin ese campo
-      if(t.includes("menu_item_id")){
-        delete payload.menu_item_id;
-        return fetch(url,{method:method,headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
-        .then(function(r2){
-          if(r2.ok||r2.status===204||r2.status===201){notif("✅ Guardado","rgba(16,185,129,0.9)");cerrarRewardProdOv();cargarRewardsAdmin();}
-          else{r2.text().then(function(t2){notif("Error: "+t2.substring(0,60));});}
-        });
-      }
-      notif("Error: "+t.substring(0,60));
-    });}
-  })
-  .catch(function(){notif("Error de conexion");})
-  .finally(function(){btn.textContent="💾 Guardar recompensa";btn.disabled=false;});
-}
-
-function eliminarRewardProd(){
-  if(!rewardProdEditId||!confirm("¿Eliminar esta recompensa?"))return;
-  fetch(SU+"/rest/v1/productos_canje?id=eq."+rewardProdEditId,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
-  .then(function(r){
-    if(r.ok||r.status===204){notif("Recompensa eliminada");cerrarRewardProdOv();cargarRewardsAdmin();}
-    else notif("Error al eliminar");
-  }).catch(function(){notif("Error de conexion");});
-}
-
-// ── CANJES PENDIENTES ──
-var canjesFiltroActual="pendiente";
-function filtrarCanjes(estado){
-  canjesFiltroActual=estado;
-  ["pendiente","aprobado","rechazado"].forEach(function(e){
-    var btn=document.getElementById("cfCanjes"+(e==="pendiente"?"Pend":e==="aprobado"?"Apro":"Rech"));
-    if(btn)btn.classList.toggle("active",e===estado);
-  });
-  cargarCanjesAdmin(estado);
-}
-function cargarCanjesAdmin(estado){
-  if(!rest)return;
-  var lista=document.getElementById("canjesLista");
-  if(lista)lista.innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
-  fetch(SU+"/rest/v1/canjes?restaurante_id=eq."+rest.id+"&estado=eq."+estado+"&order=created_at.desc&limit=50",{
-    headers:{"apikey":SK,"Authorization":"Bearer "+SK}
-  })
-  .then(function(r){return r.json();})
-  .then(function(canjes){
-    if(!lista)return;
-    if(estado==="pendiente"){
-      var badge=document.getElementById("canjesBadge");
-      if(badge){var n=canjes&&canjes.length?canjes.length:0;badge.textContent=n;badge.style.display=n?"inline":"none";}
-    }
-    if(!canjes||!canjes.length){
-      lista.innerHTML='<div class="empty"><div class="ei">🎁</div><div class="et">Sin canjes '+estado+'s</div></div>';
-      return;
-    }
-    lista.innerHTML=canjes.map(function(c){
-      var fecha=new Date(c.created_at).toLocaleDateString("es-CO",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
-      var colorBg=c.estado==="aprobado"?"rgba(16,185,129,0.08)":c.estado==="rechazado"?"rgba(239,68,68,0.08)":"rgba(245,158,11,0.08)";
-      var colorBorder=c.estado==="aprobado"?"rgba(16,185,129,0.25)":c.estado==="rechazado"?"rgba(239,68,68,0.25)":"rgba(245,158,11,0.25)";
-      var botonesHtml="";
-      if(c.estado==="pendiente"){
-        var aprobarOnclick="accionCanje('"+c.id+"','aprobado')";
-        var rechazarOnclick="accionCanje('"+c.id+"','rechazado')";
-        botonesHtml='<div style="display:flex;gap:6px;margin-top:10px">'
-          +'<button onclick="'+aprobarOnclick.replace(/"/g,"&quot;")+'" style="flex:1;padding:9px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.35);border-radius:11px;color:#34d399;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">✅ Aprobar</button>'
-          +'<button onclick="'+rechazarOnclick.replace(/"/g,"&quot;")+'" style="flex:1;padding:9px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:11px;color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">❌ Rechazar</button>'
-          +'</div>';
-      }
-      return '<div style="padding:14px;background:'+colorBg+';border:1px solid '+colorBorder+';border-radius:14px;margin-bottom:8px">'
-        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
-        +'<div style="flex:1;min-width:0">'
-        +'<div style="font-size:13px;font-weight:800;color:var(--text)">'+escHtml(c.nombre_cliente||"Cliente")+'</div>'
-        +'<div style="font-size:12px;color:var(--text3);margin-top:2px">📱 '+escHtml(c.telefono||"")+'</div>'
-        +'<div style="font-size:12px;color:#c4b5fd;margin-top:4px;font-weight:700">🎁 '+escHtml(c.producto_nombre||"Canje")+'</div>'
-        +'<div style="font-size:11px;color:var(--text3);margin-top:2px">⭐ '+c.puntos_usados+' pts · '+fecha+'</div>'
-        +'</div></div>'
-        +botonesHtml+'</div>';
-    }).join("");
-  })
-  .catch(function(){if(lista)lista.innerHTML='<div class="empty"><div class="et">Error cargando canjes</div></div>';});
-}
-function accionCanje(canjeId,nuevoEstado){
-  if(!rest)return;
-  fetch(SU+"/rest/v1/canjes?id=eq."+canjeId,{
+  var promosText=promoDiasEditorData.filter(function(p){return p.dia&&p.texto.trim();}).map(function(p){return"- "+p.dia+": "+p.texto.trim();}).join("\n");
+  var bannersStr=JSON.stringify(bannersEditorData);
+  var btn=document.querySelector("#metsec-promos .edit-save-btn");
+  if(btn){btn.textContent="Guardando...";btn.disabled=true;}
+  // Guardar promos_semanales y banners_json directo a Supabase
+  fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{
     method:"PATCH",
     headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
-    body:JSON.stringify({estado:nuevoEstado})
+    body:JSON.stringify({promos_semanales:promosText,banners_json:bannersStr})
   })
   .then(function(r){
     if(r.ok||r.status===204){
-      notif(nuevoEstado==="aprobado"?"✅ Canje aprobado":"❌ Canje rechazado",nuevoEstado==="aprobado"?"rgba(16,185,129,0.9)":"rgba(239,68,68,0.9)");
-      cargarCanjesAdmin(canjesFiltroActual);
-    }else notif("Error al actualizar canje");
-  }).catch(function(){notif("Error de conexion");});
-}
-function cargarBadgeCanjes(){
-  if(!rest)return;
-  fetch(SU+"/rest/v1/canjes?restaurante_id=eq."+rest.id+"&estado=eq.pendiente&select=id",{
-    headers:{"apikey":SK,"Authorization":"Bearer "+SK}
+      rest.promos_semanales=promosText;
+      rest.banners_json=bannersStr;
+      notif("✅ Promos y banners guardados!");
+    } else {
+      return r.text().then(function(t){
+        // Si falla por columna inexistente, intentar solo promos_semanales
+        if(t.indexOf("PGRST204")!==-1||t.indexOf("banners_json")!==-1){
+          return fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{
+            method:"PATCH",
+            headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+            body:JSON.stringify({promos_semanales:promosText})
+          }).then(function(r2){
+            if(r2.ok||r2.status===204){
+              rest.promos_semanales=promosText;
+              // Guardar banners en localStorage como fallback
+              localStorage.setItem("luzBanners_"+rest.id,bannersStr);
+              rest.banners_json=bannersStr;
+              notif("✅ Promos guardadas (banners en local)");
+            } else notif("Error guardando promos");
+          });
+        }
+        notif("Error: "+t.substring(0,40));
+      });
+    }
   })
-  .then(function(r){return r.json();})
-  .then(function(d){
-    var badge=document.getElementById("canjesBadge");
-    if(badge){var n=d&&d.length?d.length:0;badge.textContent=n;badge.style.display=n?"inline":"none";}
-  }).catch(function(){});
+  .catch(function(){notif("Error de conexion");})
+  .finally(function(){if(btn){btn.textContent="💾 Guardar promociones";btn.disabled=false;}});
 }
-
 </script>
 
 <!-- OVERLAY EDITAR PRODUCTO -->
@@ -2947,5 +3009,33 @@ function cargarBadgeCanjes(){
     <button class="edit-cancel-btn" id="epCancelar">Cancelar</button>
   </div>
 </div>
+<script>
+var ZONAS_PREDEFINIDAS=[
+  {nombre:"Zona 1 - Inmediata",precio:2000,barrios:"Canaveral, Versalles, Los Ángeles, Normandía, Samanes, Villa del Rey"},
+  {nombre:"Zona 2 - Cercana",precio:3000,barrios:"Granada, Santa Mónica, Álamos, Capri, Tequendama, El Ingenio, Pasoancho"},
+  {nombre:"Zona 3 - Media",precio:4000,barrios:"San Judas, Guadalupe, Popular, Terrón Colorado, Siloé, Belén, Salomia, Floralia"},
+  {nombre:"Zona 4 - Lejana",precio:5000,barrios:"Aguablanca, Marroquín, El Retiro, Comuneros, Desepaz, Ciudad Córdoba"},
+  {nombre:"Zona 5 - Extrema",precio:6000,barrios:"Pance, Cañaveralejo, Meléndez, Nápoles, La Buitrera"}
+];
+async function cargarZonasPredefinidas(){
+  if(!rest){notif("Sin restaurante cargado");return;}
+  if(!confirm("¿Agregar las zonas predefinidas de Cali?"))return;
+  notif("⏳ Cargando zonas...");
+  var errores=0;
+  for(var i=0;i<ZONAS_PREDEFINIDAS.length;i++){
+    var z=ZONAS_PREDEFINIDAS[i];
+    try{
+      var r=await fetch(SU+"/rest/v1/zonas_domicilio",{
+        method:"POST",
+        headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+        body:JSON.stringify({restaurante_id:rest.id,nombre:z.nombre,precio:z.precio,barrios:z.barrios.split(",").map(function(b){return b.trim();})})
+      });
+      if(!r.ok&&r.status!==201)errores++;
+    }catch(e){errores++;}
+  }
+  notif(errores===0?"✅ Zonas cargadas!":"Cargadas con "+errores+" errores");
+  cargarZonas();
+}
+</script>
 </body>
 </html>
