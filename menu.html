@@ -208,19 +208,25 @@ body::before{
 
 /* ── CATS ── */
 .cats-row{
-  display:flex;gap:7px;padding:0 16px 12px;
+  display:flex;gap:8px;padding:12px 16px;
   overflow-x:auto;scrollbar-width:none;
+  background:var(--bg);
+  position:sticky;top:56px;z-index:10;
 }
 .cats-row::-webkit-scrollbar{display:none;}
 .cat-pill{
-  flex-shrink:0;padding:7px 16px;border-radius:100px;
-  border:1.5px solid var(--border);background:transparent;
-  color:var(--t2);font-family:var(--font-ui);font-size:12px;font-weight:600;
-  cursor:pointer;transition:all 0.18s;white-space:nowrap;
+  flex-shrink:0;padding:9px 18px;border-radius:100px;
+  border:1.5px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.04);
+  color:var(--t2);font-family:var(--font-ui);font-size:13px;font-weight:700;
+  cursor:pointer;white-space:nowrap;transition:all 0.2s;
+  backdrop-filter:blur(8px);
 }
 .cat-pill.on{
-  background:var(--accent);border-color:var(--accent);color:white;
-  box-shadow:0 4px 16px rgba(232,52,28,0.3);
+  color:#fff;
+  background:linear-gradient(135deg,var(--accent),#c42912);
+  border-color:transparent;
+  box-shadow:0 4px 16px rgba(232,52,28,0.4);
 }
 
 /* ── PRODUCTS AREA ── */
@@ -233,8 +239,10 @@ body::before{
 }
 .cat-header-line{flex:1;height:1px;background:var(--border);}
 .cat-header-label{
-  font-family:var(--font-disp);font-size:22px;font-weight:800;
-  letter-spacing:1.5px;color:var(--text);
+  font-family:var(--font-disp);font-size:22px;font-weight:900;
+  letter-spacing:1px;text-transform:uppercase;
+  background:linear-gradient(90deg,var(--text),rgba(240,236,248,0.6));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
 }
 
 /* VERTICAL GRID */
@@ -242,12 +250,15 @@ body::before{
 
 /* VERTICAL CARD */
 .pcard-v{
-  background:var(--s1);border:1.5px solid var(--border);border-radius:18px;
+  background:linear-gradient(160deg,var(--s2) 0%,var(--s1) 100%);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:20px;
   overflow:hidden;cursor:pointer;position:relative;
-  transition:border-color 0.2s,transform 0.15s;
+  transition:all 0.2s;
+  box-shadow:0 4px 20px rgba(0,0,0,0.45),0 1px 0 rgba(255,255,255,0.06) inset;
 }
-.pcard-v:active{transform:scale(0.96);}
-.pcard-v.incart{border-color:rgba(232,52,28,0.4);}
+.pcard-v:active{transform:scale(0.97);box-shadow:0 2px 10px rgba(0,0,0,0.3);}
+.pcard-v.incart{border-color:rgba(232,52,28,0.5);box-shadow:0 4px 20px rgba(232,52,28,0.15),0 1px 0 rgba(255,255,255,0.06) inset;}
 .pcard-v.incart::after{
   content:'';position:absolute;inset:0;border-radius:18px;
   box-shadow:inset 0 0 0 1.5px rgba(232,52,28,0.2);
@@ -304,16 +315,16 @@ body::before{
 }
 .pcv-body{padding:10px 11px 12px;}
 .pcv-name{
-  font-family:var(--font-ui);font-size:12px;font-weight:700;
-  line-height:1.25;margin-bottom:3px;color:var(--text);
+  font-family:var(--font-ui);font-size:15px;font-weight:800;
+  line-height:1.3;margin-bottom:4px;color:#f0ecf8;
 }
 .pcv-desc{
-  font-size:11px;color:var(--t3);line-height:1.35;
+  font-size:12px;color:rgba(240,236,248,0.55);line-height:1.4;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
   margin-bottom:6px;
 }
 .pcv-price{
-  font-family:var(--font-disp);font-size:20px;font-weight:700;
+  font-family:var(--font-disp);font-size:22px;font-weight:900;
   color:var(--orange);letter-spacing:0.5px;
 }
 
@@ -935,8 +946,23 @@ textarea.fi{resize:none;min-height:66px;}
   <div class="promo-dots" id="promoDots"></div>
 </div>
 
+<!-- SEARCH -->
+<div style="padding:8px 16px 0;background:var(--bg);position:sticky;top:56px;z-index:11">
+  <div style="position:relative">
+    <input id="searchBar" type="search" placeholder="🔍 Buscar producto..." oninput="filtrarBusqueda(this.value)" autocomplete="off"
+      style="width:100%;padding:11px 42px 11px 16px;background:var(--s2);border:1.5px solid var(--border);border-radius:14px;color:var(--text);font-family:var(--font-ui);font-size:14px;box-sizing:border-box;outline:none;-webkit-appearance:none">
+    <button id="searchClear" onclick="limpiarBusqueda()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t2);font-size:16px;cursor:pointer;padding:4px;line-height:1">✕</button>
+  </div>
+</div>
+<!-- SEARCH -->
+<div id="searchWrap" style="padding:8px 16px 0;background:var(--bg);position:sticky;top:56px;z-index:11">
+  <div style="position:relative">
+    <input id="searchBar" type="search" placeholder="🔍 Buscar producto..." oninput="filtrarBusqueda(this.value)" autocomplete="off"
+      style="width:100%;padding:12px 42px 12px 18px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:16px;color:var(--text);font-family:var(--font-ui);font-size:14px;box-sizing:border-box;outline:none;-webkit-appearance:none;box-shadow:0 2px 12px rgba(0,0,0,0.3) inset">
+    <button id="searchClear" onclick="limpiarBusqueda()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t2);font-size:16px;cursor:pointer;padding:4px;line-height:1">✕</button>
+  </div>
+</div>
 <!-- CATS -->
-<div class="section-label">Menú</div>
 <div class="cats-row" id="catsRow"></div>
 
 <!-- PRODUCTS -->
@@ -1764,57 +1790,42 @@ function mostrarExito(num,id,tipo,nombre,ptsGanados){
   if(id)trackTimer=setInterval(function(){actuTracking(id);},5000);
 }
 
-var trackingMap=null,trackingMarker=null,trackingLoaded=false;
+var trackingMap=null,trackingMarker=null;
 
-function cargarGoogleMapsMenu(cb){
-  if(trackingLoaded&&typeof google!=="undefined"&&google.maps){cb();return;}
-  window._menuMapCb=cb;
-  if(document.querySelector('script[src*="maps.googleapis.com"]')){
-    if(typeof google!=="undefined"&&google.maps){trackingLoaded=true;cb();}
-    return;
-  }
-  window._menuMapReady=function(){trackingLoaded=true;if(window._menuMapCb){window._menuMapCb();window._menuMapCb=null;}};
+function cargarLeafletMenu(cb){
+  if(typeof L!=="undefined"){cb();return;}
+  // Cargar Leaflet dinámicamente
+  var link=document.createElement("link");
+  link.rel="stylesheet";link.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+  document.head.appendChild(link);
   var s=document.createElement("script");
-  s.src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAGeM9Ct-7O4yXQ7uOyFCDlY5Fgii0O0RA&callback=_menuMapReady";
+  s.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+  s.onload=cb;
   document.head.appendChild(s);
 }
 
 function initTrackingMap(lat,lng){
   var el=document.getElementById("trackingMapEl");
   if(!el)return;
-  if(!trackingMap){
-    var darkStyle=[
-      {elementType:"geometry",stylers:[{color:"#1a1520"}]},
-      {elementType:"labels.text.fill",stylers:[{color:"#746855"}]},
-      {featureType:"road",elementType:"geometry",stylers:[{color:"#38414e"}]},
-      {featureType:"road.highway",elementType:"geometry",stylers:[{color:"#746855"}]},
-      {featureType:"water",elementType:"geometry",stylers:[{color:"#17263c"}]},
-      {featureType:"poi",elementType:"labels",stylers:[{visibility:"off"}]}
-    ];
-    trackingMap=new google.maps.Map(el,{
-      center:{lat:lat,lng:lng},zoom:15,
-      styles:darkStyle,
-      disableDefaultUI:true,zoomControl:true
-    });
-  }
-  if(!trackingMarker){
-    trackingMarker=new google.maps.Marker({
-      map:trackingMap,
-      position:{lat:lat,lng:lng},
-      title:"Domiciliario",
-      icon:{
-        path:google.maps.SymbolPath.CIRCLE,
-        scale:10,
-        fillColor:"#3b82f6",
-        fillOpacity:1,
-        strokeColor:"#ffffff",
-        strokeWeight:2
-      }
-    });
-  } else {
-    trackingMarker.setPosition({lat:lat,lng:lng});
-  }
-  trackingMap.setCenter({lat:lat,lng:lng});
+  cargarLeafletMenu(function(){
+    if(!trackingMap){
+      trackingMap=L.map(el,{center:[lat,lng],zoom:15,zoomControl:false});
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{
+        attribution:"© CartoDB",maxZoom:19,subdomains:"abcd"
+      }).addTo(trackingMap);
+    }
+    if(!trackingMarker){
+      var icon=L.divIcon({
+        html:'<div style="width:20px;height:20px;border-radius:50%;background:#3b82f6;border:3px solid white;box-shadow:0 0 10px rgba(59,130,246,0.8)"></div>',
+        iconSize:[20,20],iconAnchor:[10,10],className:""
+      });
+      trackingMarker=L.marker([lat,lng],{icon:icon}).addTo(trackingMap);
+      trackingMarker.bindPopup("🛵 Domiciliario").openPopup();
+    } else {
+      trackingMarker.setLatLng([lat,lng]);
+    }
+    trackingMap.setView([lat,lng],15);
+  });
 }
 
 async function obtenerUbicacionDomiciliario(pedidoId){
@@ -2468,9 +2479,10 @@ function actualizarBtnMisPedidos(){
 }
 
 // ── NOTIFICACIONES PUSH ──
-// Pedir permiso explícitamente con UI amigable
+var VAPID_PUBLIC="BL7lY_-ROtMWRI_vu-30OblCgYjVr23nkwINlpJNplDmAoUgi5t1zYBt_WoSveYJ9FsOP0xSX88qrUOVBatAxGI";
+
 function mostrarBannerNotif(){
-  if(!("Notification" in window))return;
+  if(!("Notification" in window)||!("serviceWorker" in navigator))return;
   if(Notification.permission==="granted"){suscribirPush();return;}
   if(Notification.permission==="denied")return;
   var banner=document.getElementById("notifBanner");
@@ -2481,43 +2493,71 @@ async function pedirPermisoNotif(){
   try{
     var perm=await Notification.requestPermission();
     if(perm==="granted"){
-      suscribirPush();
+      await suscribirPush();
       showToast("🔔 ¡Notificaciones activadas!");
     } else {
-      showToast("Notificaciones no activadas");
+      showToast("Las notificaciones fueron bloqueadas");
     }
   }catch(e){showToast("Tu navegador no soporta notificaciones");}
   var banner=document.getElementById("notifBanner");
   if(banner)banner.style.display="none";
 }
 
-async function suscribirPush(){
-  if(!("serviceWorker" in navigator))return;
-  try{
-    var reg=await navigator.serviceWorker.ready;
-    // Suscripción simple sin VAPID externo por ahora
-    var sub=await reg.pushManager.getSubscription();
-    if(!sub){
-      // Solo activar notificaciones locales por ahora
-      console.log("Push: listo para notificaciones");
-    }
-    pushSub=sub;
-  }catch(e){console.log("Push no disponible");}
+function urlB64ToUint8(b){
+  var pad="=".repeat((4-b.length%4)%4);
+  var raw=atob((b+pad).replace(/-/g,"+").replace(/_/g,"/"));
+  var arr=new Uint8Array(raw.length);
+  for(var i=0;i<raw.length;i++)arr[i]=raw.charCodeAt(i);
+  return arr;
 }
 
-// Notificación local cuando cambia el estado del pedido
+async function suscribirPush(){
+  if(!("serviceWorker" in navigator)||!("PushManager" in window))return;
+  try{
+    var reg=await navigator.serviceWorker.ready;
+    var sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      sub=await reg.pushManager.subscribe({
+        userVisibleOnly:true,
+        applicationServerKey:urlB64ToUint8(VAPID_PUBLIC)
+      });
+    }
+    pushSub=sub;
+    // Guardar en el servidor con el teléfono del cliente
+    var tel=document.getElementById("iTel")?document.getElementById("iTel").value.trim().replace(/\D/g,""):"";
+    if(rest&&sub){
+      await fetch("/api/push-subscribe",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          restaurante_id:rest.id,
+          rol:"cliente",
+          nombre:tel||"cliente",
+          telefono:tel,
+          subscription:sub.toJSON()
+        })
+      });
+    }
+    console.log("Push suscrito OK");
+  }catch(e){console.log("Push no disponible:",e.message);}
+}
+
+// Notificación local de respaldo cuando el servidor no puede enviar push
 function notificarEstadoLocal(estado,numeroPedido){
   if(!("Notification" in window)||Notification.permission!=="granted")return;
   var msgs={
     en_preparacion:{titulo:"🔥 Pedido en preparación",body:"Tu pedido #"+numeroPedido+" ya está en la cocina"},
-    listo:{titulo:"🎉 ¡Tu pedido está listo!",body:"Pedido #"+numeroPedido+" listo para entrega"},
-    en_camino:{titulo:"🛵 ¡Tu pedido va en camino!",body:"El domiciliario ya salió con tu pedido #"+numeroPedido}
+    listo:{titulo:"🎉 ¡Tu pedido está listo!",body:"Pedido #"+numeroPedido+" listo para entregar"},
+    en_camino:{titulo:"🛵 ¡En camino!",body:"El domiciliario ya salió con tu pedido #"+numeroPedido}
   };
   var m=msgs[estado];
   if(!m)return;
   try{
-    var notif=new Notification(m.titulo,{body:m.body,icon:"/favicon.ico",badge:"/favicon.ico"});
-    setTimeout(function(){notif.close();},5000);
+    if("serviceWorker" in navigator&&navigator.serviceWorker.controller){
+      navigator.serviceWorker.controller.postMessage({type:"NOTIF",title:m.titulo,body:m.body});
+    } else {
+      new Notification(m.titulo,{body:m.body,icon:"/favicon.ico"});
+    }
   }catch(e){}
 }
 
@@ -2557,6 +2597,64 @@ async function actuTracking(id){
   }catch(e){}
 }
 
+// ── BÚSQUEDA RÁPIDA ──
+function filtrarBusqueda(q){
+  var clear=document.getElementById("searchClear");
+  if(clear)clear.style.display=q?"inline":"none";
+  if(!q.trim()){
+    renderProds(catActiva);
+    return;
+  }
+  var ql=q.toLowerCase().trim();
+  var results=menuItems.filter(function(i){
+    return (i.nombre||"").toLowerCase().includes(ql)||
+           (i.descripcion||"").toLowerCase().includes(ql)||
+           (i.categoria||"").toLowerCase().includes(ql);
+  });
+  var area=document.getElementById("prodsArea");
+  if(!results.length){
+    area.innerHTML='<div class="empty"><div class="empty-ico">🔍</div><div class="empty-txt">Sin resultados para "'+q+'"</div></div>';
+    return;
+  }
+  var h='<div class="cat-section"><div class="cat-header"><div class="cat-header-label">'+results.length+' resultado'+(results.length!==1?'s':'')+'</div><div class="cat-header-line"></div></div>';
+  h+='<div class="grid-v">';
+  results.forEach(function(i){h+=renderVCard(i);});
+  h+='</div></div>';
+  area.innerHTML=h;
+}
+
+function limpiarBusqueda(){
+  var bar=document.getElementById("searchBar");
+  if(bar){bar.value="";}
+  var clear=document.getElementById("searchClear");
+  if(clear)clear.style.display="none";
+  renderProds(catActiva);
+}
+
+
+// ── BÚSQUEDA RÁPIDA ──
+function filtrarBusqueda(q){
+  var clear=document.getElementById("searchClear");
+  if(clear)clear.style.display=q?"inline":"none";
+  if(!q.trim()){renderProds(catActiva);return;}
+  var ql=q.toLowerCase().trim();
+  var results=menuItems.filter(function(i){
+    return (i.nombre||"").toLowerCase().includes(ql)||
+           (i.descripcion||"").toLowerCase().includes(ql)||
+           (i.categoria||"").toLowerCase().includes(ql);
+  });
+  var area=document.getElementById("prodsArea");
+  if(!results.length){area.innerHTML='<div class="empty"><div class="empty-ico">🔍</div><div class="empty-txt">Sin resultados para "'+q+'"</div></div>';return;}
+  var h='<div class="cat-section"><div class="cat-header"><div class="cat-header-label">'+results.length+' resultado'+(results.length!==1?'s':'')+'</div><div class="cat-header-line"></div></div><div class="grid-v">';
+  results.forEach(function(i){h+=renderVCard(i);});
+  h+='</div></div>';
+  area.innerHTML=h;
+}
+function limpiarBusqueda(){
+  var b=document.getElementById("searchBar");if(b)b.value="";
+  var c=document.getElementById("searchClear");if(c)c.style.display="none";
+  renderProds(catActiva);
+}
 </script>
 </body>
-</html>
+</html>.cat-pill.act{color:var(--orange);border-bottom:3px solid var(--orange);}
