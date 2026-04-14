@@ -605,11 +605,15 @@ async function sendWhatsAppMessage(to, message, phoneNumberId) {
   var toNum = to.replace(/[^0-9]/g, "");
   if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
   try {
-    await axios.post("https://graph.facebook.com/v19.0/" + pid + "/messages",
+    var resp = await axios.post("https://graph.facebook.com/v20.0/" + pid + "/messages",
       { messaging_product: "whatsapp", to: toNum, type: "text", text: { body: message } },
       { headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } });
-    console.log("Enviado a " + toNum);
-  } catch (e) { console.error("sendWA:", e.response ? JSON.stringify(e.response.data) : e.message); }
+    console.log("Enviado a " + toNum + " OK - id:", resp.data?.messages?.[0]?.id || "?");
+  } catch (e) {
+    var errData = e.response ? e.response.data : null;
+    console.error("sendWA ERROR a " + toNum + ":", JSON.stringify(errData) || e.message);
+    console.error("sendWA status:", e.response?.status, "| pid:", pid, "| token inicio:", token ? token.substring(0,10) : "null");
+  }
 }
 
 function estaEnHorario(restaurante) {
