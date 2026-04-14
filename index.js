@@ -70,13 +70,12 @@ let   orderCounter  = 100;
 
 // ── COLA PARALELA ─────────────────────────────────────────────────────────────
 const colasPorCliente = new Map();
-var DELAY_RESPUESTA_MS = 10000; // 10 segundos para simular respuesta humana
+var DELAY_RESPUESTA_MS = 10000; // 10 segundos para simular persona real
 
 function procesarEnCola(from, tarea) {
   if (!colasPorCliente.has(from)) colasPorCliente.set(from, Promise.resolve());
   var cola = colasPorCliente.get(from);
   var nueva = cola.then(function() {
-    // Delay antes de responder para simular persona real
     return new Promise(function(resolve) { setTimeout(resolve, DELAY_RESPUESTA_MS); })
       .then(function() { return tarea(); })
       .catch(function(err) { console.error("Error cola " + from + ":", err.message); });
@@ -295,13 +294,13 @@ ${promosText}
 MENU_PLACEHOLDER
 
 MENU VISUAL:
-- En el primer mensaje SIEMPRE comparte el link y convence al cliente de usarlo con una razon clara y natural. Ejemplos de como mencionarlo (varía, no uses siempre la misma frase):
+- En el primer mensaje SIEMPRE comparte el link del menu: MENU_URL_PLACEHOLDER y convence al cliente con una razon clara. Ejemplos (varía la frase):
   * "Te comparto el menu MENU_URL_PLACEHOLDER — si pides ahi tu pedido llega directo a cocina sin intermediarios, mucho mas rapido!"
-  * "Mira el menu aqui MENU_URL_PLACEHOLDER — pedir ahi es mas rapido porque tu pedido entra directo a preparacion, y puedes ver el estado en tiempo real."
-  * "Te mando el menu MENU_URL_PLACEHOLDER — ahi ves fotos de todo, calculas el domicilio por tu barrio y tu pedido va directo a cocina. Mucho mas agil!"
-- Si el cliente de todas formas prefiere pedir por chat: atiendelo con toda la disposicion y sin volver a mencionar el link. Sin problema.
+  * "Mira el menu aqui MENU_URL_PLACEHOLDER — pedir ahi es mas rapido porque tu pedido entra directo a preparacion y puedes ver el estado en tiempo real."
+  * "Te mando el menu MENU_URL_PLACEHOLDER — ahi ves fotos de todo y tu pedido va directo a cocina. Mucho mas agil!"
+- Si el cliente prefiere pedir por chat: atiendelo con toda la disposicion, sin mencionar el link de nuevo.
 - NUNCA repitas el link mas de una vez en la misma conversacion.
-- Si ya mandaron el pedido desde el menu (el mensaje incluye "Metodo de pago elegido:"): NO menciones el link de nuevo.
+- Si ya mandaron el pedido desde el menu (mensaje incluye "Metodo de pago elegido:"): NO menciones el link.
 
 COMBOS: disponibles todos los dias. Estan en el menu activo — ofrecelos cuando pidan combos. NUNCA armes combos que no esten en el menu.
 
@@ -359,7 +358,7 @@ PREGUNTAS SIN RESPUESTA:
 - Si no puedes responder con certeza: "Un momento, ya te confirmo ese detalle." y escribe: ALERTA_PREGUNTA:[la pregunta]
 
 FLUJO:
-1. Saludo -> mensaje amable + link menu. Si el cliente prefiere pedir por chat, atiendelo con gusto sin insistir en el menu web.
+1. Saludo -> mensaje amable + link menu
 2. Cliente pide -> confirma con precios. Incluye notas especiales en los items.
 3. Pregunta direccion COMPLETA: calle, numero, barrio. Si tiene direccion frecuente, pregunta si es la misma. Si el cliente menciona conjunto, edificio, urbanizacion o unidad residencial: pide apartamento Y bloque/torre SOLO si no lo ha dicho. Si el cliente dice "porteria", "portería", "en portería", "dejalo en porteria" o similar: eso es suficiente como punto de entrega, NO pidas apartamento. Acepta porteria como direccion completa.
    - SOLO escribe DIRECCION_LISTA:[direccion] cuando el cliente te haya dado una direccion real y completa. SIEMPRE escribe DIRECCION_LISTA en el MISMO mensaje donde confirmas la direccion, no en un mensaje separado.
@@ -878,7 +877,8 @@ app.get("/vapid-public-key",      function(req, res) { res.json({ key: VAPID_PUB
 
 // ── PUSH SUBSCRIPTIONS ───────────────────────────────────────────────────────
 app.post("/api/push-subscribe", async function(req, res) {
-  var { restaurante_id, rol, subscription, nombre } = req.body;
+  var { restaurante_id, rol, subscription, nombre, telefono } = req.body;
+  nombre = telefono || nombre || rol;
   if (!restaurante_id || !rol || !subscription) return res.status(400).json({ error: "Faltan datos" });
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
@@ -946,8 +946,14 @@ app.post("/api/pedido-estado", async function(req, res) {
       }
       if (estado === "en_camino") {
         var msg = getMensaje(restaurante, "msg_en_camino", "Tu pedido" + numStr + " ya va en camino. Que lo disfrutes!");
-        await sendWhatsAppMessage(telefono_cliente, msg, pid);
+        try { await sendWhatsAppMessage(telefono_cliente, msg, pid); } catch(e) {}
         if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
+        // Push al cliente
+        enviarPushClientePorTel(restaurante_id, telefono_cliente, {
+          title: "🛵 ¡Tu pedido va en camino!",
+          body: "El domiciliario ya salió" + numStr + ". ¡Que lo disfrutes!",
+          tag: "estado-"+id
+        });
       }
     }
 
@@ -1046,8 +1052,10 @@ app.post("/enviar-mensaje-cliente", async function(req, res) {
         if (rr.data?.length && rr.data[0].whatsapp_phone_id) pid = rr.data[0].whatsapp_phone_id;
       } catch(e) {}
     }
-    await sendWhatsAppMessage(req.body.telefono, req.body.mensaje, pid);
+    // Guardar en Supabase siempre, independiente de WhatsApp
     if (req.body.restaurante_id) guardarMensajeSupabase(req.body.restaurante_id, req.body.telefono, req.body.mensaje, "restaurante", null);
+    // Intentar WhatsApp sin bloquear si falla
+    try { await sendWhatsAppMessage(req.body.telefono, req.body.mensaje, pid); } catch(e) { console.error("WA:", e.message); }
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
@@ -1151,16 +1159,6 @@ app.get("/api/chat/:telefono", async function(req, res) {
   } catch (e) { res.json({ ok: true, mensajes: [] }); }
 });
 
-app.get("/api/cliente/:telefono", async function(req, res) {
-  if (!req.query.restaurante_id) return res.json({ ok: true, cliente: null });
-  try {
-    var r = await axios.get(
-      SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + req.query.restaurante_id + "&telefono=eq." + encodeURIComponent(req.params.telefono) + "&select=*",
-      { headers: sbH(true) });
-    res.json({ ok: true, cliente: r.data && r.data.length > 0 ? r.data[0] : null });
-  } catch (e) { res.json({ ok: true, cliente: null }); }
-});
-
 app.get("/api/mis-pedidos/:telefono", async function(req, res) {
   if (!req.query.restaurante_id) return res.json({ ok: true, pedidos: [] });
   try {
@@ -1174,6 +1172,16 @@ app.get("/api/mis-pedidos/:telefono", async function(req, res) {
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
     res.json({ ok: true, pedidos: r.data || [] });
   } catch (e) { res.json({ ok: true, pedidos: [] }); }
+});
+
+app.get("/api/cliente/:telefono", async function(req, res) {
+  if (!req.query.restaurante_id) return res.json({ ok: true, cliente: null });
+  try {
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + req.query.restaurante_id + "&telefono=eq." + encodeURIComponent(req.params.telefono) + "&select=*",
+      { headers: sbH(true) });
+    res.json({ ok: true, cliente: r.data && r.data.length > 0 ? r.data[0] : null });
+  } catch (e) { res.json({ ok: true, cliente: null }); }
 });
 
 app.delete("/api/pedido/:id", async function(req, res) {
@@ -1618,6 +1626,28 @@ app.get("/", function(req, res) {
     colas: colasPorCliente.size
   });
 });
+
+// Enviar push al cliente por teléfono
+async function enviarPushClientePorTel(restauranteId, telefono, payload) {
+  if (!VAPID_PUBLIC || !VAPID_PRIVATE) return;
+  try {
+    var tel = (telefono||"").replace(/[^0-9]/g,"");
+    if (tel.startsWith("57") && tel.length===12) tel=tel.slice(2);
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/push_subscriptions?restaurante_id=eq." + restauranteId +
+      "&nombre=eq." + encodeURIComponent(tel) + "&activo=eq.true&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    for (var sub of (r.data||[])) {
+      try { await webpush.sendNotification(JSON.parse(sub.subscription), JSON.stringify(payload)); }
+      catch(e) {
+        if (e.statusCode===410) axios.patch(SUPABASE_URL+"/rest/v1/push_subscriptions?id=eq."+sub.id,
+          {activo:false},{headers:{...sbH(true),"Content-Type":"application/json","Prefer":"return=minimal"}}).catch(()=>{});
+      }
+    }
+  } catch(e) { console.log("pushCliente err:", e.message); }
+}
 
 var PORT = process.env.PORT || 3000;
 app.listen(PORT, function() {
