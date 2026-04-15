@@ -1199,6 +1199,19 @@ app.post("/api/alerta-pregunta", async function(req, res) {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+app.get("/api/menu", async function(req, res) {
+  if (!req.query.restaurante_id) return res.json([]);
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + req.query.restaurante_id +
+      "&order=categoria,orden&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json(r.data || []);
+  } catch(e) { res.json([]); }
+});
+
 app.get("/webhook", function(req, res) {
   var mode = req.query["hub.mode"], token = req.query["hub.verify_token"], challenge = req.query["hub.challenge"];
   var VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "luz_verify_token_2026";
