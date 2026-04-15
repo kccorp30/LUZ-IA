@@ -1363,8 +1363,11 @@ function cargarPromos(){
 
 async function cargarMenu(){
   if(!rest)return;
-  var all=await api("menu_items","restaurante_id=eq."+rest.id+"&order=categoria,orden&select=*");
-  menuItems=(all||[]).filter(function(i){return !esAdicCat(i.categoria);});
+  try{
+    var r=await fetch("/api/menu?restaurante_id="+rest.id);
+    var all=await r.json();
+    menuItems=(all||[]).filter(function(i){return !esAdicCat(i.categoria);});
+  }catch(e){menuItems=[];}
   renderCats();renderProds("todas");
 }
 
