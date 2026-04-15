@@ -1366,8 +1366,12 @@ async function cargarMenu(){
   try{
     var r=await fetch("/api/menu?restaurante_id="+rest.id);
     var all=await r.json();
+    console.log("Total productos API:", all?all.length:0);
+    var cats=[...new Set((all||[]).map(function(i){return i.categoria;}))];
+    console.log("Categorias:", cats.join(", "));
     menuItems=(all||[]).filter(function(i){return !esAdicCat(i.categoria);});
-  }catch(e){menuItems=[];}
+    console.log("Despues filtro:", menuItems.length);
+  }catch(e){console.error("cargarMenu error:",e);menuItems=[];}
   renderCats();renderProds("todas");
 }
 
