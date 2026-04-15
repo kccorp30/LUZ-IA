@@ -1366,13 +1366,11 @@ async function cargarMenu(){
   try{
     var r=await fetch("/api/menu?restaurante_id="+rest.id);
     var all=await r.json();
-    console.log("Total productos API:", all?all.length:0);
-    var cats=[...new Set((all||[]).map(function(i){return i.categoria;}))];
-    console.log("Categorias:", cats.join(", "));
     menuItems=(all||[]).filter(function(i){return !esAdicCat(i.categoria);});
-    console.log("Despues filtro:", menuItems.length);
+    console.log("Menu cargado:",menuItems.length,"prods,",new Set(menuItems.map(function(i){return i.categoria;})).size,"cats");
   }catch(e){console.error("cargarMenu error:",e);menuItems=[];}
-  renderCats();renderProds("todas");
+  renderCats();
+  renderProds("todas");
 }
 
 function renderCats(){
@@ -1392,6 +1390,7 @@ function renderProds(cat){
   }
   var grupos={};
   items.forEach(function(i){if(!grupos[i.categoria])grupos[i.categoria]=[];grupos[i.categoria].push(i);});
+  console.log("GRUPOS:", Object.keys(grupos).join("|"));
   var h="";
   Object.keys(grupos).forEach(function(c){
     h+='<div class="cat-section">';
