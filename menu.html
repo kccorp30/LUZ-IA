@@ -246,16 +246,17 @@ body::before{
 }
 
 /* VERTICAL GRID */
-.grid-v{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.grid-v{display:flex;flex-direction:column;gap:10px;}
 
 /* VERTICAL CARD */
 .pcard-v{
-  background:linear-gradient(160deg,var(--s2) 0%,var(--s1) 100%);
-  border:1px solid rgba(255,255,255,0.07);
-  border-radius:20px;
+  display:flex;flex-direction:row;align-items:stretch;
+  background:linear-gradient(135deg,var(--s2) 0%,var(--s1) 100%);
+  border:1px solid rgba(255,255,255,0.08);border-radius:18px;
   overflow:hidden;cursor:pointer;position:relative;
-  transition:all 0.2s;
-  box-shadow:0 4px 20px rgba(0,0,0,0.45),0 1px 0 rgba(255,255,255,0.06) inset;
+  transition:all 0.18s;
+  box-shadow:0 3px 16px rgba(0,0,0,0.4),0 1px 0 rgba(255,255,255,0.05) inset;
+  min-height:110px;
 }
 .pcard-v:active{transform:scale(0.97);box-shadow:0 2px 10px rgba(0,0,0,0.3);}
 .pcard-v.incart{border-color:rgba(232,52,28,0.5);box-shadow:0 4px 20px rgba(232,52,28,0.15),0 1px 0 rgba(255,255,255,0.06) inset;}
@@ -265,8 +266,10 @@ body::before{
   pointer-events:none;
 }
 .pcv-img{
-  width:100%;aspect-ratio:1;overflow:hidden;position:relative;
+  width:120px;min-width:120px;height:auto;
+  background:var(--s3);position:relative;overflow:hidden;
   display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;order:2;
 }
 .pcv-img img{
   position:absolute;inset:0;width:100%;height:100%;
@@ -286,12 +289,12 @@ body::before{
   position:absolute;bottom:8px;right:8px;z-index:3;
 }
 .add-btn{
-  width:33px;height:33px;border-radius:12px;border:none;
-  background:var(--accent);color:white;
-  font-size:22px;line-height:1;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 14px rgba(232,52,28,0.5);
-  transition:transform 0.15s;
+  width:34px;height:34px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),#c42912);
+  border:none;color:white;font-size:22px;line-height:1;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 10px rgba(232,52,28,0.4);
+  flex-shrink:0;align-self:flex-end;
 }
 .add-btn:active{transform:scale(0.84);}
 .qty-ctrl{
@@ -313,10 +316,14 @@ body::before{
   font-family:var(--font-disp);font-size:18px;font-weight:700;
   min-width:16px;text-align:center;line-height:1;
 }
-.pcv-body{padding:10px 11px 12px;}
+.pcv-body{
+  padding:14px 12px 14px 16px;flex:1;display:flex;
+  flex-direction:column;justify-content:space-between;order:1;
+  min-width:0;
+}
 .pcv-name{
-  font-family:var(--font-ui);font-size:15px;font-weight:800;
-  line-height:1.3;margin-bottom:4px;color:#f0ecf8;
+  font-family:var(--font-ui);font-size:16px;font-weight:800;
+  line-height:1.3;margin-bottom:5px;color:#f0ecf8;
 }
 .pcv-desc{
   font-size:12px;color:rgba(240,236,248,0.55);line-height:1.4;
@@ -325,7 +332,7 @@ body::before{
 }
 .pcv-price{
   font-family:var(--font-disp);font-size:22px;font-weight:900;
-  color:var(--orange);letter-spacing:0.5px;
+  color:var(--orange);margin-top:6px;
 }
 
 /* HORIZONTAL CARD */
@@ -946,20 +953,12 @@ textarea.fi{resize:none;min-height:66px;}
   <div class="promo-dots" id="promoDots"></div>
 </div>
 
-<!-- SEARCH -->
-<div style="padding:8px 16px 0;background:var(--bg);position:sticky;top:56px;z-index:11">
-  <div style="position:relative">
-    <input id="searchBar" type="search" placeholder="🔍 Buscar producto..." oninput="filtrarBusqueda(this.value)" autocomplete="off"
-      style="width:100%;padding:11px 42px 11px 16px;background:var(--s2);border:1.5px solid var(--border);border-radius:14px;color:var(--text);font-family:var(--font-ui);font-size:14px;box-sizing:border-box;outline:none;-webkit-appearance:none">
-    <button id="searchClear" onclick="limpiarBusqueda()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t2);font-size:16px;cursor:pointer;padding:4px;line-height:1">✕</button>
-  </div>
-</div>
-<!-- SEARCH -->
+<!-- SEARCH + CATS -->
 <div id="searchWrap" style="padding:8px 16px 0;background:var(--bg);position:sticky;top:56px;z-index:11">
   <div style="position:relative">
     <input id="searchBar" type="search" placeholder="🔍 Buscar producto..." oninput="filtrarBusqueda(this.value)" autocomplete="off"
-      style="width:100%;padding:12px 42px 12px 18px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:16px;color:var(--text);font-family:var(--font-ui);font-size:14px;box-sizing:border-box;outline:none;-webkit-appearance:none;box-shadow:0 2px 12px rgba(0,0,0,0.3) inset">
-    <button id="searchClear" onclick="limpiarBusqueda()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t2);font-size:16px;cursor:pointer;padding:4px;line-height:1">✕</button>
+      style="width:100%;padding:12px 42px 12px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:14px;color:var(--text);font-family:var(--font-ui);font-size:14px;box-sizing:border-box;outline:none;-webkit-appearance:none">
+    <button id="searchClear" onclick="limpiarBusqueda()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t2);font-size:16px;cursor:pointer;padding:4px">✕</button>
   </div>
 </div>
 <!-- CATS -->
@@ -1364,7 +1363,7 @@ function cargarPromos(){
 
 async function cargarMenu(){
   if(!rest)return;
-  var all=await api("menu_items","restaurante_id=eq."+rest.id+"&disponible=eq.true&order=categoria,orden&select=*");
+  var all=await api("menu_items","restaurante_id=eq."+rest.id+"&order=categoria,orden&select=*");
   menuItems=(all||[]).filter(function(i){return !esAdicCat(i.categoria);});
   renderCats();renderProds("todas");
 }
@@ -1402,23 +1401,13 @@ function renderProds(cat){
 
 function renderVCard(i){
   var qty=carrito[i.id]?carrito[i.id].qty:0;
-  var bgCls=catBgClass(i.categoria);
-  var imgHtml=i.imagen_url?'<img src="'+i.imagen_url+'" onerror="this.style.display=\'none\'" loading="lazy">':'';
+  var imgHtml=i.imagen_url
+    ?'<img src="'+i.imagen_url+'" onerror="this.style.display=\'none\'" loading="lazy" style="width:100%;height:100%;object-fit:cover">'
+    :'<span style="font-size:44px;opacity:0.6">'+(i.emoji||"🍔")+'</span>';
   var ctrl=qty>0
-    ?'<div class="qty-ctrl"><button class="qb" onclick="event.stopPropagation();qDec(\''+i.id+'\')">−</button><span class="qn">'+qty+'</span><button class="qb p" onclick="event.stopPropagation();addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">+</button></div>'
+    ?'<div class="qty-ctrl" style="flex-shrink:0"><button class="qb" onclick="event.stopPropagation();qDec(\''+i.id+'\')">−</button><span class="qn">'+qty+'</span><button class="qb p" onclick="event.stopPropagation();addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">+</button></div>'
     :'<button class="add-btn" onclick="event.stopPropagation();addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">+</button>';
-  return '<div class="pcard-v'+(qty>0?" incart":"")+'" id="pc-'+i.id+'" onclick="abrirProdDetalle(\''+i.id+'\')">'
-    +'<div class="pcv-img '+bgCls+'">'
-    +imgHtml
-    +(i.imagen_url?'':'<div class="pcv-emoji">'+(i.emoji||"🍔")+'</div>')
-    +(i.en_oferta?'<div class="oferta-tag">OFERTA</div>':'')
-    +'<div class="pcv-qty-wrap">'+ctrl+'</div>'
-    +'</div>'
-    +'<div class="pcv-body">'
-    +'<div class="pcv-name">'+i.nombre+'</div>'
-    +(i.descripcion?'<div class="pcv-desc">'+i.descripcion+'</div>':'')
-    +'<div class="pcv-price">'+fmt(i.precio)+'</div>'
-    +'</div></div>';
+  return '<div class="pcard-v'+(qty>0?" incart":"")+'" id="pc-'+i.id+'" onclick="abrirProdDetalle(\''+i.id+'\')">'    +'<div class="pcv-body">'    +'<div>'    +'<div class="pcv-name">'+i.nombre+'</div>'    +(i.descripcion?'<div class="pcv-desc">'+i.descripcion+'</div>':'')    +'</div>'    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">'    +'<div class="pcv-price">'+fmt(i.precio)+'</div>'    +ctrl    +'</div>'    +'</div>'    +'<div class="pcv-img">'    +imgHtml    +(i.en_oferta?'<div class="oferta-tag">OFERTA</div>':'')    +'</div>'    +'</div>';
 }
 
 function renderHCard(i){
