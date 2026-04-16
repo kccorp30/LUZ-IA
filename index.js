@@ -1250,6 +1250,18 @@ app.get("/api/zonas", async function(req, res) {
   } catch(e) { res.json([]); }
 });
 
+app.get("/api/restaurante", async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var q = req.query.id ? "id=eq."+req.query.id : "estado=eq.activo&limit=1";
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/restaurantes?" + q + "&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json(r.data || []);
+  } catch(e) { res.json([]); }
+});
+
 app.get("/webhook", function(req, res) {
   var mode = req.query["hub.mode"], token = req.query["hub.verify_token"], challenge = req.query["hub.challenge"];
   var VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "luz_verify_token_2026";
@@ -1613,6 +1625,8 @@ async function procesarMensaje(msg, from, phoneNumberId) {
         phone: from, timestamp,
         notasEspeciales: state.notasEspeciales || null,
         pedidoAdicionalDe: state.pedidoAdicionalDe || null,
+        comprobanteUrl: state.comprobanteUrl || null,
+        comprobanteMediaId: state.comprobanteMediaId || null,
         restauranteNombre: restaurante?.nombre || "Restaurante",
         restauranteCiudad: restaurante?.ciudad || "Colombia",
         nequiNum: restaurante?.metodo_pago_nequi || "3177269578",
