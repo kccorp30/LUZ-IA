@@ -14,8 +14,8 @@ const app     = express();
 // ── WEB PUSH SETUP ────────────────────────────────────────────────────────────
 // Generate VAPID keys once: node -e "const wp=require('web-push');const k=wp.generateVAPIDKeys();console.log(k)"
 // Then set as env vars VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY
-var VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || "";
-var VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "";
+var VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY  || "BAiEnD8bWwsFfBgwf4EIxJVLDJP2bQzE4xw_kLvwSGXyZmDnA0STk9SBlnGOI2sMG6Ij8-XFmbpAPPnA-UN2Nvk";
+var VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || "ZmDnA0STk9SBlnGOI2sMG6Ij8-XFmbpAPPnA-UN2Nvk";
 if (VAPID_PUBLIC && VAPID_PRIVATE) {
   webpush.setVapidDetails("mailto:admin@luzia.app", VAPID_PUBLIC, VAPID_PRIVATE);
   console.log("Web Push configurado OK");
@@ -1267,8 +1267,6 @@ app.post("/webhook", function(req, res) {
 
 async function procesarMensaje(msg, from, phoneNumberId) {
   try {
-    // Normalizar número - quitar indicativo
-    from = stripCountryCode(from);
     var msgType = msg.type;
 
     if (msgType === "audio") {
