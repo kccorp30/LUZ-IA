@@ -2135,9 +2135,7 @@ function actualizarBannerRewards(data){
 async function cargarZonasMenu(){
   if(!rest)return;
   try{
-    var r=await fetch(SU+"/rest/v1/zonas_domicilio?restaurante_id=eq."+rest.id+"&order=precio.asc",{
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK}
-    });
+    var r=await fetch("/api/zonas?restaurante_id="+rest.id);
     zonasData=await r.json()||[];
   }catch(e){zonasData=[];}
 }
