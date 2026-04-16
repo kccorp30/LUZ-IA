@@ -126,7 +126,14 @@ async function getRestaurante(phoneNumberId) {
 // ── SILENCIO ──────────────────────────────────────────────────────────────────
 async function estaEnSilencio(restauranteId, telefono) {
   try {
-    var r = await axios.get(SUPABASE_URL + "/rest/v1/silencio_conversacion?restaurante_id=eq." + restauranteId + "&telefono=eq." + encodeURIComponent(telefono) + "&activo=eq.true&select=id", { headers: sbH(true) });
+    // Buscar con y sin indicativo para cubrir ambos formatos
+    var telLocal = stripCountryCode(telefono);
+    var telFull = telefono.replace(/[^0-9]/g,"");
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/silencio_conversacion?restaurante_id=eq." + restauranteId +
+      "&telefono=in.(" + encodeURIComponent(telLocal) + "," + encodeURIComponent(telFull) + ")&activo=eq.true&select=id",
+      { headers: sbH(true) }
+    );
     return r.data && r.data.length > 0;
   } catch (e) { return false; }
 }
