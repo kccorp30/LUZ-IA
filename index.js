@@ -437,7 +437,7 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
     } catch(e) {}
     var payload = {
       restaurante_id: restauranteId, numero_pedido: pedidoData.orderNumber,
-      cliente_tel: pedidoData.phone, items: pedidoData.items,
+      cliente_tel: stripCountryCode(pedidoData.phone), items: pedidoData.items,
       subtotal, desechables: pedidoData.desechables, domicilio: pedidoData.domicilio,
       total: pedidoData.total, direccion: pedidoData.address,
       metodo_pago: pedidoData.paymentMethod, estado: "confirmado",
@@ -1212,6 +1212,37 @@ app.get("/api/menu", async function(req, res) {
   } catch(e) { res.json([]); }
 });
 
+app.delete("/api/menu-item/:id", async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.delete(SUPABASE_URL + "/rest/v1/menu_items?id=eq." + req.params.id,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.patch("/api/menu-item/:id", async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.patch(SUPABASE_URL + "/rest/v1/menu_items?id=eq." + req.params.id,
+      req.body,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get("/api/zonas", async function(req, res) {
+  if (!req.query.restaurante_id) return res.json([]);
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/zonas_domicilio?restaurante_id=eq." + req.query.restaurante_id + "&order=precio.asc",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json(r.data || []);
+  } catch(e) { res.json([]); }
+});
+
 app.get("/webhook", function(req, res) {
   var mode = req.query["hub.mode"], token = req.query["hub.verify_token"], challenge = req.query["hub.challenge"];
   var VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "luz_verify_token_2026";
@@ -1236,6 +1267,8 @@ app.post("/webhook", function(req, res) {
 
 async function procesarMensaje(msg, from, phoneNumberId) {
   try {
+    // Normalizar número - quitar indicativo
+    from = stripCountryCode(from);
     var msgType = msg.type;
 
     if (msgType === "audio") {
@@ -1281,14 +1314,14 @@ async function procesarMensaje(msg, from, phoneNumberId) {
         var msgFuera = getMensaje(restaurante, "msg_fuera_horario",
           "Hola! En este momento estamos cerrados. Nuestro horario de atencion es de " + horaAp + " a " + horaCi + " (" + diasAct + "). Con mucho gusto te atendemos en ese horario!");
         await sendWhatsAppMessage(from, msgFuera, phoneNumberId);
-        if (restaurante) guardarMensajeSupabase(restaurante.id, from, userText, "cliente", null).catch(function(){});
-        if (restaurante) guardarMensajeSupabase(restaurante.id, from, msgFuera, "restaurante", null).catch(function(){});
+        if (restaurante) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), userText, "cliente", null).catch(function(){});
+        if (restaurante) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), msgFuera, "restaurante", null).catch(function(){});
         return;
       }
       var silencio = await estaEnSilencio(restaurante.id, from);
       if (silencio) {
         console.log("SILENCIO para:", from);
-        guardarMensajeSupabase(restaurante.id, from, userText, "cliente", esImagen ? mediaId : null).catch(function(){});
+        guardarMensajeSupabase(restaurante.id, stripCountryCode(from), userText, "cliente", esImagen ? mediaId : null).catch(function(){});
         return;
       }
     }
@@ -1458,7 +1491,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     }
 
     if (sideEffect === "alerta_pregunta" && restaurante && orderState[from]?.alertaPregunta) {
-      guardarMensajeSupabase(restaurante.id, from, "ALERTA_PREGUNTA: " + orderState[from].alertaPregunta, "alerta_pregunta", null).catch(function(){});
+      guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "ALERTA_PREGUNTA: " + orderState[from].alertaPregunta, "alerta_pregunta", null).catch(function(){});
     }
 
     if (sideEffect === "modificar_pedido") { console.log("MODIFICAR intent:", JSON.stringify(orderState[from]?.modificarPedido)); }
@@ -1507,14 +1540,14 @@ async function procesarMensaje(msg, from, phoneNumberId) {
             { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
           );
           console.log("Pedido #" + mod.numero + " modificado en Supabase:", mod.accion);
-          guardarMensajeSupabase(restaurante.id, from, "✏️ Pedido #" + mod.numero + " modificado: +" + mod.accion.replace("AGREGAR:",""), "alerta_pregunta", null).catch(function(){});
+          guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "✏️ Pedido #" + mod.numero + " modificado: +" + mod.accion.replace("AGREGAR:",""), "alerta_pregunta", null).catch(function(){});
         }
       } catch(e) { console.error("modificar_pedido error:", e.message); }
     }
 
     if (sideEffect === "cancelar_pedido" && orderState[from]?.cancelarPedido && restaurante) {
       var numCancel = orderState[from].cancelarPedido;
-      guardarMensajeSupabase(restaurante.id, from, "⚠️ CLIENTE SOLICITA CANCELAR PEDIDO #" + numCancel, "alerta_pregunta", null).catch(function(){});
+      guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "⚠️ CLIENTE SOLICITA CANCELAR PEDIDO #" + numCancel, "alerta_pregunta", null).catch(function(){});
       console.log("Solicitud cancelacion pedido #" + numCancel + " de:", from);
     }
 
@@ -1525,8 +1558,8 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     console.log("Luz: " + cleanReply.substring(0, 100));
 
     if (restaurante) {
-      guardarMensajeSupabase(restaurante.id, from, esComprobante ? "📎 Comprobante de pago" : userText, "cliente", esImagen ? mediaId : null).catch(function(){});
-      guardarMensajeSupabase(restaurante.id, from, cleanReply, "restaurante", null).catch(function(){});
+      guardarMensajeSupabase(restaurante.id, stripCountryCode(from), esComprobante ? "📎 Comprobante de pago" : userText, "cliente", esImagen ? mediaId : null).catch(function(){});
+      guardarMensajeSupabase(restaurante.id, stripCountryCode(from), cleanReply, "restaurante", null).catch(function(){});
     }
 
     if (orderState[from] && sideEffect !== "pago_confirmado") {
