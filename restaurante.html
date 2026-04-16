@@ -2457,13 +2457,14 @@ function guardarProdEditor(id,btn){
   .finally(function(){btn.textContent=orig;btn.disabled=false;});
 }
 function toggleDispoProd(id,val){
-  fetch("/api/menu-toggle",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,disponible:val==="true"})})
+  fetch("/api/menu-item/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({disponible:val==="true"})})
   .then(function(r){return r.json();}).then(function(){notif(val==="true"?"✅ Activado":"🙈 Ocultado");loadMenuEditor();loadMenu();}).catch(function(e){notif("Error: "+e.message.substring(0,30));});
 }
 function confirmarBorrarProd(id,nombre){
   if(!confirm("¿Eliminar "+nombre+"? Esta acción no se puede deshacer."))return;
-  fetch(SU+"/rest/v1/menu_items?id=eq."+id,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
-  .then(function(r){if(r.ok||r.status===204){notif("Producto eliminado");loadMenuEditor();loadMenu();}else{notif("Error al eliminar");}})
+  fetch("/api/menu-item/"+id,{method:"DELETE"})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.ok){notif("Producto eliminado");loadMenuEditor();loadMenu();}else{notif("Error al eliminar");}})
   .catch(function(){notif("Error de conexion");});
 }
 
