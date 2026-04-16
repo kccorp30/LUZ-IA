@@ -1059,7 +1059,8 @@ textarea.fi{resize:none;min-height:66px;}
   <button class="canje-confirm-btn" id="canjeConfirmBtn" onclick="confirmarCanje()">⭐ Confirmar canje</button>
 </div>
 
-,SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
+<script>
+var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 var rest=null,menuItems=[],carrito={},tipoPedido="domicilio",pagoSel=null;
 var compB64=null,trackId=null,trackTimer=null;
 var descVal=0,descTipo=null,clienteData=null,chkTimer=null;
@@ -1115,8 +1116,8 @@ window.addEventListener("load",async function(){
   var mesa=gp("mesa")||gp("m");
   if(mesa){document.getElementById("t-mesa").style.display="flex";setTipo("mesa");document.getElementById("iMesa").value=mesa;}
   try{
-    var q=restId?"id=eq."+restId:"estado=eq.activo&limit=1";
-    var rs=await api("restaurantes",q+"&select=*");
+    var restUrl="/api/restaurante"+(restId?"?id="+restId:"");
+    var rs=await fetch(restUrl).then(function(r){return r.json();});
     if(rs&&rs.length){rest=rs[0];aplicarRest();}
     await cargarMenu();
   }catch(e){console.error(e);}
