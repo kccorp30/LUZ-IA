@@ -2094,7 +2094,7 @@ function agregarDesdeDet(){
   var totalP=prodDetActual.precio+extraP;
   var nomC=prodDetActual.nombre+(extraN.length?" + "+extraN.join(", "):"")+(prodDetSalsaSel.length?" 🌶️ "+prodDetSalsaSel.join(" + "):"");
   for(var q=0;q<prodDetCant;q++){setQty(prodDetActual.id,totalP,nomC,(carrito[prodDetActual.id]?carrito[prodDetActual.id].qty:0)+1);}
-  cerrarProdDetalle();showToast("✅ "+prodDetActual.nombre+" agregado");
+  var _nom=prodDetActual.nombre;cerrarProdDetalle();showToast("✅ "+_nom+" agregado");
 }
 
 // ── MIS PEDIDOS ──
@@ -2194,21 +2194,7 @@ async function pedirPermisoNotif(){
   var b=document.getElementById("notifBanner");if(b)b.style.display="none";
 }
 
-// Override actuTracking
-var _actuTrackBase=actuTracking;
-async function actuTracking(id){
-  try{
-    var d=await api("pedidos","id=eq."+id+"&select=estado,numero_pedido");if(!d||!d.length)return;
-    var est=d[0].estado,num=d[0].numero_pedido;
-    if(_ultimoEstado[id]&&_ultimoEstado[id]!==est){notificarEstadoLocal(est,num);var btn=document.getElementById("btnMisPedidos");if(btn&&btn.style.display!=="none"){btn.textContent="📦 Ver pedido";btn.style.color="#fb923c";}}
-    _ultimoEstado[id]=est;
-    if(est==="en_camino")obtenerUbicacionDomiciliario(id);
-    var map2={confirmado:"confirmado",en_preparacion:"preparando",listo:"listo",en_camino:"camino",entregado:"entregado"};
-    var order=["confirmado","en_preparacion","listo","en_camino","entregado"],idx2=order.indexOf(est);
-    order.forEach(function(s,i){var el=document.getElementById("ts-"+map2[s]);if(!el)return;el.classList.remove("done","act");if(i<idx2)el.classList.add("done");else if(i===idx2)el.classList.add("act");});
-    if(est==="entregado")clearInterval(trackTimer);
-  }catch(e){}
-}
+
 
 if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(function(r){}).catch(function(){});}
 
