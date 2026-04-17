@@ -896,8 +896,8 @@ function selBarrioManual(barrio){
 // ── CARRITO SHEET ──
 function abrirCarrito(){
   if(!Object.keys(carrito).length){toast("Agrega productos primero 🛒");return;}
-  renderCiList();
-  calcularTotales();
+  try{renderCiList();}catch(e){console.error("renderCiList error:",e);}
+  try{calcularTotales();}catch(e){console.error("calcularTotales error:",e);}
   document.getElementById("cartOv").classList.add("on");
   document.getElementById("cartSheet").classList.add("on");
 }
@@ -911,6 +911,7 @@ function cerrarCarrito(){
 function renderCiList(){
   var items=Object.values(carrito);
   var list=document.getElementById("ciList");
+  if(!list)return;
   if(!items.length){
     list.innerHTML='<div class="empty"><div class="empty-ico">🛒</div><div class="empty-txt">Carrito vacío</div></div>';
     return;
@@ -923,36 +924,35 @@ function renderCiList(){
   vbtn.style.cssText="background:none;border:none;color:var(--t3);font-family:var(--font-u);font-size:11px;font-weight:700;cursor:pointer;padding:4px 8px;";
   vbtn.textContent="🗑 Vaciar todo";
   vbtn.onclick=function(){carrito={};actualizarUI();renderCiList();calcularTotales();};
-  vrow.appendChild(vbtn);list.appendChild(vrow);
+  vrow.appendChild(vbtn);
+  list.appendChild(vrow);
   items.forEach(function(ci){
     var item=menuItems.find(function(m){return m.id===ci.id;})||{};
     var row=document.createElement("div");
     row.className="ci-row";
-    var uid="ci-"+ci.id.replace(/[^a-zA-Z0-9]/g,"_");
     row.innerHTML='<div class="ci-emo">'+(item.emoji||"🍔")+'</div>'
       +'<div class="ci-info"><div class="ci-name">'+ci.nombre+'</div><div class="ci-unit">'+fmt(ci.precio)+' c/u</div></div>'
       +'<div class="ci-ctrl">'
-      +'<button class="cib m" data-id="'+ci.id+'" data-action="dec">−</button>'
+      +'<button class="cib m">−</button>'
       +'<span class="ci-n">'+ci.qty+'</span>'
-      +'<button class="cib p" data-id="'+ci.id+'" data-action="inc">+</button>'
+      +'<button class="cib p">+</button>'
       +'</div>';
     list.appendChild(row);
+    // Agregar listeners directamente a los botones
+    var btns=row.querySelectorAll("button.cib");
+    var ciId=ci.id;
+    btns[0].addEventListener("click",function(){
+      if(!carrito[ciId])return;
+      if(carrito[ciId].qty<=1)delete carrito[ciId];
+      else carrito[ciId].qty--;
+      actualizarUI();renderCiList();calcularTotales();
+    });
+    btns[1].addEventListener("click",function(){
+      if(!carrito[ciId])return;
+      carrito[ciId].qty++;
+      actualizarUI();renderCiList();calcularTotales();
+    });
   });
-  // Un solo listener por delegación
-  list.onclick=function(e){
-    var btn=e.target.closest("button[data-action]");
-    if(!btn)return;
-    var id=btn.dataset.id;
-    var act=btn.dataset.action;
-    if(!carrito[id])return;
-    if(act==="dec"){
-      if(carrito[id].qty<=1)delete carrito[id];
-      else carrito[id].qty--;
-    } else {
-      carrito[id].qty++;
-    }
-    actualizarUI();renderCiList();calcularTotales();
-  };
 }
 
 function cambiarCiQty(id,qty){
