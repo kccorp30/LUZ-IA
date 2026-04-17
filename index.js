@@ -406,6 +406,7 @@ ITEMS: [categoria producto1 $precio (notas)|categoria producto2 $precio] — SIE
 DESECHABLES: [valor total en pesos, ej: 500 si hay 1 comida, 1000 si hay 2]
 DOMICILIO: [numero sin puntos ni signos, o 0]
 TOTAL: [numero sin puntos ni signos]
+METODO_PAGO: [nequi|bancolombia|efectivo|datafono — el que el cliente menciono, o "pendiente" si no ha dicho]
 
 Al confirmar direccion: DIRECCION_LISTA:[direccion completa]
 Telefono adicional: TELEFONO_ADICIONAL:[numero]
@@ -736,6 +737,7 @@ function parseReply(reply, from) {
     var totalMatch  = reply.match(/TOTAL:\s*([^\n]+)/);
     var desechMatch = reply.match(/DESECHABLES:\s*([^\n]+)/);
     var domMatch    = reply.match(/DOMICILIO:\s*([^\n]+)/);
+    var pagoMatch   = reply.match(/METODO_PAGO:\s*([^\n]+)/);
 
     if (itemsMatch && totalMatch) {
       var items = itemsMatch[1].split("|").map(function(i) { return i.trim(); });
@@ -1250,7 +1252,7 @@ app.get("/api/zonas", async function(req, res) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var r = await axios.get(
-      SUPABASE_URL + "/rest/v1/zonas_domicilio?restaurante_id=eq." + req.query.restaurante_id + "&order=precio.asc",
+      SUPABASE_URL + "/rest/v1/zonas_domicilio?restaurante_id=eq." + req.query.restaurante_id + "&order=precio_domicilio.asc",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
     );
     res.json(r.data || []);
