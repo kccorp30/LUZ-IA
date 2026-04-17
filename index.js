@@ -1071,6 +1071,66 @@ app.post("/enviar-mensaje-cliente", async function(req, res) {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+
+
+// ── UBICACIÓN DOMICILIARIO ─────────────────────────────────────────────────
+app.post("/api/ubicacion-domiciliario", async function(req, res) {
+  try {
+    var { pedido_id, restaurante_id, domiciliario_id, lat, lng } = req.body;
+    if (!pedido_id || !lat || !lng) return res.status(400).json({ error: "Faltan datos" });
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var headers = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" };
+    var body = { pedido_id, restaurante_id, domiciliario_id: domiciliario_id || null, lat, lng, updated_at: new Date().toISOString() };
+    await axios.post(SUPABASE_URL + "/rest/v1/domiciliario_ubicacion?on_conflict=pedido_id", body, { headers });
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.response?.data || e.message });
+  }
+});
+
+// ── SUBIR COMPROBANTE A SUPABASE STORAGE ──────────────────────────────────
+app.post("/api/subir-comprobante", async function(req, res) {
+  try {
+    var { imagen_base64, restaurante_id } = req.body;
+    if (!imagen_base64) return res.status(400).json({ error: "Sin imagen" });
+    
+    // Extraer datos del base64
+    var matches = imagen_base64.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+    if (!matches) return res.status(400).json({ error: "Formato inválido" });
+    
+    var mimeType = matches[1];
+    var base64Data = matches[2];
+    var buffer = Buffer.from(base64Data, "base64");
+    var ext = mimeType.includes("png") ? "png" : "jpg";
+    var fileName = "comprobante_" + Date.now() + "_" + Math.random().toString(36).substr(2,6) + "." + ext;
+    var filePath = (restaurante_id || "general") + "/" + fileName;
+    
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    
+    // Subir a Supabase Storage bucket 'comprobantes'
+    var uploadResp = await axios.post(
+      SUPABASE_URL + "/storage/v1/object/comprobantes/" + filePath,
+      buffer,
+      {
+        headers: {
+          "apikey": svcKey,
+          "Authorization": "Bearer " + svcKey,
+          "Content-Type": mimeType,
+          "x-upsert": "true"
+        },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity
+      }
+    );
+    
+    var publicUrl = SUPABASE_URL + "/storage/v1/object/public/comprobantes/" + filePath;
+    res.json({ ok: true, url: publicUrl });
+  } catch(e) {
+    console.error("Error subiendo comprobante:", e.response?.data || e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 app.post("/api/pedido-manual", async function(req, res) {
   var { restaurante_id, telefono, items, total, desechables, domicilio, direccion, metodo_pago, notas_especiales } = req.body;
   if (!restaurante_id || !telefono || !items || !total) return res.status(400).json({ error: "Faltan datos" });
