@@ -2240,14 +2240,20 @@ async function cargarMisPedidos(){
         stepsEl.appendChild(s);
       });
       div.appendChild(stepsEl);
-      // Mapa si está en camino
+      // Info domiciliario + mapa si está en camino
       if(p.estado==="en_camino"&&p.id){
+        // Info del domiciliario
+        if(p.domiciliario_nombre){
+          var domiInfo=document.createElement("div");
+          domiInfo.style.cssText="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:12px;margin-bottom:8px;font-size:13px;font-weight:700;color:#60a5fa";
+          domiInfo.innerHTML="🛵 "+p.domiciliario_nombre+" está en camino";
+          div.appendChild(domiInfo);
+        }
+        // Mapa
         var mapDiv=document.createElement("div");
         mapDiv.id="trackMap-"+p.id;
-        mapDiv.style.cssText="width:100%;height:200px;border-radius:14px;overflow:hidden;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);margin-top:8px;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:13px";
-        mapDiv.innerHTML='<span style="animation:spin 1s linear infinite;display:inline-block;margin-right:8px">📍</span> Cargando ubicación del domiciliario...';
+        mapDiv.style.cssText="width:100%;height:220px;border-radius:14px;overflow:hidden;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);margin-top:4px";
         div.appendChild(mapDiv);
-        // Cargar ubicación del domiciliario
         cargarMapaDomiciliario(p.id, mapDiv);
       }
       lista.appendChild(div);
@@ -2257,25 +2263,44 @@ async function cargarMisPedidos(){
 
 async function cargarMapaDomiciliario(pedidoId, mapEl){
   try{
-    var r=await fetch(SU+"/rest/v1/domiciliario_ubicacion?pedido_id=eq."+pedidoId+"&select=lat,lng,updated_at",
+    var r=await fetch(SU+"/rest/v1/domiciliario_ubicacion?pedido_id=eq."+pedidoId+"&select=lat,lng,updated_at,domiciliario_id",
       {headers:{"apikey":SK,"Authorization":"Bearer "+SK}});
     var d=await r.json();
     if(!d||!d.length||!d[0].lat){
-      mapEl.innerHTML='<span>🛵</span> <span style="color:var(--t2);font-size:12px">El domiciliario activará el GPS al salir</span>';
+      mapEl.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;gap:8px;flex-direction:column"><span style="font-size:28px">🛵</span><span style="color:var(--t2);font-size:12px;text-align:center">El domiciliario activará<br>el GPS al salir</span></div>';
+      setTimeout(function(){cargarMapaDomiciliario(pedidoId,mapEl);},8000);
       return;
     }
     var lat=d[0].lat,lng=d[0].lng;
-    // Mostrar en iframe de Google Maps
-    mapEl.innerHTML='';
-    var iframe=document.createElement("iframe");
-    iframe.src="https://www.google.com/maps?q="+lat+","+lng+"&z=16&output=embed";
-    iframe.style.cssText="width:100%;height:100%;border:none";
-    iframe.loading="lazy";
-    mapEl.appendChild(iframe);
-    // Actualizar cada 10s
-    setTimeout(function(){cargarMapaDomiciliario(pedidoId,mapEl);},10000);
+    mapEl.style.height="220px";
+    mapEl.style.position="relative";
+    var mapId="leafmap-"+pedidoId;
+    if(!document.getElementById(mapId)){
+      mapEl.innerHTML='<div id="'+mapId+'" style="width:100%;height:100%"></div>';
+      // Cargar Leaflet si no está
+      if(!window.L){
+        var css=document.createElement("link");
+        css.rel="stylesheet";css.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        document.head.appendChild(css);
+        await new Promise(function(resolve){
+          var s=document.createElement("script");
+          s.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+          s.onload=resolve;document.head.appendChild(s);
+        });
+      }
+      var map=L.map(mapId,{zoomControl:false,attributionControl:false}).setView([lat,lng],16);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+      var icon=L.divIcon({html:'<div style="background:#3b82f6;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>',iconSize:[20,20],iconAnchor:[10,10]});
+      var marker=L.marker([lat,lng],{icon:icon}).addTo(map);
+      mapEl._leafMap=map;mapEl._leafMarker=marker;
+    } else if(mapEl._leafMap){
+      mapEl._leafMarker.setLatLng([lat,lng]);
+      mapEl._leafMap.setView([lat,lng],16);
+    }
+    // Actualizar cada 8s
+    setTimeout(function(){cargarMapaDomiciliario(pedidoId,mapEl);},8000);
   }catch(e){
-    mapEl.innerHTML='<span style="color:var(--t3);font-size:12px">No se pudo cargar la ubicación</span>';
+    mapEl.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--t3);font-size:12px">No se pudo cargar el mapa</div>';
   }
 }
 function actualizarBtnMisPedidos(){
