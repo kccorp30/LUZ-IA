@@ -861,7 +861,7 @@ function buscarBarrio(q){
       ?z.barrios.split(",").map(function(b){return b.trim();})
       :(z.barrios||[]);
     barrios.forEach(function(b){
-      if(b.toLowerCase().includes(ql))res.push({barrio:b,zona:z.nombre,precio:z.precio});
+      if(b.toLowerCase().includes(ql))res.push({barrio:b,zona:z.nombre,precio:z.precio_domicilio||z.precio||4000});
     });
   });
   if(!res.length){
