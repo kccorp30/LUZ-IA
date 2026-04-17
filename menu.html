@@ -33,8 +33,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-b);min-height
 .hdr-logo{font-family:var(--font-d);font-size:22px;font-weight:900;letter-spacing:4px;}
 .hdr-logo span{color:var(--accent);}
 .hdr-logo img{height:38px;object-fit:contain;}
-.hdr-cart{display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--border2);border-radius:100px;padding:8px 14px 8px 10px;cursor:pointer;transition:all .2s;position:relative;}
-.hdr-cart.on{background:var(--accent);border-color:var(--accent);}
+.hdr-cart{display:flex;align-items:center;gap:8px;background:rgba(232,52,28,0.15);border:1.5px solid rgba(232,52,28,0.4);border-radius:100px;padding:8px 14px 8px 10px;cursor:pointer;transition:all .2s;position:relative;}
+.hdr-cart.on{background:var(--accent);border-color:var(--accent);box-shadow:0 4px 20px rgba(232,52,28,0.5);}
 .hdr-cart-n{font-family:var(--font-u);font-size:13px;font-weight:700;}
 .hdr-cart-t{font-family:var(--font-d);font-size:15px;font-weight:700;display:none;}
 .hdr-cart.on .hdr-cart-t{display:block;}
@@ -380,7 +380,7 @@ textarea.fi{resize:none;min-height:64px;}
       <button class="popt" id="p-nequi" onclick="setPago('nequi')"><span class="pi">📱</span>Nequi</button>
       <button class="popt" id="p-bancolombia" onclick="setPago('bancolombia')"><span class="pi">🏦</span>Bancolombia</button>
       <button class="popt" id="p-efectivo" onclick="setPago('efectivo')"><span class="pi">💵</span>Efectivo</button>
-      <button class="popt" id="p-datafono" onclick="setPago('datafono')" style="display:none"><span class="pi">💳</span>Datáfono</button>
+      <button class="popt" id="p-datafono" onclick="setPago('datafono')"><span class="pi">💳</span>Datáfono</button>
     </div>
     <div class="pago-info" id="pagoInfo"></div>
     <div id="compWrap" style="display:none">
@@ -398,6 +398,12 @@ textarea.fi{resize:none;min-height:64px;}
 </div>
 
 <!-- BEBIDA SUGGEST -->
+
+<!-- REWARDS FAB -->
+<button id="rewardsFab" onclick="abrirRewards()" style="display:none;position:fixed;bottom:80px;right:16px;z-index:95;background:linear-gradient(135deg,#f5a623,#f97316);border:none;border-radius:100px;padding:10px 16px 10px 12px;color:#fff;font-family:var(--font-u);font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(245,166,35,0.5);align-items:center;gap:6px;">
+  <span>⭐</span><span id="rewardsFabPts">0 pts</span>
+</button>
+
 <div id="bsug">
   <div class="bsug-title">🥤 ¿Agregas una bebida? <button class="bsug-close" onclick="cerrarBsug()">✕</button></div>
   <div class="bsug-items" id="bsugItems"></div>
@@ -558,7 +564,17 @@ async function cargarZonas(){
   if(!rest)return;
   try{
     var r=await fetch("/api/zonas?restaurante_id="+encodeURIComponent(rest.id));
-    if(r.ok)zonasData=await r.json()||[];
+    if(r.ok){
+      var d=await r.json();
+      if(d&&d.length){zonasData=d;console.log("Zonas cargadas:",d.length);return;}
+    }
+  }catch(e){}
+  // Fallback directo a Supabase
+  try{
+    var r2=await fetch(SU+"/rest/v1/zonas_domicilio?restaurante_id=eq."+rest.id+"&order=precio.asc",
+      {headers:{"apikey":SK,"Authorization":"Bearer "+SK}});
+    if(r2.ok){zonasData=await r2.json()||[];}
+    console.log("Zonas desde Supabase:",zonasData.length);
   }catch(e){zonasData=[];}
 }
 
@@ -894,18 +910,49 @@ function cerrarCarrito(){
 
 function renderCiList(){
   var items=Object.values(carrito);
-  if(!items.length){document.getElementById("ciList").innerHTML='<div class="empty"><div class="empty-ico">🛒</div><div class="empty-txt">Carrito vacío</div></div>';return;}
-  document.getElementById("ciList").innerHTML=items.map(function(ci){
+  var list=document.getElementById("ciList");
+  if(!items.length){
+    list.innerHTML='<div class="empty"><div class="empty-ico">🛒</div><div class="empty-txt">Carrito vacío</div></div>';
+    return;
+  }
+  list.innerHTML='';
+  // Botón vaciar
+  var vrow=document.createElement("div");
+  vrow.style.cssText="display:flex;justify-content:flex-end;padding:4px 0 8px;border-bottom:1px solid var(--border);";
+  var vbtn=document.createElement("button");
+  vbtn.style.cssText="background:none;border:none;color:var(--t3);font-family:var(--font-u);font-size:11px;font-weight:700;cursor:pointer;padding:4px 8px;";
+  vbtn.textContent="🗑 Vaciar todo";
+  vbtn.onclick=function(){carrito={};actualizarUI();renderCiList();calcularTotales();};
+  vrow.appendChild(vbtn);list.appendChild(vrow);
+  items.forEach(function(ci){
     var item=menuItems.find(function(m){return m.id===ci.id;})||{};
-    return '<div class="ci-row">'
-      +'<div class="ci-emo">'+(item.emoji||"🍔")+'</div>'
+    var row=document.createElement("div");
+    row.className="ci-row";
+    var uid="ci-"+ci.id.replace(/[^a-zA-Z0-9]/g,"_");
+    row.innerHTML='<div class="ci-emo">'+(item.emoji||"🍔")+'</div>'
       +'<div class="ci-info"><div class="ci-name">'+ci.nombre+'</div><div class="ci-unit">'+fmt(ci.precio)+' c/u</div></div>'
       +'<div class="ci-ctrl">'
-      +'<button class="cib m" onclick="cambiarCiQty(\''+ci.id+'\','+(ci.qty-1)+')">−</button>'
+      +'<button class="cib m" data-id="'+ci.id+'" data-action="dec">−</button>'
       +'<span class="ci-n">'+ci.qty+'</span>'
-      +'<button class="cib p" onclick="cambiarCiQty(\''+ci.id+'\','+(ci.qty+1)+')">+</button>'
-      +'</div></div>';
-  }).join("");
+      +'<button class="cib p" data-id="'+ci.id+'" data-action="inc">+</button>'
+      +'</div>';
+    list.appendChild(row);
+  });
+  // Un solo listener por delegación
+  list.onclick=function(e){
+    var btn=e.target.closest("button[data-action]");
+    if(!btn)return;
+    var id=btn.dataset.id;
+    var act=btn.dataset.action;
+    if(!carrito[id])return;
+    if(act==="dec"){
+      if(carrito[id].qty<=1)delete carrito[id];
+      else carrito[id].qty--;
+    } else {
+      carrito[id].qty++;
+    }
+    actualizarUI();renderCiList();calcularTotales();
+  };
 }
 
 function cambiarCiQty(id,qty){
@@ -1000,6 +1047,9 @@ function chkCliente(){
         document.getElementById("fidIco").textContent=c.ico;
         document.getElementById("fidName").textContent=clienteData.nombre_cliente||"Cliente";
         document.getElementById("fidLvl").textContent="Nivel "+nv.toUpperCase()+" · "+clienteData.total_pedidos+" pedidos";
+        // Mostrar rewards fab
+        var pts=clienteData.puntos||0;
+        actualizarRewardsFab(pts);
       }
     }catch(e){}
   },600);
@@ -1148,6 +1198,18 @@ function comprimirImg(b64,maxW,q){
     img.onerror=function(){resolve(b64);};
     img.src=b64;
   });
+}
+
+
+// ── REWARDS ──
+function abrirRewards(){
+  toast("Pronto: pantalla de rewards completa ⭐");
+}
+function actualizarRewardsFab(pts){
+  var fab=document.getElementById("rewardsFab");
+  if(!fab)return;
+  document.getElementById("rewardsFabPts").textContent=pts+" pts";
+  fab.style.display="flex";
 }
 
 var _toastT=null;
