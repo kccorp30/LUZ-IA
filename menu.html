@@ -1236,19 +1236,19 @@ function renderProds(cat){
 function renderVCard(i){
   var qty=carrito[i.id]?carrito[i.id].qty:0;
   var imgHtml=i.imagen_url
-    ?('<img src="'+i.imagen_url+'" onerror="this.style.display=\'none\'" loading="lazy" style="width:100%;height:100%;object-fit:cover">')
-    :('<span style="font-size:40px;opacity:0.5">'+(i.emoji||'🍔')+'</span>');
+    ?('<img src="'+i.imagen_url+'" loading="lazy" style="width:100%;height:100%;object-fit:cover">')
+    :('<span style="font-size:40px;opacity:0.5">'+(i.emoji||"\u{1F354}")+'</span>');
   var ctrl=qty>0
-    ?('<div class="qty-ctrl" style="flex-shrink:0"><button class="qb" onclick="event.stopPropagation();qDec(\''+i.id+'\')">−</button><span class="qn">'+qty+'</span><button class="qb p" onclick="event.stopPropagation();addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">+</button></div>')
+    ?('<div class="qty-ctrl" style="flex-shrink:0"><button class="qb" onclick="event.stopPropagation();qDec(\''+i.id+'\')">-</button><span class="qn">'+qty+'</span><button class="qb p" onclick="event.stopPropagation();addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">+</button></div>')
     :('<button class="add-btn" onclick="event.stopPropagation();addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">+</button>');
-  return '<div class="pcard-v'+(qty>0?' incart':'')+'" id="pc-'+i.id+'" onclick="abrirProdDetalle(\''+i.id+'\')">'
+  return '<div class="pcard-v'+(qty>0?' incart':'')+'" id="pc-'+i.id+'">'
     +'<div class="pcv-body">'
     +'<div class="pcv-name">'+i.nombre+'</div>'
     +(i.descripcion?'<div class="pcv-desc">'+i.descripcion+'</div>':'')
     +'<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">'
     +'<div class="pcv-price">'+fmt(i.precio)+'</div>'
     +ctrl+'</div></div>'
-    +'<div class="pcv-img">'+imgHtml+(i.en_oferta?'<div class="oferta-tag">OFERTA</div>':'')+'</div>'
+    +'<div class="pcv-img">'+imgHtml+'</div>'
     +'</div>';
 }
 
@@ -1274,7 +1274,7 @@ function esAdicionable(i){return i&&!i.es_bebida&&!esAdicCat(i.categoria||"");}
 function addItem(id,precio,nombre){
   if(!carrito[id])carrito[id]={qty:0,precio:precio,nombre:nombre};
   carrito[id].qty++;
-  actualizarCarrito();
+  updateCartUI();
   var item=menuItems.find(function(i){return i.id===id;});
   if(item&&!esAdicCat(item.categoria)&&!(item.categoria||'').toLowerCase().includes('bebida')){
     sugerirBebida();
