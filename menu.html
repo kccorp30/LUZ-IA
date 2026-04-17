@@ -844,7 +844,8 @@ textarea.fi{resize:none;min-height:66px;}
 <!-- HEADER -->
 <header class="header" id="header">
   <div class="hd-logo" id="hdLogo">LA<span>CURVA</span></div>
-  <button class="hd-cart" id="cartBtn" onclick="openCart()">
+  <button onclick="abrirMisPedidos()" id="btnMisPedidos" style="display:none;padding:7px 12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:100px;color:#34d399;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">📦 Mis pedidos</button>
+    <button class="hd-cart" id="cartBtn" onclick="openCart()">
     <div class="cart-pulse"></div>
     <span>🛒</span>
     <span class="hd-cart-n" id="cartN">0</span>
@@ -872,6 +873,38 @@ textarea.fi{resize:none;min-height:66px;}
   </div>
 </div>
 
+<!-- MODAL REGISTRO RAPIDO -->
+<div id="regRapidoOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)" onclick="if(event.target===this)cerrarRegistroRapido()">
+  <div style="background:var(--bg2);border-radius:26px 26px 0 0;padding:24px 20px calc(32px + env(safe-area-inset-bottom));width:100%;max-width:520px;border:1px solid var(--border);border-bottom:none">
+    <div style="width:38px;height:4px;background:var(--s3);border-radius:2px;margin:0 auto 20px"></div>
+    <div style="font-family:var(--font-disp);font-size:28px;font-weight:900;letter-spacing:1px;margin-bottom:4px">⭐ REWARDS</div>
+    <div style="font-size:13px;color:var(--t2);margin-bottom:20px">Ingresa tu WhatsApp para ver tus puntos</div>
+    <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:7px">Tu WhatsApp</label>
+    <input id="regRapidoTel" class="fi" type="tel" placeholder="3001234567" style="margin-bottom:12px" oninput="buscarClienteRapido(this.value)">
+    <div id="regRapidoInfo" style="display:none;padding:12px 14px;border-radius:13px;margin-bottom:14px;background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2)">
+      <div id="regRapidoNombre" style="font-size:14px;font-weight:700;color:#f5a623"></div>
+      <div id="regRapidoPts" style="font-size:13px;color:var(--t2);margin-top:3px"></div>
+    </div>
+    <button onclick="confirmarRegistroRapido()" style="width:100%;padding:15px;background:linear-gradient(135deg,#f5a623,#f97316);border:none;border-radius:14px;color:white;font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer">Ver mis puntos ⭐</button>
+  </div>
+</div>
+
+<!-- BANNER REWARDS -->
+<div id="rewardsBanner" style="margin:12px 16px 0;background:linear-gradient(135deg,rgba(245,166,35,0.12),rgba(249,115,22,0.08));border:1px solid rgba(245,166,35,0.25);border-radius:16px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer" onclick="abrirRegistroRapido()">
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:24px">⭐</span>
+    <div>
+      <div id="rwBannerTxt" style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#f5a623">Acumula puntos con cada pedido</div>
+      <div id="rwBannerSub" style="font-size:11px;color:var(--t2);margin-top:1px">Ingresa tu número para ver tus puntos</div>
+    </div>
+  </div>
+  <div id="rwBannerPts" style="display:none;text-align:right">
+    <div style="font-family:var(--font-disp);font-size:22px;font-weight:900;color:#f5a623;line-height:1" id="rwBannerPtsNum">0</div>
+    <div style="font-size:10px;color:var(--t2)">pts</div>
+  </div>
+  <div id="rwBannerArrow" style="color:rgba(245,166,35,0.6);font-size:18px">›</div>
+</div>
+
 <!-- PROMOS -->
 <div class="promos-wrap" id="promosWrap">
   <div class="promos-scroll" id="promosScroll"></div>
@@ -897,6 +930,45 @@ textarea.fi{resize:none;min-height:66px;}
   </button>
 </div>
 
+<!-- PRODUCT DETAIL OVERLAY -->
+<div class="ov" id="prodDetOv" onclick="cerrarProdDetalle()"></div>
+<div class="sheet" id="prodDetSheet" style="max-height:95vh;border-radius:26px 26px 0 0">
+  <div style="position:relative">
+    <div id="prodDetImg" style="width:100%;height:240px;background:#1c1928;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center">
+      <span id="prodDetEmoji" style="font-size:80px;opacity:0.5"></span>
+      <img id="prodDetImgEl" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none">
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 50%,rgba(8,7,9,0.95))"></div>
+    </div>
+    <button onclick="cerrarProdDetalle()" style="position:absolute;top:16px;right:16px;z-index:10;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.75);border:2px solid rgba(255,255,255,0.25);color:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(12px)">✕</button>
+    <div style="position:absolute;bottom:14px;left:20px;right:20px">
+      <div id="prodDetNombre" style="font-family:var(--font-disp);font-size:28px;font-weight:900;letter-spacing:1px;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.8)"></div>
+      <div id="prodDetPrecio" style="font-family:var(--font-disp);font-size:22px;font-weight:700;color:var(--orange);margin-top:2px"></div>
+    </div>
+  </div>
+  <div style="padding:16px 20px 0">
+    <div id="prodDetDesc" style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:16px"></div>
+    <div id="prodDetAdicSec">
+      <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px">Adicionales</div>
+      <div class="adic-grid" id="prodDetAdicGrid" style="padding:0;margin-bottom:16px"></div>
+    </div>
+    <div id="prodDetSalsaSec" style="display:none">
+      <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px">🌶️ Elige tu salsa</div>
+      <div class="salsa-row" id="prodDetSalsaRow" style="padding:0;margin-bottom:16px"></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:16px">
+      <div style="font-family:var(--font-ui);font-size:13px;font-weight:700">Cantidad</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button onclick="cambiarCantDet(-1)" style="width:34px;height:34px;border-radius:11px;border:1px solid var(--border2);background:var(--s2);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+        <span id="prodDetCant" style="font-family:var(--font-disp);font-size:22px;font-weight:800;min-width:20px;text-align:center">1</span>
+        <button onclick="cambiarCantDet(1)" style="width:34px;height:34px;border-radius:11px;border:none;background:var(--accent);color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+      </div>
+    </div>
+    <button onclick="agregarDesdeDet()" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--accent),#c42912);border:none;border-radius:16px;color:white;font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:calc(24px + env(safe-area-inset-bottom))">
+      <span>Agregar al pedido</span>
+      <span id="prodDetTotalBtn" style="font-family:var(--font-disp);font-size:20px;font-weight:800">$0</span>
+    </button>
+  </div>
+</div>
 <!-- CART OVERLAY + SHEET -->
 <div class="ov" id="cartOv" onclick="closeCart()"></div>
 <div class="sheet" id="cartSheet">
@@ -925,8 +997,16 @@ textarea.fi{resize:none;min-height:66px;}
     </div>
 
     <div id="domFields">
-      <label class="fl">Dirección de entrega</label>
-      <input class="fi" id="iDir" placeholder="Calle, número, barrio, referencias">
+      <label class="fl">Barrio <span style="color:var(--accent)">*</span></label>
+      <div style="position:relative;margin-bottom:8px">
+        <input class="fi" id="iBarrio" placeholder="🔍 Busca tu barrio..." oninput="buscarBarrio(this.value)" autocomplete="off" style="margin:0">
+        <div id="barrioDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1c1928;border:1px solid rgba(232,52,28,0.3);border-radius:13px;margin-top:4px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.5)"></div>
+      </div>
+      <div id="barrioSelInfo" style="display:none;padding:10px 13px;border-radius:12px;margin-bottom:8px;font-size:12px;font-weight:700"></div>
+      <label class="fl">Dirección <span style="color:var(--accent)">*</span></label>
+      <input class="fi" id="iDir" placeholder="Calle y número">
+      <label class="fl">Apto / Torre / Casa <span style="color:var(--t3);font-weight:400">(si aplica)</span></label>
+      <input class="fi" id="iApto" placeholder="Apto 301, Torre B...">
     </div>
     <div id="mesaField">
       <label class="fl">Número de mesa</label>
@@ -1012,9 +1092,38 @@ textarea.fi{resize:none;min-height:66px;}
     <div class="tstep" id="ts-camino"><div class="ts-dot"></div><div class="ts-label">🛵 En camino</div></div>
     <div class="tstep" id="ts-entregado"><div class="ts-dot"></div><div class="ts-label">🏠 Entregado</div></div>
   </div>
-  <button class="nuevo-btn" onclick="nuevoPedido()">+ Hacer otro pedido</button>
+  <!-- BANNER NOTIFICACIONES -->
+<div id="notifBanner" style="display:none;margin:0 24px 16px;padding:14px 18px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);border-radius:16px;align-items:center;gap:12px;width:calc(100% - 48px)">
+  <span style="font-size:24px">🔔</span>
+  <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#c4b5fd">¿Recibir alertas de tu pedido?</div><div style="font-size:11px;color:var(--t2);margin-top:2px">Te avisamos cuando esté listo y en camino</div></div>
+  <button onclick="pedirPermisoNotif();document.getElementById('notifBanner').style.display='none'" style="padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Activar</button>
+</div>
+<!-- MAPA TRACKING -->
+<div id="trackingMapWrap" style="display:none;margin:0 24px 16px;border-radius:16px;overflow:hidden;border:1px solid rgba(59,130,246,0.3)">
+  <div style="padding:10px 14px;background:rgba(59,130,246,0.1);display:flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;color:#60a5fa"><span style="width:8px;height:8px;border-radius:50%;background:#60a5fa;display:inline-block"></span>Domiciliario en camino — ubicación en tiempo real</div>
+  <div id="trackingMapEl" style="width:100%;height:220px;background:#1a1520"></div>
+</div>
+<button class="nuevo-btn" onclick="nuevoPedido()">+ Hacer otro pedido</button>
 </div>
 
+
+<!-- MIS PEDIDOS SCREEN -->
+<div id="misPedidosScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:350;flex-direction:column">
+  <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;background:var(--bg);position:sticky;top:0">
+    <button onclick="cerrarMisPedidos()" style="width:34px;height:34px;border-radius:11px;background:var(--s2);border:1px solid var(--border);color:var(--t2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center">←</button>
+    <div style="flex:1">
+      <div style="font-family:var(--font-disp);font-size:22px;font-weight:900;letter-spacing:1px">Mis Pedidos</div>
+      <div style="font-size:11px;color:var(--t3)">Estado en tiempo real</div>
+    </div>
+    <button onclick="cargarMisPedidos()" style="padding:7px 13px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">↻ Actualizar</button>
+  </div>
+  <div style="overflow-y:auto;padding:16px 20px;flex:1" id="misPedidosLista">
+    <div style="text-align:center;padding:40px 0;color:var(--t3)">
+      <div style="font-size:40px;margin-bottom:12px">📦</div>
+      <div style="font-size:14px">Ingresa tu WhatsApp en el carrito<br>para ver tus pedidos activos</div>
+    </div>
+  </div>
+</div>
 <!-- REWARDS FAB -->
 <button class="rewards-fab hidden" id="rewardsFab" onclick="abrirRewards()">
   <span>⭐</span><span class="rewards-fab-pts" id="rewardsFabPts">0 pts</span>
@@ -1342,7 +1451,7 @@ function setTipo(t){
   });
   document.getElementById("domFields").style.display=t==="domicilio"?"block":"none";
   document.getElementById("mesaField").style.display=t==="mesa"?"block":"none";
-  document.getElementById("p-datafono").style.display=(t==="domicilio")?"none":"block";
+  document.getElementById("p-datafono").style.display="block";
   updateTotales();
 }
 
@@ -1380,7 +1489,7 @@ function updateTotales(){
     var m=menuItems.find(function(x){return x.id===i.id;});
     return m&&!m.es_bebida;
   }).length*500:0;
-  var dom=tipoPedido==="domicilio"?(rest&&rest.domicilio_base?Number(rest.domicilio_base):4000):0;
+  var dom=tipoPedido==="domicilio"?(domCalculado!==null?domCalculado:(rest&&rest.domicilio_base?Number(rest.domicilio_base):4000)):0;
   var dsc=0;if(descVal>0&&descTipo){dsc=descTipo==="porcentaje"?Math.round(sub*descVal/100):descVal;}
   var total=sub+des+dom-dsc;
   var h="";
@@ -1540,7 +1649,7 @@ async function enviar(){
   try{
     var sub=items.reduce(function(s,i){return s+i.precio*i.qty;},0);
     var des=tipoPedido!=="mesa"?items.filter(function(i){var m=menuItems.find(function(x){return x.id===i.id;});return m&&!m.es_bebida;}).length*500:0;
-    var dom=tipoPedido==="domicilio"?(rest&&rest.domicilio_base?Number(rest.domicilio_base):4000):0;
+    var dom=tipoPedido==="domicilio"?(domCalculado!==null?domCalculado:(rest&&rest.domicilio_base?Number(rest.domicilio_base):4000)):0;
     var dsc=0;if(descVal>0&&descTipo){dsc=descTipo==="porcentaje"?Math.round(sub*descVal/100):descVal;}
     var total=sub+des+dom-dsc;
     var dir=tipoPedido==="domicilio"?document.getElementById("iDir").value.trim():tipoPedido==="mesa"?"Mesa "+document.getElementById("iMesa").value:"RECOGER EN TIENDA";
@@ -1847,17 +1956,15 @@ function closeBsug(){var s=document.getElementById('bsug');if(s)s.remove();windo
 function addBebida(id,precio,nombre){addItem(id,precio,nombre);closeBsug();}
 
 
-// ── ZONAS DE DOMICILIO ──
+// ── ZONAS ──
 var zonasData=[],domCalculado=null;
 
 async function cargarZonasMenu(){
   if(!rest)return;
   try{
-    // Primero via servidor
     var r=await fetch("/api/zonas?restaurante_id="+encodeURIComponent(rest.id));
     if(r.ok){var d=await r.json();if(d&&d.length){zonasData=d;return;}}
   }catch(e){}
-  // Fallback directo a Supabase
   try{
     var r2=await fetch(SU+"/rest/v1/zonas_domicilio?restaurante_id=eq."+rest.id+"&order=precio_domicilio.asc",
       {headers:{"apikey":SK,"Authorization":"Bearer "+SK}});
@@ -1867,129 +1974,108 @@ async function cargarZonasMenu(){
 
 function buscarBarrio(q){
   var drop=document.getElementById("barrioDropdown");
+  if(!drop)return;
   if(!q||q.length<2){drop.style.display="none";return;}
   var ql=q.toLowerCase().trim();
-  var resultados=[];
+  var res=[];
   (zonasData||[]).forEach(function(z){
     var precio=z.precio_domicilio||z.precio||4000;
     var barrios=(z.barrios||"").split(",").map(function(b){return b.trim();}).filter(Boolean);
-    barrios.forEach(function(b){
-      if(b.toLowerCase().includes(ql))resultados.push({barrio:b,zona:z.nombre,precio:precio});
-    });
+    barrios.forEach(function(b){if(b.toLowerCase().includes(ql))res.push({barrio:b,zona:z.nombre,precio:precio});});
   });
-  drop.style.display="block";
-  if(!resultados.length){
-    drop.innerHTML='';
+  drop.style.display="block";drop.innerHTML="";
+  if(!res.length){
     var dm=document.createElement("div");
     dm.style.cssText="padding:12px 15px;font-size:13px;color:var(--t2)";
     dm.innerHTML='<b style="color:var(--text)">📍 "'+q+'" no está en la lista</b><br><span style="font-size:11px">El domiciliario confirma el valor al entregar</span>';
     var bb=document.createElement("button");
     bb.style.cssText="width:calc(100% - 30px);margin:8px 15px 10px;padding:10px;background:rgba(232,52,28,0.15);border:1px solid rgba(232,52,28,0.3);border-radius:10px;color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit";
-    bb.textContent="Usar este barrio";
-    bb.onclick=function(){seleccionarBarrioManual(q);};
-    drop.appendChild(dm);drop.appendChild(bb);
-    return;
+    bb.textContent="Usar este barrio";bb.onclick=function(){seleccionarBarrioManual(q);};
+    drop.appendChild(dm);drop.appendChild(bb);return;
   }
-  drop.innerHTML="";
-  resultados.forEach(function(r){
+  res.forEach(function(r){
     var div=document.createElement("div");
     div.style.cssText="display:flex;align-items:center;justify-content:space-between;padding:11px 15px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05)";
     div.onmouseover=function(){this.style.background="rgba(232,52,28,0.08)";};
     div.onmouseout=function(){this.style.background="";};
     div.onclick=function(){seleccionarBarrio(r.barrio,r.zona,r.precio);};
     var left=document.createElement("div");
-    var nom=document.createElement("div");
-    nom.style.cssText="font-size:13px;font-weight:700;color:#f0ecf8";nom.textContent=r.barrio;
-    var zona=document.createElement("div");
-    zona.style.cssText="font-size:11px;color:rgba(240,236,248,0.45);margin-top:2px";zona.textContent="Zona "+r.zona;
+    var nom=document.createElement("div");nom.style.cssText="font-size:13px;font-weight:700;color:#f0ecf8";nom.textContent=r.barrio;
+    var zona=document.createElement("div");zona.style.cssText="font-size:11px;color:rgba(240,236,248,0.45);margin-top:2px";zona.textContent="Zona "+r.zona;
     left.appendChild(nom);left.appendChild(zona);
-    var precio=document.createElement("div");
-    precio.style.cssText="font-size:14px;font-weight:900;color:#f97316;flex-shrink:0;margin-left:10px";
-    precio.textContent=fmt(r.precio);
-    div.appendChild(left);div.appendChild(precio);
-    drop.appendChild(div);
+    var pr=document.createElement("div");pr.style.cssText="font-size:14px;font-weight:900;color:#f97316;flex-shrink:0;margin-left:10px";
+    pr.textContent=fmt(r.precio);
+    div.appendChild(left);div.appendChild(pr);drop.appendChild(div);
   });
 }
 
 function seleccionarBarrio(barrio,zona,precio){
-  document.getElementById("barrioDropdown").style.display="none";
-  document.getElementById("iBarrio").value=barrio;
+  var drop=document.getElementById("barrioDropdown");if(drop)drop.style.display="none";
+  var ib=document.getElementById("iBarrio");if(ib)ib.value=barrio;
   domCalculado=precio;window._domZona=zona;
   var info=document.getElementById("barrioSelInfo");
-  info.style.cssText="display:block;padding:10px 13px;border-radius:12px;margin-bottom:10px;font-size:12px;font-weight:700;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);color:#f97316";
-  info.innerHTML="✅ "+barrio+" · Zona "+zona+" · "+fmt(precio);
+  if(info){info.style.cssText="display:block;padding:10px 13px;border-radius:12px;margin-bottom:10px;font-size:12px;font-weight:700;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);color:#f97316";
+  info.innerHTML="✅ "+barrio+" · Zona "+zona+" · "+fmt(precio);}
   updateTotales();
 }
 
 function seleccionarBarrioManual(barrio){
-  document.getElementById("barrioDropdown").style.display="none";
-  document.getElementById("iBarrio").value=barrio;
+  var drop=document.getElementById("barrioDropdown");if(drop)drop.style.display="none";
+  var ib=document.getElementById("iBarrio");if(ib)ib.value=barrio;
   domCalculado=null;window._domZona=null;
   var info=document.getElementById("barrioSelInfo");
-  info.style.cssText="display:block;padding:10px 13px;border-radius:12px;margin-bottom:10px;font-size:12px;font-weight:700;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:#f5a623";
-  info.innerHTML="📍 "+barrio+" — El domiciliario confirma el valor";
+  if(info){info.style.cssText="display:block;padding:10px 13px;border-radius:12px;margin-bottom:10px;font-size:12px;font-weight:700;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:#f5a623";
+  info.innerHTML="📍 "+barrio+" — El domiciliario confirma el valor";}
   updateTotales();
 }
 
 document.addEventListener("click",function(e){
-  var drop=document.getElementById("barrioDropdown");
-  var input=document.getElementById("iBarrio");
+  var drop=document.getElementById("barrioDropdown"),input=document.getElementById("iBarrio");
   if(drop&&input&&!drop.contains(e.target)&&e.target!==input)drop.style.display="none";
 });
 
-// ── DETALLE DE PRODUCTO ──
+// ── DETALLE PRODUCTO ──
 var prodDetActual=null,prodDetCant=1,prodDetAdicSel={},prodDetSalsaSel=[];
 
 function abrirProdDetalle(id){
-  var item=menuItems.find(function(x){return x.id===id;});
-  if(!item)return;
+  var item=menuItems.find(function(x){return x.id===id;});if(!item)return;
   prodDetActual=item;prodDetCant=1;prodDetAdicSel={};prodDetSalsaSel=[];
-  var imgEl=document.getElementById("prodDetImgEl");
-  var emoEl=document.getElementById("prodDetEmoji");
-  if(item.imagen_url){imgEl.src=item.imagen_url;imgEl.style.display="block";emoEl.style.display="none";}
-  else{imgEl.style.display="none";emoEl.textContent=item.emoji||"🍔";emoEl.style.display="block";}
-  document.getElementById("prodDetNombre").textContent=item.nombre;
-  document.getElementById("prodDetPrecio").textContent=fmt(item.precio);
-  document.getElementById("prodDetDesc").textContent=item.descripcion||"";
-  document.getElementById("prodDetCant").textContent=1;
+  var imgEl=document.getElementById("prodDetImgEl"),emoEl=document.getElementById("prodDetEmoji");
+  if(item.imagen_url&&imgEl){imgEl.src=item.imagen_url;imgEl.style.display="block";if(emoEl)emoEl.style.display="none";}
+  else{if(imgEl)imgEl.style.display="none";if(emoEl){emoEl.textContent=item.emoji||"🍔";emoEl.style.display="block";}}
+  var en=document.getElementById("prodDetNombre"),ep=document.getElementById("prodDetPrecio"),ed=document.getElementById("prodDetDesc"),ec=document.getElementById("prodDetCant");
+  if(en)en.textContent=item.nombre;if(ep)ep.textContent=fmt(item.precio);if(ed)ed.textContent=item.descripcion||"";if(ec)ec.textContent=1;
   var adicSec=document.getElementById("prodDetAdicSec");
-  var esAdic=!item.es_bebida&&!esAdicCat(item.categoria||"");
-  adicSec.style.display=esAdic?"block":"none";
-  if(esAdic){
-    var grid=document.getElementById("prodDetAdicGrid");grid.innerHTML="";
+  var mostrarAdic=!item.es_bebida&&!esAdicCat(item.categoria||"");
+  if(adicSec){adicSec.style.display=mostrarAdic?"block":"none";}
+  if(mostrarAdic){
+    var grid=document.getElementById("prodDetAdicGrid");if(grid){grid.innerHTML="";
     ADICIONALES.forEach(function(a){
-      var div=document.createElement("div");
-      div.className="adic-opt";div.id="pda-"+a.id;
+      var div=document.createElement("div");div.className="adic-opt";div.id="pda-"+a.id;
       div.innerHTML='<div class="adic-emo">'+a.emoji+'</div><div class="adic-nm">'+a.nombre+'</div><div class="adic-pr">+'+fmt(a.precio)+'</div>';
       div.onclick=function(){prodDetAdicSel[a.id]=!prodDetAdicSel[a.id];div.classList.toggle("on",prodDetAdicSel[a.id]);actualizarTotalDet();};
-      grid.appendChild(div);
-    });
+      grid.appendChild(div);});}
   }
   var salsaSec=document.getElementById("prodDetSalsaSec");
   var esAlit=esAlitas(item.nombre);
-  salsaSec.style.display=esAlit?"block":"none";
-  if(esAlit){
-    var row=document.getElementById("prodDetSalsaRow");row.innerHTML="";
-    SALSAS.forEach(function(s){
-      var btn=document.createElement("button");btn.className="sopt";btn.textContent=s;
+  if(salsaSec)salsaSec.style.display=esAlit?"block":"none";
+  if(esAlit){var row=document.getElementById("prodDetSalsaRow");if(row){row.innerHTML="";
+    SALSAS.forEach(function(s){var btn=document.createElement("button");btn.className="sopt";btn.textContent=s;
       btn.onclick=function(){var idx=prodDetSalsaSel.indexOf(s);if(idx===-1){prodDetSalsaSel.push(s);btn.classList.add("on");}else{prodDetSalsaSel.splice(idx,1);btn.classList.remove("on");}};
-      row.appendChild(btn);
-    });
-  }
+      row.appendChild(btn);});}}
   actualizarTotalDet();
-  document.getElementById("prodDetOv").classList.add("on");
-  document.getElementById("prodDetSheet").classList.add("on");
+  var ov=document.getElementById("prodDetOv"),sh=document.getElementById("prodDetSheet");
+  if(ov)ov.classList.add("on");if(sh)sh.classList.add("on");
 }
 
 function cerrarProdDetalle(){
-  document.getElementById("prodDetOv").classList.remove("on");
-  document.getElementById("prodDetSheet").classList.remove("on");
-  prodDetActual=null;
+  var ov=document.getElementById("prodDetOv"),sh=document.getElementById("prodDetSheet");
+  if(ov)ov.classList.remove("on");if(sh)sh.classList.remove("on");prodDetActual=null;
 }
 
 function cambiarCantDet(delta){
   prodDetCant=Math.max(1,prodDetCant+delta);
-  document.getElementById("prodDetCant").textContent=prodDetCant;
+  var ec=document.getElementById("prodDetCant");if(ec)ec.textContent=prodDetCant;
   actualizarTotalDet();
 }
 
@@ -1997,54 +2083,38 @@ function actualizarTotalDet(){
   if(!prodDetActual)return;
   var extra=Object.keys(prodDetAdicSel).filter(function(k){return prodDetAdicSel[k];})
     .reduce(function(s,k){var a=ADICIONALES.find(function(x){return x.id===k;});return s+(a?a.precio:0);},0);
-  document.getElementById("prodDetTotalBtn").textContent=fmt((prodDetActual.precio+extra)*prodDetCant);
+  var tb=document.getElementById("prodDetTotalBtn");if(tb)tb.textContent=fmt((prodDetActual.precio+extra)*prodDetCant);
 }
 
 function agregarDesdeDet(){
   if(!prodDetActual)return;
   var selArr=Object.keys(prodDetAdicSel).filter(function(k){return prodDetAdicSel[k];});
-  var extraPrecio=selArr.reduce(function(s,k){var a=ADICIONALES.find(function(x){return x.id===k;});return s+(a?a.precio:0);},0);
-  var extraNoms=selArr.map(function(k){var a=ADICIONALES.find(function(x){return x.id===k;});return a?a.nombre:"";}).filter(Boolean);
-  var totalPrecio=prodDetActual.precio+extraPrecio;
-  var nomCompleto=prodDetActual.nombre+(extraNoms.length?" + "+extraNoms.join(", "):"")+(prodDetSalsaSel.length?" 🌶️ "+prodDetSalsaSel.join(" + "):"");
-  for(var q=0;q<prodDetCant;q++){
-    setQty(prodDetActual.id,totalPrecio,nomCompleto,(carrito[prodDetActual.id]?carrito[prodDetActual.id].qty:0)+1);
-  }
-  cerrarProdDetalle();
-  showToast("✅ "+prodDetActual.nombre+" agregado");
+  var extraP=selArr.reduce(function(s,k){var a=ADICIONALES.find(function(x){return x.id===k;});return s+(a?a.precio:0);},0);
+  var extraN=selArr.map(function(k){var a=ADICIONALES.find(function(x){return x.id===k;});return a?a.nombre:"";}).filter(Boolean);
+  var totalP=prodDetActual.precio+extraP;
+  var nomC=prodDetActual.nombre+(extraN.length?" + "+extraN.join(", "):"")+(prodDetSalsaSel.length?" 🌶️ "+prodDetSalsaSel.join(" + "):"");
+  for(var q=0;q<prodDetCant;q++){setQty(prodDetActual.id,totalP,nomC,(carrito[prodDetActual.id]?carrito[prodDetActual.id].qty:0)+1);}
+  cerrarProdDetalle();showToast("✅ "+prodDetActual.nombre+" agregado");
 }
 
 // ── MIS PEDIDOS ──
 var misPedidosTimer=null;
-
 function abrirMisPedidos(){
-  var screen=document.getElementById("misPedidosScreen");
-  if(screen){screen.style.display="flex";cargarMisPedidos();misPedidosTimer=setInterval(cargarMisPedidos,10000);}
+  var s=document.getElementById("misPedidosScreen");if(s){s.style.display="flex";cargarMisPedidos();misPedidosTimer=setInterval(cargarMisPedidos,10000);}
 }
-
 function cerrarMisPedidos(){
-  var screen=document.getElementById("misPedidosScreen");
-  if(screen)screen.style.display="none";
+  var s=document.getElementById("misPedidosScreen");if(s)s.style.display="none";
   if(misPedidosTimer){clearInterval(misPedidosTimer);misPedidosTimer=null;}
 }
-
 async function cargarMisPedidos(){
   var tel=document.getElementById("iTel")?document.getElementById("iTel").value.trim().replace(/\D/g,""):"";
-  var lista=document.getElementById("misPedidosLista");
-  if(!lista)return;
-  if(!tel||tel.length<10||!rest){
-    lista.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">📱</div><div style="font-size:14px">Ingresa tu WhatsApp en el carrito<br>para ver tus pedidos</div></div>';
-    return;
-  }
-  var telLimpio=tel.replace(/^57/,"");
+  var lista=document.getElementById("misPedidosLista");if(!lista)return;
+  if(!tel||tel.length<10||!rest){lista.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">📱</div><div style="font-size:14px">Ingresa tu WhatsApp en el carrito<br>para ver tus pedidos</div></div>';return;}
+  var tl=tel.replace(/^57/,"");
   try{
-    var r=await fetch("/api/mis-pedidos/"+telLimpio+"?restaurante_id="+rest.id);
-    var data=await r.json();
-    var pedidos=data.pedidos||[];
-    if(!pedidos.length){
-      lista.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">✅</div><div style="font-size:14px">No tienes pedidos activos</div></div>';
-      return;
-    }
+    var r=await fetch("/api/mis-pedidos/"+tl+"?restaurante_id="+rest.id);
+    var data=await r.json();var pedidos=data.pedidos||[];
+    if(!pedidos.length){lista.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">✅</div><div style="font-size:14px">No tienes pedidos activos</div></div>';return;}
     var ei={confirmado:{ico:"✅",label:"Confirmado",c:"rgba(16,185,129,0.15)",b:"rgba(16,185,129,0.3)",t:"#34d399"},en_preparacion:{ico:"🔥",label:"En preparación",c:"rgba(249,115,22,0.12)",b:"rgba(249,115,22,0.3)",t:"#fb923c"},listo:{ico:"🎉",label:"¡Listo!",c:"rgba(234,179,8,0.12)",b:"rgba(234,179,8,0.3)",t:"#fbbf24"},en_camino:{ico:"🛵",label:"En camino",c:"rgba(59,130,246,0.12)",b:"rgba(59,130,246,0.3)",t:"#60a5fa"}};
     lista.innerHTML=pedidos.map(function(p){
       var e=ei[p.estado]||{ico:"⏳",label:p.estado,c:"rgba(255,255,255,0.05)",b:"rgba(255,255,255,0.1)",t:"var(--t2)"};
@@ -2056,264 +2126,92 @@ async function cargarMisPedidos(){
         +'<div><div style="font-family:var(--font-disp);font-size:18px;font-weight:800;color:'+e.t+'">'+e.label+'</div>'
         +'<div style="font-size:11px;color:var(--t3)">Pedido #'+p.numero_pedido+' · '+fecha+'</div></div></div>'
         +'<div style="font-family:var(--font-disp);font-size:20px;font-weight:800;color:var(--orange)">'+fmt(p.total)+'</div>'
-        +'</div>'
-        +'<div style="background:rgba(0,0,0,0.2);border-radius:12px;padding:10px 12px;margin-bottom:8px">'
+        +'</div>'+'<div style="background:rgba(0,0,0,0.2);border-radius:12px;padding:10px 12px;margin-bottom:8px">'
         +items.slice(0,4).map(function(it){return '<div style="font-size:12px;color:var(--t2);padding:2px 0">'+it+'</div>';}).join("")
         +(items.length>4?'<div style="font-size:11px;color:var(--t3)">+'+(items.length-4)+' más</div>':'')
-        +'</div>'
-        +(p.direccion?'<div style="font-size:11px;color:var(--t3)">📍 '+p.direccion+'</div>':'')
-        +'</div>';
+        +'</div>'+(p.direccion?'<div style="font-size:11px;color:var(--t3)">📍 '+p.direccion+'</div>':'')+'</div>';
     }).join("");
   }catch(e){lista.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">Error cargando pedidos.</div>';}
 }
-
 function actualizarBtnMisPedidos(){
   var tel=document.getElementById("iTel")?document.getElementById("iTel").value.trim().replace(/\D/g,""):"";
-  var btn=document.getElementById("btnMisPedidos");
-  if(btn)btn.style.display=tel&&tel.length>=10?"flex":"none";
+  var btn=document.getElementById("btnMisPedidos");if(btn)btn.style.display=tel&&tel.length>=10?"flex":"none";
 }
 
-// ── REGISTRO RAPIDO / BANNER ──
+// ── REGISTRO RAPIDO ──
 var regRapidoData=null,regRapidoTimer=null;
-
 function abrirRegistroRapido(){
   var telCart=document.getElementById("iTel");
   if(telCart&&telCart.value.trim().replace(/\D/g,"").length>=10){abrirRewards();return;}
   var ov=document.getElementById("regRapidoOv");if(ov)ov.style.display="flex";
   setTimeout(function(){var t=document.getElementById("regRapidoTel");if(t)t.focus();},200);
 }
-
-function cerrarRegistroRapido(){
-  var ov=document.getElementById("regRapidoOv");if(ov)ov.style.display="none";
-}
-
+function cerrarRegistroRapido(){var ov=document.getElementById("regRapidoOv");if(ov)ov.style.display="none";}
 function buscarClienteRapido(val){
-  clearTimeout(regRapidoTimer);
-  var tel=val.replace(/\D/g,"");
+  clearTimeout(regRapidoTimer);var tel=val.replace(/\D/g,"");
   if(tel.length<10){var i=document.getElementById("regRapidoInfo");if(i)i.style.display="none";regRapidoData=null;return;}
   regRapidoTimer=setTimeout(async function(){
     var tl=tel.replace(/^57/,"");
     try{
       var r=await api("clientes_frecuentes","restaurante_id=eq."+rest.id+"&telefono=eq."+encodeURIComponent(tl)+"&select=nombre_cliente,puntos,nivel_fidelidad,total_pedidos");
       var info=document.getElementById("regRapidoInfo");
-      if(r&&r.length){
-        regRapidoData=r[0];regRapidoData.telefono=tl;
-        document.getElementById("regRapidoNombre").textContent=(r[0].nombre_cliente||"Cliente")+" · Nivel "+(r[0].nivel_fidelidad||"bronce").toUpperCase();
-        document.getElementById("regRapidoPts").textContent="⭐ "+(r[0].puntos||0)+" puntos · "+r[0].total_pedidos+" pedidos";
-      }else{
-        regRapidoData={telefono:tl,puntos:0,nuevo:true};
-        document.getElementById("regRapidoNombre").textContent="¡Cliente nuevo!";
-        document.getElementById("regRapidoPts").textContent="Empieza a acumular puntos ⭐";
-      }
+      if(r&&r.length){regRapidoData=r[0];regRapidoData.telefono=tl;document.getElementById("regRapidoNombre").textContent=(r[0].nombre_cliente||"Cliente")+" · Nivel "+(r[0].nivel_fidelidad||"bronce").toUpperCase();document.getElementById("regRapidoPts").textContent="⭐ "+(r[0].puntos||0)+" puntos · "+r[0].total_pedidos+" pedidos";}
+      else{regRapidoData={telefono:tl,puntos:0,nuevo:true};document.getElementById("regRapidoNombre").textContent="¡Cliente nuevo!";document.getElementById("regRapidoPts").textContent="Empieza a acumular puntos ⭐";}
       if(info)info.style.display="block";
     }catch(e){}
   },500);
 }
-
 function confirmarRegistroRapido(){
   var tel=document.getElementById("regRapidoTel").value.replace(/\D/g,"");
   if(tel.length<10){showToast("Ingresa tu número completo");return;}
-  var tl=tel.replace(/^57/,"");
   var telCart=document.getElementById("iTel");if(telCart)telCart.value=tel;
-  actualizarBannerRewards(regRapidoData);
-  cerrarRegistroRapido();
-  if(regRapidoData&&!regRapidoData.nuevo){
-    puntosCliente=regRapidoData.puntos||0;clienteData=regRapidoData;
-    var fab=document.getElementById("rewardsFab");
-    if(fab){document.getElementById("rewardsFabPts").textContent=puntosCliente+" pts";fab.classList.remove("hidden");}
-    abrirRewards();
-  }else{showToast("¡Listo! Ganarás puntos en tu primer pedido ⭐");}
+  actualizarBannerRewards(regRapidoData);cerrarRegistroRapido();
+  if(regRapidoData&&!regRapidoData.nuevo){puntosCliente=regRapidoData.puntos||0;clienteData=regRapidoData;var fab=document.getElementById("rewardsFab");if(fab){document.getElementById("rewardsFabPts").textContent=puntosCliente+" pts";fab.classList.remove("hidden");}abrirRewards();}
+  else showToast("¡Listo! Ganarás puntos en tu primer pedido ⭐");
 }
-
 function actualizarBannerRewards(data){
-  var txt=document.getElementById("rwBannerTxt");
-  var sub=document.getElementById("rwBannerSub");
-  var ptsDiv=document.getElementById("rwBannerPts");
-  var ptsNum=document.getElementById("rwBannerPtsNum");
-  var arrow=document.getElementById("rwBannerArrow");
+  var txt=document.getElementById("rwBannerTxt"),sub=document.getElementById("rwBannerSub");
+  var ptsDiv=document.getElementById("rwBannerPts"),ptsNum=document.getElementById("rwBannerPtsNum"),arrow=document.getElementById("rwBannerArrow");
   if(!txt)return;
-  if(data&&!data.nuevo&&data.puntos!==undefined){
-    var pts=data.puntos||0;
-    txt.textContent=(data.nombre_cliente||"Cliente")+" — Nivel "+(data.nivel_fidelidad||"bronce").toUpperCase();
-    sub.textContent=pts>0?"Toca para ver y canjear tus recompensas":"Haz tu primer pedido y empieza a acumular ⭐";
-    if(ptsNum)ptsNum.textContent=pts;
-    if(ptsDiv)ptsDiv.style.display="block";
-    if(arrow)arrow.style.display="none";
-  }else if(data&&data.nuevo){
-    txt.textContent="¡Bienvenido al programa de puntos!";
-    if(sub)sub.textContent="Cada pedido suma puntos canjeables ⭐";
-  }
+  if(data&&!data.nuevo&&data.puntos!==undefined){var pts=data.puntos||0;txt.textContent=(data.nombre_cliente||"Cliente")+" — Nivel "+(data.nivel_fidelidad||"bronce").toUpperCase();if(sub)sub.textContent=pts>0?"Toca para ver y canjear tus recompensas":"Haz tu primer pedido ⭐";if(ptsNum)ptsNum.textContent=pts;if(ptsDiv)ptsDiv.style.display="block";if(arrow)arrow.style.display="none";}
+  else if(data&&data.nuevo){txt.textContent="¡Bienvenido!";if(sub)sub.textContent="Cada pedido suma puntos canjeables ⭐";}
 }
 
 // ── NOTIFICACIONES ──
 var _ultimoEstado={};
-
 function notificarEstadoLocal(estado,num){
   if(!("Notification" in window)||Notification.permission!=="granted")return;
-  var msgs={en_preparacion:{titulo:"🔥 En preparación",body:"Pedido #"+num+" ya está en cocina"},listo:{titulo:"🎉 ¡Listo!",body:"Pedido #"+num+" listo"},en_camino:{titulo:"🛵 En camino",body:"El domiciliario ya salió con tu pedido #"+num}};
+  var msgs={en_preparacion:{titulo:"🔥 En preparación",body:"Pedido #"+num+" ya está en cocina"},listo:{titulo:"🎉 ¡Listo!",body:"Pedido #"+num+" listo para entrega"},en_camino:{titulo:"🛵 En camino",body:"Domiciliario en camino con pedido #"+num}};
   var m=msgs[estado];if(!m)return;
   try{var n=new Notification(m.titulo,{body:m.body,icon:"/favicon.ico"});setTimeout(function(){n.close();},5000);}catch(e){}
 }
-
 function mostrarBannerNotif(){
-  if(!("Notification" in window))return;
-  if(Notification.permission==="granted"){return;}
-  if(Notification.permission==="denied")return;
-  var banner=document.getElementById("notifBanner");
-  if(banner)banner.style.display="flex";
+  if(!("Notification" in window)||Notification.permission==="granted"||Notification.permission==="denied")return;
+  var b=document.getElementById("notifBanner");if(b)b.style.display="flex";
 }
-
 async function pedirPermisoNotif(){
-  try{
-    var perm=await Notification.requestPermission();
-    if(perm==="granted")showToast("🔔 ¡Notificaciones activadas!");
-    else showToast("Notificaciones no activadas");
-  }catch(e){}
+  try{var p=await Notification.requestPermission();showToast(p==="granted"?"🔔 Notificaciones activadas":"Notificaciones no activadas");}catch(e){}
   var b=document.getElementById("notifBanner");if(b)b.style.display="none";
 }
 
-// Override actuTracking con notificaciones
-var _actuTrackingBase=actuTracking;
+// Override actuTracking
+var _actuTrackBase=actuTracking;
 async function actuTracking(id){
   try{
-    var d=await api("pedidos","id=eq."+id+"&select=estado,numero_pedido");
-    if(!d||!d.length)return;
+    var d=await api("pedidos","id=eq."+id+"&select=estado,numero_pedido");if(!d||!d.length)return;
     var est=d[0].estado,num=d[0].numero_pedido;
-    if(_ultimoEstado[id]&&_ultimoEstado[id]!==est){
-      notificarEstadoLocal(est,num);
-      var btn=document.getElementById("btnMisPedidos");
-      if(btn&&btn.style.display!=="none"){btn.textContent="📦 Ver pedido";btn.style.color="#fb923c";}
-    }
+    if(_ultimoEstado[id]&&_ultimoEstado[id]!==est){notificarEstadoLocal(est,num);var btn=document.getElementById("btnMisPedidos");if(btn&&btn.style.display!=="none"){btn.textContent="📦 Ver pedido";btn.style.color="#fb923c";}}
     _ultimoEstado[id]=est;
-    if(est==="en_camino"){obtenerUbicacionDomiciliario(id);}
+    if(est==="en_camino")obtenerUbicacionDomiciliario(id);
     var map2={confirmado:"confirmado",en_preparacion:"preparando",listo:"listo",en_camino:"camino",entregado:"entregado"};
-    var order=["confirmado","en_preparacion","listo","en_camino","entregado"];
-    var idx2=order.indexOf(est);
+    var order=["confirmado","en_preparacion","listo","en_camino","entregado"],idx2=order.indexOf(est);
     order.forEach(function(s,i){var el=document.getElementById("ts-"+map2[s]);if(!el)return;el.classList.remove("done","act");if(i<idx2)el.classList.add("done");else if(i===idx2)el.classList.add("act");});
     if(est==="entregado")clearInterval(trackTimer);
   }catch(e){}
 }
 
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("/sw.js").then(function(r){console.log("SW:",r.scope);}).catch(function(){});
-}
+if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(function(r){}).catch(function(){});}
 
 </script>
-
-<!-- MODAL REGISTRO RAPIDO -->
-<div id="regRapidoOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)" onclick="if(event.target===this)cerrarRegistroRapido()">
-  <div style="background:var(--bg2);border-radius:26px 26px 0 0;padding:24px 20px calc(32px + env(safe-area-inset-bottom));width:100%;max-width:520px;border:1px solid var(--border);border-bottom:none">
-    <div style="width:38px;height:4px;background:var(--s3);border-radius:2px;margin:0 auto 20px"></div>
-    <div style="font-family:var(--font-disp);font-size:28px;font-weight:900;letter-spacing:1px;margin-bottom:4px">⭐ REWARDS</div>
-    <div style="font-size:13px;color:var(--t2);margin-bottom:20px">Ingresa tu WhatsApp para ver tus puntos</div>
-    <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:7px">Tu WhatsApp</label>
-    <input id="regRapidoTel" class="fi" type="tel" placeholder="3001234567" style="margin-bottom:12px" oninput="buscarClienteRapido(this.value)">
-    <div id="regRapidoInfo" style="display:none;padding:12px 14px;border-radius:13px;margin-bottom:14px;background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2)">
-      <div id="regRapidoNombre" style="font-size:14px;font-weight:700;color:#f5a623"></div>
-      <div id="regRapidoPts" style="font-size:13px;color:var(--t2);margin-top:3px"></div>
-    </div>
-    <button onclick="confirmarRegistroRapido()" style="width:100%;padding:15px;background:linear-gradient(135deg,#f5a623,#f97316);border:none;border-radius:14px;color:white;font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer">Ver mis puntos ⭐</button>
-  </div>
-</div>
-
-<!-- BANNER REWARDS -->
-<div id="rewardsBanner" style="margin:12px 16px 0;background:linear-gradient(135deg,rgba(245,166,35,0.12),rgba(249,115,22,0.08));border:1px solid rgba(245,166,35,0.25);border-radius:16px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer" onclick="abrirRegistroRapido()">
-  <div style="display:flex;align-items:center;gap:10px">
-    <span style="font-size:24px">⭐</span>
-    <div>
-      <div id="rwBannerTxt" style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#f5a623">Acumula puntos con cada pedido</div>
-      <div id="rwBannerSub" style="font-size:11px;color:var(--t2);margin-top:1px">Ingresa tu número para ver tus puntos</div>
-    </div>
-  </div>
-  <div id="rwBannerPts" style="display:none;text-align:right">
-    <div style="font-family:var(--font-disp);font-size:22px;font-weight:900;color:#f5a623;line-height:1" id="rwBannerPtsNum">0</div>
-    <div style="font-size:10px;color:var(--t2)">pts</div>
-  </div>
-  <div id="rwBannerArrow" style="color:rgba(245,166,35,0.6);font-size:18px">›</div>
-</div>
-
-<!-- PRODUCT DETAIL SHEET -->
-<div class="ov" id="prodDetOv" onclick="cerrarProdDetalle()"></div>
-<div class="sheet" id="prodDetSheet" style="max-height:95vh;border-radius:26px 26px 0 0">
-  <div style="position:relative">
-    <div id="prodDetImg" style="width:100%;height:240px;background:#1c1928;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center">
-      <span id="prodDetEmoji" style="font-size:80px;opacity:0.5"></span>
-      <img id="prodDetImgEl" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none">
-      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 50%,rgba(8,7,9,0.95))"></div>
-    </div>
-    <button onclick="cerrarProdDetalle()" style="position:absolute;top:16px;right:16px;z-index:10;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.75);border:2px solid rgba(255,255,255,0.25);color:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(12px)">✕</button>
-    <div style="position:absolute;bottom:14px;left:20px;right:20px">
-      <div id="prodDetNombre" style="font-family:var(--font-disp);font-size:28px;font-weight:900;letter-spacing:1px;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.8)"></div>
-      <div id="prodDetPrecio" style="font-family:var(--font-disp);font-size:22px;font-weight:700;color:var(--orange);margin-top:2px"></div>
-    </div>
-  </div>
-  <div style="padding:16px 20px 0">
-    <div id="prodDetDesc" style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:16px"></div>
-    <div id="prodDetAdicSec">
-      <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px">Adicionales</div>
-      <div class="adic-grid" id="prodDetAdicGrid" style="padding:0;margin-bottom:16px"></div>
-    </div>
-    <div id="prodDetSalsaSec" style="display:none">
-      <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px">🌶️ Elige tu salsa</div>
-      <div class="salsa-row" id="prodDetSalsaRow" style="padding:0;margin-bottom:16px"></div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:16px">
-      <div style="font-family:var(--font-ui);font-size:13px;font-weight:700">Cantidad</div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <button onclick="cambiarCantDet(-1)" style="width:34px;height:34px;border-radius:11px;border:1px solid var(--border2);background:var(--s2);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
-        <span id="prodDetCant" style="font-family:var(--font-disp);font-size:22px;font-weight:800;min-width:20px;text-align:center">1</span>
-        <button onclick="cambiarCantDet(1)" style="width:34px;height:34px;border-radius:11px;border:none;background:var(--accent);color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
-      </div>
-    </div>
-    <button onclick="agregarDesdeDet()" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--accent),#c42912);border:none;border-radius:16px;color:white;font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:calc(24px + env(safe-area-inset-bottom))">
-      <span>Agregar al pedido</span>
-      <span id="prodDetTotalBtn" style="font-family:var(--font-disp);font-size:20px;font-weight:800">$0</span>
-    </button>
-  </div>
-</div>
-
-<!-- MIS PEDIDOS SCREEN -->
-<div id="misPedidosScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:350;flex-direction:column">
-  <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;background:var(--bg);position:sticky;top:0">
-    <button onclick="cerrarMisPedidos()" style="width:34px;height:34px;border-radius:11px;background:var(--s2);border:1px solid var(--border);color:var(--t2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center">←</button>
-    <div style="flex:1">
-      <div style="font-family:var(--font-disp);font-size:22px;font-weight:900;letter-spacing:1px">Mis Pedidos</div>
-      <div style="font-size:11px;color:var(--t3)">Estado en tiempo real</div>
-    </div>
-    <button onclick="cargarMisPedidos()" style="padding:7px 13px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">↻</button>
-  </div>
-  <div style="overflow-y:auto;padding:16px 20px;flex:1" id="misPedidosLista">
-    <div style="text-align:center;padding:40px 0;color:var(--t3)">
-      <div style="font-size:40px;margin-bottom:12px">📦</div>
-      <div style="font-size:14px">Ingresa tu WhatsApp en el carrito<br>para ver tus pedidos</div>
-    </div>
-  </div>
-</div>
-
-<!-- NOTIF BANNER -->
-<div id="notifBanner" style="display:none;margin:0 24px 16px;padding:14px 18px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);border-radius:16px;align-items:center;gap:12px;width:calc(100% - 48px)">
-  <span style="font-size:24px">🔔</span>
-  <div style="flex:1">
-    <div style="font-size:13px;font-weight:700;color:#c4b5fd">¿Recibir alertas de tu pedido?</div>
-    <div style="font-size:11px;color:var(--t2);margin-top:2px">Te avisamos cuando esté listo y en camino</div>
-  </div>
-  <button onclick="pedirPermisoNotif();document.getElementById('notifBanner').style.display='none'" style="padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Activar</button>
-</div>
-
-<!-- TRACKING MAP -->
-<div id="trackingMapWrap" style="display:none;margin:0 24px 16px;border-radius:16px;overflow:hidden;border:1px solid rgba(59,130,246,0.3)">
-  <div style="padding:10px 14px;background:rgba(59,130,246,0.1);display:flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;color:#60a5fa">
-    <span style="width:8px;height:8px;border-radius:50%;background:#60a5fa;display:inline-block"></span>
-    Domiciliario en camino
-  </div>
-  <div id="trackingMapEl" style="width:100%;height:220px;background:#1a1520"></div>
-</div>
-
-<!-- BTN MIS PEDIDOS en header -->
-<style>
-#btnMisPedidos{display:none;position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:101;padding:7px 12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:100px;color:#34d399;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.2s}
-</style>
-<button id="btnMisPedidos" onclick="abrirMisPedidos()">📦 Mis pedidos</button>
-
 </body>
 </html>
