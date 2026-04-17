@@ -830,6 +830,36 @@ textarea.fi{resize:none;min-height:66px;}
 .catbg-bebida{background:linear-gradient(140deg,#061724,#030c12);}
 .catbg-arepa{background:linear-gradient(140deg,#201a08,#0e0d04);}
 .catbg-postre{background:linear-gradient(140deg,#190622,#0a0311);}
+
+/* ADMIN PANEL */
+.admin-fab{position:fixed;bottom:24px;left:16px;z-index:95;width:40px;height:40px;border-radius:50%;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);color:#a78bfa;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.admin-fab:active{transform:scale(.9);}
+#adminScreen{display:none;position:fixed;inset:0;background:var(--bg);z-index:400;flex-direction:column;overflow-y:auto;}
+#adminScreen.show{display:flex;}
+.adm-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;background:var(--bg);position:sticky;top:0;z-index:2;}
+.adm-title{font-family:var(--font-disp);font-size:22px;font-weight:900;letter-spacing:1px;flex:1;}
+.adm-close{width:34px;height:34px;border-radius:11px;background:var(--s2);border:1px solid var(--border);color:var(--t2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.adm-body{padding:20px;}
+.adm-field{margin-bottom:14px;}
+.adm-label{font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;}
+.adm-input{width:100%;padding:12px 14px;background:var(--s2);border:1.5px solid var(--border);border-radius:13px;color:var(--text);font-family:var(--font-b);font-size:14px;outline:none;box-sizing:border-box;}
+.adm-input:focus{border-color:rgba(124,58,237,.6);}
+.adm-input::placeholder{color:var(--t3);}
+.adm-btn{width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:14px;color:#fff;font-family:var(--font-ui);font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;margin-top:4px;}
+.adm-btn:active{transform:scale(.98);}
+.adm-btn.danger{background:linear-gradient(135deg,var(--accent),#c42912);}
+.adm-list{margin-top:20px;}
+.adm-prod{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;}
+.adm-prod-img{width:48px;height:48px;border-radius:10px;object-fit:cover;background:var(--s2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.adm-prod-info{flex:1;min-width:0;}
+.adm-prod-name{font-family:var(--font-ui);font-size:13px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.adm-prod-cat{font-size:11px;color:var(--t3);}
+.adm-prod-price{font-family:var(--font-disp);font-size:17px;font-weight:700;color:var(--orange);flex-shrink:0;}
+.adm-prod-toggle{width:36px;height:20px;border-radius:10px;border:none;cursor:pointer;transition:all .2s;flex-shrink:0;}
+.adm-tabs{display:flex;gap:6px;margin-bottom:20px;background:var(--s1);border-radius:14px;padding:4px;}
+.adm-tab{flex:1;padding:9px;border:none;border-radius:10px;background:transparent;color:var(--t2);font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;}
+.adm-tab.on{background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3);}
+
 </style>
 </head>
 <body>
@@ -986,7 +1016,7 @@ textarea.fi{resize:none;min-height:66px;}
     <input class="fi" id="iNombre" placeholder="¿Cómo te llamas?" oninput="checkCliente()">
 
     <label class="fl">WhatsApp</label>
-    <input class="fi" id="iTel" placeholder="3001234567" type="tel" oninput="checkCliente()">
+    <input class="fi" id="iTel" placeholder="3001234567" type="tel" oninput="checkCliente();actualizarBtnMisPedidos()">
 
     <div class="fid-box" id="fidBox">
       <span class="fid-ico" id="fidIco"></span>
@@ -1199,7 +1229,7 @@ function api(t,q){return fetch(SU+"/rest/v1/"+t+"?"+q,{headers:{"apikey":SK,"Aut
 function fmt(n){return "$"+Number(n).toLocaleString("es-CO");}
 function gp(k){return new URLSearchParams(window.location.search).get(k);}
 function esc(s){return (s||"").replace(/'/g,"\\'").replace(/"/g,"&quot;");}
-function esHoriz(cat){var c=(cat||"").toLowerCase();return c.includes("bebida");}
+function esHoriz(cat){var c=(cat||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");return c.includes("bebida");}
 function esAdicCat(cat){return (cat||"").toLowerCase().includes("adicional");}
 function esAlitas(n){return (n||"").toLowerCase().includes("alita");}
 
@@ -1233,8 +1263,7 @@ window.addEventListener("load", async function(){
   }catch(e){console.error("restaurante error",e);}
   await cargarMenu();
   await cargarZonasMenu();
-  var telInput=document.getElementById("iTel");
-  if(telInput)telInput.addEventListener("input",actualizarBtnMisPedidos);
+  // actualizarBtnMisPedidos se llama via oninput en iTel
   setTimeout(function(){
     var l=document.getElementById("ls");if(l){l.classList.add("out");setTimeout(function(){l.style.display="none";},600);}
   },900);
@@ -1310,38 +1339,71 @@ async function cargarMenu(){
   if(!rest)return;
   try{
     var r=await fetch("/api/menu?restaurante_id="+rest.id);
-    var all=await r.json();
-    menuItems=(all||[]).filter(function(i){return !esAdicCat(i.categoria);});
-  }catch(e){menuItems=[];}
-  renderCats();renderProds("todas");
+    var data=await r.json();
+    // Normalizar categoria_slug - blindado contra mayúsculas, espacios y tildes
+    menuItems=(data||[])
+      .filter(function(i){return !esAdicCat(i.categoria);})
+      .map(function(i){
+        var slug=(i.categoria_slug||i.categoria||"")
+          .toLowerCase().trim()
+          .normalize("NFD").replace(/[̀-ͯ]/g,"");
+        return Object.assign({},i,{categoria_slug:slug});
+      });
+    console.log("Menu cargado:",menuItems.length,"productos");
+  }catch(e){
+    console.error("cargarMenu error:",e);
+    menuItems=[];
+  }
+  renderCats();
+  renderProds("todas");
 }
 
 function renderCats(){
-  var cats=["todas",...new Set(menuItems.map(function(i){return i.categoria;}))];
-  document.getElementById("catsRow").innerHTML=cats.map(function(c){
-    return '<button class="cat-pill'+(c===catActiva?" on":"")+'" onclick="filtrarCat(\''+esc(c)+'\')">'+(c==="todas"?"🍽 Todo":c)+'</button>';
-  }).join("");
+  var slugs=[];
+  var slugToDisplay={};
+  menuItems.forEach(function(i){
+    if(!slugToDisplay[i.categoria_slug]){
+      slugs.push(i.categoria_slug);
+      slugToDisplay[i.categoria_slug]=i.categoria;
+    }
+  });
+  var pills='<button class="cat-pill'+(catActiva==="todas"?" on":"")+'" onclick="filtrarCat(\'todas\')">🍽 Todo</button>';
+  slugs.forEach(function(slug){
+    var lbl=slugToDisplay[slug]||slug;
+    var on=catActiva===slug?" on":"";
+    pills+='<button class="cat-pill'+on+'" onclick="filtrarCat(\''+slug+'\')">'+lbl+'</button>';
+  });
+  document.getElementById("catsRow").innerHTML=pills;
 }
 
 function filtrarCat(c){catActiva=c;renderCats();renderProds(c);}
 
 function renderProds(cat){
-  var items=cat==="todas"?menuItems:menuItems.filter(function(i){return i.categoria===cat;});
+  var items=cat==="todas"
+    ?menuItems
+    :menuItems.filter(function(i){return i.categoria_slug===cat;});
   if(!items.length){
     document.getElementById("prodsArea").innerHTML='<div class="empty"><div class="empty-ico">🍽️</div><div class="empty-txt">Sin productos disponibles</div></div>';
     return;
   }
+  // Agrupar por slug pero mostrar nombre original
   var grupos={};
-  items.forEach(function(i){if(!grupos[i.categoria])grupos[i.categoria]=[];grupos[i.categoria].push(i);});
+  var slugDisplay={};
+  items.forEach(function(i){
+    if(!grupos[i.categoria_slug])grupos[i.categoria_slug]=[];
+    grupos[i.categoria_slug].push(i);
+    slugDisplay[i.categoria_slug]=i.categoria;
+  });
   var h="";
-  Object.keys(grupos).forEach(function(c){
+  Object.keys(grupos).forEach(function(slug){
+    var displayName=slugDisplay[slug]||slug;
+    var horiz=esHoriz(slug);
     h+='<div class="cat-section">';
     if(cat==="todas"){
-      h+='<div class="cat-header"><div class="cat-header-label">'+c+'</div><div class="cat-header-line"></div></div>';
+      h+='<div class="cat-header"><div class="cat-header-label">'+displayName+'</div><div class="cat-header-line"></div></div>';
     }
-    var horiz=esHoriz(c);
     h+=horiz?'<div class="grid-h">':'<div class="grid-v">';
-    grupos[c].forEach(function(i){h+=horiz?renderHCard(i):renderVCard(i);});
+    grupos[slug].forEach(function(i){h+=horiz?renderHCard(i):renderVCard(i);});
     h+='</div></div>';
   });
   document.getElementById("prodsArea").innerHTML=h;
@@ -2412,6 +2474,157 @@ async function pedirPermisoNotif(){
 
 if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(function(r){}).catch(function(){});}
 
+
+// ── ADMIN ──
+var admAuthed=false;
+var ADMIN_PIN="2025";
+var admTabActual="nuevo";
+
+function abrirAdmin(){
+  if(!admAuthed){
+    document.getElementById("adminPinInput").value="";
+    document.getElementById("pinErr").textContent="";
+    document.getElementById("adminPinOv").style.display="flex";
+    setTimeout(function(){document.getElementById("adminPinInput").focus();},200);
+  } else {
+    document.getElementById("adminScreen").classList.add("show");
+    admCargarCats();
+    if(admTabActual==="lista")admCargarLista();
+  }
+}
+
+function verificarPin(){
+  var pin=document.getElementById("adminPinInput").value.trim();
+  if(pin===ADMIN_PIN){
+    admAuthed=true;
+    document.getElementById("adminPinOv").style.display="none";
+    document.getElementById("adminScreen").classList.add("show");
+    admCargarCats();
+  } else {
+    document.getElementById("pinErr").textContent="PIN incorrecto";
+    document.getElementById("adminPinInput").value="";
+  }
+}
+
+function cerrarAdmin(){
+  document.getElementById("adminScreen").classList.remove("show");
+}
+
+function admSetTab(t){
+  admTabActual=t;
+  ["nuevo","lista"].forEach(function(k){
+    document.getElementById("admTab-"+k).classList.toggle("on",k===t);
+    document.getElementById("admPanel-"+k).style.display=k===t?"block":"none";
+  });
+  if(t==="lista")admCargarLista();
+}
+
+function admCargarCats(){
+  var cats=[...new Set(menuItems.map(function(i){return i.categoria;}))].filter(Boolean);
+  var dl=document.getElementById("admCatList");
+  if(dl)dl.innerHTML=cats.map(function(c){return'<option value="'+c+'">';}).join("");
+}
+
+async function admGuardarProducto(){
+  var nombre=document.getElementById("admNombre").value.trim();
+  var cat=document.getElementById("admCategoria").value.trim();
+  var precio=parseInt(document.getElementById("admPrecio").value)||0;
+  var desc=document.getElementById("admDesc").value.trim();
+  var img=document.getElementById("admImg").value.trim();
+  var emoji=document.getElementById("admEmoji").value.trim();
+  var msg=document.getElementById("admMsg");
+
+  if(!nombre||!cat||!precio){msg.style.color="var(--accent)";msg.textContent="❌ Nombre, categoría y precio son obligatorios";return;}
+  if(!rest){msg.style.color="var(--accent)";msg.textContent="❌ Sin restaurante";return;}
+
+  msg.style.color="var(--t2)";msg.textContent="Guardando...";
+
+  try{
+    var payload={
+      restaurante_id:rest.id,nombre:nombre,categoria:cat,
+      precio:precio,descripcion:desc||null,
+      imagen_url:img||null,emoji:emoji||null,
+      disponible:true,en_oferta:false
+    };
+    var r=await fetch(SU+"/rest/v1/menu_items",{
+      method:"POST",
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify(payload)
+    });
+    if(r.ok||r.status===201){
+      msg.style.color="var(--green)";msg.textContent="✅ Producto guardado";
+      // Limpiar form
+      ["admNombre","admCategoria","admPrecio","admDesc","admImg","admEmoji"].forEach(function(id){
+        var el=document.getElementById(id);if(el)el.value="";
+      });
+      // Recargar menú
+      await cargarMenu();
+    } else {
+      var err=await r.json();
+      msg.style.color="var(--accent)";msg.textContent="❌ Error: "+(err.message||r.status);
+    }
+  }catch(e){
+    msg.style.color="var(--accent)";msg.textContent="❌ Error: "+e.message;
+  }
+}
+
+var admTodosProds=[];
+async function admCargarLista(){
+  var lista=document.getElementById("admLista");
+  lista.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">Cargando...</div>';
+  try{
+    var r=await fetch("/api/menu?restaurante_id="+rest.id);
+    admTodosProds=await r.json()||[];
+    admRenderLista(admTodosProds);
+  }catch(e){lista.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">Error cargando</div>';}
+}
+
+function admFiltrar(q){
+  var res=!q?admTodosProds:admTodosProds.filter(function(p){
+    return (p.nombre||"").toLowerCase().includes(q.toLowerCase())||(p.categoria||"").toLowerCase().includes(q.toLowerCase());
+  });
+  admRenderLista(res);
+}
+
+function admRenderLista(prods){
+  var lista=document.getElementById("admLista");
+  if(!prods.length){lista.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">Sin resultados</div>';return;}
+  lista.innerHTML="";
+  prods.forEach(function(p){
+    var div=document.createElement("div");
+    div.className="adm-prod";
+    var imgEl=document.createElement(p.imagen_url?"img":"div");
+    if(p.imagen_url){imgEl.src=p.imagen_url;imgEl.style.cssText="width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0";}
+    else{imgEl.className="adm-prod-img";imgEl.textContent=p.emoji||"🍔";}
+    var info=document.createElement("div");
+    info.className="adm-prod-info";
+    info.innerHTML='<div class="adm-prod-name">'+p.nombre+'</div><div class="adm-prod-cat">'+p.categoria+'</div>';
+    var price=document.createElement("div");
+    price.style.cssText="font-family:var(--font-disp);font-size:17px;font-weight:700;color:var(--orange);flex-shrink:0;margin-right:8px";
+    price.textContent=fmt(p.precio);
+    var tog=document.createElement("button");
+    tog.style.cssText="width:40px;height:24px;border-radius:12px;border:none;background:"+(p.disponible?"var(--green)":"var(--s3)")+";cursor:pointer;flex-shrink:0;font-size:10px;color:#fff;font-weight:700";
+    tog.textContent=p.disponible?"ON":"OFF";
+    var pid=p.id,pdis=!p.disponible;
+    tog.onclick=function(){admToggle(pid,pdis);};
+    div.appendChild(imgEl);div.appendChild(info);div.appendChild(price);div.appendChild(tog);
+    lista.appendChild(div);
+  });
+}
+
+async function admToggle(id, disponible){
+  try{
+    await fetch(SU+"/rest/v1/menu_items?id=eq."+id,{
+      method:"PATCH",
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({disponible:disponible})
+    });
+    await admCargarLista();
+    await cargarMenu();
+    showToast(disponible?"✅ Producto activado":"⭕ Producto desactivado");
+  }catch(e){showToast("Error actualizando");}
+}
+
 </script>
 
 <div id="bsug" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:480px;background:rgba(20,17,30,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:16px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,0.7)">
@@ -2421,5 +2634,72 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then
   </div>
   <div id="bsugItems" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px"></div>
 </div>
+
+<!-- ADMIN FAB -->
+<button class="admin-fab" onclick="abrirAdmin()" title="Admin">⚙️</button>
+
+<!-- ADMIN SCREEN -->
+<div id="adminScreen">
+  <div class="adm-hdr">
+    <div class="adm-title">⚙️ ADMIN</div>
+    <button class="adm-close" onclick="cerrarAdmin()">✕</button>
+  </div>
+  <div class="adm-body">
+    <div class="adm-tabs">
+      <button class="adm-tab on" id="admTab-nuevo" onclick="admSetTab('nuevo')">+ Nuevo producto</button>
+      <button class="adm-tab" id="admTab-lista" onclick="admSetTab('lista')">Lista</button>
+    </div>
+
+    <!-- TAB NUEVO PRODUCTO -->
+    <div id="admPanel-nuevo">
+      <div class="adm-field">
+        <label class="adm-label">Nombre *</label>
+        <input class="adm-input" id="admNombre" placeholder="Ej: Hamburguesa Especial">
+      </div>
+      <div class="adm-field">
+        <label class="adm-label">Categoría *</label>
+        <input class="adm-input" id="admCategoria" placeholder="Ej: Hamburguesas Tradicionales" list="admCatList">
+        <datalist id="admCatList"></datalist>
+      </div>
+      <div class="adm-field">
+        <label class="adm-label">Precio *</label>
+        <input class="adm-input" id="admPrecio" type="number" placeholder="18900">
+      </div>
+      <div class="adm-field">
+        <label class="adm-label">Descripción</label>
+        <input class="adm-input" id="admDesc" placeholder="Ingredientes, detalles...">
+      </div>
+      <div class="adm-field">
+        <label class="adm-label">URL de imagen</label>
+        <input class="adm-input" id="admImg" placeholder="https://...jpg">
+      </div>
+      <div class="adm-field">
+        <label class="adm-label">Emoji (si no hay imagen)</label>
+        <input class="adm-input" id="admEmoji" placeholder="🍔" maxlength="4">
+      </div>
+      <button class="adm-btn" onclick="admGuardarProducto()">Guardar producto →</button>
+      <div id="admMsg" style="text-align:center;font-size:13px;margin-top:12px;min-height:20px;font-family:var(--font-ui);font-weight:600"></div>
+    </div>
+
+    <!-- TAB LISTA -->
+    <div id="admPanel-lista" style="display:none">
+      <input class="adm-input" id="admSearch" placeholder="🔍 Buscar producto..." oninput="admFiltrar(this.value)" style="margin-bottom:14px">
+      <div id="admLista"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PIN -->
+<div id="adminPinOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(8px)" onclick="if(event.target===this)document.getElementById('adminPinOv').style.display='none'">
+  <div style="background:var(--s1);border:1px solid var(--border);border-radius:24px;padding:28px 24px;width:280px;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px">🔐</div>
+    <div style="font-family:var(--font-disp);font-size:22px;font-weight:800;margin-bottom:4px">Acceso Admin</div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:20px">Ingresa el PIN</div>
+    <input id="adminPinInput" type="password" class="adm-input" placeholder="••••" maxlength="6" style="text-align:center;font-size:24px;letter-spacing:8px;margin-bottom:14px" onkeydown="if(event.key==='Enter')verificarPin()">
+    <button class="adm-btn" onclick="verificarPin()">Entrar</button>
+    <div id="pinErr" style="color:var(--accent);font-size:12px;margin-top:10px;font-family:var(--font-ui);font-weight:700;min-height:16px"></div>
+  </div>
+</div>
+
 </body>
 </html>
