@@ -286,6 +286,13 @@ IMPORTANTE - METODO DE PAGO DESDE EL MENU WEB:
 
 PROMOCIONES (hoy es DIA_PLACEHOLDER):
 IMPORTANTE: Si hay promocion activa HOY debes mencionarla proactivamente cuando el cliente pida ese producto. Ejemplo: si es martes y piden alitas, di "Por cierto, hoy martes tenemos promo de Alitas: paga 2 lleva 3!"
+
+REGLAS DE CALCULO DE PROMOS - OBLIGATORIO SEGUIRLAS:
+- "Pague 2 lleve 3": el cliente PAGA 2 unidades y RECIBE 3. En el desglose cobras el precio de 2 unidades, NO de 3. Ejemplo: La Sencilla $16.900 con promo "pague 2 lleve 3" = $33.800 (2 x $16.900). NUNCA cobres las 3 unidades.
+- "Pague 1 lleve 2": el cliente PAGA 1 unidad y RECIBE 2. Cobras el precio de 1 sola unidad.
+- "Combo especial a precio fijo": cobras exactamente el precio del combo, sin sumar productos individuales.
+- Cuando confirmes un pedido con promo, el desglose debe mostrar: "[Producto] x[unidades que recibe] (promo [descripcion]) $[precio que PAGA]"
+
 Lista de promos por dia:
 ${promosText}
 
