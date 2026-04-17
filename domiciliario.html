@@ -367,13 +367,13 @@ function arrancar(){
 
 function loadPedidos(){
   if(!rest||!domiciliarioId)return;
-  get("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(listo,en_camino)&or=(domiciliario_id.eq."+domiciliarioId+",domiciliario_nombre.eq."+encodeURIComponent(domiciliarioNombre)+")&order=created_at.asc&limit=20").then(function(pedidos){
+  get("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(listo,en_camino)&domiciliario_id=eq."+domiciliarioId+"&order=created_at.asc&limit=20").then(function(pedidos){
     var isFirst=Object.keys(pedidosKnown).length===0;
     pedidos.forEach(function(p){if(!pedidosKnown[p.id]){if(!isFirst)playSound();pedidosKnown[p.id]=true;}});
     document.getElementById("statAsignados").textContent=pedidos.filter(function(p){return p.estado==="listo";}).length;
     document.getElementById("statCamino").textContent=pedidos.filter(function(p){return p.estado==="en_camino";}).length;
     var col=getHoraCol(),desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
-    get("pedidos","restaurante_id=eq."+rest.id+"&estado=eq.entregado&or=(domiciliario_id.eq."+domiciliarioId+",domiciliario_nombre.eq."+encodeURIComponent(domiciliarioNombre)+")&created_at=gte."+desde+"&select=id,created_at,updated_at").then(function(e){
+    get("pedidos","restaurante_id=eq."+rest.id+"&estado=eq.entregado&domiciliario_id=eq."+domiciliarioId+"&created_at=gte."+desde+"&select=id,created_at,updated_at").then(function(e){
       document.getElementById("statEntregados").textContent=e.length;
       var tiempos=e.map(function(p){if(p.updated_at&&p.created_at){return Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);}return null;}).filter(function(t){return t!==null&&t>0&&t<300;});
       if(tiempos.length){
@@ -538,10 +538,10 @@ function mostrarGPS(on){
 
 function enviarUbicacion(pedidoId,lat,lng){
   if(!rest||!pedidoId)return;
-  fetch("https://vbxuwzcfzfjwhllkppkg.supabase.co/rest/v1/domiciliario_ubicacion?on_conflict=pedido_id",{
+  fetch("/api/ubicacion-domiciliario",{
     method:"POST",
-    headers:{"apikey":"sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5","Authorization":"Bearer sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5","Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},
-    body:JSON.stringify({restaurante_id:rest.id,pedido_id:pedidoId,domiciliario_id:domiciliarioId||null,lat:lat,lng:lng,updated_at:new Date().toISOString()})
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({pedido_id:pedidoId,restaurante_id:rest.id,domiciliario_id:domiciliarioId||null,lat:lat,lng:lng})
   }).catch(function(){});
 }
 
