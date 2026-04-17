@@ -1386,7 +1386,16 @@ function esAdicionable(i){return i&&!i.es_bebida&&!esAdicCat(i.categoria||"");}
 
 function addItem(id,precio,nombre){
   var item=menuItems.find(function(x){return x.id===id;});
-  var esAdicionable=item&&!item.es_bebida&&!esAdicCat(item.categoria||"");
+  var esBeb=item&&(item.es_bebida||(item.categoria||"").toLowerCase().includes("bebida"));
+  // Bebidas: agregar directo siempre
+  if(esBeb){
+    if(!carrito[id])carrito[id]={id:id,precio:precio,nombre:nombre,qty:0};
+    carrito[id].qty++;
+    updateCartUI();
+    return;
+  }
+  // Comida: primera vez abre detalle, después incrementa directo
+  var esAdicionable=item&&!esAdicCat(item.categoria||"");
   if(esAdicionable&&(!carrito[id]||carrito[id].qty===0)){
     abrirProdDetalle(id);
     return;
@@ -1394,14 +1403,12 @@ function addItem(id,precio,nombre){
   if(!carrito[id])carrito[id]={id:id,precio:precio,nombre:nombre,qty:0};
   carrito[id].qty++;
   updateCartUI();
-  // Sugerencia bebida cada 3 items de comida
-  if(item&&!item.es_bebida&&!esAdicCat(item.categoria||"")){
-    var totalComida=Object.values(carrito).filter(function(ci){
-      var m=menuItems.find(function(x){return x.id===ci.id;});
-      return m&&!m.es_bebida&&!esAdicCat(m.categoria||"");
-    }).reduce(function(a,b){return a+b.qty;},0);
-    if(totalComida%3===0)sugerirBebida();
-  }
+  // Sugerencia bebida cada 3 comidas
+  var totalComida=Object.values(carrito).filter(function(ci){
+    var m=menuItems.find(function(x){return x.id===ci.id;});
+    return m&&!m.es_bebida&&!(m.categoria||"").toLowerCase().includes("bebida");
+  }).reduce(function(a,b){return a+b.qty;},0);
+  if(totalComida>0&&totalComida%3===0)sugerirBebida();
 }
 
 function qDec(id){
@@ -1673,7 +1680,7 @@ async function enviar(){
     var notasFinal=notas||"";
     if(cuponCod&&dsc>0){notasFinal=(notasFinal?notasFinal+" | ":"")+"Cupón: "+cuponCod+" (−"+fmt(dsc)+")";}
     var compUrl=null;
-    if(compB64){try{compUrl=await comprimirImg(compB64,600,0.65);}catch(e){}}
+    if(compB64){try{compUrl=await comprimirImg(compB64,800,0.7);}catch(e){compUrl=compB64;}}
 
     var resp=await fetch("/api/pedido-manual",{
       method:"POST",headers:{"Content-Type":"application/json"},
@@ -1953,27 +1960,35 @@ function filtrarBusqueda(q){
 }
 
 function sugerirBebida(){
-  var bs=menuItems.filter(function(i){return (i.categoria||'').toLowerCase().includes('bebida');});
+  var bs=menuItems.filter(function(i){return i.es_bebida||(i.categoria||"").toLowerCase().includes("bebida");});
   if(!bs.length)return;
-  if(!window._sc)window._sc=0;
-  window._sc++;
-  if(window._sc%3!==1)return;
-  var s=document.getElementById('bsug');
+  var s=document.getElementById("bsug");
   if(!s)return;
-  var wrap=document.getElementById('bsugItems')||s;
-  if(document.getElementById('bsugItems')){
-    wrap.innerHTML='';
+  var wrap=document.getElementById("bsugItems");
+  if(wrap){
+    wrap.innerHTML="";
     bs.slice(0,6).forEach(function(b){
-      var div=document.createElement('div');
-      div.style.cssText='flex-shrink:0;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 14px;cursor:pointer;text-align:center;min-width:90px;transition:background 0.15s';
-      div.innerHTML='<div style="font-size:11px;font-weight:700;color:#f0ecf8;margin-bottom:4px">'+b.nombre+'</div><div style="font-size:13px;font-weight:900;color:#f97316">'+fmt(b.precio)+'</div>';
-      div.onclick=function(){addItem(b.id,b.precio,b.nombre);closeBsug();};
+      var div=document.createElement("div");
+      div.style.cssText="flex-shrink:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 14px;cursor:pointer;text-align:center;min-width:100px;transition:background 0.15s";
+      div.innerHTML='<div style="font-size:11px;font-weight:700;color:#f0ecf8;margin-bottom:5px;line-height:1.3">'+b.nombre+'</div>'
+        +'<div style="font-size:14px;font-weight:900;color:#f97316">'+fmt(b.precio)+'</div>';
+      div.onclick=function(){
+        if(!carrito[b.id])carrito[b.id]={id:b.id,precio:b.precio,nombre:b.nombre,qty:0};
+        carrito[b.id].qty++;
+        updateCartUI();
+        closeBsug();
+        showToast("🥤 "+b.nombre+" agregado");
+      };
       wrap.appendChild(div);
     });
   }
-  s.style.display='block';
-  clearTimeout(window._st);
-  window._st=setTimeout(closeBsug,10000);
+  s.style.cssText="display:block;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:480px;background:rgba(20,17,30,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:16px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,0.7);animation:slideUp 0.3s ease";
+  clearTimeout(window._bsugT);
+  window._bsugT=setTimeout(closeBsug,10000);
+}
+function closeBsug(){
+  var s=document.getElementById("bsug");if(s)s.style.display="none";
+  clearTimeout(window._bsugT);
 }
 function closeBsug(){
   var s=document.getElementById('bsug');
@@ -2144,29 +2159,93 @@ function cerrarMisPedidos(){
 async function cargarMisPedidos(){
   var tel=document.getElementById("iTel")?document.getElementById("iTel").value.trim().replace(/\D/g,""):"";
   var lista=document.getElementById("misPedidosLista");if(!lista)return;
-  if(!tel||tel.length<10||!rest){lista.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">📱</div><div style="font-size:14px">Ingresa tu WhatsApp en el carrito<br>para ver tus pedidos</div></div>';return;}
+  if(!tel||tel.length<10||!rest){
+    lista.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">📱</div><div style="font-size:14px">Ingresa tu WhatsApp en el carrito<br>para ver tus pedidos</div></div>';
+    return;
+  }
   var tl=tel.replace(/^57/,"");
   try{
     var r=await fetch("/api/mis-pedidos/"+tl+"?restaurante_id="+rest.id);
     var data=await r.json();var pedidos=data.pedidos||[];
-    if(!pedidos.length){lista.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">✅</div><div style="font-size:14px">No tienes pedidos activos</div></div>';return;}
-    var ei={confirmado:{ico:"✅",label:"Confirmado",c:"rgba(16,185,129,0.15)",b:"rgba(16,185,129,0.3)",t:"#34d399"},en_preparacion:{ico:"🔥",label:"En preparación",c:"rgba(249,115,22,0.12)",b:"rgba(249,115,22,0.3)",t:"#fb923c"},listo:{ico:"🎉",label:"¡Listo!",c:"rgba(234,179,8,0.12)",b:"rgba(234,179,8,0.3)",t:"#fbbf24"},en_camino:{ico:"🛵",label:"En camino",c:"rgba(59,130,246,0.12)",b:"rgba(59,130,246,0.3)",t:"#60a5fa"}};
-    lista.innerHTML=pedidos.map(function(p){
+    if(!pedidos.length){
+      lista.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">✅</div><div style="font-size:14px">No tienes pedidos activos</div></div>';
+      return;
+    }
+    var ei={
+      confirmado:{ico:"✅",label:"Confirmado",c:"rgba(16,185,129,0.15)",b:"rgba(16,185,129,0.3)",t:"#34d399"},
+      en_preparacion:{ico:"🔥",label:"En preparación",c:"rgba(249,115,22,0.12)",b:"rgba(249,115,22,0.3)",t:"#fb923c"},
+      listo:{ico:"🎉",label:"¡Listo!",c:"rgba(234,179,8,0.12)",b:"rgba(234,179,8,0.3)",t:"#fbbf24"},
+      en_camino:{ico:"🛵",label:"En camino",c:"rgba(59,130,246,0.12)",b:"rgba(59,130,246,0.3)",t:"#60a5fa"}
+    };
+    lista.innerHTML="";
+    pedidos.forEach(function(p){
       var e=ei[p.estado]||{ico:"⏳",label:p.estado,c:"rgba(255,255,255,0.05)",b:"rgba(255,255,255,0.1)",t:"var(--t2)"};
       var items=Array.isArray(p.items)?p.items:(p.items||"").split("\n").filter(Boolean);
       var fecha=new Date(p.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});
-      return '<div style="background:'+e.c+';border:1px solid '+e.b+';border-radius:18px;padding:16px;margin-bottom:12px">'
-        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+      var div=document.createElement("div");
+      div.style.cssText="background:"+e.c+";border:1px solid "+e.b+";border-radius:18px;padding:16px;margin-bottom:12px";
+      div.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
         +'<div style="display:flex;align-items:center;gap:8px"><span style="font-size:24px">'+e.ico+'</span>'
         +'<div><div style="font-family:var(--font-disp);font-size:18px;font-weight:800;color:'+e.t+'">'+e.label+'</div>'
         +'<div style="font-size:11px;color:var(--t3)">Pedido #'+p.numero_pedido+' · '+fecha+'</div></div></div>'
         +'<div style="font-family:var(--font-disp);font-size:20px;font-weight:800;color:var(--orange)">'+fmt(p.total)+'</div>'
-        +'</div>'+'<div style="background:rgba(0,0,0,0.2);border-radius:12px;padding:10px 12px;margin-bottom:8px">'
+        +'</div>'
+        +'<div style="background:rgba(0,0,0,0.2);border-radius:12px;padding:10px 12px;margin-bottom:8px">'
         +items.slice(0,4).map(function(it){return '<div style="font-size:12px;color:var(--t2);padding:2px 0">'+it+'</div>';}).join("")
         +(items.length>4?'<div style="font-size:11px;color:var(--t3)">+'+(items.length-4)+' más</div>':'')
-        +'</div>'+(p.direccion?'<div style="font-size:11px;color:var(--t3)">📍 '+p.direccion+'</div>':'')+'</div>';
-    }).join("");
+        +'</div>'
+        +(p.direccion?'<div style="font-size:11px;color:var(--t3);margin-bottom:8px">📍 '+p.direccion+'</div>':'');
+      // Pasos de tracking
+      var stepsEl=document.createElement("div");
+      stepsEl.style.cssText="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:8px";
+      var steps=["confirmado","en_preparacion","listo","en_camino"];
+      var labels=["✅ Recibido","🔥 Prep","🎉 Listo","🛵 Camino"];
+      var curIdx=steps.indexOf(p.estado);
+      steps.forEach(function(st,i){
+        var done=i<=curIdx;
+        var s=document.createElement("div");
+        s.style.cssText="flex-shrink:0;padding:4px 10px;border-radius:8px;font-size:10px;font-weight:700;background:"+(done?"rgba(16,185,129,0.2)":"rgba(255,255,255,0.05)")+";color:"+(done?"#34d399":"var(--t3)")+(i===curIdx?";border:1px solid rgba(16,185,129,0.4)":"");
+        s.textContent=labels[i];
+        stepsEl.appendChild(s);
+      });
+      div.appendChild(stepsEl);
+      // Mapa si está en camino
+      if(p.estado==="en_camino"&&p.id){
+        var mapDiv=document.createElement("div");
+        mapDiv.id="trackMap-"+p.id;
+        mapDiv.style.cssText="width:100%;height:200px;border-radius:14px;overflow:hidden;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);margin-top:8px;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:13px";
+        mapDiv.innerHTML='<span style="animation:spin 1s linear infinite;display:inline-block;margin-right:8px">📍</span> Cargando ubicación del domiciliario...';
+        div.appendChild(mapDiv);
+        // Cargar ubicación del domiciliario
+        cargarMapaDomiciliario(p.id, mapDiv);
+      }
+      lista.appendChild(div);
+    });
   }catch(e){lista.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">Error cargando pedidos.</div>';}
+}
+
+async function cargarMapaDomiciliario(pedidoId, mapEl){
+  try{
+    var r=await fetch(SU+"/rest/v1/domiciliario_ubicacion?pedido_id=eq."+pedidoId+"&select=lat,lng,updated_at",
+      {headers:{"apikey":SK,"Authorization":"Bearer "+SK}});
+    var d=await r.json();
+    if(!d||!d.length||!d[0].lat){
+      mapEl.innerHTML='<span>🛵</span> <span style="color:var(--t2);font-size:12px">El domiciliario activará el GPS al salir</span>';
+      return;
+    }
+    var lat=d[0].lat,lng=d[0].lng;
+    // Mostrar en iframe de Google Maps
+    mapEl.innerHTML='';
+    var iframe=document.createElement("iframe");
+    iframe.src="https://www.google.com/maps?q="+lat+","+lng+"&z=16&output=embed";
+    iframe.style.cssText="width:100%;height:100%;border:none";
+    iframe.loading="lazy";
+    mapEl.appendChild(iframe);
+    // Actualizar cada 10s
+    setTimeout(function(){cargarMapaDomiciliario(pedidoId,mapEl);},10000);
+  }catch(e){
+    mapEl.innerHTML='<span style="color:var(--t3);font-size:12px">No se pudo cargar la ubicación</span>';
+  }
 }
 function actualizarBtnMisPedidos(){
   var tel=document.getElementById("iTel")?document.getElementById("iTel").value.trim().replace(/\D/g,""):"";
