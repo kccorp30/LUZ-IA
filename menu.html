@@ -1220,20 +1220,22 @@ window.addEventListener("scroll",function(){
 },{passive:true});
 
 /* ── INIT ── */
-window.addEventListener("load",async function(){
+window.addEventListener("load", async function(){
   var restId=gp("rest")||gp("r");
   var mesa=gp("mesa")||gp("m");
-  if(mesa){document.getElementById("t-mesa").style.display="flex";setTipo("mesa");document.getElementById("iMesa").value=mesa;}
+  if(mesa){var mt=document.getElementById("t-mesa");if(mt)mt.style.display="flex";setTipo("mesa");var mi=document.getElementById("iMesa");if(mi)mi.value=mesa;}
   try{
-    var restUrl="/api/restaurante"+(restId?"?id="+restId:"");
-    var rs=await fetch(restUrl).then(function(r){return r.json();});
-    if(rs&&rs.length){rest=rs[0];aplicarRest();}
-    await cargarMenu();
-    cargarZonasMenu();
-  }catch(e){console.error(e);}
+    var rUrl="/api/restaurante"+(restId?"?id="+encodeURIComponent(restId):"");
+    var rs=await fetch(rUrl).then(function(r){return r.json();});
+    if(rs&&rs.length){rest=rs[0];}else if(rs&&rs.id){rest=rs;}
+    if(rest)aplicarRest();
+  }catch(e){console.error("restaurante error",e);}
+  await cargarMenu();
+  await cargarZonasMenu();
+  var telInput=document.getElementById("iTel");
+  if(telInput)telInput.addEventListener("input",actualizarBtnMisPedidos);
   setTimeout(function(){
-    var l=document.getElementById("ls");l.classList.add("out");
-    setTimeout(function(){l.style.display="none";},600);
+    var l=document.getElementById("ls");if(l){l.classList.add("out");setTimeout(function(){l.style.display="none";},600);}
   },900);
 });
 
@@ -1383,12 +1385,22 @@ function renderHCard(i){
 function esAdicionable(i){return i&&!i.es_bebida&&!esAdicCat(i.categoria||"");}
 
 function addItem(id,precio,nombre){
-  if(!carrito[id])carrito[id]={qty:0,precio:precio,nombre:nombre};
+  var item=menuItems.find(function(x){return x.id===id;});
+  var esAdicionable=item&&!item.es_bebida&&!esAdicCat(item.categoria||"");
+  if(esAdicionable&&(!carrito[id]||carrito[id].qty===0)){
+    abrirProdDetalle(id);
+    return;
+  }
+  if(!carrito[id])carrito[id]={id:id,precio:precio,nombre:nombre,qty:0};
   carrito[id].qty++;
   updateCartUI();
-  var item=menuItems.find(function(i){return i.id===id;});
-  if(item&&!esAdicCat(item.categoria)&&!(item.categoria||'').toLowerCase().includes('bebida')){
-    sugerirBebida();
+  // Sugerencia bebida cada 3 items de comida
+  if(item&&!item.es_bebida&&!esAdicCat(item.categoria||"")){
+    var totalComida=Object.values(carrito).filter(function(ci){
+      var m=menuItems.find(function(x){return x.id===ci.id;});
+      return m&&!m.es_bebida&&!esAdicCat(m.categoria||"");
+    }).reduce(function(a,b){return a+b.qty;},0);
+    if(totalComida%3===0)sugerirBebida();
   }
 }
 
@@ -1704,38 +1716,48 @@ async function enviar(){
 /* ── SUCCESS ── */
 function mostrarExito(num,id,tipo,nombre,ptsGanados){
   document.getElementById("ordNum").textContent="#"+num;
-  var msg=tipo==="domicilio"?"Hola <b>"+nombre+"</b>! Tu pedido está en preparación 🔥 Te avisamos cuando salga."
-    :tipo==="mesa"?"<b>"+nombre+"</b>, pedido en cocina. Lo llevamos a tu mesa 🪑"
+  var msg=tipo==="domicilio"?"Hola <b>"+nombre+"</b>! Tu pedido está en preparación 🔥"
+    :tipo==="mesa"?"<b>"+nombre+"</b>, pedido en cocina 🪑"
     :"<b>"+nombre+"</b>, pasa a recoger en unos minutos 🏪";
   document.getElementById("succMsg").innerHTML=msg;
-  if(tipo!=="domicilio")document.getElementById("ts-camino").style.display="none";
-  // show pts badge
+  if(tipo!=="domicilio"){var tc=document.getElementById("ts-camino");if(tc)tc.style.display="none";}
   var sb=document.getElementById("succPtsBadge");
-  if(sb&&ptsGanados){
-    document.getElementById("succPtsTxt").textContent="+"+ptsGanados+" pts";
-    sb.style.display="block";
-  }
+  if(sb&&ptsGanados){var st=document.getElementById("succPtsTxt");if(st)st.textContent="+"+ptsGanados+" pts";sb.style.display="block";}
   document.getElementById("succ").classList.add("show");
-  trackId=id;
-  if(id)trackTimer=setInterval(function(){actuTracking(id);},5000);
+  setTimeout(mostrarBannerNotif,1500);
+  // Iniciar tracking limpio
+  if(trackTimer){clearInterval(trackTimer);trackTimer=null;}
+  if(id){
+    trackId=id;
+    _ultimoEstado[id]="confirmado";
+    trackTimer=setInterval(function(){actuTracking(id);},5000);
+  }
 }
 
 async function actuTracking(id){
   try{
-    var d=await api("pedidos","id=eq."+id+"&select=estado");
+    var d=await fetch(SU+"/rest/v1/pedidos?id=eq."+id+"&select=estado,numero_pedido",
+      {headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json();});
     if(!d||!d.length)return;
-    var est=d[0].estado;
-    var map={confirmado:"confirmado",en_preparacion:"preparando",listo:"listo",en_camino:"camino",entregado:"entregado"};
+    var est=d[0].estado,num=d[0].numero_pedido;
+    if(_ultimoEstado[id]!==undefined&&_ultimoEstado[id]!==est){
+      notificarEstadoLocal(est,num);
+      var btn=document.getElementById("btnMisPedidos");
+      if(btn&&btn.style.display!=="none"){btn.textContent="📦 Ver pedido";btn.style.color="#fb923c";}
+    }
+    _ultimoEstado[id]=est;
+    if(est==="en_camino")obtenerUbicacionDomiciliario(id);
+    var map2={confirmado:"confirmado",en_preparacion:"preparando",listo:"listo",en_camino:"camino",entregado:"entregado"};
     var order=["confirmado","en_preparacion","listo","en_camino","entregado"];
-    var idx=order.indexOf(est);
+    var idx2=order.indexOf(est);
     order.forEach(function(s,i){
-      var key=map[s];var el=document.getElementById("ts-"+key);if(!el)return;
+      var el=document.getElementById("ts-"+map2[s]);if(!el)return;
       el.classList.remove("done","act");
-      if(i<idx)el.classList.add("done");
-      else if(i===idx)el.classList.add("act");
+      if(i<idx2)el.classList.add("done");
+      else if(i===idx2)el.classList.add("act");
     });
     if(est==="entregado")clearInterval(trackTimer);
-  }catch(e){}
+  }catch(e){console.error("tracking error",e);}
 }
 
 function nuevoPedido(){
@@ -1966,26 +1988,23 @@ function addItem(id,precio,nombre){addItem(id,precio,nombre);closeBsug();}
 var zonasData=[],domCalculado=null;
 
 async function cargarZonasMenu(){
-  // Zonas hardcodeadas como base (siempre disponibles)
-  var ZONAS_BASE=[
-    {nombre:"Zona 1",precio_domicilio:3000,barrios:"Canaveral,Granada,Versalles,Centenario,San Fernando,Alameda,Ciudad Jardin,Tequendama,Miraflores,Chipichape,Normandia"},
-    {nombre:"Zona 2",precio_domicilio:4000,barrios:"San Judas,Guadalupe,Calima,Alfonso Lopez,Limonar,El Ingenio,Naciones Unidas,Quintas de Don Simon,La Flora,Mayapan"},
-    {nombre:"Zona 3",precio_domicilio:5000,barrios:"Salomia,Floralia,El Troncal,Petecuy,Terron Colorado,Siloé,Marroquin,El Poblado,Compartir,Las Americas,Univalle"},
-    {nombre:"Zona 4",precio_domicilio:6000,barrios:"Aguablanca,Villanueva,El Vallado,Ciudad Cordoba,Puertas del Sol,Manuela Beltran,El Retiro,Alfonso Bonilla Aragon"}
+  // Zonas hardcodeadas siempre disponibles
+  zonasData=[
+    {nombre:"Zona 1",precio_domicilio:3000,barrios:"Canaveral,Granada,Versalles,Centenario,San Fernando,Alameda,Ciudad Jardin,Tequendama,Miraflores,Chipichape,Normandia,Belalcazar"},
+    {nombre:"Zona 2",precio_domicilio:4000,barrios:"San Judas,Guadalupe,Calima,Alfonso Lopez,Limonar,El Ingenio,Naciones Unidas,Quintas de Don Simon,La Flora,Mayapan,El Refugio,Camino Real"},
+    {nombre:"Zona 3",precio_domicilio:5000,barrios:"Salomia,Floralia,El Troncal,Petecuy,Terron Colorado,Siloé,Marroquin,El Poblado,Compartir,Las Americas,Univalle,Meléndez,Pance"},
+    {nombre:"Zona 4",precio_domicilio:6000,barrios:"Aguablanca,Villanueva,El Vallado,Ciudad Cordoba,Puertas del Sol,Manuela Beltran,El Retiro,Alfonso Bonilla Aragon,Mojica,Desepaz"}
   ];
-  zonasData=ZONAS_BASE;
   if(!rest)return;
-  // Intentar cargar desde servidor para sobrescribir con datos reales
   try{
-    var r=await fetch("/api/zonas?restaurante_id="+encodeURIComponent(rest.id));
-    if(r.ok){var d=await r.json();if(d&&d.length){zonasData=d;console.log("Zonas servidor:",d.length);return;}}
+    var r=await fetch("/api/zonas?restaurante_id="+rest.id);
+    if(r.ok){var d=await r.json();if(d&&d.length){zonasData=d;return;}}
   }catch(e){}
   try{
     var r2=await fetch(SU+"/rest/v1/zonas_domicilio?restaurante_id=eq."+rest.id+"&order=precio_domicilio.asc",
       {headers:{"apikey":SK,"Authorization":"Bearer "+SK}});
-    if(r2.ok){var d2=await r2.json();if(d2&&d2.length){zonasData=d2;console.log("Zonas Supabase:",d2.length);return;}}
+    if(r2.ok){var d2=await r2.json();if(d2&&d2.length){zonasData=d2;}}
   }catch(e){}
-  console.log("Usando zonas hardcodeadas:",zonasData.length);
 }
 
 function buscarBarrio(q){
