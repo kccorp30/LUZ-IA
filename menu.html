@@ -90,7 +90,7 @@ body::before{
 .hd-cart:active{transform:scale(0.93);}
 .hd-cart.active{background:var(--accent);border-color:var(--accent);box-shadow:0 0 20px var(--glow);}
 .hd-cart-n{font-family:var(--font-ui);font-size:13px;font-weight:700;}
-.hd-cart-t{font-family:var(--font-disp);font-size:15px;font-weight:700;letter-spacing:0.5px;display:none;}
+.hd-cart-t{font-family:var(--font-disp);font-size:15px;font-weight:700;letter-spacing:0.5px;display:block;}
 .hd-cart.active .hd-cart-t{display:block;}
 .cart-pulse{
   position:absolute;top:-3px;right:-3px;width:10px;height:10px;
@@ -166,14 +166,14 @@ body::before{
 }
 
 /* ── PROMOS CAROUSEL ── */
-.promos-wrap{padding:4px 16px 8px;display:none;}
+.promos-wrap{padding:4px 16px 8px;display:block;}
 .promos-wrap.visible{display:block;}
 .promos-scroll{
   display:flex;gap:10px;overflow-x:auto;
   scrollbar-width:none;padding-bottom:4px;
   scroll-snap-type:x mandatory;
 }
-.promos-scroll::-webkit-scrollbar{display:none;}
+.promos-scroll::-webkit-scrollbar{display:block;}
 .promo-card{
   flex-shrink:0;width:240px;border-radius:18px;overflow:hidden;
   cursor:pointer;scroll-snap-align:start;
@@ -211,7 +211,7 @@ body::before{
   display:flex;gap:7px;padding:0 16px 12px;
   overflow-x:auto;scrollbar-width:none;
 }
-.cats-row::-webkit-scrollbar{display:none;}
+.cats-row::-webkit-scrollbar{display:block;}
 .cat-pill{flex-shrink:0;padding:9px 18px;border-radius:100px;border:1.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--t2);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.2s;}
 .cat-pill.on{color:#fff;background:linear-gradient(135deg,var(--accent),#c42912);border-color:transparent;box-shadow:0 4px 16px rgba(232,52,28,0.4);}
 
@@ -467,7 +467,7 @@ textarea.fi{resize:none;min-height:66px;}
 .uz-ico{font-size:28px;margin-bottom:6px;}
 .uz-txt{font-family:var(--font-ui);font-size:13px;color:var(--t2);font-weight:600;}
 .uz-sub{font-size:11px;color:var(--t3);margin-top:3px;}
-.uz-prev{width:100%;border-radius:10px;max-height:150px;object-fit:cover;margin-top:10px;display:none;}
+.uz-prev{width:100%;border-radius:10px;max-height:150px;object-fit:cover;margin-top:10px;display:block;}
 
 /* CUPÓN */
 .cupon-row{display:flex;gap:8px;margin-bottom:8px;}
@@ -644,9 +644,9 @@ textarea.fi{resize:none;min-height:66px;}
 .empty-txt{font-size:14px;font-weight:300;line-height:1.6;}
 
 /* mesa field hidden by default */
-#mesaField{display:none;}
+#mesaField{display:block;}
 /* datafono option hidden by default */
-#p-datafono{display:none;}
+#p-datafono{display:block;}
 
 /* ── REWARDS SYSTEM ── */
 /* Floating star button */
@@ -1383,7 +1383,7 @@ function esAdicionable(i){return i&&!i.es_bebida&&!esAdicCat(i.categoria||"");}
 function addItem(id,precio,nombre){
   if(!carrito[id])carrito[id]={qty:0,precio:precio,nombre:nombre};
   carrito[id].qty++;
-  actualizarCarrito();
+  updateCartUI();
   var item=menuItems.find(function(i){return i.id===id;});
   if(item&&!esAdicCat(item.categoria)&&!(item.categoria||'').toLowerCase().includes('bebida')){
     sugerirBebida();
@@ -1451,7 +1451,7 @@ function setTipo(t){
   });
   document.getElementById("domFields").style.display=t==="domicilio"?"block":"none";
   document.getElementById("mesaField").style.display=t==="mesa"?"block":"none";
-  document.getElementById("p-datafono").style.display="block";
+  // datafono siempre visible
   updateTotales();
 }
 
@@ -1942,7 +1942,7 @@ function sugerirBebida(){
     +'<button onclick="closeBsug()" style="background:none;border:none;color:rgba(240,236,248,0.4);font-size:20px;cursor:pointer">x</button>'
     +'</div><div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none">';
   bs.slice(0,6).forEach(function(b){
-    h+='<div onclick="addBebida(\''+b.id+'\','+b.precio+',\''+esc(b.nombre)+'\')" '
+    h+='<div onclick="addItem(\''+b.id+'\','+b.precio+',\''+esc(b.nombre)+'\')" '
       +'style="flex-shrink:0;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 14px;cursor:pointer;text-align:center;min-width:90px">'
       +'<div style="font-size:11px;font-weight:700;color:#f0ecf8;margin-bottom:4px">'+b.nombre+'</div>'
       +'<div style="font-size:13px;font-weight:900;color:#f97316">'+fmt(b.precio)+'</div></div>';
@@ -1953,7 +1953,7 @@ function sugerirBebida(){
   window._st=setTimeout(closeBsug,5000);
 }
 function closeBsug(){var s=document.getElementById('bsug');if(s)s.remove();window._sc=0;}
-function addBebida(id,precio,nombre){addItem(id,precio,nombre);closeBsug();}
+function addItem(id,precio,nombre){addItem(id,precio,nombre);closeBsug();}
 
 
 // ── ZONAS ──
