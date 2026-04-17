@@ -1599,23 +1599,27 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       try {
         var svcRec = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
         // Look for recent pedido from this client that has no comprobante yet
+        // Buscar pedido reciente del cliente en cualquier estado activo
         var recResp = await axios.get(
           SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id +
           "&cliente_tel=eq." + encodeURIComponent(from) +
-          "&estado=eq.confirmado&order=created_at.desc&limit=1&select=*",
+          "&estado=in.(confirmado,en_preparacion,listo)&order=created_at.desc&limit=1&select=*",
           { headers: { "apikey": svcRec, "Authorization": "Bearer " + svcRec } }
         );
         if (recResp.data && recResp.data.length > 0) {
           var recPed = recResp.data[0];
-          // Update with comprobante if we have it
+          // Actualizar comprobante
+          var patchData = { metodo_pago: orderState[from]?.paymentMethod || recPed.metodo_pago || "digital" };
           if (mediaId) {
-            await axios.patch(
-              SUPABASE_URL + "/rest/v1/pedidos?id=eq." + recPed.id,
-              { comprobante_media_id: mediaId, comprobante_url: "/api/comprobante/" + mediaId },
-              { headers: { "apikey": svcRec, "Authorization": "Bearer " + svcRec, "Content-Type": "application/json", "Prefer": "return=minimal" } }
-            );
+            patchData.comprobante_media_id = mediaId;
+            patchData.comprobante_url = "/api/comprobante/" + mediaId;
           }
-          console.log("Pedido #" + recPed.numero_pedido + " ya existia en Supabase - comprobante actualizado");
+          await axios.patch(
+            SUPABASE_URL + "/rest/v1/pedidos?id=eq." + recPed.id,
+            patchData,
+            { headers: { "apikey": svcRec, "Authorization": "Bearer " + svcRec, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+          );
+          console.log("Pedido #" + recPed.numero_pedido + " - comprobante y metodo_pago actualizados");
         }
       } catch(e) { console.error("recover pedido:", e.message); }
     }
