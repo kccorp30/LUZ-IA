@@ -1935,22 +1935,26 @@ function sugerirBebida(){
   window._sc++;
   if(window._sc%3!==1)return;
   var s=document.getElementById('bsug');
-  if(!s){s=document.createElement('div');s.id='bsug';document.body.appendChild(s);}
-  s.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:440px;background:#1c1923;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,0.6)';
-  var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
-    +'<span style="font-weight:800;font-size:15px;color:#f0ecf8">Agregar bebida?</span>'
-    +'<button onclick="closeBsug()" style="background:none;border:none;color:rgba(240,236,248,0.4);font-size:20px;cursor:pointer">x</button>'
-    +'</div><div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none">';
-  bs.slice(0,6).forEach(function(b){
-    h+='<div onclick="addItem(\''+b.id+'\','+b.precio+',\''+esc(b.nombre)+'\')" '
-      +'style="flex-shrink:0;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 14px;cursor:pointer;text-align:center;min-width:90px">'
-      +'<div style="font-size:11px;font-weight:700;color:#f0ecf8;margin-bottom:4px">'+b.nombre+'</div>'
-      +'<div style="font-size:13px;font-weight:900;color:#f97316">'+fmt(b.precio)+'</div></div>';
-  });
-  h+='</div>';
-  s.innerHTML=h;
+  if(!s)return;
+  var wrap=document.getElementById('bsugItems')||s;
+  if(document.getElementById('bsugItems')){
+    wrap.innerHTML='';
+    bs.slice(0,6).forEach(function(b){
+      var div=document.createElement('div');
+      div.style.cssText='flex-shrink:0;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 14px;cursor:pointer;text-align:center;min-width:90px;transition:background 0.15s';
+      div.innerHTML='<div style="font-size:11px;font-weight:700;color:#f0ecf8;margin-bottom:4px">'+b.nombre+'</div><div style="font-size:13px;font-weight:900;color:#f97316">'+fmt(b.precio)+'</div>';
+      div.onclick=function(){addItem(b.id,b.precio,b.nombre);closeBsug();};
+      wrap.appendChild(div);
+    });
+  }
+  s.style.display='block';
   clearTimeout(window._st);
-  window._st=setTimeout(closeBsug,5000);
+  window._st=setTimeout(closeBsug,10000);
+}
+function closeBsug(){
+  var s=document.getElementById('bsug');
+  if(s)s.style.display='none';
+  clearTimeout(window._st);
 }
 function closeBsug(){var s=document.getElementById('bsug');if(s)s.remove();window._sc=0;}
 function addItem(id,precio,nombre){addItem(id,precio,nombre);closeBsug();}
@@ -1960,16 +1964,26 @@ function addItem(id,precio,nombre){addItem(id,precio,nombre);closeBsug();}
 var zonasData=[],domCalculado=null;
 
 async function cargarZonasMenu(){
+  // Zonas hardcodeadas como base (siempre disponibles)
+  var ZONAS_BASE=[
+    {nombre:"Zona 1",precio_domicilio:3000,barrios:"Canaveral,Granada,Versalles,Centenario,San Fernando,Alameda,Ciudad Jardin,Tequendama,Miraflores,Chipichape,Normandia"},
+    {nombre:"Zona 2",precio_domicilio:4000,barrios:"San Judas,Guadalupe,Calima,Alfonso Lopez,Limonar,El Ingenio,Naciones Unidas,Quintas de Don Simon,La Flora,Mayapan"},
+    {nombre:"Zona 3",precio_domicilio:5000,barrios:"Salomia,Floralia,El Troncal,Petecuy,Terron Colorado,Siloé,Marroquin,El Poblado,Compartir,Las Americas,Univalle"},
+    {nombre:"Zona 4",precio_domicilio:6000,barrios:"Aguablanca,Villanueva,El Vallado,Ciudad Cordoba,Puertas del Sol,Manuela Beltran,El Retiro,Alfonso Bonilla Aragon"}
+  ];
+  zonasData=ZONAS_BASE;
   if(!rest)return;
+  // Intentar cargar desde servidor para sobrescribir con datos reales
   try{
     var r=await fetch("/api/zonas?restaurante_id="+encodeURIComponent(rest.id));
-    if(r.ok){var d=await r.json();if(d&&d.length){zonasData=d;return;}}
+    if(r.ok){var d=await r.json();if(d&&d.length){zonasData=d;console.log("Zonas servidor:",d.length);return;}}
   }catch(e){}
   try{
     var r2=await fetch(SU+"/rest/v1/zonas_domicilio?restaurante_id=eq."+rest.id+"&order=precio_domicilio.asc",
       {headers:{"apikey":SK,"Authorization":"Bearer "+SK}});
-    if(r2.ok)zonasData=await r2.json()||[];
-  }catch(e){zonasData=[];}
+    if(r2.ok){var d2=await r2.json();if(d2&&d2.length){zonasData=d2;console.log("Zonas Supabase:",d2.length);return;}}
+  }catch(e){}
+  console.log("Usando zonas hardcodeadas:",zonasData.length);
 }
 
 function buscarBarrio(q){
@@ -2199,5 +2213,13 @@ async function pedirPermisoNotif(){
 if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(function(r){}).catch(function(){});}
 
 </script>
+
+<div id="bsug" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:440px;background:#1c1923;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,0.6)">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <span style="font-weight:800;font-size:15px;color:#f0ecf8">🥤 ¿Agregas una bebida?</span>
+    <button onclick="closeBsug()" style="background:none;border:none;color:rgba(240,236,248,0.4);font-size:20px;cursor:pointer;padding:0 4px">✕</button>
+  </div>
+  <div id="bsugItems" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none"></div>
+</div>
 </body>
 </html>
