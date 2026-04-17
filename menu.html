@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>La Curva Street Food</title>
+<!-- v=1776449901.6731932 -->
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -1680,7 +1681,26 @@ async function enviar(){
     var notasFinal=notas||"";
     if(cuponCod&&dsc>0){notasFinal=(notasFinal?notasFinal+" | ":"")+"Cupón: "+cuponCod+" (−"+fmt(dsc)+")";}
     var compUrl=null;
-    if(compB64){try{compUrl=await comprimirImg(compB64,800,0.7);}catch(e){compUrl=compB64;}}
+    if(compB64){
+      try{
+        // Subir a Supabase Storage via servidor
+        var compResp=await fetch("/api/subir-comprobante",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({imagen_base64:compB64,restaurante_id:rest.id})
+        });
+        var compData=await compResp.json();
+        if(compData.ok&&compData.url){
+          compUrl=compData.url;
+          console.log("Comprobante subido:",compUrl);
+        } else {
+          // Fallback: comprimir y enviar base64
+          compUrl=await comprimirImg(compB64,600,0.6);
+        }
+      }catch(e){
+        compUrl=await comprimirImg(compB64,600,0.6);
+      }
+    }
 
     var resp=await fetch("/api/pedido-manual",{
       method:"POST",headers:{"Content-Type":"application/json"},
@@ -2143,8 +2163,19 @@ function agregarDesdeDet(){
   var extraN=selArr.map(function(k){var a=ADICIONALES.find(function(x){return x.id===k;});return a?a.nombre:"";}).filter(Boolean);
   var totalP=prodDetActual.precio+extraP;
   var nomC=prodDetActual.nombre+(extraN.length?" + "+extraN.join(", "):"")+(prodDetSalsaSel.length?" 🌶️ "+prodDetSalsaSel.join(" + "):"");
-  for(var q=0;q<prodDetCant;q++){setQty(prodDetActual.id,totalP,nomC,(carrito[prodDetActual.id]?carrito[prodDetActual.id].qty:0)+1);}
-  var _nom=prodDetActual.nombre;cerrarProdDetalle();showToast("✅ "+_nom+" agregado");
+  var _nom=prodDetActual.nombre;
+  var _id=prodDetActual.id;
+  for(var q=0;q<prodDetCant;q++){
+    setQty(_id,totalP,nomC,(carrito[_id]?carrito[_id].qty:0)+1);
+  }
+  cerrarProdDetalle();
+  showToast("✅ "+_nom+" agregado");
+  // Sugerencia bebida
+  var totalComida=Object.values(carrito).filter(function(ci){
+    var m=menuItems.find(function(x){return x.id===ci.id;});
+    return m&&!m.es_bebida&&!(m.categoria||"").toLowerCase().includes("bebida");
+  }).reduce(function(a,b){return a+b.qty;},0);
+  if(totalComida>0&&totalComida%3===0)sugerirBebida();
 }
 
 // ── MIS PEDIDOS ──
@@ -2314,12 +2345,12 @@ if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then
 
 </script>
 
-<div id="bsug" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:440px;background:#1c1923;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:16px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,0.6)">
+<div id="bsug" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:480px;background:rgba(20,17,30,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:16px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,0.7)">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
     <span style="font-weight:800;font-size:15px;color:#f0ecf8">🥤 ¿Agregas una bebida?</span>
-    <button onclick="closeBsug()" style="background:none;border:none;color:rgba(240,236,248,0.4);font-size:20px;cursor:pointer;padding:0 4px">✕</button>
+    <button onclick="closeBsug()" style="background:none;border:none;color:rgba(240,236,248,0.5);font-size:22px;cursor:pointer;padding:0 4px;line-height:1">✕</button>
   </div>
-  <div id="bsugItems" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none"></div>
+  <div id="bsugItems" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px"></div>
 </div>
 </body>
 </html>
