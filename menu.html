@@ -1342,7 +1342,7 @@ async function cargarMenu(){
     var data=await r.json();
     // Normalizar categoria_slug - blindado contra mayúsculas, espacios y tildes
     menuItems=(data||[])
-      .filter(function(i){return !esAdicCat(i.categoria);})
+      .filter(function(i){return !esAdicCat(i.categoria) && i.disponible!==false;})
       .map(function(i){
         var slug=(i.categoria_slug||i.categoria||"")
           .toLowerCase().trim()
