@@ -1,0 +1,282 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ══════════════════════════════════════════════════════════
+   LUZ IA · Design System
+   Bases globales, componentes, utilidades custom
+   ══════════════════════════════════════════════════════════ */
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-bg-base text-white font-sans min-h-screen;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    background-image: theme('backgroundImage.gradient-mesh');
+    background-attachment: fixed;
+  }
+  /* Scrollbars premium */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+  /* Inputs base — el plugin de forms necesita override para dark */
+  input, textarea, select {
+    @apply bg-glass-white border border-glass-border text-white placeholder-white/35;
+    @apply rounded-xl px-4 py-3 transition-all duration-200;
+  }
+  input:focus, textarea:focus, select:focus {
+    @apply outline-none ring-2 ring-brand-500/40 border-brand-500/50 bg-glass-light;
+  }
+  /* Tap target mínimo móvil */
+  button, a {
+    touch-action: manipulation;
+  }
+  /* Selección */
+  ::selection {
+    background: rgba(249,115,22,0.35);
+    color: white;
+  }
+}
+
+@layer components {
+  /* ── BOTONES ── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm;
+    @apply transition-all duration-200 ease-smooth active:scale-[0.97];
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+  .btn-primary {
+    @apply btn bg-gradient-brand text-white shadow-glow-brand;
+    @apply hover:brightness-110 hover:shadow-[0_0_32px_rgba(249,115,22,0.55)];
+  }
+  .btn-luz {
+    @apply btn bg-gradient-luz text-white shadow-glow-luz;
+    @apply hover:brightness-110;
+  }
+  .btn-success {
+    @apply btn bg-gradient-success text-white shadow-glow-success;
+  }
+  .btn-danger {
+    @apply btn bg-gradient-danger text-white;
+  }
+  .btn-ghost {
+    @apply btn bg-glass-white border border-glass-border text-white/90;
+    @apply hover:bg-glass-light hover:border-glass-border-strong;
+  }
+  .btn-icon {
+    @apply inline-flex items-center justify-center w-10 h-10 rounded-xl;
+    @apply bg-glass-white border border-glass-border text-white/80;
+    @apply transition-all duration-200 active:scale-90 hover:bg-glass-light hover:text-white;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    @apply bg-glass-white backdrop-blur-xl2 border border-glass-border rounded-2xl shadow-card;
+  }
+  .card-glass {
+    @apply card;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+  }
+  .card-elevated {
+    @apply bg-bg-elevated border border-glass-border rounded-2xl shadow-card;
+  }
+  .card-interactive {
+    @apply card transition-all duration-200 ease-smooth cursor-pointer;
+    @apply hover:border-glass-border-strong hover:shadow-card-hover hover:-translate-y-0.5 active:scale-[0.98];
+  }
+
+  /* ── CHIPS / BADGES ── */
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-2xs font-semibold;
+    @apply bg-glass-white border border-glass-border text-white/80;
+  }
+  .chip-success { @apply chip bg-success-500/15 border-success-500/30 text-success-400; }
+  .chip-danger  { @apply chip bg-danger-500/15 border-danger-500/30 text-danger-400; }
+  .chip-warning { @apply chip bg-warning-500/15 border-warning-500/30 text-warning-400; }
+  .chip-brand   { @apply chip bg-brand-500/15 border-brand-500/30 text-brand-400; }
+  .chip-luz     { @apply chip bg-luz-500/15 border-luz-500/30 text-luz-300; }
+
+  /* ── LIVE DOT indicador de tiempo real ── */
+  .live-dot {
+    @apply w-2 h-2 rounded-full bg-success-500 animate-pulse-glow;
+  }
+
+  /* ── INPUT FLOTANTE ── campo con label que flota ── */
+  .float-field {
+    @apply relative;
+  }
+  .float-field input,
+  .float-field textarea {
+    @apply pt-5 pb-2;
+  }
+  .float-field label {
+    @apply absolute left-4 top-3.5 text-white/45 text-sm pointer-events-none;
+    @apply transition-all duration-200 ease-smooth;
+  }
+  .float-field input:focus ~ label,
+  .float-field input:not(:placeholder-shown) ~ label,
+  .float-field textarea:focus ~ label,
+  .float-field textarea:not(:placeholder-shown) ~ label {
+    @apply top-1.5 text-2xs text-brand-400 font-semibold;
+  }
+
+  /* ── SKELETON ── placeholders animados ── */
+  .skeleton {
+    @apply bg-glass-white rounded-lg animate-skeleton;
+  }
+  .skeleton-shimmer {
+    @apply relative overflow-hidden bg-glass-white rounded-lg;
+  }
+  .skeleton-shimmer::after {
+    content: '';
+    @apply absolute inset-0 bg-shimmer-gradient animate-shimmer;
+    background-size: 200% 100%;
+  }
+
+  /* ── MODAL ── estructura base ── */
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 bg-black/75 backdrop-blur-sm;
+    @apply flex items-end sm:items-center justify-center p-0 sm:p-4;
+    animation: fadeIn 0.2s ease-out forwards;
+  }
+  .modal-panel {
+    @apply w-full sm:max-w-lg bg-bg-elevated border border-glass-border-strong;
+    @apply rounded-t-3xl sm:rounded-3xl shadow-floating;
+    @apply max-h-[92vh] overflow-y-auto;
+    animation: slideUp 0.35s cubic-bezier(0.16,1,0.3,1) forwards;
+  }
+  @media (min-width: 640px) {
+    .modal-panel { animation: scaleIn 0.3s cubic-bezier(0.16,1,0.3,1) forwards; }
+  }
+
+  /* ── TOAST ── notificaciones ── */
+  .toast {
+    @apply fixed left-1/2 -translate-x-1/2 top-5 z-[100] max-w-[90vw];
+    @apply card-elevated px-5 py-3 flex items-center gap-3 text-sm font-semibold;
+    animation: fadeInDown 0.35s cubic-bezier(0.16,1,0.3,1) forwards;
+  }
+
+  /* ── BLOBS decorativos de fondo ── */
+  .blob-bg {
+    @apply fixed inset-0 pointer-events-none overflow-hidden;
+    z-index: 0;
+  }
+  .blob {
+    @apply absolute rounded-full blur-3xl opacity-40 animate-blob-float;
+  }
+
+  /* ── TYPING DOTS ── chat ── */
+  .typing-dot {
+    @apply inline-block w-1.5 h-1.5 rounded-full bg-white/60;
+    animation: typing 1.4s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+}
+
+@layer utilities {
+  /* ── Glassmorphism helper ── */
+  .glass {
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .glass-strong {
+    background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255,255,255,0.16);
+  }
+
+  /* ── Texto con gradiente ── */
+  .text-gradient-brand {
+    @apply bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent;
+  }
+  .text-gradient-luz {
+    background: linear-gradient(135deg, #c4b5fd, #8547ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .text-gradient-white {
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.65) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* ── Safe area iOS ── */
+  .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 1rem); }
+  .pt-safe { padding-top: max(env(safe-area-inset-top), 1rem); }
+
+  /* ── No scrollbar ── */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+
+  /* ── Grain/noise texture ── */
+  .noise {
+    position: relative;
+  }
+  .noise::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    mix-blend-mode: overlay;
+  }
+
+  /* ── Stagger delays para animaciones escalonadas ── */
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.10s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.20s; }
+  .stagger-5 { animation-delay: 0.25s; }
+  .stagger-6 { animation-delay: 0.30s; }
+
+  /* ── Override de Leaflet para dark mode ── */
+  .leaflet-container {
+    background: #0a0710 !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+  }
+  .leaflet-dark .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.85) saturate(0.7) contrast(0.9);
+  }
+  .leaflet-dark .leaflet-marker-icon {
+    filter: invert(1) hue-rotate(180deg);
+  }
+  .leaflet-popup-content-wrapper {
+    background: rgba(26, 22, 40, 0.95) !important;
+    color: white !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    backdrop-filter: blur(20px);
+    border-radius: 12px !important;
+  }
+  .leaflet-popup-tip {
+    background: rgba(26, 22, 40, 0.95) !important;
+  }
+  .leaflet-control-zoom a {
+    background: rgba(26, 22, 40, 0.9) !important;
+    color: white !important;
+    border-color: rgba(255,255,255,0.15) !important;
+  }
+  .leaflet-control-attribution {
+    background: rgba(10,7,16,0.7) !important;
+    color: rgba(255,255,255,0.5) !important;
+    backdrop-filter: blur(8px);
+  }
+  .leaflet-control-attribution a {
+    color: rgba(249,115,22,0.8) !important;
+  }
+}
