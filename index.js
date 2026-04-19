@@ -63,6 +63,11 @@ app.use((req, res, next) => {
   }
   next();
 });
+// Servir assets estáticos (CSS compilado de Tailwind, imágenes, etc.)
+app.use('/dist', express.static(path.join(__dirname, 'dist'), {
+  maxAge: '7d',
+  etag: true
+}));
 
 const conversations = {};
 const orderState    = {};
