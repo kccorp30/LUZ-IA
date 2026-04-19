@@ -1381,7 +1381,7 @@ function filtrarCat(c){catActiva=c;renderCats();renderProds(c);}
 function renderProds(cat){
   var items=cat==="todas"
     ?menuItems
-    :menuItems.filter(function(i){return i.categoria_slug===cat;});
+    :menuItems.filter(function(i){return (i.categoria_slug||"").toLowerCase().trim()===(cat||"").toLowerCase().trim();});
   if(!items.length){
     document.getElementById("prodsArea").innerHTML='<div class="empty"><div class="empty-ico">🍽️</div><div class="empty-txt">Sin productos disponibles</div></div>';
     return;
