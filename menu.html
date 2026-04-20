@@ -2,2762 +2,1260 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0A0710">
 <title>La Curva Street Food</title>
-<!-- v=1776449901.6731932 -->
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Barlow+Condensed:wght@400;500;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-:root{
-  --bg:#080709;
-  --bg2:#0f0d12;
-  --s1:#141118;
-  --s2:#1c1923;
-  --s3:#24202e;
-  --border:rgba(255,255,255,0.07);
-  --border2:rgba(255,255,255,0.12);
-  --accent:#e8341c;
-  --accent2:#ff5a3c;
-  --orange:#f97316;
-  --gold:#f5a623;
-  --green:#22c55e;
-  --green2:#16a34a;
-  --text:#f0ecf8;
-  --t2:rgba(240,236,248,0.55);
-  --t3:rgba(240,236,248,0.3);
-  --t4:rgba(240,236,248,0.1);
-  --glow:rgba(232,52,28,0.18);
-  --radius:20px;
-  --font-disp:'Barlow Condensed',sans-serif;
-  --font-body:'Barlow',sans-serif;
-  --font-ui:'Syne',sans-serif;
-}
-html,body{height:100%;overflow-x:hidden;scroll-behavior:smooth;}
-body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overscroll-behavior-y:contain;}
+/* ═══════════════════════════════════════════════════════════
+   LUZ IA · La Curva · Menú v3.0 — Emil Kowalski Style
+   Foundation: Fase 1
+   ═══════════════════════════════════════════════════════════ */
 
-/* ── NOISE OVERLAY ── */
-body::before{
-  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  opacity:0.025;
-}
+:root {
+  /* ── Colores ── */
+  --bg: #0A0710;
+  --bg-2: #13101D;
+  --bg-3: #1A1628;
+  --bg-elev: rgba(255,255,255,0.04);
+  --bg-elev-2: rgba(255,255,255,0.06);
+  --bg-elev-3: rgba(255,255,255,0.09);
 
-/* ── LOADING SCREEN ── */
-#ls{
-  position:fixed;inset:0;background:var(--bg);z-index:999;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;
-  transition:opacity 0.6s cubic-bezier(0.4,0,0.2,1),transform 0.6s;
-}
-#ls.out{opacity:0;transform:scale(1.04);pointer-events:none;}
-.ls-logo{
-  font-family:var(--font-disp);font-size:52px;font-weight:900;
-  letter-spacing:6px;color:var(--text);
-  animation:logoPulse 1.8s ease-in-out infinite alternate;
-}
-.ls-logo span{color:var(--accent);}
-.ls-bar{width:120px;height:2px;background:var(--s3);border-radius:2px;overflow:hidden;}
-.ls-prog{height:100%;background:linear-gradient(90deg,var(--accent),var(--orange));border-radius:2px;animation:ldprog 1s ease-in-out infinite alternate;}
-@keyframes logoPulse{from{opacity:0.6;}to{opacity:1;}}
-@keyframes ldprog{from{width:20%;}to{width:100%;}}
+  --brand: #FF6B1A;
+  --brand-2: #FF8745;
+  --brand-dark: #E85A0A;
 
-/* ── STICKY HEADER ── */
-.header{
-  position:fixed;top:0;left:0;right:0;z-index:100;
-  padding:0 16px;height:56px;
-  display:flex;align-items:center;justify-content:space-between;
-  background:rgba(8,7,9,0);
-  backdrop-filter:blur(0px);
-  border-bottom:1px solid transparent;
-  transition:all 0.3s;
-}
-.header.scrolled{
-  background:rgba(8,7,9,0.92);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
-  border-bottom-color:var(--border);
-}
-.hd-logo{
-  font-family:var(--font-disp);font-size:22px;font-weight:900;
-  letter-spacing:4px;color:var(--text);
-}
-.hd-logo span{color:var(--accent);}
-.hd-logo img{height:38px;object-fit:contain;filter:drop-shadow(0 0 12px rgba(232,52,28,0.4));}
-.hd-cart{
-  display:flex;align-items:center;gap:8px;
-  background:var(--s1);border:1px solid var(--border2);
-  border-radius:100px;padding:8px 14px 8px 10px;
-  cursor:pointer;transition:all 0.2s;position:relative;
-}
-.hd-cart:active{transform:scale(0.93);}
-.hd-cart.active{background:var(--accent);border-color:var(--accent);box-shadow:0 0 20px var(--glow);}
-.hd-cart-n{font-family:var(--font-ui);font-size:13px;font-weight:700;}
-.hd-cart-t{font-family:var(--font-disp);font-size:15px;font-weight:700;letter-spacing:0.5px;display:block;}
-.hd-cart.active .hd-cart-t{display:block;}
-.cart-pulse{
-  position:absolute;top:-3px;right:-3px;width:10px;height:10px;
-  border-radius:50%;background:var(--accent);display:none;
-}
-.hd-cart.active .cart-pulse{display:block;animation:cpulse 1.5s ease-in-out infinite;}
-@keyframes cpulse{0%,100%{box-shadow:0 0 0 0 rgba(232,52,28,0.6);}50%{box-shadow:0 0 0 6px rgba(232,52,28,0);}}
+  --success: #22C55E;
+  --danger: #EF4444;
+  --gold: #FFB800;
 
-/* ── HERO ── */
-.hero{
-  position:relative;height:320px;overflow:hidden;
-  margin-top:0;
-}
-.hero-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-.hero-fallback{
-  width:100%;height:100%;
-  background:linear-gradient(140deg,#2a1108 0%,#1a0a05 35%,#0e0812 70%,var(--bg) 100%);
-  display:flex;align-items:center;justify-content:center;font-size:100px;opacity:0.25;
-  animation:heroFallAnim 8s ease-in-out infinite alternate;
-}
-@keyframes heroFallAnim{from{transform:scale(1);}to{transform:scale(1.06);}}
-.hero-overlay{
-  position:absolute;inset:0;
-  background:linear-gradient(to bottom,
-    rgba(8,7,9,0.55) 0%,
-    rgba(8,7,9,0.1) 30%,
-    rgba(8,7,9,0.4) 60%,
-    rgba(8,7,9,0.88) 85%,
-    var(--bg) 100%
-  );
-}
-.hero-content{
-  position:absolute;bottom:0;left:0;right:0;padding:20px 20px 24px;
-}
-.hero-tag{
-  display:inline-flex;align-items:center;gap:6px;
-  background:var(--accent);color:white;
-  font-family:var(--font-ui);font-size:10px;font-weight:700;
-  padding:4px 11px;border-radius:100px;margin-bottom:10px;
-  letter-spacing:0.08em;text-transform:uppercase;
-  box-shadow:0 0 16px var(--glow);
-  display:none;
-}
-.hero-name{
-  font-family:var(--font-disp);font-size:46px;font-weight:900;
-  letter-spacing:2px;line-height:0.95;
-  text-shadow:0 4px 24px rgba(0,0,0,0.7);
-  margin-bottom:6px;
-}
-.hero-sub{
-  font-family:var(--font-body);font-size:13px;font-weight:300;
-  color:var(--t2);letter-spacing:0.02em;
+  --text: #FAFAF9;
+  --t2: rgba(250,250,249,0.70);
+  --t3: rgba(250,250,249,0.45);
+  --t4: rgba(250,250,249,0.22);
+
+  --border: rgba(255,255,255,0.08);
+  --border-2: rgba(255,255,255,0.14);
+
+  /* ── Easings (Emil Kowalski canonicals) ── */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-snappy: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ── Timings ── */
+  --t-micro: 150ms;
+  --t-fast: 200ms;
+  --t-normal: 280ms;
+  --t-drawer: 500ms;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.5);
+  --shadow-xl: 0 24px 64px rgba(0,0,0,0.6);
+  --shadow-glow: 0 0 32px rgba(255,107,26,0.35);
 }
 
-/* ── TIPO PEDIDO ── */
-.tipo-wrap{padding:16px 16px 8px;}
-.tipo-row{
-  display:flex;gap:6px;
-  background:var(--s1);border:1px solid var(--border);
-  border-radius:16px;padding:4px;
-}
-.tbtn{
-  flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
-  padding:10px 8px;border-radius:12px;border:none;
-  background:transparent;color:var(--t2);
-  font-family:var(--font-ui);font-size:12px;font-weight:600;
-  cursor:pointer;transition:all 0.22s;white-space:nowrap;
-}
-.tbtn .ti{font-size:16px;}
-.tbtn.on{
-  background:var(--accent);color:white;
-  box-shadow:0 4px 14px rgba(232,52,28,0.35);
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* ── PROMOS CAROUSEL ── */
-.promos-wrap{padding:4px 16px 8px;display:block;}
-.promos-wrap.visible{display:block;}
-.promos-scroll{
-  display:flex;gap:10px;overflow-x:auto;
-  scrollbar-width:none;padding-bottom:4px;
-  scroll-snap-type:x mandatory;
-}
-.promos-scroll::-webkit-scrollbar{display:block;}
-.promo-card{
-  flex-shrink:0;width:240px;border-radius:18px;overflow:hidden;
-  cursor:pointer;scroll-snap-align:start;
-  border:1px solid rgba(255,255,255,0.06);
-  transition:transform 0.2s;
-}
-.promo-card:active{transform:scale(0.97);}
-.promo-inner{padding:16px;position:relative;z-index:1;}
-.promo-emoji{font-size:26px;margin-bottom:8px;display:block;}
-.promo-badge{
-  display:inline-flex;align-items:center;gap:4px;
-  background:rgba(255,255,255,0.12);backdrop-filter:blur(8px);
-  border-radius:100px;padding:3px 9px;
-  font-family:var(--font-ui);font-size:9px;font-weight:700;
-  color:white;margin-bottom:8px;letter-spacing:0.08em;text-transform:uppercase;
-}
-.promo-title{
-  font-family:var(--font-disp);font-size:20px;font-weight:800;
-  letter-spacing:1px;color:white;line-height:1.1;margin-bottom:5px;
-}
-.promo-desc{font-size:11px;color:rgba(255,255,255,0.65);line-height:1.45;}
-.promo-dots{display:flex;gap:5px;padding:8px 0 4px;}
-.pdot{width:6px;height:6px;border-radius:3px;background:var(--t4);transition:all 0.25s;}
-.pdot.on{background:var(--accent);width:18px;}
-
-/* ── SECTION LABEL ── */
-.section-label{
-  padding:16px 16px 10px;
-  font-family:var(--font-ui);font-size:10px;font-weight:700;
-  color:var(--t3);letter-spacing:0.14em;text-transform:uppercase;
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
 }
 
-/* ── CATS ── */
-.cats-row{
-  display:flex;gap:7px;padding:0 16px 12px;
-  overflow-x:auto;scrollbar-width:none;
-}
-.cats-row::-webkit-scrollbar{display:block;}
-.cat-pill{flex-shrink:0;padding:9px 18px;border-radius:100px;border:1.5px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:var(--t2);font-family:var(--font-ui);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.2s;}
-.cat-pill.on{color:#fff;background:linear-gradient(135deg,var(--accent),#c42912);border-color:transparent;box-shadow:0 4px 16px rgba(232,52,28,0.4);}
-
-/* ── PRODUCTS AREA ── */
-.prods-area{padding:0 16px 180px;}
-
-/* section header */
-.cat-section{margin-bottom:28px;}
-.cat-header{
-  display:flex;align-items:center;gap:12px;margin-bottom:14px;
-}
-.cat-header-line{flex:1;height:1px;background:var(--border);}
-.cat-header-label{
-  font-family:var(--font-disp);font-size:22px;font-weight:800;
-  letter-spacing:1.5px;color:var(--text);
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.011em;
+  min-height: 100vh;
 }
 
-/* VERTICAL GRID */
-.grid-v{display:flex;flex-direction:column;gap:10px;}
-
-/* VERTICAL CARD */
-.pcard-v{display:flex;flex-direction:row;align-items:stretch;background:linear-gradient(135deg,#1c1923 0%,#141118 100%);border:1px solid rgba(255,255,255,0.08);border-radius:18px;overflow:hidden;cursor:pointer;position:relative;transition:all 0.18s;min-height:100px;box-shadow:0 3px 16px rgba(0,0,0,0.4);}
-.pcard-v:active{transform:scale(0.96);}
-.pcard-v.incart{border-color:rgba(232,52,28,0.4);}
-.pcard-v.incart::after{
-  content:'';position:absolute;inset:0;border-radius:18px;
-  box-shadow:inset 0 0 0 1.5px rgba(232,52,28,0.2);
-  pointer-events:none;
-}
-.pcv-img{width:110px;min-width:110px;background:#1c1923;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0;order:2;}
-.pcv-img img{
-  position:absolute;inset:0;width:100%;height:100%;
-  object-fit:cover;transition:transform 0.4s;pointer-events:none;
-}
-.pcard-v:active .pcv-img img{transform:scale(1.04);}
-.pcv-emoji{font-size:50px;opacity:0.8;z-index:1;position:relative;}
-.pcv-img-bg{position:absolute;inset:0;}
-.oferta-tag{
-  position:absolute;top:8px;left:8px;z-index:3;
-  background:var(--accent);color:white;
-  font-family:var(--font-ui);font-size:9px;font-weight:700;
-  padding:3px 7px;border-radius:6px;letter-spacing:0.07em;
-}
-/* qty overlay */
-.pcv-qty-wrap{
-  position:absolute;bottom:8px;right:8px;z-index:3;
-}
-.add-btn{
-  width:33px;height:33px;border-radius:12px;border:none;
-  background:var(--accent);color:white;
-  font-size:22px;line-height:1;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 14px rgba(232,52,28,0.5);
-  transition:transform 0.15s;
-}
-.add-btn:active{transform:scale(0.84);}
-.qty-ctrl{
-  display:flex;align-items:center;gap:3px;
-  background:rgba(8,7,9,0.88);backdrop-filter:blur(12px);
-  border:1px solid var(--border2);border-radius:11px;
-  padding:3px 5px;
-}
-.qb{
-  width:26px;height:26px;border-radius:8px;border:none;
-  background:transparent;color:var(--text);
-  font-size:16px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:background 0.12s;
-}
-.qb.p{background:var(--accent);}
-.qb:active{opacity:0.7;}
-.qn{
-  font-family:var(--font-disp);font-size:18px;font-weight:700;
-  min-width:16px;text-align:center;line-height:1;
-}
-.pcv-body{padding:14px 12px 14px 16px;flex:1;display:flex;flex-direction:column;justify-content:space-between;order:1;min-width:0;}
-.pcv-name{font-family:var(--font-ui);font-size:15px;font-weight:800;line-height:1.3;margin-bottom:4px;color:#f0ecf8;}
-.pcv-desc{
-  font-size:11px;color:var(--t3);line-height:1.35;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-  margin-bottom:6px;
-}
-.pcv-price{font-family:var(--font-disp);font-size:20px;font-weight:900;color:var(--orange);}
-
-/* HORIZONTAL CARD */
-.grid-h{display:flex;flex-direction:column;gap:8px;}
-.pcard-h{
-  background:var(--s1);border:1.5px solid var(--border);border-radius:16px;
-  overflow:hidden;display:flex;cursor:pointer;position:relative;
-  transition:border-color 0.2s;min-height:88px;
-}
-.pcard-h.incart{border-color:rgba(232,52,28,0.4);}
-.pch-img{
-  width:88px;flex-shrink:0;position:relative;
-  display:flex;align-items:center;justify-content:center;
-  overflow:hidden;
-}
-.pch-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;}
-.pch-emoji{font-size:36px;z-index:1;position:relative;}
-.pch-body{
-  flex:1;padding:12px 14px 10px;
-  display:flex;flex-direction:column;justify-content:space-between;
-  min-width:0;
-}
-.pch-name{font-family:var(--font-ui);font-size:13px;font-weight:700;margin-bottom:2px;}
-.pch-desc{font-size:11px;color:var(--t3);line-height:1.3;margin-bottom:6px;}
-.pch-bot{display:flex;align-items:center;justify-content:space-between;}
-.pch-price{font-family:var(--font-disp);font-size:20px;font-weight:700;color:var(--orange);}
-.pch-ctrl{display:flex;align-items:center;gap:5px;}
-
-/* ── FLOATING CHECKOUT BAR ── */
-.fbar{
-  position:fixed;bottom:0;left:0;right:0;z-index:90;
-  padding:10px 16px calc(18px + env(safe-area-inset-bottom));
-  background:linear-gradient(to top,rgba(8,7,9,0.98) 50%,transparent);
-  pointer-events:none;opacity:0;transform:translateY(12px);
-  transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);
-}
-.fbar.show{opacity:1;transform:translateY(0);pointer-events:all;}
-.fbar-btn{
-  width:100%;padding:16px 20px;
-  background:linear-gradient(135deg,var(--accent) 0%,#c42912 100%);
-  border:none;border-radius:18px;
-  color:white;cursor:pointer;
-  display:flex;align-items:center;justify-content:space-between;
-  box-shadow:0 8px 32px rgba(232,52,28,0.45),0 2px 8px rgba(0,0,0,0.5);
-  transition:transform 0.15s;
-}
-.fbar-btn:active{transform:scale(0.98);}
-.fbar-left{display:flex;align-items:center;gap:10px;}
-.fbar-badge{
-  background:rgba(255,255,255,0.2);border-radius:8px;
-  padding:3px 10px;
-  font-family:var(--font-ui);font-size:13px;font-weight:700;
-}
-.fbar-label{font-family:var(--font-ui);font-size:14px;font-weight:600;}
-.fbar-total{font-family:var(--font-disp);font-size:24px;font-weight:700;letter-spacing:0.5px;}
-
-/* ── OVERLAYS & SHEETS ── */
-.ov{
-  position:fixed;inset:0;background:rgba(0,0,0,0.8);
-  z-index:200;opacity:0;pointer-events:none;
-  transition:opacity 0.3s;backdrop-filter:blur(4px);
-}
-.ov.on{opacity:1;pointer-events:all;}
-.sheet{
-  position:fixed;bottom:0;left:0;right:0;
-  max-height:92vh;background:var(--bg2);
-  border-radius:26px 26px 0 0;z-index:201;
-  transform:translateY(100%);
-  transition:transform 0.38s cubic-bezier(0.32,0.72,0,1);
-  overflow-y:auto;-webkit-overflow-scrolling:touch;
-  border:1px solid var(--border);border-bottom:none;
-}
-.sheet.on{transform:translateY(0);}
-.sh-handle{
-  width:38px;height:4px;background:var(--s3);border-radius:2px;
-  margin:14px auto 0;display:block;
-}
-.sh-head{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 20px 12px;border-bottom:1px solid var(--border);
-  position:sticky;top:0;background:var(--bg2);z-index:2;
-}
-.sh-title{font-family:var(--font-disp);font-size:26px;font-weight:800;letter-spacing:1px;}
-.sh-close{
-  width:34px;height:34px;border-radius:11px;
-  background:var(--s2);border:1px solid var(--border);
-  color:var(--t2);cursor:pointer;font-size:16px;
-  display:flex;align-items:center;justify-content:center;
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: inherit;
 }
 
-/* CART ITEMS */
-.ci-list{padding:8px 20px;}
-.ci-row{
-  display:flex;align-items:center;gap:12px;
-  padding:11px 0;border-bottom:1px solid var(--border);
-}
-.ci-row:last-child{border:none;}
-.ci-emo{font-size:24px;width:38px;text-align:center;flex-shrink:0;}
-.ci-info{flex:1;min-width:0;}
-.ci-name{font-family:var(--font-ui);font-size:13px;font-weight:600;margin-bottom:2px;line-height:1.3;}
-.ci-unit{font-size:11px;color:var(--t2);}
-.ci-ctrl{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-.cib{
-  width:28px;height:28px;border-radius:9px;border:none;
-  font-size:14px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  font-family:var(--font-ui);transition:all 0.12s;
-}
-.cib.m{background:var(--s2);color:var(--t2);border:1px solid var(--border);}
-.cib.p{background:var(--accent);color:white;}
-.cib:active{opacity:0.7;}
-.ci-n{font-family:var(--font-disp);font-size:17px;font-weight:700;min-width:14px;text-align:center;}
+input, textarea, select { font-family: inherit; }
 
-/* FORM */
-.fsec{padding:14px 20px;}
-.fl{
-  font-family:var(--font-ui);font-size:10px;font-weight:700;
-  color:var(--t3);text-transform:uppercase;letter-spacing:0.1em;
-  margin-bottom:7px;display:block;
-}
-.fi{
-  width:100%;padding:13px 15px;
-  background:var(--s2);border:1.5px solid var(--border);
-  border-radius:13px;color:var(--text);
-  font-family:var(--font-body);font-size:14px;outline:none;
-  transition:border-color 0.15s;margin-bottom:13px;
-}
-.fi:focus{border-color:rgba(232,52,28,0.6);background:rgba(232,52,28,0.04);}
-.fi::placeholder{color:var(--t3);}
-textarea.fi{resize:none;min-height:66px;}
+::selection { background: rgba(255,107,26,0.35); color: white; }
+::-webkit-scrollbar { width: 0; height: 0; }
 
-/* FIDELIDAD */
-.fid-box{
-  display:none;align-items:center;gap:10px;
-  padding:12px 14px;border-radius:14px;margin-bottom:13px;
-  border:1px solid;
-}
-.fid-box.show{display:flex;}
-.fid-ico{font-size:26px;}
-.fid-info{flex:1;}
-.fid-name{font-family:var(--font-ui);font-size:14px;font-weight:700;margin-bottom:2px;}
-.fid-lvl{font-size:11px;opacity:0.65;}
-
-/* PAGO */
-.pago-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
-.popt{
-  padding:12px 8px;border-radius:14px;
-  border:1.5px solid var(--border);background:transparent;
-  color:var(--t2);font-family:var(--font-ui);font-size:12px;font-weight:600;
-  cursor:pointer;text-align:center;transition:all 0.18s;
-}
-.popt .pi{font-size:22px;display:block;margin-bottom:4px;}
-.popt.on{border-color:var(--accent);background:rgba(232,52,28,0.1);color:var(--text);}
-.pago-info{
-  display:none;background:rgba(245,166,35,0.06);
-  border:1px solid rgba(245,166,35,0.2);border-radius:13px;
-  padding:12px 15px;margin-bottom:12px;
-  font-size:13px;line-height:1.8;color:var(--text);
-}
-.pago-info.show{display:block;}
-
-/* COMPROBANTE UPLOAD */
-.uzone{
-  border:2px dashed var(--border2);border-radius:15px;
-  padding:22px;text-align:center;cursor:pointer;
-  transition:all 0.22s;margin-bottom:12px;
-  position:relative;
-}
-.uzone.done{border-color:var(--green);background:rgba(34,197,94,0.05);}
-.uzone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.uz-ico{font-size:28px;margin-bottom:6px;}
-.uz-txt{font-family:var(--font-ui);font-size:13px;color:var(--t2);font-weight:600;}
-.uz-sub{font-size:11px;color:var(--t3);margin-top:3px;}
-.uz-prev{width:100%;border-radius:10px;max-height:150px;object-fit:cover;margin-top:10px;display:block;}
-
-/* CUPÓN */
-.cupon-row{display:flex;gap:8px;margin-bottom:8px;}
-.cupon-row .fi{margin:0;flex:1;}
-.cup-btn{
-  padding:0 16px;background:var(--s2);
-  border:1.5px solid var(--border2);border-radius:13px;
-  color:var(--text);font-family:var(--font-ui);
-  font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
-  transition:all 0.15s;
-}
-.cup-btn:hover{border-color:var(--accent);color:var(--accent);}
-.cupon-res{display:none;font-size:12px;padding:9px 12px;border-radius:10px;margin-bottom:10px;}
-
-/* TOTALES */
-.tot-box{margin:0 20px;background:var(--s2);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
-.tot-row{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:10px 15px;font-size:13px;border-bottom:1px solid var(--border);
-}
-.tot-row:last-child{border:none;}
-.tot-l{color:var(--t2);}
-.tot-v{font-family:var(--font-ui);font-weight:600;}
-.tot-grand{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:14px 20px;
-}
-.tg-l{font-family:var(--font-disp);font-size:20px;letter-spacing:1px;}
-.tg-v{font-family:var(--font-disp);font-size:30px;color:var(--orange);letter-spacing:1px;}
-
-/* CTA BTN */
-.cta-btn{
-  width:calc(100% - 40px);margin:14px 20px calc(24px + env(safe-area-inset-bottom));
-  padding:17px;background:linear-gradient(135deg,var(--accent),#c42912);
-  border:none;border-radius:16px;color:white;
-  font-family:var(--font-ui);font-size:15px;font-weight:700;
-  cursor:pointer;transition:all 0.18s;
-  box-shadow:0 8px 24px rgba(232,52,28,0.3);letter-spacing:0.02em;
-}
-.cta-btn:active{transform:scale(0.98);}
-.cta-btn:disabled{background:var(--s2);color:var(--t3);box-shadow:none;}
-
-/* ── ADICIONALES SHEET ── */
-.adic-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 20px 4px;}
-.adic-opt{
-  padding:13px 10px;border-radius:15px;
-  border:1.5px solid var(--border);background:var(--s2);
-  cursor:pointer;text-align:center;transition:all 0.18s;
-  position:relative;
-}
-.adic-opt.on{border-color:var(--accent);background:rgba(232,52,28,0.08);}
-.adic-opt.on::after{
-  content:'✓';position:absolute;top:7px;right:9px;
-  font-size:11px;font-weight:800;color:var(--accent);
-}
-.adic-emo{font-size:26px;margin-bottom:5px;}
-.adic-nm{font-size:11px;font-weight:600;color:var(--t2);margin-bottom:3px;line-height:1.25;}
-.adic-pr{font-size:12px;color:var(--orange);font-weight:700;font-family:var(--font-disp);}
-
-.salsas-label{
-  font-family:var(--font-ui);font-size:10px;font-weight:700;
-  color:var(--t3);letter-spacing:0.1em;text-transform:uppercase;
-  padding:14px 20px 7px;
-}
-.salsa-row{
-  display:flex;gap:7px;padding:0 20px;
-  overflow-x:auto;flex-wrap:wrap;scrollbar-width:none;
-}
-.sopt{
-  padding:7px 14px;border-radius:100px;
-  border:1.5px solid var(--border);background:transparent;
-  color:var(--t2);font-size:12px;font-weight:600;
-  cursor:pointer;transition:all 0.15s;
-  font-family:var(--font-ui);white-space:nowrap;margin-bottom:6px;
-}
-.sopt.on{background:var(--orange);border-color:var(--orange);color:white;}
-
-/* ── SUCCESS SCREEN ── */
-#succ{
-  display:none;position:fixed;inset:0;background:var(--bg);z-index:400;
-  flex-direction:column;align-items:center;justify-content:flex-start;
-  overflow-y:auto;
-}
-#succ.show{display:flex;}
-.succ-glow{
-  position:absolute;top:-100px;left:50%;transform:translateX(-50%);
-  width:300px;height:300px;border-radius:50%;
-  background:radial-gradient(circle,rgba(232,52,28,0.18) 0%,transparent 70%);
-  pointer-events:none;
-}
-.succ-top{width:100%;padding:64px 24px 28px;text-align:center;position:relative;}
-.succ-ico{
-  font-size:72px;margin-bottom:16px;display:block;
-  animation:succPop 0.6s cubic-bezier(0.175,0.885,0.32,1.275) both;
-}
-@keyframes succPop{from{transform:scale(0);opacity:0;}to{transform:scale(1);opacity:1;}}
-.succ-title{
-  font-family:var(--font-disp);font-size:42px;font-weight:900;
-  letter-spacing:2px;margin-bottom:8px;
-}
-.succ-sub{font-size:14px;color:var(--t2);line-height:1.6;font-weight:300;}
-.order-box{
-  background:var(--s1);border:1px solid var(--border);border-radius:20px;
-  padding:18px 24px;margin:0 24px 20px;text-align:center;width:calc(100% - 48px);
-  position:relative;overflow:hidden;
-}
-.order-box::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,var(--accent),var(--orange));
-}
-.ord-label{
-  font-family:var(--font-ui);font-size:10px;font-weight:700;
-  color:var(--t3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;
-}
-.ord-num{
-  font-family:var(--font-disp);font-size:56px;color:var(--orange);
-  font-weight:900;letter-spacing:4px;line-height:1;
-}
-.track-wrap{padding:4px 24px;width:100%;}
-.track-title{
-  font-family:var(--font-disp);font-size:19px;font-weight:700;
-  letter-spacing:1px;color:var(--t2);margin-bottom:10px;
-}
-.tstep{
-  display:flex;align-items:center;gap:14px;
-  padding:12px 15px;border-radius:15px;background:var(--s1);
-  margin-bottom:8px;transition:all 0.35s;
-  border:1px solid transparent;
-}
-.tstep.done{background:rgba(34,197,94,0.07);border-color:rgba(34,197,94,0.15);}
-.tstep.act{background:rgba(232,52,28,0.07);border-color:rgba(232,52,28,0.2);animation:stepGlow 2s ease-in-out infinite;}
-@keyframes stepGlow{0%,100%{box-shadow:none;}50%{box-shadow:0 0 16px rgba(232,52,28,0.12);}}
-.ts-dot{width:10px;height:10px;border-radius:50%;background:var(--s3);flex-shrink:0;transition:background 0.3s;}
-.tstep.done .ts-dot{background:var(--green);}
-.tstep.act .ts-dot{background:var(--accent);}
-.ts-label{font-family:var(--font-ui);font-size:13px;font-weight:600;color:var(--t3);transition:color 0.3s;}
-.tstep.done .ts-label{color:var(--green);}
-.tstep.act .ts-label{color:var(--accent2);}
-.nuevo-btn{
-  margin:10px 24px 48px;width:calc(100% - 48px);
-  padding:16px;background:var(--s1);
-  border:1.5px solid var(--border2);border-radius:16px;
-  color:var(--text);font-family:var(--font-ui);font-size:14px;font-weight:700;
-  cursor:pointer;letter-spacing:0.03em;transition:all 0.15s;
-}
-.nuevo-btn:active{background:var(--s2);}
-
-/* SPINNER */
-.sp{
-  width:18px;height:18px;
-  border:2.5px solid rgba(255,255,255,0.2);border-top-color:white;
-  border-radius:50%;animation:spin 0.7s linear infinite;
-  display:inline-block;vertical-align:middle;margin-right:8px;
-}
-@keyframes spin{to{transform:rotate(360deg);}}
-
-/* TOAST */
-.toast{
-  position:fixed;bottom:100px;left:50%;
-  transform:translateX(-50%) translateY(8px);
-  background:rgba(20,17,24,0.97);color:var(--text);
-  padding:11px 20px;border-radius:13px;
-  font-family:var(--font-ui);font-size:13px;font-weight:600;
-  z-index:700;white-space:nowrap;
-  box-shadow:0 8px 32px rgba(0,0,0,0.6);
-  border:1px solid rgba(255,255,255,0.08);
-  opacity:0;pointer-events:none;transition:all 0.28s;
-}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-
-/* EMPTY */
-.empty{text-align:center;padding:52px 20px;color:var(--t3);}
-.empty-ico{font-size:48px;margin-bottom:12px;opacity:0.5;}
-.empty-txt{font-size:14px;font-weight:300;line-height:1.6;}
-
-/* mesa field hidden by default */
-#mesaField{display:block;}
-/* datafono option hidden by default */
-#p-datafono{display:block;}
-
-/* ── REWARDS SYSTEM ── */
-/* Floating star button */
-.rewards-fab{
-  position:fixed;bottom:80px;right:16px;z-index:95;
-  display:none;
-  background:linear-gradient(135deg,#f5a623,#f97316);
-  border:none;border-radius:100px;
-  padding:10px 16px 10px 12px;
-  color:white;font-family:var(--font-ui);font-size:13px;font-weight:700;
-  cursor:pointer;letter-spacing:0.02em;
-  box-shadow:0 6px 20px rgba(245,166,35,0.5);
-  display:flex;align-items:center;gap:6px;
-  transition:transform 0.2s;
-}
-.rewards-fab.hidden{display:none!important;}
-.rewards-fab:active{transform:scale(0.93);}
-.rewards-fab-pts{font-family:var(--font-disp);font-size:18px;font-weight:800;line-height:1;}
-
-/* Pts badge on product cards */
-.pts-badge{
-  position:absolute;top:8px;right:8px;z-index:3;
-  background:rgba(245,166,35,0.9);color:white;
-  font-family:var(--font-ui);font-size:9px;font-weight:700;
-  padding:3px 7px;border-radius:6px;letter-spacing:0.05em;
-  display:none;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-/* Pts badge in fid box */
-.fid-pts-badge{
-  background:rgba(245,166,35,0.15);
-  border:1px solid rgba(245,166,35,0.35);
-  border-radius:10px;padding:5px 10px;
-  font-family:var(--font-ui);font-size:12px;font-weight:700;
-  color:#f5a623;margin-top:4px;display:inline-block;
+/* ═══ Atmósfera de fondo ═══ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,107,26,0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 0% 50%, rgba(133,71,255,0.05) 0%, transparent 70%);
 }
 
-/* Pts badge success screen */
-.succ-pts-badge{
-  display:none;
-  background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);
-  border-radius:16px;padding:12px 20px;margin:0 24px 16px;
-  text-align:center;width:calc(100% - 48px);
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.4;
+  mix-blend-mode: overlay;
 }
-.succ-pts-txt{font-family:var(--font-disp);font-size:28px;font-weight:800;color:#f5a623;letter-spacing:1px;}
-.succ-pts-lbl{font-size:12px;color:var(--t2);margin-top:2px;}
 
-/* REWARDS FULL SCREEN */
-#rewardsScreen{
-  display:none;position:fixed;inset:0;background:var(--bg);z-index:300;
-  flex-direction:column;overflow-y:auto;
+/* ═══ Splash ═══ */
+#splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 24px;
+  transition: opacity var(--t-drawer) var(--ease-out);
 }
-#rewardsScreen.show{display:flex;}
-.rw-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:16px 20px;border-bottom:1px solid var(--border);
-  background:var(--bg);position:sticky;top:0;z-index:2;
-}
-.rw-title{font-family:var(--font-disp);font-size:26px;font-weight:800;letter-spacing:1px;}
-.rw-close{
-  width:34px;height:34px;border-radius:11px;
-  background:var(--s2);border:1px solid var(--border);
-  color:var(--t2);cursor:pointer;font-size:16px;
-  display:flex;align-items:center;justify-content:center;
-}
-.rw-hero{
-  padding:24px 20px 20px;
-  background:linear-gradient(135deg,rgba(245,166,35,0.1),rgba(249,115,22,0.06));
-  border-bottom:1px solid rgba(245,166,35,0.15);
-}
-.rw-pts-big{
-  font-family:var(--font-disp);font-size:64px;font-weight:900;
-  color:#f5a623;letter-spacing:2px;line-height:1;
-}
-.rw-pts-lbl{font-size:13px;color:var(--t2);margin-top:4px;font-weight:300;}
-.rw-progress-wrap{margin-top:16px;}
-.rw-progress-labels{
-  display:flex;justify-content:space-between;
-  font-family:var(--font-ui);font-size:10px;color:var(--t3);
-  font-weight:600;letter-spacing:0.08em;margin-bottom:6px;
-}
-.rw-progress-bar{
-  width:100%;height:6px;background:var(--s3);border-radius:3px;overflow:hidden;
-}
-.rw-progress-fill{
-  height:100%;background:linear-gradient(90deg,#f5a623,#f97316);
-  border-radius:3px;transition:width 0.6s cubic-bezier(0.34,1.56,0.64,1);
-}
-.rw-next-txt{font-size:11px;color:var(--t3);margin-top:6px;}
 
-.rw-section-label{
-  padding:16px 20px 8px;
-  font-family:var(--font-ui);font-size:10px;font-weight:700;
-  color:var(--t3);letter-spacing:0.14em;text-transform:uppercase;
-}
-.rw-prods-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 20px 16px;}
-.rw-prod-card{
-  background:var(--s1);border:1.5px solid var(--border);border-radius:16px;
-  overflow:hidden;cursor:pointer;transition:border-color 0.2s,transform 0.15s;
-}
-.rw-prod-card:active{transform:scale(0.96);}
-.rw-prod-img{
-  width:100%;aspect-ratio:1;overflow:hidden;position:relative;
-  background:var(--s2);display:flex;align-items:center;justify-content:center;
-  font-size:40px;
-}
-.rw-prod-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-.rw-prod-body{padding:10px 11px 12px;}
-.rw-prod-name{font-family:var(--font-ui);font-size:12px;font-weight:700;margin-bottom:4px;}
-.rw-prod-pts{
-  font-family:var(--font-disp);font-size:17px;font-weight:700;
-  color:#f5a623;
-}
-.rw-prod-pts span{font-size:10px;font-weight:600;color:var(--t3);}
-.rw-prod-locked{opacity:0.45;pointer-events:none;}
-.rw-prod-locked .rw-prod-pts{color:var(--t3);}
+#splash.out { opacity: 0; pointer-events: none; }
 
-.rw-history{padding:0 20px 100px;}
-.rw-hist-item{
-  display:flex;align-items:center;gap:10px;
-  padding:10px 0;border-bottom:1px solid var(--border);
+.splash-logo {
+  font-size: 44px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: splashPulse 1.4s var(--ease-smooth) infinite alternate;
 }
-.rw-hist-item:last-child{border:none;}
-.rw-hist-ico{font-size:20px;width:36px;text-align:center;}
-.rw-hist-info{flex:1;}
-.rw-hist-desc{font-size:13px;font-weight:600;}
-.rw-hist-date{font-size:11px;color:var(--t3);margin-top:1px;}
-.rw-hist-pts{
-  font-family:var(--font-disp);font-size:18px;font-weight:700;
-  color:#f5a623;
-}
-.rw-hist-pts.neg{color:var(--accent2);}
 
-/* CANJE OVERLAY */
-.canje-ov{
-  position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:400;
-  opacity:0;pointer-events:none;transition:opacity 0.3s;backdrop-filter:blur(4px);
+.splash-dot {
+  width: 4px;
+  height: 4px;
+  background: var(--brand);
+  border-radius: 50%;
+  animation: splashBreathe 1.2s var(--ease-smooth) infinite alternate;
+  box-shadow: 0 0 16px var(--brand);
 }
-.canje-ov.on{opacity:1;pointer-events:all;}
-.canje-sheet{
-  position:fixed;bottom:0;left:0;right:0;
-  background:var(--bg2);border-radius:26px 26px 0 0;
-  z-index:401;transform:translateY(100%);
-  transition:transform 0.38s cubic-bezier(0.32,0.72,0,1);
-  border:1px solid var(--border);border-bottom:none;
-  padding:0 0 calc(24px + env(safe-area-inset-bottom));
-}
-.canje-sheet.on{transform:translateY(0);}
-.canje-sheet-head{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 20px 12px;border-bottom:1px solid var(--border);
-}
-.canje-sheet-title{font-family:var(--font-disp);font-size:24px;font-weight:800;letter-spacing:1px;}
-.canje-prod-preview{padding:20px;text-align:center;}
-.canje-prod-img{width:100px;height:100px;border-radius:16px;object-fit:cover;margin:0 auto 12px;display:block;background:var(--s2);}
-.canje-prod-emo{font-size:64px;margin-bottom:12px;}
-.canje-prod-name{font-family:var(--font-ui);font-size:18px;font-weight:700;margin-bottom:6px;}
-.canje-prod-desc{font-size:13px;color:var(--t2);line-height:1.5;margin-bottom:14px;}
-.canje-prod-cost{
-  font-family:var(--font-disp);font-size:32px;font-weight:800;color:#f5a623;
-  margin-bottom:4px;
-}
-.canje-pts-actual{font-size:12px;color:var(--t2);}
-.canje-confirm-btn{
-  width:calc(100% - 40px);margin:16px 20px 0;
-  padding:16px;background:linear-gradient(135deg,#f5a623,#f97316);
-  border:none;border-radius:16px;color:white;
-  font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer;
-  box-shadow:0 8px 24px rgba(245,166,35,0.3);transition:all 0.15s;
-}
-.canje-confirm-btn:active{transform:scale(0.98);}
-.canje-confirm-btn:disabled{background:var(--s2);color:var(--t3);box-shadow:none;}
 
-/* CAT BG utils */
-.catbg-default{background:linear-gradient(140deg,#1c1408,#0d0c08);}
-.catbg-hamburguesa{background:linear-gradient(140deg,#2d1308,#140a04);}
-.catbg-pollo{background:linear-gradient(140deg,#241e06,#111004);}
-.catbg-perro{background:linear-gradient(140deg,#230d0d,#100606);}
-.catbg-alita{background:linear-gradient(140deg,#2c1806,#130b03);}
-.catbg-bebida{background:linear-gradient(140deg,#061724,#030c12);}
-.catbg-arepa{background:linear-gradient(140deg,#201a08,#0e0d04);}
-.catbg-postre{background:linear-gradient(140deg,#190622,#0a0311);}
+@keyframes splashPulse {
+  from { opacity: 0.5; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-/* ADMIN PANEL */
-.admin-fab{position:fixed;bottom:24px;left:16px;z-index:95;width:40px;height:40px;border-radius:50%;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);color:#a78bfa;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
-.admin-fab:active{transform:scale(.9);}
-#adminScreen{display:none;position:fixed;inset:0;background:var(--bg);z-index:400;flex-direction:column;overflow-y:auto;}
-#adminScreen.show{display:flex;}
-.adm-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;background:var(--bg);position:sticky;top:0;z-index:2;}
-.adm-title{font-family:var(--font-disp);font-size:22px;font-weight:900;letter-spacing:1px;flex:1;}
-.adm-close{width:34px;height:34px;border-radius:11px;background:var(--s2);border:1px solid var(--border);color:var(--t2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
-.adm-body{padding:20px;}
-.adm-field{margin-bottom:14px;}
-.adm-label{font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;}
-.adm-input{width:100%;padding:12px 14px;background:var(--s2);border:1.5px solid var(--border);border-radius:13px;color:var(--text);font-family:var(--font-b);font-size:14px;outline:none;box-sizing:border-box;}
-.adm-input:focus{border-color:rgba(124,58,237,.6);}
-.adm-input::placeholder{color:var(--t3);}
-.adm-btn{width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:14px;color:#fff;font-family:var(--font-ui);font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;margin-top:4px;}
-.adm-btn:active{transform:scale(.98);}
-.adm-btn.danger{background:linear-gradient(135deg,var(--accent),#c42912);}
-.adm-list{margin-top:20px;}
-.adm-prod{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;}
-.adm-prod-img{width:48px;height:48px;border-radius:10px;object-fit:cover;background:var(--s2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;}
-.adm-prod-info{flex:1;min-width:0;}
-.adm-prod-name{font-family:var(--font-ui);font-size:13px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.adm-prod-cat{font-size:11px;color:var(--t3);}
-.adm-prod-price{font-family:var(--font-disp);font-size:17px;font-weight:700;color:var(--orange);flex-shrink:0;}
-.adm-prod-toggle{width:36px;height:20px;border-radius:10px;border:none;cursor:pointer;transition:all .2s;flex-shrink:0;}
-.adm-tabs{display:flex;gap:6px;margin-bottom:20px;background:var(--s1);border-radius:14px;padding:4px;}
-.adm-tab{flex:1;padding:9px;border:none;border-radius:10px;background:transparent;color:var(--t2);font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;}
-.adm-tab.on{background:rgba(124,58,237,.2);color:#a78bfa;border:1px solid rgba(124,58,237,.3);}
+@keyframes splashBreathe {
+  from { transform: scale(0.8); opacity: 0.4; }
+  to { transform: scale(1.2); opacity: 1; }
+}
 
+/* ═══ Header ═══ */
+.hdr {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  padding: max(env(safe-area-inset-top), 0px) 16px 0;
+  height: calc(56px + env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: transparent;
+  transition: background var(--t-normal) var(--ease-out),
+              backdrop-filter var(--t-normal) var(--ease-out),
+              border-color var(--t-normal) var(--ease-out);
+  border-bottom: 1px solid transparent;
+}
+
+.hdr.scrolled {
+  background: rgba(10,7,16,0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom-color: var(--border);
+}
+
+.hdr-brand {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.03em;
+}
+
+.hdr-brand .p1 { color: var(--text); }
+.hdr-brand .p2 { color: var(--brand); }
+.hdr-brand img { height: 32px; width: auto; }
+
+.hdr-actions { display: flex; align-items: center; gap: 6px; }
+
+.hdr-btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--text);
+  transition: all var(--t-fast) var(--ease-out);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.hdr-btn:active { transform: scale(0.94); background: var(--bg-elev-2); }
+
+.hdr-btn-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--brand);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: white;
+  border: 2px solid var(--bg);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.hdr-btn-dot {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 7px;
+  height: 7px;
+  background: var(--brand);
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 8px var(--brand);
+}
+
+.hide { display: none !important; }
+
+/* ═══ Hero ═══ */
+.hero {
+  position: relative;
+  z-index: 1;
+  padding: calc(72px + env(safe-area-inset-top)) 20px 12px;
+}
+
+.greet { animation: fadeUp 400ms var(--ease-out) 100ms backwards; }
+
+.greet-label {
+  font-size: 11px;
+  color: var(--t3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: 6px;
+}
+
+.greet-title {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.greet-sub {
+  font-size: 14px;
+  color: var(--t2);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══ Tipo pedido ═══ */
+.tipos {
+  margin-top: 16px;
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: fadeUp 400ms var(--ease-out) 200ms backwards;
+}
+
+.tipo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2);
+  transition: all var(--t-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.tipo-chip:active { transform: scale(0.96); }
+
+.tipo-chip.on {
+  background: var(--bg-elev-3);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.tipo-chip .ico { font-size: 14px; }
+
+/* ═══ Rewards ═══ */
+.rew {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255,184,0,0.08) 0%, rgba(255,107,26,0.04) 100%);
+  border: 1px solid rgba(255,184,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all var(--t-fast) var(--ease-out);
+  cursor: pointer;
+  animation: fadeUp 400ms var(--ease-out) 300ms backwards;
+}
+
+.rew:active {
+  transform: scale(0.99);
+  background: linear-gradient(135deg, rgba(255,184,0,0.12) 0%, rgba(255,107,26,0.06) 100%);
+}
+
+.rew-ico {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #FFB800 0%, #FF8A00 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 4px 12px rgba(255,184,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.rew-info { flex: 1; min-width: 0; }
+
+.rew-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1px;
+  letter-spacing: -0.01em;
+}
+
+.rew-sub {
+  font-size: 11px;
+  color: var(--t2);
+  font-weight: 500;
+}
+
+.rew-arrow {
+  flex-shrink: 0;
+  color: var(--t3);
+  font-size: 18px;
+  transition: transform var(--t-fast) var(--ease-out);
+}
+
+.rew:active .rew-arrow { transform: translateX(2px); }
+
+/* ═══ Promos ═══ */
+.prms {
+  margin-top: 16px;
+  padding: 0 20px;
+  animation: fadeUp 400ms var(--ease-out) 400ms backwards;
+}
+
+.prms-wrap {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  margin: 0 -20px;
+  padding: 0 20px 4px;
+}
+
+.prm {
+  flex: 0 0 82%;
+  min-height: 110px;
+  border-radius: 20px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  scroll-snap-align: start;
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--t-fast) var(--ease-out);
+}
+
+.prm:active { transform: scale(0.98); }
+
+.prm::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 60%;
+  height: 200%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.prm-ico {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  border: 1px solid rgba(255,255,255,0.15);
+  position: relative;
+  z-index: 1;
+}
+
+.prm-txt { flex: 1; position: relative; z-index: 1; min-width: 0; }
+
+.prm-t {
+  font-size: 14px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-bottom: 3px;
+}
+
+.prm-d {
+  font-size: 11px;
+  color: rgba(255,255,255,0.82);
+  line-height: 1.35;
+  font-weight: 500;
+}
+
+/* ═══ Search ═══ */
+.srch-wrap {
+  padding: 20px 20px 12px;
+  animation: fadeUp 400ms var(--ease-out) 500ms backwards;
+}
+
+.srch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition: all var(--t-fast) var(--ease-out);
+}
+
+.srch:focus-within {
+  border-color: rgba(255,107,26,0.4);
+  background: var(--bg-elev-2);
+  box-shadow: 0 0 0 3px rgba(255,107,26,0.08);
+}
+
+.srch-ico {
+  padding: 0 12px 0 14px;
+  color: var(--t3);
+  font-size: 15px;
+  transition: color var(--t-fast) var(--ease-out);
+}
+
+.srch:focus-within .srch-ico { color: var(--brand); }
+
+.srch input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 12px 14px 12px 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.srch input::placeholder { color: var(--t3); }
+
+/* ═══ Categorías pills ═══ */
+.cats-wrap {
+  position: sticky;
+  top: calc(56px + env(safe-area-inset-top));
+  z-index: 70;
+  background: rgba(10,7,16,0.82);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 0;
+  margin-bottom: 4px;
+}
+
+.cats-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 20px;
+  scroll-behavior: smooth;
+}
+
+.cat-pill {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t2);
+  white-space: nowrap;
+  transition: all var(--t-fast) var(--ease-out);
+  letter-spacing: -0.01em;
+}
+
+.cat-pill:active { transform: scale(0.96); }
+
+.cat-pill.on {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+  font-weight: 700;
+}
+
+/* ═══ Skeletons ═══ */
+.skel {
+  background: linear-gradient(90deg, var(--bg-elev) 0%, var(--bg-elev-2) 50%, var(--bg-elev) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s var(--ease-smooth) infinite;
+  border-radius: 12px;
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.skel-card {
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+
+.skel-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+.skel-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.skel-line { height: 10px; border-radius: 5px; }
+
+/* ═══ Empty states ═══ */
+.empty {
+  padding: 80px 24px;
+  text-align: center;
+  animation: fadeUp 400ms var(--ease-out);
+}
+
+.empty-ico {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.35;
+}
+
+.empty-txt {
+  font-size: 15px;
+  color: var(--t2);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.empty-sub {
+  font-size: 12px;
+  color: var(--t3);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.prods { padding: 16px 20px 140px; }
+
+/* ═══ Carrito FAB ═══ */
+.cart-fab {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  z-index: 60;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 12px 32px rgba(255,107,26,0.35),
+              0 0 0 1px rgba(255,255,255,0.08),
+              inset 0 1px 0 rgba(255,255,255,0.25);
+  transform: translateY(calc(100% + 32px));
+  transition: transform var(--t-drawer) var(--ease-drawer);
+  border: none;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.cart-fab.show { transform: translateY(0); }
+
+.cart-fab:active {
+  transform: translateY(0) scale(0.98);
+  transition: transform var(--t-micro) var(--ease-out);
+}
+
+.cart-fab-ico {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  backdrop-filter: blur(8px);
+}
+
+.cart-fab-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--brand-dark);
+  border: 2px solid var(--brand-dark);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.cart-fab-label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+  min-width: 0;
+}
+
+.cart-fab-label-t {
+  font-size: 11px;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+.cart-fab-label-s {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.cart-fab-price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+
+/* ═══ Toast ═══ */
+.toast {
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 500;
+  padding: 11px 18px;
+  border-radius: 14px;
+  background: rgba(20,17,30,0.96);
+  border: 1px solid var(--border-2);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  box-shadow: var(--shadow-xl);
+  transform: translate(-50%, calc(-100% - 16px));
+  transition: transform var(--t-normal) var(--ease-snappy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast.show { transform: translate(-50%, 0); }
+
+/* ═══ Sheet system (Vaul-inspired) ═══ */
+.sheet-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0,0,0,0);
+  transition: background var(--t-drawer) var(--ease-drawer);
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.sheet-bg.open { background: rgba(0,0,0,0.55); pointer-events: auto; }
+
+.sheet {
+  background: var(--bg-2);
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -20px 60px rgba(0,0,0,0.7);
+  transform: translateY(100%);
+  transition: transform var(--t-drawer) var(--ease-drawer);
+  position: relative;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.sheet-bg.open .sheet { transform: translateY(0); }
+.sheet-bg.dragging .sheet { transition: none; }
+
+.sheet-handle-wrap {
+  padding: 10px 0 4px;
+  display: flex;
+  justify-content: center;
+  cursor: grab;
+  flex-shrink: 0;
+  touch-action: none;
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  transition: background var(--t-fast) var(--ease-out);
+}
+
+.sheet-handle-wrap:active .sheet-handle { background: rgba(255,255,255,0.4); }
+
+.sheet-head {
+  padding: 8px 18px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sheet-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.sheet-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--text);
+  transition: all var(--t-fast) var(--ease-out);
+}
+
+.sheet-close:active { transform: scale(0.9); background: var(--bg-elev-2); }
+
+.sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 18px;
+  overscroll-behavior: contain;
+}
+
+.sheet-foot {
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--bg-2);
+  flex-shrink: 0;
+}
+
+/* ═══ Botones ═══ */
+.btn-xl {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform var(--t-micro) var(--ease-out),
+              background var(--t-fast) var(--ease-out);
+  border: none;
+  letter-spacing: -0.015em;
+}
+
+.btn-xl:active { transform: scale(0.985); }
+.btn-xl:disabled { opacity: 0.4; pointer-events: none; }
+
+.btn-xl.primary {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  color: white;
+  box-shadow: 0 6px 20px rgba(255,107,26,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.btn-xl.ghost {
+  background: var(--bg-elev);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-xl.success {
+  background: linear-gradient(135deg, var(--success) 0%, #16A34A 100%);
+  color: white;
+  box-shadow: 0 6px 20px rgba(34,197,94,0.3);
+}
+
+.btn-md {
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  transition: transform var(--t-micro) var(--ease-out);
+  border: none;
+  letter-spacing: -0.01em;
+}
+
+.btn-md:active { transform: scale(0.96); }
+
+.btn-md.ghost {
+  background: var(--bg-elev);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-md.primary { background: var(--brand); color: white; }
 </style>
 </head>
 <body>
 
-<!-- LOADING -->
-<div id="ls">
-  <div class="ls-logo">LA<span>CURVA</span></div>
-  <div class="ls-bar"><div class="ls-prog"></div></div>
+<div id="splash">
+  <div class="splash-logo">LA CURVA</div>
+  <div class="splash-dot"></div>
 </div>
+
+<header class="hdr" id="hdr">
+  <div class="hdr-brand" id="hdrLogo">
+    <span class="p1">LA</span><span class="p2">CURVA</span>
+  </div>
+  <div class="hdr-actions">
+    <button class="hdr-btn" onclick="abrirMisPedidos()" title="Mis pedidos">
+      📦
+      <span class="hdr-btn-dot hide" id="mpDot"></span>
+    </button>
+    <button class="hdr-btn" onclick="abrirRewards()" title="Mis puntos">⭐</button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="greet">
+    <div class="greet-label">La Curva · Street Food</div>
+    <h1 class="greet-title" id="heroGreet">Buenas 👋</h1>
+    <div class="greet-sub" id="heroSub">Pide tu favorito, llega rapidito</div>
+  </div>
+
+  <div class="tipos">
+    <button class="tipo-chip on" id="t-domi" onclick="setTipo('domicilio')">
+      <span class="ico">🛵</span> Domicilio
+    </button>
+    <button class="tipo-chip" id="t-rec" onclick="setTipo('recoger')">
+      <span class="ico">🏪</span> Recoger
+    </button>
+    <button class="tipo-chip hide" id="t-mesa" onclick="setTipo('mesa')">
+      <span class="ico">🍽️</span> Mesa
+    </button>
+  </div>
+
+  <div class="rew" onclick="abrirRewards()" id="rewBanner">
+    <div class="rew-ico">⭐</div>
+    <div class="rew-info">
+      <div class="rew-title" id="rewTitle">Acumula puntos con cada pedido</div>
+      <div class="rew-sub" id="rewSub">Ingresa tu número para ver tus puntos</div>
+    </div>
+    <div class="rew-arrow">›</div>
+  </div>
+</section>
+
+<section class="prms">
+  <div class="prms-wrap" id="prmsWrap"></div>
+</section>
+
+<section class="srch-wrap">
+  <div class="srch">
+    <span class="srch-ico">🔍</span>
+    <input id="srchInput" type="text" placeholder="Buscar producto..." oninput="filtrarBusqueda(this.value)">
+  </div>
+</section>
+
+<div class="cats-wrap">
+  <div class="cats-row" id="catsRow">
+    <div class="skel" style="width:62px;height:30px;flex-shrink:0"></div>
+    <div class="skel" style="width:90px;height:30px;flex-shrink:0"></div>
+    <div class="skel" style="width:76px;height:30px;flex-shrink:0"></div>
+    <div class="skel" style="width:110px;height:30px;flex-shrink:0"></div>
+  </div>
+</div>
+
+<main class="prods" id="prodsArea">
+  <div class="skel-card">
+    <div class="skel skel-img"></div>
+    <div class="skel-body">
+      <div class="skel skel-line" style="width:70%"></div>
+      <div class="skel skel-line" style="width:90%"></div>
+      <div class="skel skel-line" style="width:40%;margin-top:auto"></div>
+    </div>
+  </div>
+  <div class="skel-card">
+    <div class="skel skel-img"></div>
+    <div class="skel-body">
+      <div class="skel skel-line" style="width:60%"></div>
+      <div class="skel skel-line" style="width:85%"></div>
+      <div class="skel skel-line" style="width:35%;margin-top:auto"></div>
+    </div>
+  </div>
+  <div class="skel-card">
+    <div class="skel skel-img"></div>
+    <div class="skel-body">
+      <div class="skel skel-line" style="width:75%"></div>
+      <div class="skel skel-line" style="width:92%"></div>
+      <div class="skel skel-line" style="width:45%;margin-top:auto"></div>
+    </div>
+  </div>
+</main>
+
+<button class="cart-fab" id="cartFab" onclick="openCart()">
+  <span class="cart-fab-ico">
+    🛒
+    <span class="cart-fab-badge" id="cartFabQty">0</span>
+  </span>
+  <span class="cart-fab-label">
+    <span class="cart-fab-label-t">Ver mi pedido</span>
+    <span class="cart-fab-label-s" id="cartFabItems">0 productos</span>
+  </span>
+  <span class="cart-fab-price" id="cartFabPrice">$0</span>
+</button>
 
 <div class="toast" id="toast"></div>
 
-<!-- HEADER -->
-<header class="header" id="header">
-  <div class="hd-logo" id="hdLogo">LA<span>CURVA</span></div>
-  <button onclick="abrirMisPedidos()" id="btnMisPedidos" style="display:none;padding:7px 12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:100px;color:#34d399;font-family:var(--font-ui);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">📦 Mis pedidos</button>
-    <button class="hd-cart" id="cartBtn" onclick="openCart()">
-    <div class="cart-pulse"></div>
-    <span>🛒</span>
-    <span class="hd-cart-n" id="cartN">0</span>
-    <span class="hd-cart-t" id="cartT"></span>
-  </button>
-</header>
-
-<!-- HERO -->
-<div class="hero" id="heroSection">
-  <div class="hero-fallback" id="heroFallback">🍔</div>
-  <div class="hero-overlay"></div>
-  <div class="hero-content">
-    <div class="hero-tag" id="heroTag">🔥 <span id="heroTagTxt"></span></div>
-    <div class="hero-name" id="heroName">LA CURVA</div>
-    <div class="hero-sub" id="heroSub">Street Food · Sabor inigualable</div>
-  </div>
-</div>
-
-<!-- TIPO -->
-<div class="tipo-wrap">
-  <div class="tipo-row">
-    <button class="tbtn on" id="t-domicilio" onclick="setTipo('domicilio')"><span class="ti">🛵</span>Domicilio</button>
-    <button class="tbtn" id="t-recoger" onclick="setTipo('recoger')"><span class="ti">🏪</span>Recoger</button>
-    <button class="tbtn" id="t-mesa" onclick="setTipo('mesa')" style="display:none"><span class="ti">🪑</span>Mesa</button>
-  </div>
-</div>
-
-<!-- MODAL REGISTRO RAPIDO -->
-<div id="regRapidoOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)" onclick="if(event.target===this)cerrarRegistroRapido()">
-  <div style="background:var(--bg2);border-radius:26px 26px 0 0;padding:24px 20px calc(32px + env(safe-area-inset-bottom));width:100%;max-width:520px;border:1px solid var(--border);border-bottom:none">
-    <div style="width:38px;height:4px;background:var(--s3);border-radius:2px;margin:0 auto 20px"></div>
-    <div style="font-family:var(--font-disp);font-size:28px;font-weight:900;letter-spacing:1px;margin-bottom:4px">⭐ REWARDS</div>
-    <div style="font-size:13px;color:var(--t2);margin-bottom:20px">Ingresa tu WhatsApp para ver tus puntos</div>
-    <label style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:7px">Tu WhatsApp</label>
-    <input id="regRapidoTel" class="fi" type="tel" placeholder="3001234567" style="margin-bottom:12px" oninput="buscarClienteRapido(this.value)">
-    <div id="regRapidoInfo" style="display:none;padding:12px 14px;border-radius:13px;margin-bottom:14px;background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2)">
-      <div id="regRapidoNombre" style="font-size:14px;font-weight:700;color:#f5a623"></div>
-      <div id="regRapidoPts" style="font-size:13px;color:var(--t2);margin-top:3px"></div>
+<div class="sheet-bg" id="cartOv">
+  <div class="sheet">
+    <div class="sheet-handle-wrap"><div class="sheet-handle"></div></div>
+    <div class="sheet-head">
+      <div class="sheet-title">Mi Pedido</div>
+      <button class="sheet-close" onclick="closeCart()">✕</button>
     </div>
-    <button onclick="confirmarRegistroRapido()" style="width:100%;padding:15px;background:linear-gradient(135deg,#f5a623,#f97316);border:none;border-radius:14px;color:white;font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer">Ver mis puntos ⭐</button>
-  </div>
-</div>
-
-<!-- BANNER REWARDS -->
-<div id="rewardsBanner" style="margin:12px 16px 0;background:linear-gradient(135deg,rgba(245,166,35,0.12),rgba(249,115,22,0.08));border:1px solid rgba(245,166,35,0.25);border-radius:16px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer" onclick="abrirRegistroRapido()">
-  <div style="display:flex;align-items:center;gap:10px">
-    <span style="font-size:24px">⭐</span>
-    <div>
-      <div id="rwBannerTxt" style="font-family:var(--font-ui);font-size:13px;font-weight:700;color:#f5a623">Acumula puntos con cada pedido</div>
-      <div id="rwBannerSub" style="font-size:11px;color:var(--t2);margin-top:1px">Ingresa tu número para ver tus puntos</div>
-    </div>
-  </div>
-  <div id="rwBannerPts" style="display:none;text-align:right">
-    <div style="font-family:var(--font-disp);font-size:22px;font-weight:900;color:#f5a623;line-height:1" id="rwBannerPtsNum">0</div>
-    <div style="font-size:10px;color:var(--t2)">pts</div>
-  </div>
-  <div id="rwBannerArrow" style="color:rgba(245,166,35,0.6);font-size:18px">›</div>
-</div>
-
-<!-- PROMOS -->
-<div class="promos-wrap" id="promosWrap">
-  <div class="promos-scroll" id="promosScroll"></div>
-  <div class="promo-dots" id="promoDots"></div>
-</div>
-
-<!-- CATS -->
-<div class="section-label">Menú</div>
-<div style="padding:8px 16px 0;background:var(--bg)"><input id="searchBar" type="search" placeholder="Buscar producto..." oninput="filtrarBusqueda(this.value)" autocomplete="off" style="width:100%;padding:11px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:14px;color:var(--text);font-family:var(--font-ui);font-size:14px;box-sizing:border-box;outline:none;-webkit-appearance:none"></div>
-<div class="cats-row" id="catsRow"></div>
-
-<!-- PRODUCTS -->
-<div class="prods-area" id="prodsArea"></div>
-
-<!-- FLOATING BAR -->
-<div class="fbar" id="fbar">
-  <button class="fbar-btn" onclick="openCart()">
-    <div class="fbar-left">
-      <span class="fbar-badge" id="fbarBadge">0</span>
-      <span class="fbar-label">Ver pedido</span>
-    </div>
-    <span class="fbar-total" id="fbarTotal">$0</span>
-  </button>
-</div>
-
-<!-- PRODUCT DETAIL OVERLAY -->
-<div class="ov" id="prodDetOv" onclick="cerrarProdDetalle()"></div>
-<div class="sheet" id="prodDetSheet" style="max-height:95vh;border-radius:26px 26px 0 0">
-  <div style="position:relative">
-    <div id="prodDetImg" style="width:100%;height:240px;background:#1c1928;overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center">
-      <span id="prodDetEmoji" style="font-size:80px;opacity:0.5"></span>
-      <img id="prodDetImgEl" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none">
-      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 50%,rgba(8,7,9,0.95))"></div>
-    </div>
-    <button onclick="cerrarProdDetalle()" style="position:absolute;top:16px;right:16px;z-index:10;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.75);border:2px solid rgba(255,255,255,0.25);color:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(12px)">✕</button>
-    <div style="position:absolute;bottom:14px;left:20px;right:20px">
-      <div id="prodDetNombre" style="font-family:var(--font-disp);font-size:28px;font-weight:900;letter-spacing:1px;color:white;text-shadow:0 2px 8px rgba(0,0,0,0.8)"></div>
-      <div id="prodDetPrecio" style="font-family:var(--font-disp);font-size:22px;font-weight:700;color:var(--orange);margin-top:2px"></div>
-    </div>
-  </div>
-  <div style="padding:16px 20px 0">
-    <div id="prodDetDesc" style="font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:16px"></div>
-    <div id="prodDetAdicSec">
-      <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px">Adicionales</div>
-      <div class="adic-grid" id="prodDetAdicGrid" style="padding:0;margin-bottom:16px"></div>
-    </div>
-    <div id="prodDetSalsaSec" style="display:none">
-      <div style="font-family:var(--font-ui);font-size:10px;font-weight:700;color:var(--t3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px">🌶️ Elige tu salsa</div>
-      <div class="salsa-row" id="prodDetSalsaRow" style="padding:0;margin-bottom:16px"></div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:16px">
-      <div style="font-family:var(--font-ui);font-size:13px;font-weight:700">Cantidad</div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <button onclick="cambiarCantDet(-1)" style="width:34px;height:34px;border-radius:11px;border:1px solid var(--border2);background:var(--s2);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
-        <span id="prodDetCant" style="font-family:var(--font-disp);font-size:22px;font-weight:800;min-width:20px;text-align:center">1</span>
-        <button onclick="cambiarCantDet(1)" style="width:34px;height:34px;border-radius:11px;border:none;background:var(--accent);color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
-      </div>
-    </div>
-    <button onclick="agregarDesdeDet()" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--accent),#c42912);border:none;border-radius:16px;color:white;font-family:var(--font-ui);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:calc(24px + env(safe-area-inset-bottom))">
-      <span>Agregar al pedido</span>
-      <span id="prodDetTotalBtn" style="font-family:var(--font-disp);font-size:20px;font-weight:800">$0</span>
-    </button>
-  </div>
-</div>
-<!-- CART OVERLAY + SHEET -->
-<div class="ov" id="cartOv" onclick="closeCart()"></div>
-<div class="sheet" id="cartSheet">
-  <span class="sh-handle"></span>
-  <div class="sh-head">
-    <div class="sh-title">Tu Pedido</div>
-    <button class="sh-close" onclick="closeCart()">✕</button>
-  </div>
-
-  <div class="ci-list" id="ciList"></div>
-
-  <div class="fsec">
-    <label class="fl">Tu nombre</label>
-    <input class="fi" id="iNombre" placeholder="¿Cómo te llamas?" oninput="checkCliente()">
-
-    <label class="fl">WhatsApp</label>
-    <input class="fi" id="iTel" placeholder="3001234567" type="tel" oninput="checkCliente();actualizarBtnMisPedidos()">
-
-    <div class="fid-box" id="fidBox">
-      <span class="fid-ico" id="fidIco"></span>
-      <div class="fid-info">
-        <div class="fid-name" id="fidName"></div>
-        <div class="fid-lvl" id="fidLvl"></div>
-        <span class="fid-pts-badge" id="fidPtsBadge" style="display:none"></span>
-      </div>
-    </div>
-
-    <div id="domFields">
-      <label class="fl">Barrio <span style="color:var(--accent)">*</span></label>
-      <div style="position:relative;margin-bottom:8px">
-        <input class="fi" id="iBarrio" placeholder="🔍 Busca tu barrio..." oninput="buscarBarrio(this.value)" autocomplete="off" style="margin:0">
-        <div id="barrioDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1c1928;border:1px solid rgba(232,52,28,0.3);border-radius:13px;margin-top:4px;max-height:180px;overflow-y:auto;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.5)"></div>
-      </div>
-      <div id="barrioSelInfo" style="display:none;padding:10px 13px;border-radius:12px;margin-bottom:8px;font-size:12px;font-weight:700"></div>
-      <label class="fl">Dirección <span style="color:var(--accent)">*</span></label>
-      <input class="fi" id="iDir" placeholder="Calle y número">
-      <label class="fl">Apto / Torre / Casa <span style="color:var(--t3);font-weight:400">(si aplica)</span></label>
-      <input class="fi" id="iApto" placeholder="Apto 301, Torre B...">
-    </div>
-    <div id="mesaField">
-      <label class="fl">Número de mesa</label>
-      <input class="fi" id="iMesa" placeholder="Ej: 5" type="number">
-    </div>
-
-    <label class="fl">Notas especiales</label>
-    <textarea class="fi" id="iNotas" placeholder="Sin cebolla, sin salsa, bien cocido..."></textarea>
-
-    <label class="fl">¿Tienes cupón?</label>
-    <div class="cupon-row">
-      <input class="fi" id="iCupon" placeholder="Código de descuento" oninput="this.value=this.value.toUpperCase()">
-      <button class="cup-btn" onclick="aplicarCupon()">Aplicar</button>
-    </div>
-    <div class="cupon-res" id="cuponRes"></div>
-
-    <label class="fl">Método de pago</label>
-    <div class="pago-grid">
-      <button class="popt" id="p-nequi" onclick="setPago('nequi')"><span class="pi">📱</span>Nequi</button>
-      <button class="popt" id="p-bancolombia" onclick="setPago('bancolombia')"><span class="pi">🏦</span>Bancolombia</button>
-      <button class="popt" id="p-efectivo" onclick="setPago('efectivo')"><span class="pi">💵</span>Efectivo</button>
-      <button class="popt" id="p-datafono" onclick="setPago('datafono')"><span class="pi">💳</span>Datáfono</button>
-    </div>
-    <div class="pago-info" id="pagoInfo"></div>
-
-    <div id="comprobanteWrap" style="display:none">
-      <label class="fl">Comprobante de pago</label>
-      <div class="uzone" id="uzone">
-        <input type="file" id="compFile" accept="image/*" onchange="handleComp(event)">
-        <div class="uz-ico">📎</div>
-        <div class="uz-txt">Toca para subir comprobante</div>
-        <div class="uz-sub">Foto de la transferencia · JPG o PNG</div>
-        <img class="uz-prev" id="uzPrev">
+    <div class="sheet-body">
+      <div class="empty">
+        <div class="empty-ico">🚧</div>
+        <div class="empty-txt">Carrito en construcción</div>
+        <div class="empty-sub">Se activa en Fase 3</div>
       </div>
     </div>
   </div>
-
-  <div class="tot-box" id="totBox"></div>
-  <div class="tot-grand" id="totGrand"><span class="tg-l">TOTAL</span><span class="tg-v" id="totTotal">$0</span></div>
-  <button class="cta-btn" id="ctaBtn" onclick="enviar()">Confirmar pedido →</button>
 </div>
 
-<!-- ADICIONALES OVERLAY + SHEET -->
-<div class="ov" id="adicOv" onclick="cerrarAdic()"></div>
-<div class="sheet" id="adicSheet" style="max-height:82vh;">
-  <span class="sh-handle"></span>
-  <div class="sh-head">
-    <div class="sh-title" id="adicTitle">Adicionales</div>
-    <button class="sh-close" onclick="cerrarAdic()">✕</button>
-  </div>
-  <div style="padding:4px 20px 2px;font-size:12px;color:var(--t3);font-weight:400;">Extras con costo adicional:</div>
-  <div class="adic-grid" id="adicGrid"></div>
-  <div id="salsasSec" style="display:none">
-    <div class="salsas-label">🌶️ Elige tu salsa:</div>
-    <div class="salsa-row" id="salsaRow"></div>
-  </div>
-  <div style="padding:14px 20px calc(24px + env(safe-area-inset-bottom));">
-    <button class="cta-btn" style="width:100%;margin:0;" onclick="confirmarAdic()">Agregar al carrito →</button>
-  </div>
-</div>
-
-<!-- SUCCESS -->
-<div id="succ">
-  <div class="succ-glow"></div>
-  <div class="succ-top">
-    <span class="succ-ico">🎉</span>
-    <div class="succ-title">¡Pedido Recibido!</div>
-    <div class="succ-sub" id="succMsg">Tu pedido ya está en preparación.</div>
-  </div>
-  <div class="order-box">
-    <div class="ord-label">Número de pedido</div>
-    <div class="ord-num" id="ordNum">#000</div>
-  </div>
-  <div class="succ-pts-badge" id="succPtsBadge">
-    <div class="succ-pts-txt" id="succPtsTxt">+10 pts</div>
-    <div class="succ-pts-lbl">puntos ganados ⭐</div>
-  </div>
-  <div class="track-wrap">
-    <div class="track-title">ESTADO EN TIEMPO REAL</div>
-    <div class="tstep act" id="ts-confirmado"><div class="ts-dot"></div><div class="ts-label">✅ Recibido</div></div>
-    <div class="tstep" id="ts-preparando"><div class="ts-dot"></div><div class="ts-label">🔥 En preparación</div></div>
-    <div class="tstep" id="ts-listo"><div class="ts-dot"></div><div class="ts-label">🎉 Listo</div></div>
-    <div class="tstep" id="ts-camino"><div class="ts-dot"></div><div class="ts-label">🛵 En camino</div></div>
-    <div class="tstep" id="ts-entregado"><div class="ts-dot"></div><div class="ts-label">🏠 Entregado</div></div>
-  </div>
-  <!-- BANNER NOTIFICACIONES -->
-<div id="notifBanner" style="display:none;margin:0 24px 16px;padding:14px 18px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);border-radius:16px;align-items:center;gap:12px;width:calc(100% - 48px)">
-  <span style="font-size:24px">🔔</span>
-  <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#c4b5fd">¿Recibir alertas de tu pedido?</div><div style="font-size:11px;color:var(--t2);margin-top:2px">Te avisamos cuando esté listo y en camino</div></div>
-  <button onclick="pedirPermisoNotif();document.getElementById('notifBanner').style.display='none'" style="padding:8px 14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">Activar</button>
-</div>
-<!-- MAPA TRACKING -->
-<div id="trackingMapWrap" style="display:none;margin:0 24px 16px;border-radius:16px;overflow:hidden;border:1px solid rgba(59,130,246,0.3)">
-  <div style="padding:10px 14px;background:rgba(59,130,246,0.1);display:flex;align-items:center;gap:8px;font-family:var(--font-ui);font-size:12px;font-weight:700;color:#60a5fa"><span style="width:8px;height:8px;border-radius:50%;background:#60a5fa;display:inline-block"></span>Domiciliario en camino — ubicación en tiempo real</div>
-  <div id="trackingMapEl" style="width:100%;height:220px;background:#1a1520"></div>
-</div>
-<button class="nuevo-btn" onclick="nuevoPedido()">+ Hacer otro pedido</button>
-</div>
-
-
-<!-- MIS PEDIDOS SCREEN -->
-<div id="misPedidosScreen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:350;flex-direction:column">
-  <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;background:var(--bg);position:sticky;top:0">
-    <button onclick="cerrarMisPedidos()" style="width:34px;height:34px;border-radius:11px;background:var(--s2);border:1px solid var(--border);color:var(--t2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center">←</button>
-    <div style="flex:1">
-      <div style="font-family:var(--font-disp);font-size:22px;font-weight:900;letter-spacing:1px">Mis Pedidos</div>
-      <div style="font-size:11px;color:var(--t3)">Estado en tiempo real</div>
+<div class="sheet-bg" id="mpOv">
+  <div class="sheet">
+    <div class="sheet-handle-wrap"><div class="sheet-handle"></div></div>
+    <div class="sheet-head">
+      <div class="sheet-title">Mis Pedidos</div>
+      <button class="sheet-close" onclick="cerrarMisPedidos()">✕</button>
     </div>
-    <button onclick="cargarMisPedidos()" style="padding:7px 13px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">↻ Actualizar</button>
-  </div>
-  <div style="overflow-y:auto;padding:16px 20px;flex:1" id="misPedidosLista">
-    <div style="text-align:center;padding:40px 0;color:var(--t3)">
-      <div style="font-size:40px;margin-bottom:12px">📦</div>
-      <div style="font-size:14px">Ingresa tu WhatsApp en el carrito<br>para ver tus pedidos activos</div>
-    </div>
-  </div>
-</div>
-<!-- REWARDS FAB -->
-<button class="rewards-fab hidden" id="rewardsFab" onclick="abrirRewards()">
-  <span>⭐</span><span class="rewards-fab-pts" id="rewardsFabPts">0 pts</span>
-</button>
-
-<!-- REWARDS SCREEN -->
-<div id="rewardsScreen">
-  <div class="rw-header">
-    <div class="rw-title">⭐ REWARDS</div>
-    <button class="rw-close" onclick="cerrarRewards()">✕</button>
-  </div>
-  <div class="rw-hero">
-    <div class="rw-pts-big" id="rwPtsBig">0</div>
-    <div class="rw-pts-lbl">puntos acumulados</div>
-    <div class="rw-progress-wrap">
-      <div class="rw-progress-labels">
-        <span id="rwProgFrom">0 pts</span>
-        <span id="rwProgTo">100 pts para canjear</span>
+    <div class="sheet-body">
+      <div class="empty">
+        <div class="empty-ico">📦</div>
+        <div class="empty-txt">En construcción</div>
+        <div class="empty-sub">Se activa en Fase 4</div>
       </div>
-      <div class="rw-progress-bar"><div class="rw-progress-fill" id="rwProgFill" style="width:0%"></div></div>
-      <div class="rw-next-txt" id="rwNextTxt"></div>
     </div>
-  </div>
-  <div class="rw-section-label">Canjea tus puntos</div>
-  <div class="rw-prods-grid" id="rwProdsGrid">
-    <div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--t3);font-size:13px;">Cargando recompensas...</div>
-  </div>
-  <div class="rw-section-label">Historial</div>
-  <div class="rw-history" id="rwHistory">
-    <div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Sin historial aún</div>
   </div>
 </div>
 
-<!-- CANJE OVERLAY -->
-<div class="canje-ov" id="canjeOv" onclick="cerrarCanjeOv()"></div>
-<div class="canje-sheet" id="canjeSheet">
-  <div class="canje-sheet-head">
-    <div class="canje-sheet-title">Canjear</div>
-    <button class="rw-close" onclick="cerrarCanjeOv()">✕</button>
+<div class="sheet-bg" id="rewOv">
+  <div class="sheet">
+    <div class="sheet-handle-wrap"><div class="sheet-handle"></div></div>
+    <div class="sheet-head">
+      <div class="sheet-title">⭐ Mis Puntos</div>
+      <button class="sheet-close" onclick="cerrarRewards()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="empty">
+        <div class="empty-ico">🎁</div>
+        <div class="empty-txt">En construcción</div>
+        <div class="empty-sub">Se activa en Fase 4</div>
+      </div>
+    </div>
   </div>
-  <div class="canje-prod-preview" id="canjePreview"></div>
-  <button class="canje-confirm-btn" id="canjeConfirmBtn" onclick="confirmarCanje()">⭐ Confirmar canje</button>
 </div>
 
 <script>
-var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
-var rest=null,menuItems=[],carrito={},tipoPedido="domicilio",pagoSel=null;
-var compB64=null,trackId=null,trackTimer=null;
-var descVal=0,descTipo=null,clienteData=null,chkTimer=null;
-var catActiva="todas",adicPend=null,adicSel={},salsaSel=null;
-var puntosCliente=0,canjeActual=null;
+/* ═══════════════════════════════════════════════════════════
+   LUZ IA · Menú v3.0 — Fase 1: Foundation
+   ═══════════════════════════════════════════════════════════ */
 
-var ADICIONALES=[
-  {id:"queso",nombre:"Queso tajado",precio:1600,emoji:"🧀"},
-  {id:"tocineta",nombre:"Tocineta",precio:2000,emoji:"🥓"},
-  {id:"jamon",nombre:"Jamón",precio:2000,emoji:"🍖"},
-  {id:"maduro",nombre:"Maduro calado",precio:3000,emoji:"🍌"},
-  {id:"jalapenos",nombre:"Jalapeños",precio:2000,emoji:"🌶️"},
-  {id:"maiz",nombre:"Maíz pira",precio:6000,emoji:"🌽"},
-  {id:"salchicha",nombre:"Salchicha",precio:6000,emoji:"🌭"},
-  {id:"ranchera",nombre:"Ranchera",precio:4000,emoji:"🫙"}
+var tipoPedido = "domicilio";
+var rest = null;
+
+// ── Utilidades ──
+function fmt(n) { return "$" + Number(n||0).toLocaleString("es-CO"); }
+function gp(k) { return new URLSearchParams(window.location.search).get(k); }
+function esc(s) { return (s||"").replace(/'/g,"\\'").replace(/"/g,"&quot;"); }
+function escHtml(s) {
+  return String(s||"")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+function showToast(msg) {
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(window._toastT);
+  window._toastT = setTimeout(function(){ t.classList.remove("show"); }, 2600);
+}
+
+// ── Stubs para Fases siguientes ──
+function openCart(){ document.getElementById('cartOv').classList.add('open'); document.body.style.overflow='hidden'; }
+function closeCart(){ document.getElementById('cartOv').classList.remove('open'); document.body.style.overflow=''; }
+function abrirMisPedidos(){ document.getElementById('mpOv').classList.add('open'); document.body.style.overflow='hidden'; }
+function cerrarMisPedidos(){ document.getElementById('mpOv').classList.remove('open'); document.body.style.overflow=''; }
+function abrirRewards(){ document.getElementById('rewOv').classList.add('open'); document.body.style.overflow='hidden'; }
+function cerrarRewards(){ document.getElementById('rewOv').classList.remove('open'); document.body.style.overflow=''; }
+function filtrarBusqueda(q){ console.log('[search]', q); }
+
+function setTipo(t) {
+  tipoPedido = t;
+  document.querySelectorAll('.tipo-chip').forEach(function(el){ el.classList.remove('on'); });
+  var map = { domicilio:'t-domi', recoger:'t-rec', mesa:'t-mesa' };
+  var el = document.getElementById(map[t]);
+  if (el) el.classList.add('on');
+}
+
+// ── Header scroll ──
+window.addEventListener("scroll", function() {
+  document.getElementById("hdr").classList.toggle("scrolled", window.scrollY > 20);
+}, { passive: true });
+
+// ── Saludo dinámico ──
+function actualizarSaludo() {
+  var h = new Date().getHours();
+  var saludo = "Buenas";
+  if (h < 12) saludo = "Buenos días";
+  else if (h < 19) saludo = "Buenas tardes";
+  else saludo = "Buenas noches";
+  var el = document.getElementById("heroGreet");
+  if (el) el.textContent = saludo + " 👋";
+}
+
+// ── Promos default ──
+var PROMOS_DEFAULT = [
+  { titulo:"2x1 en Combos", desc:"Todos los martes pide dos combos al precio de uno", c1:"#7c1a08", c2:"#3d0d04", ico:"🍔" },
+  { titulo:"Domicilio Gratis", desc:"En pedidos mayores a $30.000", c1:"#0a2a1a", c2:"#051409", ico:"🛵" },
+  { titulo:"Puntos Dobles", desc:"Acumula el doble de puntos los fines de semana", c1:"#1a1408", c2:"#0a0904", ico:"⭐" }
 ];
-var SALSAS=["BBQ","Buffalo","Mango Habanero","Teriyaki","Ajo Parmesano","Honey Mustard","Picante clásica","Sin salsa"];
 
-var PROMOS_DEFAULT=[
-  {titulo:"2x1 en Combos",desc:"Todos los martes pide dos combos al precio de uno",color1:"#7c1a08",color2:"#3d0d04",emoji:"🍔"},
-  {titulo:"Domicilio Gratis",desc:"En pedidos mayores a $30.000 el envío es gratis",color1:"#0a2a1a",color2:"#051409",emoji:"🛵"},
-  {titulo:"Puntos Dobles",desc:"Acumula el doble de puntos los fines de semana",color1:"#1a1408",color2:"#0a0904",emoji:"⭐"}
-];
-
-function api(t,q){return fetch(SU+"/rest/v1/"+t+"?"+q,{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json();});}
-function fmt(n){return "$"+Number(n).toLocaleString("es-CO");}
-function gp(k){return new URLSearchParams(window.location.search).get(k);}
-function esc(s){return (s||"").replace(/'/g,"\\'").replace(/"/g,"&quot;");}
-function esHoriz(cat){var c=(cat||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");return c.includes("bebida");}
-function esAdicCat(cat){return (cat||"").toLowerCase().includes("adicional");}
-function esAlitas(n){return (n||"").toLowerCase().includes("alita");}
-
-function catBgClass(cat){
-  var c=(cat||"").toLowerCase();
-  if(c.includes("hamburguesa"))return "catbg-hamburguesa";
-  if(c.includes("pollo"))return "catbg-pollo";
-  if(c.includes("perro")||c.includes("hot"))return "catbg-perro";
-  if(c.includes("alita"))return "catbg-alita";
-  if(c.includes("bebida"))return "catbg-bebida";
-  if(c.includes("arepa"))return "catbg-arepa";
-  if(c.includes("postre"))return "catbg-postre";
-  return "catbg-default";
+function renderPromos() {
+  var wrap = document.getElementById("prmsWrap");
+  if (!wrap) return;
+  wrap.innerHTML = PROMOS_DEFAULT.map(function(p){
+    var bg = 'linear-gradient(135deg, '+p.c1+' 0%, '+p.c2+' 100%)';
+    return '<div class="prm" style="background:'+bg+'">'
+      + '<div class="prm-ico">'+p.ico+'</div>'
+      + '<div class="prm-txt">'
+      + '<div class="prm-t">'+escHtml(p.titulo)+'</div>'
+      + '<div class="prm-d">'+escHtml(p.desc)+'</div>'
+      + '</div></div>';
+  }).join("");
 }
 
-/* ── SCROLL HEADER ── */
-window.addEventListener("scroll",function(){
-  document.getElementById("header").classList.toggle("scrolled",window.scrollY>200);
-},{passive:true});
+// ── Drag-to-dismiss para sheets ──
+function initSheetDrag() {
+  document.querySelectorAll(".sheet").forEach(function(sheet) {
+    var handle = sheet.querySelector(".sheet-handle-wrap");
+    if (!handle) return;
+    var isDragging = false;
+    var startY = 0;
+    var currentY = 0;
+    var sheetBg = sheet.closest(".sheet-bg");
 
-/* ── INIT ── */
-window.addEventListener("load", async function(){
-  var restId=gp("rest")||gp("r");
-  var mesa=gp("mesa")||gp("m");
-  if(mesa){var mt=document.getElementById("t-mesa");if(mt)mt.style.display="flex";setTipo("mesa");var mi=document.getElementById("iMesa");if(mi)mi.value=mesa;}
-  try{
-    var rUrl="/api/restaurante"+(restId?"?id="+encodeURIComponent(restId):"");
-    var rs=await fetch(rUrl).then(function(r){return r.json();});
-    if(rs&&rs.length){rest=rs[0];}else if(rs&&rs.id){rest=rs;}
-    if(rest)aplicarRest();
-  }catch(e){console.error("restaurante error",e);}
-  await cargarMenu();
-  await cargarZonasMenu();
-  // actualizarBtnMisPedidos se llama via oninput en iTel
-  setTimeout(function(){
-    var l=document.getElementById("ls");if(l){l.classList.add("out");setTimeout(function(){l.style.display="none";},600);}
-  },900);
+    function onStart(e) {
+      isDragging = true;
+      startY = (e.touches ? e.touches[0].clientY : e.clientY);
+      currentY = 0;
+      sheetBg.classList.add("dragging");
+    }
+    function onMove(e) {
+      if (!isDragging) return;
+      var y = (e.touches ? e.touches[0].clientY : e.clientY);
+      currentY = y - startY;
+      if (currentY < 0) currentY = 0;
+      sheet.style.transform = "translateY(" + currentY + "px)";
+      var progress = Math.min(currentY / 300, 1);
+      sheetBg.style.background = "rgba(0,0,0," + (0.55 * (1 - progress)) + ")";
+    }
+    function onEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      sheetBg.classList.remove("dragging");
+      sheet.style.transform = "";
+      sheetBg.style.background = "";
+      if (currentY > 120) {
+        sheetBg.classList.remove("open");
+        document.body.style.overflow = "";
+      }
+    }
+
+    handle.addEventListener("touchstart", onStart, { passive: true });
+    handle.addEventListener("touchmove", onMove, { passive: true });
+    handle.addEventListener("touchend", onEnd);
+    handle.addEventListener("mousedown", onStart);
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onEnd);
+  });
+}
+
+// ── Init ──
+window.addEventListener("load", function() {
+  console.log("%c[LUZ IA v3.0] Fase 1 — Foundation cargada", "color:#FF6B1A;font-weight:bold;font-size:14px");
+
+  actualizarSaludo();
+  renderPromos();
+  initSheetDrag();
+
+  // Ocultar splash
+  setTimeout(function() {
+    var s = document.getElementById("splash");
+    if (s) s.classList.add("out");
+  }, 600);
+  setTimeout(function() {
+    var s = document.getElementById("splash");
+    if (s) s.remove();
+  }, 1200);
+
+  // Cerrar sheets con Escape
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+      document.querySelectorAll(".sheet-bg.open").forEach(function(sh){
+        sh.classList.remove("open");
+      });
+      document.body.style.overflow = "";
+    }
+  });
+
+  // Cerrar sheet al tocar background
+  document.querySelectorAll(".sheet-bg").forEach(function(sh) {
+    sh.addEventListener("click", function(e) {
+      if (e.target === sh) {
+        sh.classList.remove("open");
+        document.body.style.overflow = "";
+      }
+    });
+  });
+
+  // Test: mostrar FAB de prueba
+  setTimeout(function() {
+    document.getElementById("cartFab").classList.add("show");
+    document.getElementById("cartFabQty").textContent = "3";
+    document.getElementById("cartFabItems").textContent = "3 productos";
+    document.getElementById("cartFabPrice").textContent = "$42.000";
+  }, 1500);
+
+  console.log("%c[LUZ IA v3.0] Ready", "color:#22C55E;font-weight:bold");
 });
-
-function aplicarRest(){
-  if(!rest)return;
-  var n=rest.nombre||"La Curva Street Food";
-  document.title=n;
-  document.getElementById("heroName").textContent=n.toUpperCase();
-  document.getElementById("heroSub").textContent=rest.descripcion||"Street Food · Sabor inigualable";
-  // logo
-  if(rest.logo_url){
-    document.getElementById("hdLogo").innerHTML='<img src="'+rest.logo_url+'" onerror="this.parentElement.innerHTML=\'LA<span>CURVA</span>\'">';
-  }
-  // hero
-  var hImg=rest.imagen_hero||rest.imagen_url;
-  if(hImg){
-    var hSec=document.getElementById("heroSection");
-    var fallback=document.getElementById("heroFallback");
-    var img=document.createElement("img");
-    img.className="hero-media";
-    img.alt="hero";
-    img.src=hImg;
-    img.onerror=function(){};
-    hSec.insertBefore(img,hSec.firstChild);
-    fallback.style.display="none";
-  }
-  // promo del día
-  var dias=["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
-  var hoy=dias[new Date().getDay()];
-  if(rest.promos_semanales){
-    var lp=(rest.promos_semanales||"").split("\n").find(function(l){return l.toLowerCase().includes(hoy);});
-    if(lp){
-      var txt=lp.replace(/^[-*\s]*/,"").replace(/^(lunes|martes|miercoles|jueves|viernes|sabado|domingo):\s*/i,"");
-      var tag=document.getElementById("heroTag");
-      tag.style.display="inline-flex";
-      document.getElementById("heroTagTxt").textContent=txt;
-    }
-  }
-  cargarPromos();
-  cargarZonasMenu();
-}
-
-function cargarPromos(){
-  var promos=PROMOS_DEFAULT;
-  var raw=rest.banners_json||rest.promos_json;
-  if(rest&&raw){try{promos=JSON.parse(raw);}catch(e){}}
-  if(!promos||!promos.length)return;
-  document.getElementById("promosWrap").classList.add("visible");
-  var h=promos.map(function(p){
-    var bg="linear-gradient(140deg,"+p.color1+","+p.color2+")";
-    return '<div class="promo-card" style="background:'+bg+'">'
-      +'<div class="promo-inner">'
-      +'<span class="promo-emoji">'+(p.emoji||"🔥")+'</span>'
-      +'<div class="promo-badge">🔥 PROMO</div>'
-      +'<div class="promo-title">'+p.titulo+'</div>'
-      +'<div class="promo-desc">'+(p.desc||p.descripcion||"")+'</div>'
-      +'</div></div>';
-  }).join("");
-  document.getElementById("promosScroll").innerHTML=h;
-  document.getElementById("promoDots").innerHTML=promos.map(function(_,i){
-    return '<div class="pdot'+(i===0?" on":"")+'" id="pd'+i+'"></div>';
-  }).join("");
-  var sc=document.getElementById("promosScroll");
-  sc.addEventListener("scroll",function(){
-    var idx=Math.round(sc.scrollLeft/(sc.scrollWidth/promos.length));
-    promos.forEach(function(_,i){var d=document.getElementById("pd"+i);if(d)d.classList.toggle("on",i===idx);});
-  },{passive:true});
-}
-
-async function cargarMenu(){
-  if(!rest)return;
-  try{
-    var r=await fetch("/api/menu?restaurante_id="+rest.id);
-    var data=await r.json();
-    console.log("═══ DIAGNÓSTICO MENÚ ═══");
-    console.log("Backend devolvió:",data.length,"productos totales");
-
-    // DIAGNÓSTICO 1: ¿Llegan las tradicionales desde el backend?
-    var tradicionalesRaw=data.filter(function(i){return (i.categoria||"").toLowerCase().indexOf("tradicional")!==-1;});
-    console.log("🔍 Tradicionales en backend:",tradicionalesRaw.length);
-    tradicionalesRaw.forEach(function(t){
-      console.log("   →",t.nombre,"| categoria:",JSON.stringify(t.categoria),"| disponible:",t.disponible,"| es_adicional?",esAdicCat(t.categoria));
-    });
-
-    // Normalizar categoria_slug - blindado contra mayúsculas, espacios y tildes
-    menuItems=(data||[])
-      .filter(function(i){
-        var adic=esAdicCat(i.categoria);
-        var noDispo=i.disponible===false;
-        if(adic)console.log("⚠️ Filtrado por adicional:",i.nombre,"cat:",i.categoria);
-        if(noDispo)console.log("⚠️ Filtrado por no disponible:",i.nombre);
-        return !adic && !noDispo;
-      })
-      .map(function(i){
-        var slug=(i.categoria_slug||i.categoria||"")
-          .toLowerCase().trim()
-          .normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-        return Object.assign({},i,{categoria_slug:slug});
-      });
-    console.log("✅ Menu filtrado:",menuItems.length,"productos");
-
-    // DIAGNÓSTICO 2: ¿Quedaron las tradicionales después del filtro?
-    var tradicionalesFiltradas=menuItems.filter(function(i){return (i.categoria||"").toLowerCase().indexOf("tradicional")!==-1;});
-    console.log("🔍 Tradicionales DESPUÉS del filtro:",tradicionalesFiltradas.length);
-    if(tradicionalesFiltradas.length>0){
-      console.log("   Slug generado:",tradicionalesFiltradas[0].categoria_slug);
-    }
-
-    // DIAGNÓSTICO 3: agrupación por slug (puede haber colisiones)
-    var slugsCount={};
-    menuItems.forEach(function(i){
-      slugsCount[i.categoria_slug]=(slugsCount[i.categoria_slug]||0)+1;
-    });
-    console.log("📊 Slugs únicos generados:",Object.keys(slugsCount).length);
-    console.log("   Distribución:",slugsCount);
-
-    // DIAGNÓSTICO 4: cuántos productos tienen imagen
-    var conImg=menuItems.filter(function(i){return i.imagen_url&&i.imagen_url.trim();}).length;
-    console.log("📷 con imagen:",conImg,"/",menuItems.length);
-
-    console.log("═══════════════════════════");
-  }catch(e){
-    console.error("cargarMenu error:",e);
-    menuItems=[];
-  }
-  renderCats();
-  renderProds("todas");
-}
-
-function renderCats(){
-  var slugs=[];
-  var slugToDisplay={};
-  menuItems.forEach(function(i){
-    if(!slugToDisplay[i.categoria_slug]){
-      slugs.push(i.categoria_slug);
-      slugToDisplay[i.categoria_slug]=i.categoria;
-    }
-  });
-  var pills='<button class="cat-pill'+(catActiva==="todas"?" on":"")+'" onclick="filtrarCat(\'todas\')">🍽 Todo</button>';
-  slugs.forEach(function(slug){
-    var lbl=slugToDisplay[slug]||slug;
-    var on=catActiva===slug?" on":"";
-    pills+='<button class="cat-pill'+on+'" onclick="filtrarCat(\''+slug+'\')">'+lbl+'</button>';
-  });
-  document.getElementById("catsRow").innerHTML=pills;
-}
-
-function filtrarCat(c){catActiva=c;renderCats();renderProds(c);}
-
-function renderProds(cat){
-  var items=cat==="todas"
-    ?menuItems
-    :menuItems.filter(function(i){return (i.categoria_slug||"").toLowerCase().trim()===(cat||"").toLowerCase().trim();});
-  if(!items.length){
-    document.getElementById("prodsArea").innerHTML='<div class="empty"><div class="empty-ico">🍽️</div><div class="empty-txt">Sin productos disponibles</div></div>';
-    return;
-  }
-  // Agrupar por slug pero mostrar nombre original
-  var grupos={};
-  var slugDisplay={};
-  items.forEach(function(i){
-    if(!grupos[i.categoria_slug])grupos[i.categoria_slug]=[];
-    grupos[i.categoria_slug].push(i);
-    slugDisplay[i.categoria_slug]=i.categoria;
-  });
-  var h="";
-  Object.keys(grupos).forEach(function(slug){
-    var displayName=slugDisplay[slug]||slug;
-    var horiz=esHoriz(slug);
-    h+='<div class="cat-section">';
-    if(cat==="todas"){
-      h+='<div class="cat-header"><div class="cat-header-label">'+displayName+'</div><div class="cat-header-line"></div></div>';
-    }
-    h+=horiz?'<div class="grid-h">':'<div class="grid-v">';
-    grupos[slug].forEach(function(i){h+=horiz?renderHCard(i):renderVCard(i);});
-    h+='</div></div>';
-  });
-  document.getElementById("prodsArea").innerHTML=h;
-}
-
-function renderVCard(i){
-  var qty=carrito[i.id]?carrito[i.id].qty:0;
-  var imgHtml=i.imagen_url
-    ?('<img src="'+i.imagen_url+'" onerror="this.style.display=\'none\'" loading="lazy" style="width:100%;height:100%;object-fit:cover">')
-    :('<span style="font-size:40px;opacity:0.5">'+(i.emoji||'🍔')+'</span>');
-  var ctrl=qty>0
-    ?('<div class="qty-ctrl" style="flex-shrink:0"><button class="qb" onclick="event.stopPropagation();qDec(\''+i.id+'\')">−</button><span class="qn">'+qty+'</span><button class="qb p" onclick="event.stopPropagation();addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">+</button></div>')
-    :('<button class="add-btn" onclick="event.stopPropagation();addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">+</button>');
-  return '<div class="pcard-v'+(qty>0?' incart':'')+'" id="pc-'+i.id+'" onclick="abrirProdDetalle(\''+i.id+'\')">'
-    +'<div class="pcv-body">'
-    +'<div class="pcv-name">'+i.nombre+'</div>'
-    +(i.descripcion?'<div class="pcv-desc">'+i.descripcion+'</div>':'')
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">'
-    +'<div class="pcv-price">'+fmt(i.precio)+'</div>'
-    +ctrl+'</div></div>'
-    +'<div class="pcv-img">'+imgHtml+(i.en_oferta?'<div class="oferta-tag">OFERTA</div>':'')+'</div>'
-    +'</div>';
-}
-
-function renderHCard(i){
-  var qty=carrito[i.id]?carrito[i.id].qty:0;
-  var bgCls=catBgClass(i.categoria);
-  var imgHtml=i.imagen_url?'<img src="'+i.imagen_url+'" onerror="this.style.display=\'none\'" loading="lazy">':'';
-  var ctrl=qty>0
-    ?'<div class="pch-ctrl"><button class="cib m" onclick="event.stopPropagation();qDec(\''+i.id+'\')">−</button><span class="ci-n">'+qty+'</span><button class="cib p" onclick="event.stopPropagation();addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">+</button></div>'
-    :'<button class="cib p" onclick="event.stopPropagation();addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">+</button>';
-  return '<div class="pcard-h'+(qty>0?" incart":"")+'" id="pc-'+i.id+'" onclick="addItem(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\')">'
-    +'<div class="pch-img '+bgCls+'">'+imgHtml+'<span class="pch-emoji">'+(i.emoji||"🥤")+'</span></div>'
-    +'<div class="pch-body">'
-    +'<div><div class="pch-name">'+i.nombre+(i.en_oferta?' <span style="font-size:9px;background:var(--accent);color:white;padding:2px 6px;border-radius:5px;vertical-align:middle">OFERTA</span>':'')+'</div>'
-    +(i.descripcion?'<div class="pch-desc">'+i.descripcion+'</div>':'')+'</div>'
-    +'<div class="pch-bot"><div class="pch-price">'+fmt(i.precio)+'</div>'+ctrl+'</div>'
-    +'</div></div>';
-}
-
-/* ── ADD / QTY ── */
-function esAdicionable(i){return i&&!i.es_bebida&&!esAdicCat(i.categoria||"");}
-
-function addItem(id,precio,nombre){
-  var item=menuItems.find(function(x){return x.id===id;});
-  var esBeb=item&&(item.es_bebida||(item.categoria||"").toLowerCase().includes("bebida"));
-  // Bebidas: agregar directo siempre
-  if(esBeb){
-    if(!carrito[id])carrito[id]={id:id,precio:precio,nombre:nombre,qty:0};
-    carrito[id].qty++;
-    updateCartUI();
-    return;
-  }
-  // Comida: primera vez abre detalle, después incrementa directo
-  var esAdicionable=item&&!esAdicCat(item.categoria||"");
-  if(esAdicionable&&(!carrito[id]||carrito[id].qty===0)){
-    abrirProdDetalle(id);
-    return;
-  }
-  if(!carrito[id])carrito[id]={id:id,precio:precio,nombre:nombre,qty:0};
-  carrito[id].qty++;
-  updateCartUI();
-  // Sugerencia bebida: dispara al tener 2+ comidas si no hay bebida en carrito
-  var totalComida=Object.values(carrito).filter(function(ci){
-    var m=menuItems.find(function(x){return x.id===ci.id;});
-    return m&&!m.es_bebida&&!(m.categoria||"").toLowerCase().includes("bebida");
-  }).reduce(function(a,b){return a+b.qty;},0);
-  var tieneBebida=Object.values(carrito).some(function(ci){
-    var m=menuItems.find(function(x){return x.id===ci.id;});
-    return m&&(m.es_bebida||(m.categoria||"").toLowerCase().includes("bebida"));
-  });
-  console.log("[addItem] totalComida:",totalComida,"| tieneBebida:",tieneBebida);
-  // Mostrar al llegar a 2 comidas o cada 3 si sigue sumando, y solo si no hay bebida
-  if(!tieneBebida && (totalComida===2 || (totalComida>2 && totalComida%3===0))){
-    sugerirBebida();
-  }
-}
-
-function qDec(id){
-  if(!carrito[id])return;
-  setQty(id,carrito[id].precio,carrito[id].nombre,carrito[id].qty-1);
-}
-
-function setQty(id,precio,nombre,qty){
-  if(qty<=0)delete carrito[id];
-  else carrito[id]={id,precio,nombre,qty};
-  updateCartUI();
-  var el=document.getElementById("pc-"+id);
-  if(el){
-    el.classList.toggle("incart",qty>0);
-    var wrap=el.querySelector(".pcv-qty-wrap,.pch-ctrl,.pch-bot");
-    // Re-render just the qty control
-    var newQty=carrito[id]?carrito[id].qty:0;
-    var isVert=el.classList.contains("pcard-v");
-    if(isVert){
-      var qw=el.querySelector(".pcv-qty-wrap");
-      if(qw){
-        if(newQty>0)qw.innerHTML='<div class="qty-ctrl"><button class="qb" onclick="event.stopPropagation();qDec(\''+id+'\')">−</button><span class="qn">'+newQty+'</span><button class="qb p" onclick="event.stopPropagation();addItem(\''+id+'\','+precio+',\''+esc(nombre)+'\')">+</button></div>';
-        else qw.innerHTML='<button class="add-btn" onclick="event.stopPropagation();addItem(\''+id+'\','+precio+',\''+esc(nombre)+'\')">+</button>';
-      }
-    } else {
-      var bot=el.querySelector(".pch-bot");
-      if(bot){
-        var priceEl=bot.querySelector(".pch-price").outerHTML;
-        var ctrlHtml=newQty>0
-          ?'<div class="pch-ctrl"><button class="cib m" onclick="event.stopPropagation();qDec(\''+id+'\')">−</button><span class="ci-n">'+newQty+'</span><button class="cib p" onclick="event.stopPropagation();addItem(\''+id+'\','+precio+',\''+esc(nombre)+'\')">+</button></div>'
-          :'<button class="cib p" onclick="event.stopPropagation();addItem(\''+id+'\','+precio+',\''+esc(nombre)+'\')">+</button>';
-        bot.innerHTML=priceEl+ctrlHtml;
-      }
-    }
-  }
-}
-
-function updateCartUI(){
-  var items=Object.values(carrito);
-  var count=items.reduce(function(s,i){return s+i.qty;},0);
-  var total=items.reduce(function(s,i){return s+i.precio*i.qty;},0);
-  var btn=document.getElementById("cartBtn");
-  document.getElementById("cartN").textContent=count;
-  document.getElementById("cartT").textContent=fmt(total);
-  if(count>0){
-    btn.classList.add("active");
-    document.getElementById("fbar").classList.add("show");
-    document.getElementById("fbarBadge").textContent=count;
-    document.getElementById("fbarTotal").textContent=fmt(total);
-  } else {
-    btn.classList.remove("active");
-    document.getElementById("fbar").classList.remove("show");
-  }
-}
-
-/* ── TIPO ── */
-function setTipo(t){
-  tipoPedido=t;
-  ["domicilio","recoger","mesa"].forEach(function(k){
-    var b=document.getElementById("t-"+k);if(b)b.classList.toggle("on",k===t);
-  });
-  document.getElementById("domFields").style.display=t==="domicilio"?"block":"none";
-  document.getElementById("mesaField").style.display=t==="mesa"?"block":"none";
-  // datafono siempre visible
-  updateTotales();
-}
-
-/* ── CART SHEET ── */
-function openCart(){
-  if(!Object.keys(carrito).length){showToast("Agrega productos primero 🛒");return;}
-  renderCiList();updateTotales();
-  document.getElementById("cartOv").classList.add("on");
-  document.getElementById("cartSheet").classList.add("on");
-}
-function closeCart(){
-  document.getElementById("cartOv").classList.remove("on");
-  document.getElementById("cartSheet").classList.remove("on");
-}
-function renderCiList(){
-  var items=Object.values(carrito);
-  if(!items.length){document.getElementById("ciList").innerHTML='<div class="empty"><div class="empty-ico">🛒</div><div class="empty-txt">Carrito vacío</div></div>';return;}
-  document.getElementById("ciList").innerHTML=items.map(function(i){
-    var item=menuItems.find(function(m){return m.id===i.id;})||{};
-    return '<div class="ci-row">'
-      +'<div class="ci-emo">'+(item.emoji||"🍔")+'</div>'
-      +'<div class="ci-info"><div class="ci-name">'+i.nombre+'</div><div class="ci-unit">'+fmt(i.precio)+' c/u</div></div>'
-      +'<div class="ci-ctrl">'
-      +'<button class="cib m" onclick="setQty(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\','+(i.qty-1)+');renderCiList();updateTotales()">−</button>'
-      +'<span class="ci-n">'+i.qty+'</span>'
-      +'<button class="cib p" onclick="setQty(\''+i.id+'\','+i.precio+',\''+esc(i.nombre)+'\','+(i.qty+1)+');renderCiList();updateTotales()">+</button>'
-      +'</div></div>';
-  }).join("");
-}
-
-function updateTotales(){
-  var items=Object.values(carrito);
-  var sub=items.reduce(function(s,i){return s+i.precio*i.qty;},0);
-  var des=tipoPedido!=="mesa"?items.filter(function(i){
-    var m=menuItems.find(function(x){return x.id===i.id;});
-    return m&&!m.es_bebida;
-  }).length*500:0;
-  var dom=tipoPedido==="domicilio"?(domCalculado!==null?domCalculado:(rest&&rest.domicilio_base?Number(rest.domicilio_base):4000)):0;
-  var dsc=0;if(descVal>0&&descTipo){dsc=descTipo==="porcentaje"?Math.round(sub*descVal/100):descVal;}
-  var total=sub+des+dom-dsc;
-  var h="";
-  if(sub>0)h+='<div class="tot-row"><span class="tot-l">Subtotal</span><span class="tot-v">'+fmt(sub)+'</span></div>';
-  if(des>0)h+='<div class="tot-row"><span class="tot-l">Desechables</span><span class="tot-v">'+fmt(des)+'</span></div>';
-  if(dom>0)h+='<div class="tot-row"><span class="tot-l">Domicilio</span><span class="tot-v">'+fmt(dom)+'</span></div>';
-  if(dsc>0)h+='<div class="tot-row"><span class="tot-l" style="color:var(--green)">🎟 Descuento</span><span class="tot-v" style="color:var(--green)">−'+fmt(dsc)+'</span></div>';
-  document.getElementById("totBox").innerHTML=h;
-  document.getElementById("totTotal").textContent=fmt(total);
-}
-
-/* ── PAGO ── */
-function setPago(p){
-  pagoSel=p;
-  ["nequi","bancolombia","efectivo","datafono"].forEach(function(k){var b=document.getElementById("p-"+k);if(b)b.classList.toggle("on",k===p);});
-  var pi=document.getElementById("pagoInfo"),cw=document.getElementById("comprobanteWrap");
-  if(p==="nequi"){
-    pi.classList.add("show");pi.innerHTML='<b>📱 Nequi</b> — Busca la llave <b>'+(rest&&rest.nequi_numero?"@"+rest.nequi_numero:"@NEQUIJOS126")+'</b><br>Transferir → Por número de celular / llave';
-    cw.style.display="block";
-  } else if(p==="bancolombia"){
-    pi.classList.add("show");pi.innerHTML='<b>🏦 Bancolombia</b> — Llave: <b>'+(rest&&rest.bancolombia_llave||"0089102980")+'</b><br>A nombre de: '+(rest&&rest.bancolombia_nombre||"La Curva");
-    cw.style.display="block";
-  } else {
-    pi.classList.remove("show");cw.style.display="none";compB64=null;
-    var uz=document.getElementById("uzone");uz.classList.remove("done");
-    document.getElementById("uzPrev").style.display="none";
-  }
-}
-
-function handleComp(e){
-  var f=e.target.files[0];if(!f)return;
-  var r=new FileReader();
-  r.onload=function(ev){
-    compB64=ev.target.result;
-    var p=document.getElementById("uzPrev");p.src=compB64;p.style.display="block";
-    document.getElementById("uzone").classList.add("done");
-    document.getElementById("uzone").querySelector(".uz-txt").textContent="✅ Comprobante listo";
-  };
-  r.readAsDataURL(f);
-}
-
-/* ── FIDELIDAD ── */
-function checkCliente(){
-  clearTimeout(chkTimer);
-  chkTimer=setTimeout(async function(){
-    var tel=document.getElementById("iTel").value.trim().replace(/\D/g,"");
-    if(!rest||tel.length<10)return;
-    try{
-      var tl=tel.replace(/^57/,"");
-      var r=await api("clientes_frecuentes","restaurante_id=eq."+rest.id+"&telefono=eq."+encodeURIComponent(tl)+"&select=nombre_cliente,nivel_fidelidad,total_pedidos");
-      if(r&&r.length){
-        clienteData=r[0];
-        var nv=clienteData.nivel_fidelidad||"bronce";
-        var cfgs={
-          bronce:{ico:"🥉",color:"#f97316",bg:"rgba(249,115,22,0.08)",border:"rgba(249,115,22,0.2)"},
-          plata:{ico:"🥈",color:"#94a3b8",bg:"rgba(148,163,184,0.08)",border:"rgba(148,163,184,0.2)"},
-          oro:{ico:"🥇",color:"#f5a623",bg:"rgba(245,166,35,0.1)",border:"rgba(245,166,35,0.25)"}
-        };
-        var c=cfgs[nv]||cfgs.bronce;
-        var nm=document.getElementById("iNombre");
-        if(clienteData.nombre_cliente&&!nm.value)nm.value=clienteData.nombre_cliente;
-        var b=document.getElementById("fidBox");
-        b.style.cssText="background:"+c.bg+";border-color:"+c.border+";color:"+c.color+";border-radius:14px;padding:12px 14px;margin-bottom:13px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;border:1px solid;";
-        b.classList.add("show");
-        document.getElementById("fidIco").textContent=c.ico;
-        document.getElementById("fidName").textContent=clienteData.nombre_cliente;
-        document.getElementById("fidLvl").textContent="Nivel "+nv.toUpperCase()+" · "+clienteData.total_pedidos+" pedidos";
-        // puntos
-        var pts=clienteData.puntos||0;
-        puntosCliente=pts;
-        var ptsBadge=document.getElementById("fidPtsBadge");
-        if(ptsBadge){ptsBadge.textContent="⭐ "+pts+" pts acumulados";ptsBadge.style.display="inline-block";}
-        var fab=document.getElementById("rewardsFab");
-        if(fab){document.getElementById("rewardsFabPts").textContent=pts+" pts";fab.classList.remove("hidden");}
-        // mostrar badges pts en tarjetas
-        document.querySelectorAll(".pts-badge-v").forEach(function(b){b.style.display="block";});
-      }
-    }catch(e){}
-  },600);
-}
-
-/* ── CUPÓN ── */
-async function aplicarCupon(){
-  var codigo=document.getElementById("iCupon").value.trim().toUpperCase();
-  var res=document.getElementById("cuponRes");
-  if(!codigo||!rest)return;
-  try{
-    var r=await api("cupones","restaurante_id=eq."+rest.id+"&codigo=eq."+encodeURIComponent(codigo)+"&activo=eq.true&select=*");
-    if(r&&r.length){
-      var c=r[0];descVal=c.valor;descTipo=c.tipo;
-      res.style.cssText="display:block;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:var(--green);border-radius:10px;padding:9px 13px;font-size:12px;font-family:var(--font-ui);font-weight:600;margin-bottom:10px;";
-      res.textContent="✅ Cupón aplicado: "+(c.tipo==="porcentaje"?c.valor+"%":"$"+Number(c.valor).toLocaleString("es-CO"))+" de descuento";
-      updateTotales();
-    } else {
-      descVal=0;descTipo=null;
-      res.style.cssText="display:block;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#fca5a5;border-radius:10px;padding:9px 13px;font-size:12px;font-family:var(--font-ui);font-weight:600;margin-bottom:10px;";
-      res.textContent="❌ Código no válido o expirado";
-    }
-  }catch(e){showToast("Error verificando cupón");}
-}
-
-/* ── ADICIONALES ── */
-function abrirAdic(id,precio,nombre,item){
-  adicPend={id,precio,nombre};adicSel={};salsaSel=null;
-  document.getElementById("adicTitle").textContent="Adicionales";
-  document.getElementById("adicGrid").innerHTML=ADICIONALES.map(function(a){
-    return '<div class="adic-opt" id="ao-'+a.id+'" onclick="toggleAdic(\''+a.id+'\')">'
-      +'<div class="adic-emo">'+a.emoji+'</div>'
-      +'<div class="adic-nm">'+a.nombre+'</div>'
-      +'<div class="adic-pr">+'+fmt(a.precio)+'</div></div>';
-  }).join("");
-  var showSalsas=esAlitas(nombre);
-  var ss=document.getElementById("salsasSec");ss.style.display=showSalsas?"block":"none";
-  if(showSalsas){
-    document.getElementById("salsaRow").innerHTML=SALSAS.map(function(s){
-      return '<button class="sopt" id="sal-'+s.replace(/\s/g,"")+'" onclick="toggleSalsa(\''+esc(s)+'\')">'+s+'</button>';
-    }).join("");
-  }
-  document.getElementById("adicOv").classList.add("on");
-  document.getElementById("adicSheet").classList.add("on");
-}
-function toggleAdic(id){
-  adicSel[id]=!adicSel[id];
-  document.getElementById("ao-"+id).classList.toggle("on",adicSel[id]);
-}
-function toggleSalsa(s){
-  salsaSel=salsaSel===s?null:s;
-  SALSAS.forEach(function(x){var el=document.getElementById("sal-"+x.replace(/\s/g,""));if(el)el.classList.toggle("on",x===salsaSel);});
-}
-function confirmarAdic(){
-  if(!adicPend)return;
-  var selArr=Object.keys(adicSel).filter(function(k){return adicSel[k];});
-  var extraPrecio=selArr.reduce(function(s,k){var a=ADICIONALES.find(function(x){return x.id===k;});return s+(a?a.precio:0);},0);
-  var extraNoms=selArr.map(function(k){var a=ADICIONALES.find(function(x){return x.id===k;});return a?a.nombre:"";}).filter(Boolean);
-  var totalPrecio=adicPend.precio+extraPrecio;
-  var nomCompleto=adicPend.nombre+(extraNoms.length?" + "+extraNoms.join(", "):"")+(salsaSel?" 🌶️ "+salsaSel:"");
-  setQty(adicPend.id,totalPrecio,nomCompleto,1);
-  cerrarAdic();
-}
-function cerrarAdic(){
-  document.getElementById("adicOv").classList.remove("on");
-  document.getElementById("adicSheet").classList.remove("on");
-  adicPend=null;adicSel={};salsaSel=null;
-}
-
-/* ── ENVIAR ── */
-async function enviar(){
-  var items=Object.values(carrito);
-  if(!items.length){showToast("Agrega productos primero");return;}
-  var nombre=document.getElementById("iNombre").value.trim();
-  if(!nombre){showToast("¿Cómo te llamas? 😊");document.getElementById("iNombre").focus();return;}
-  if(!pagoSel){showToast("Elige cómo vas a pagar");return;}
-  if(tipoPedido==="domicilio"&&!document.getElementById("iDir").value.trim()){showToast("Dinos dónde entregamos 📍");document.getElementById("iDir").focus();return;}
-  if((pagoSel==="nequi"||pagoSel==="bancolombia")&&!compB64){showToast("Sube tu comprobante 📎");return;}
-  var btn=document.getElementById("ctaBtn");
-  btn.disabled=true;btn.innerHTML='<span class="sp"></span>Enviando...';
-  try{
-    var sub=items.reduce(function(s,i){return s+i.precio*i.qty;},0);
-    var des=tipoPedido!=="mesa"?items.filter(function(i){var m=menuItems.find(function(x){return x.id===i.id;});return m&&!m.es_bebida;}).length*500:0;
-    var dom=tipoPedido==="domicilio"?(domCalculado!==null?domCalculado:(rest&&rest.domicilio_base?Number(rest.domicilio_base):4000)):0;
-    var dsc=0;if(descVal>0&&descTipo){dsc=descTipo==="porcentaje"?Math.round(sub*descVal/100):descVal;}
-    var total=sub+des+dom-dsc;
-    var dir=tipoPedido==="domicilio"?document.getElementById("iDir").value.trim():tipoPedido==="mesa"?"Mesa "+document.getElementById("iMesa").value:"RECOGER EN TIENDA";
-    var tel=document.getElementById("iTel").value.trim().replace(/\D/g,"")||"web-"+Date.now();
-    var notas=document.getElementById("iNotas").value.trim();
-    var cuponCod=document.getElementById("iCupon").value.trim().toUpperCase();
-    var notasFinal=notas||"";
-    if(cuponCod&&dsc>0){notasFinal=(notasFinal?notasFinal+" | ":"")+"Cupón: "+cuponCod+" (−"+fmt(dsc)+")";}
-    var compUrl=null;
-    if(compB64){
-      try{
-        // Subir a Supabase Storage via servidor
-        var compResp=await fetch("/api/subir-comprobante",{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({imagen_base64:compB64,restaurante_id:rest.id})
-        });
-        var compData=await compResp.json();
-        if(compData.ok&&compData.url){
-          compUrl=compData.url;
-          console.log("Comprobante subido:",compUrl);
-        } else {
-          // Fallback: comprimir y enviar base64
-          compUrl=await comprimirImg(compB64,600,0.6);
-        }
-      }catch(e){
-        compUrl=await comprimirImg(compB64,600,0.6);
-      }
-    }
-
-    var resp=await fetch("/api/pedido-manual",{
-      method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        restaurante_id:rest.id,telefono:tel,nombre_cliente:nombre,
-        items:items.map(function(i){return i.qty+"x "+i.nombre+" "+fmt(i.precio*i.qty);}),
-        total,desechables:des,domicilio:dom,direccion:dir,
-        metodo_pago:pagoSel,notas_especiales:notasFinal||null,comprobante_url:compUrl
-      })
-    });
-    if(!resp.ok)throw new Error("Error "+resp.status);
-    var data=await resp.json();
-    if(!data.ok)throw new Error(data.error||"Error desconocido");
-
-    var pedidoId=data.id||null;
-    var num=data.numero_pedido||Math.floor(Date.now()/1000)%100000;
-    // fidelidad
-    var telFid=tel.replace(/^57/,"");
-    if(rest&&telFid.length>=10){
-      try{
-        var tot=(clienteData?clienteData.total_pedidos:0)+1;
-        var nv=tot>=25?"oro":tot>=10?"plata":"bronce";
-        var ptsGanados=(rest&&rest.puntos_por_pedido)||10;
-        var ptsTotales=(clienteData&&clienteData.puntos||0)+ptsGanados;
-        await fetch(SU+"/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",{
-          method:"POST",
-          headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},
-          body:JSON.stringify({restaurante_id:rest.id,telefono:telFid,nombre_cliente:nombre,total_pedidos:tot,nivel_fidelidad:nv,puntos:ptsTotales,updated_at:new Date().toISOString()})
-        });
-        puntosCliente=ptsTotales;
-      }catch(e){var ptsGanados=(rest&&rest.puntos_por_pedido)||10;}
-    }
-    closeCart();mostrarExito(num,pedidoId,tipoPedido,nombre,ptsGanados||((rest&&rest.puntos_por_pedido)||10));
-  }catch(e){
-    console.error(e);showToast("Error al enviar. Intenta de nuevo.");
-    btn.disabled=false;btn.innerHTML="Confirmar pedido →";
-  }
-}
-
-/* ── SUCCESS ── */
-function mostrarExito(num,id,tipo,nombre,ptsGanados){
-  document.getElementById("ordNum").textContent="#"+num;
-  var msg=tipo==="domicilio"?"Hola <b>"+nombre+"</b>! Tu pedido está en preparación 🔥"
-    :tipo==="mesa"?"<b>"+nombre+"</b>, pedido en cocina 🪑"
-    :"<b>"+nombre+"</b>, pasa a recoger en unos minutos 🏪";
-  document.getElementById("succMsg").innerHTML=msg;
-  if(tipo!=="domicilio"){var tc=document.getElementById("ts-camino");if(tc)tc.style.display="none";}
-  var sb=document.getElementById("succPtsBadge");
-  if(sb&&ptsGanados){var st=document.getElementById("succPtsTxt");if(st)st.textContent="+"+ptsGanados+" pts";sb.style.display="block";}
-  document.getElementById("succ").classList.add("show");
-  setTimeout(mostrarBannerNotif,1500);
-  // Iniciar tracking limpio
-  if(trackTimer){clearInterval(trackTimer);trackTimer=null;}
-  if(id){
-    trackId=id;
-    _ultimoEstado[id]="confirmado";
-    trackTimer=setInterval(function(){actuTracking(id);},5000);
-  }
-}
-
-async function actuTracking(id){
-  try{
-    var d=await fetch(SU+"/rest/v1/pedidos?id=eq."+id+"&select=estado,numero_pedido",
-      {headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json();});
-    if(!d||!d.length)return;
-    var est=d[0].estado,num=d[0].numero_pedido;
-    if(_ultimoEstado[id]!==undefined&&_ultimoEstado[id]!==est){
-      notificarEstadoLocal(est,num);
-      var btn=document.getElementById("btnMisPedidos");
-      if(btn&&btn.style.display!=="none"){btn.textContent="📦 Ver pedido";btn.style.color="#fb923c";}
-    }
-    _ultimoEstado[id]=est;
-    if(est==="en_camino")obtenerUbicacionDomiciliario(id);
-    var map2={confirmado:"confirmado",en_preparacion:"preparando",listo:"listo",en_camino:"camino",entregado:"entregado"};
-    var order=["confirmado","en_preparacion","listo","en_camino","entregado"];
-    var idx2=order.indexOf(est);
-    order.forEach(function(s,i){
-      var el=document.getElementById("ts-"+map2[s]);if(!el)return;
-      el.classList.remove("done","act");
-      if(i<idx2)el.classList.add("done");
-      else if(i===idx2)el.classList.add("act");
-    });
-    if(est==="entregado")clearInterval(trackTimer);
-  }catch(e){console.error("tracking error",e);}
-}
-
-function nuevoPedido(){
-  carrito={};pagoSel=null;compB64=null;descVal=0;descTipo=null;clienteData=null;puntosCliente=0;
-  trackId=null;if(trackTimer){clearInterval(trackTimer);trackTimer=null;}
-  document.getElementById("succ").classList.remove("show");
-  var sb=document.getElementById("succPtsBadge");if(sb)sb.style.display="none";
-  var fab=document.getElementById("rewardsFab");if(fab)fab.classList.add("hidden");
-  document.getElementById("ts-camino").style.display="flex";
-  updateCartUI();renderProds(catActiva);
-}
-
-/* ── COMPRIMIR ── */
-function comprimirImg(b64,maxW,q){
-  return new Promise(function(resolve){
-    var img=new Image();
-    img.onload=function(){
-      var canvas=document.createElement("canvas");
-      var ratio=Math.min(maxW/img.width,maxW/img.height,1);
-      canvas.width=img.width*ratio;canvas.height=img.height*ratio;
-      canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
-      resolve(canvas.toDataURL("image/jpeg",q||0.7));
-    };
-    img.onerror=function(){resolve(b64);};
-    img.src=b64;
-  });
-}
-
-/* ── TOAST ── */
-var _toastT=null;
-function showToast(msg){
-  var el=document.getElementById("toast");el.textContent=msg;el.classList.add("show");
-  clearTimeout(_toastT);_toastT=setTimeout(function(){el.classList.remove("show");},2600);
-}
-/* ── REWARDS SYSTEM ── */
-function abrirRewards(){
-  document.getElementById("rewardsScreen").classList.add("show");
-  var tel=document.getElementById("iTel").value.trim().replace(/\D/g,"");
-  buscarPuntosCliente(tel);
-  cargarProductosCanje();
-}
-function cerrarRewards(){
-  document.getElementById("rewardsScreen").classList.remove("show");
-}
-async function buscarPuntosCliente(tel){
-  if(!rest||!tel||tel.length<10)return;
-  var tl=tel.replace(/^57/,"");
-  try{
-    var r=await api("clientes_frecuentes","restaurante_id=eq."+rest.id+"&telefono=eq."+encodeURIComponent(tl)+"&select=puntos,puntos_canjeados,nombre_cliente");
-    var pts=0;
-    if(r&&r.length){pts=r[0].puntos||0;puntosCliente=pts;}
-    document.getElementById("rwPtsBig").textContent=pts;
-    // progress bar hacia el primer canje disponible
-    var minReq=100;
-    try{
-      var prods=await api("productos_canje","restaurante_id=eq."+rest.id+"&activo=eq.true&order=puntos_requeridos&limit=1");
-      if(prods&&prods.length)minReq=prods[0].puntos_requeridos;
-    }catch(e){}
-    var pct=Math.min(100,Math.round(pts/minReq*100));
-    document.getElementById("rwProgFill").style.width=pct+"%";
-    document.getElementById("rwProgFrom").textContent=pts+" pts";
-    document.getElementById("rwProgTo").textContent=minReq+" pts para canjear";
-    document.getElementById("rwNextTxt").textContent=pts>=minReq?"¡Ya puedes canjear! 🎉":"Faltan "+(minReq-pts)+" pts para tu primera recompensa";
-    cargarHistorialPuntos(tl);
-  }catch(e){}
-}
-async function cargarProductosCanje(){
-  if(!rest)return;
-  var grid=document.getElementById("rwProdsGrid");
-  try{
-    var prods=await api("productos_canje","restaurante_id=eq."+rest.id+"&activo=eq.true&order=puntos_requeridos");
-    if(!prods||!prods.length){
-      grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--t3);font-size:13px;">No hay recompensas disponibles aún</div>';
-      return;
-    }
-    renderProductosCanje(prods);
-  }catch(e){
-    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--t3);font-size:13px;">Error cargando recompensas</div>';
-  }
-}
-function renderProductosCanje(prods){
-  var grid=document.getElementById("rwProdsGrid");
-  var html=prods.map(function(p){
-    var locked=puntosCliente<p.puntos_requeridos;
-    var imgHtml=p.imagen_url?'<img src="'+p.imagen_url+'" onerror="this.style.display=\'none\'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">':'';
-    return '<div class="rw-prod-card'+(locked?' rw-prod-locked':'')+'" onclick="'+(locked?'showToast(\"Necesitas '+p.puntos_requeridos+' pts para esto ⭐\")':'abrirCanjeOv(\''+p.id+'\')') +'">'
-      +'<div class="rw-prod-img">'+(imgHtml||'<span style="font-size:40px">'+(p.emoji||'🎁')+'</span>')+'</div>'
-      +'<div class="rw-prod-body">'
-      +'<div class="rw-prod-name">'+p.nombre+'</div>'
-      +'<div class="rw-prod-pts">⭐ '+p.puntos_requeridos+' <span>pts</span></div>'
-      +(locked?'<div style="font-size:10px;color:var(--t3);margin-top:2px;">Faltan '+(p.puntos_requeridos-puntosCliente)+' pts</div>':'')
-      +'</div></div>';
-  }).join("");
-  grid.innerHTML=html;
-}
-async function cargarHistorialPuntos(tl){
-  if(!rest)return;
-  var hist=document.getElementById("rwHistory");
-  try{
-    var canjes=await api("canjes","restaurante_id=eq."+rest.id+"&telefono=eq."+encodeURIComponent(tl)+"&order=created_at.desc&limit=10&select=*");
-    if(!canjes||!canjes.length){hist.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Sin canjes aún. ¡Empieza a acumular!</div>';return;}
-    hist.innerHTML=canjes.map(function(c){
-      var fecha=new Date(c.created_at).toLocaleDateString("es-CO",{day:"2-digit",month:"short"});
-      var estado=c.estado==="aprobado"?"✅":c.estado==="rechazado"?"❌":"⏳";
-      return '<div class="rw-hist-item">'
-        +'<div class="rw-hist-ico">'+estado+'</div>'
-        +'<div class="rw-hist-info"><div class="rw-hist-desc">'+(c.producto_nombre||"Canje")+'</div><div class="rw-hist-date">'+fecha+' · '+c.estado+'</div></div>'
-        +'<div class="rw-hist-pts neg">−'+c.puntos_usados+' pts</div>'
-        +'</div>';
-    }).join("");
-  }catch(e){}
-}
-async function abrirCanjeOv(prodId){
-  if(!rest)return;
-  try{
-    var prods=await api("productos_canje","id=eq."+prodId+"&select=*");
-    if(!prods||!prods.length)return;
-    var p=prods[0];
-    canjeActual=p;
-    var imgHtml=p.imagen_url?'<img class="canje-prod-img" src="'+p.imagen_url+'">'
-      :'<div class="canje-prod-emo">'+(p.emoji||'🎁')+'</div>';
-    var puedeCanjear=puntosCliente>=p.puntos_requeridos;
-    document.getElementById("canjePreview").innerHTML=
-      imgHtml
-      +'<div class="canje-prod-name">'+p.nombre+'</div>'
-      +(p.descripcion?'<div class="canje-prod-desc">'+p.descripcion+'</div>':'')
-      +'<div class="canje-prod-cost">⭐ '+p.puntos_requeridos+' pts</div>'
-      +'<div class="canje-pts-actual">Tienes '+puntosCliente+' pts</div>';
-    var btn=document.getElementById("canjeConfirmBtn");
-    btn.disabled=!puedeCanjear;
-    btn.textContent=puedeCanjear?"⭐ Confirmar canje":"Puntos insuficientes";
-    document.getElementById("canjeOv").classList.add("on");
-    document.getElementById("canjeSheet").classList.add("on");
-  }catch(e){}
-}
-function cerrarCanjeOv(){
-  document.getElementById("canjeOv").classList.remove("on");
-  document.getElementById("canjeSheet").classList.remove("on");
-  canjeActual=null;
-}
-async function confirmarCanje(){
-  if(!canjeActual||!rest)return;
-  var tel=document.getElementById("iTel").value.trim().replace(/\D/g,"");
-  var nombre=document.getElementById("iNombre").value.trim();
-  if(!tel||tel.length<10){showToast("Ingresa tu teléfono primero");cerrarCanjeOv();return;}
-  var tl=tel.replace(/^57/,"");
-  var btn=document.getElementById("canjeConfirmBtn");
-  btn.disabled=true;btn.textContent="Enviando...";
-  try{
-    // Registrar canje
-    await fetch(SU+"/rest/v1/canjes",{
-      method:"POST",
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
-      body:JSON.stringify({restaurante_id:rest.id,telefono:tl,nombre_cliente:nombre||"Cliente",producto_canje_id:canjeActual.id,producto_nombre:canjeActual.nombre,puntos_usados:canjeActual.puntos_requeridos,estado:"pendiente"})
-    });
-    // Restar puntos
-    var nuevosPts=Math.max(0,puntosCliente-canjeActual.puntos_requeridos);
-    await fetch(SU+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+rest.id+"&telefono=eq."+encodeURIComponent(tl),{
-      method:"PATCH",
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
-      body:JSON.stringify({puntos:nuevosPts,puntos_canjeados:(puntosCliente-nuevosPts)})
-    });
-    puntosCliente=nuevosPts;
-    cerrarCanjeOv();
-    showToast("¡Canje solicitado! El restaurante lo confirmará ✅");
-    // Refrescar rewards screen
-    document.getElementById("rwPtsBig").textContent=nuevosPts;
-    document.getElementById("rewardsFabPts").textContent=nuevosPts+" pts";
-    var tel2=document.getElementById("iTel").value.trim().replace(/\D/g,"");
-    buscarPuntosCliente(tel2);
-  }catch(e){
-    showToast("Error al canjear. Intenta de nuevo.");
-    btn.disabled=false;btn.textContent="⭐ Confirmar canje";
-  }
-}
-
-
-function filtrarBusqueda(q){
-  if(!q||!q.trim()){renderProds(catActiva);return;}
-  var ql=q.toLowerCase();
-  var res=menuItems.filter(function(i){
-    return (i.nombre||'').toLowerCase().includes(ql)||(i.categoria||'').toLowerCase().includes(ql);
-  });
-  var area=document.getElementById('prodsArea');
-  if(!res.length){
-    area.innerHTML='<div class="empty"><div class="empty-ico">🔍</div><div class="empty-txt">Sin resultados</div></div>';
-    return;
-  }
-  var h='<div class="cat-section"><div class="grid-v">';
-  res.forEach(function(i){h+=renderVCard(i);});
-  h+='</div></div>';
-  area.innerHTML=h;
-}
-
-function sugerirBebida(){
-  // Detectar bebidas por múltiples criterios para máxima compatibilidad
-  var bs=menuItems.filter(function(i){
-    if(!i||i.disponible===false)return false;
-    if(i.es_bebida===true)return true;
-    var cat=(i.categoria||"").toLowerCase();
-    if(cat.indexOf("bebida")!==-1)return true;
-    if(cat.indexOf("jugo")!==-1||cat.indexOf("gaseosa")!==-1||cat.indexOf("agua")!==-1||cat.indexOf("drink")!==-1)return true;
-    var nombre=(i.nombre||"").toLowerCase();
-    if(nombre.indexOf("coca")!==-1||nombre.indexOf("pepsi")!==-1||nombre.indexOf("jugo")!==-1||nombre.indexOf("limonada")!==-1||nombre.indexOf("agua ")!==-1)return true;
-    return false;
-  });
-  console.log("[sugerirBebida] bebidas encontradas:",bs.length);
-  if(!bs.length){console.warn("[sugerirBebida] Sin bebidas — marca productos con es_bebida=true o categoria 'Bebidas'");return;}
-  var s=document.getElementById("bsug");
-  if(!s){console.warn("[sugerirBebida] elemento #bsug no existe");return;}
-  var wrap=document.getElementById("bsugItems");
-  if(wrap){
-    wrap.innerHTML="";
-    // Evitar sugerir bebidas que ya están en el carrito
-    var bebidasNoEnCarrito=bs.filter(function(b){return !carrito[b.id];});
-    var bebidasAMostrar=bebidasNoEnCarrito.length>0?bebidasNoEnCarrito:bs;
-    bebidasAMostrar.slice(0,6).forEach(function(b){
-      var div=document.createElement("div");
-      div.style.cssText="flex-shrink:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 14px;cursor:pointer;text-align:center;min-width:100px;transition:background 0.15s";
-      div.innerHTML='<div style="font-size:11px;font-weight:700;color:#f0ecf8;margin-bottom:5px;line-height:1.3">'+b.nombre+'</div>'
-        +'<div style="font-size:14px;font-weight:900;color:#f97316">'+fmt(b.precio)+'</div>';
-      div.onclick=function(){
-        if(!carrito[b.id])carrito[b.id]={id:b.id,precio:b.precio,nombre:b.nombre,qty:0};
-        carrito[b.id].qty++;
-        updateCartUI();
-        closeBsug();
-        showToast("🥤 "+b.nombre+" agregado");
-      };
-      wrap.appendChild(div);
-    });
-  }
-  s.style.cssText="display:block;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:480px;background:rgba(20,17,30,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:16px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,0.7);animation:slideUp 0.3s ease";
-  clearTimeout(window._bsugT);
-  window._bsugT=setTimeout(closeBsug,10000);
-}
-function closeBsug(){
-  var s=document.getElementById("bsug");if(s)s.style.display="none";
-  clearTimeout(window._bsugT);
-}
-
-
-// ── ZONAS ──
-var zonasData=[],domCalculado=null;
-
-async function cargarZonasMenu(){
-  // Zonas hardcodeadas siempre disponibles
-  zonasData=[
-    {nombre:"Zona 1",precio_domicilio:3000,barrios:"Canaveral,Granada,Versalles,Centenario,San Fernando,Alameda,Ciudad Jardin,Tequendama,Miraflores,Chipichape,Normandia,Belalcazar"},
-    {nombre:"Zona 2",precio_domicilio:4000,barrios:"San Judas,Guadalupe,Calima,Alfonso Lopez,Limonar,El Ingenio,Naciones Unidas,Quintas de Don Simon,La Flora,Mayapan,El Refugio,Camino Real"},
-    {nombre:"Zona 3",precio_domicilio:5000,barrios:"Salomia,Floralia,El Troncal,Petecuy,Terron Colorado,Siloé,Marroquin,El Poblado,Compartir,Las Americas,Univalle,Meléndez,Pance"},
-    {nombre:"Zona 4",precio_domicilio:6000,barrios:"Aguablanca,Villanueva,El Vallado,Ciudad Cordoba,Puertas del Sol,Manuela Beltran,El Retiro,Alfonso Bonilla Aragon,Mojica,Desepaz"}
-  ];
-  if(!rest)return;
-  try{
-    var r=await fetch("/api/zonas?restaurante_id="+rest.id);
-    if(r.ok){var d=await r.json();if(d&&d.length){zonasData=d;return;}}
-  }catch(e){}
-  try{
-    var r2=await fetch(SU+"/rest/v1/zonas_domicilio?restaurante_id=eq."+rest.id+"&order=precio_domicilio.asc",
-      {headers:{"apikey":SK,"Authorization":"Bearer "+SK}});
-    if(r2.ok){var d2=await r2.json();if(d2&&d2.length){zonasData=d2;}}
-  }catch(e){}
-}
-
-function buscarBarrio(q){
-  var drop=document.getElementById("barrioDropdown");
-  if(!drop)return;
-  if(!q||q.length<2){drop.style.display="none";return;}
-  var ql=q.toLowerCase().trim();
-  var res=[];
-  (zonasData||[]).forEach(function(z){
-    var precio=z.precio_domicilio||z.precio||4000;
-    var barrios=(z.barrios||"").split(",").map(function(b){return b.trim();}).filter(Boolean);
-    barrios.forEach(function(b){if(b.toLowerCase().includes(ql))res.push({barrio:b,zona:z.nombre,precio:precio});});
-  });
-  drop.style.display="block";drop.innerHTML="";
-  if(!res.length){
-    var dm=document.createElement("div");
-    dm.style.cssText="padding:12px 15px;font-size:13px;color:var(--t2)";
-    dm.innerHTML='<b style="color:var(--text)">📍 "'+q+'" no está en la lista</b><br><span style="font-size:11px">El domiciliario confirma el valor al entregar</span>';
-    var bb=document.createElement("button");
-    bb.style.cssText="width:calc(100% - 30px);margin:8px 15px 10px;padding:10px;background:rgba(232,52,28,0.15);border:1px solid rgba(232,52,28,0.3);border-radius:10px;color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit";
-    bb.textContent="Usar este barrio";bb.onclick=function(){seleccionarBarrioManual(q);};
-    drop.appendChild(dm);drop.appendChild(bb);return;
-  }
-  res.forEach(function(r){
-    var div=document.createElement("div");
-    div.style.cssText="display:flex;align-items:center;justify-content:space-between;padding:11px 15px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05)";
-    div.onmouseover=function(){this.style.background="rgba(232,52,28,0.08)";};
-    div.onmouseout=function(){this.style.background="";};
-    div.onclick=function(){seleccionarBarrio(r.barrio,r.zona,r.precio);};
-    var left=document.createElement("div");
-    var nom=document.createElement("div");nom.style.cssText="font-size:13px;font-weight:700;color:#f0ecf8";nom.textContent=r.barrio;
-    var zona=document.createElement("div");zona.style.cssText="font-size:11px;color:rgba(240,236,248,0.45);margin-top:2px";zona.textContent="Zona "+r.zona;
-    left.appendChild(nom);left.appendChild(zona);
-    var pr=document.createElement("div");pr.style.cssText="font-size:14px;font-weight:900;color:#f97316;flex-shrink:0;margin-left:10px";
-    pr.textContent=fmt(r.precio);
-    div.appendChild(left);div.appendChild(pr);drop.appendChild(div);
-  });
-}
-
-function seleccionarBarrio(barrio,zona,precio){
-  var drop=document.getElementById("barrioDropdown");if(drop)drop.style.display="none";
-  var ib=document.getElementById("iBarrio");if(ib)ib.value=barrio;
-  domCalculado=precio;window._domZona=zona;
-  var info=document.getElementById("barrioSelInfo");
-  if(info){info.style.cssText="display:block;padding:10px 13px;border-radius:12px;margin-bottom:10px;font-size:12px;font-weight:700;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);color:#f97316";
-  info.innerHTML="✅ "+barrio+" · Zona "+zona+" · "+fmt(precio);}
-  updateTotales();
-}
-
-function seleccionarBarrioManual(barrio){
-  var drop=document.getElementById("barrioDropdown");if(drop)drop.style.display="none";
-  var ib=document.getElementById("iBarrio");if(ib)ib.value=barrio;
-  domCalculado=null;window._domZona=null;
-  var info=document.getElementById("barrioSelInfo");
-  if(info){info.style.cssText="display:block;padding:10px 13px;border-radius:12px;margin-bottom:10px;font-size:12px;font-weight:700;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:#f5a623";
-  info.innerHTML="📍 "+barrio+" — El domiciliario confirma el valor";}
-  updateTotales();
-}
-
-document.addEventListener("click",function(e){
-  var drop=document.getElementById("barrioDropdown"),input=document.getElementById("iBarrio");
-  if(drop&&input&&!drop.contains(e.target)&&e.target!==input)drop.style.display="none";
-});
-
-// ── DETALLE PRODUCTO ──
-var prodDetActual=null,prodDetCant=1,prodDetAdicSel={},prodDetSalsaSel=[];
-
-function abrirProdDetalle(id){
-  var item=menuItems.find(function(x){return x.id===id;});if(!item)return;
-  prodDetActual=item;prodDetCant=1;prodDetAdicSel={};prodDetSalsaSel=[];
-  var imgEl=document.getElementById("prodDetImgEl"),emoEl=document.getElementById("prodDetEmoji");
-  if(item.imagen_url&&imgEl){imgEl.src=item.imagen_url;imgEl.style.display="block";if(emoEl)emoEl.style.display="none";}
-  else{if(imgEl)imgEl.style.display="none";if(emoEl){emoEl.textContent=item.emoji||"🍔";emoEl.style.display="block";}}
-  var en=document.getElementById("prodDetNombre"),ep=document.getElementById("prodDetPrecio"),ed=document.getElementById("prodDetDesc"),ec=document.getElementById("prodDetCant");
-  if(en)en.textContent=item.nombre;if(ep)ep.textContent=fmt(item.precio);if(ed)ed.textContent=item.descripcion||"";if(ec)ec.textContent=1;
-  var adicSec=document.getElementById("prodDetAdicSec");
-  var mostrarAdic=!item.es_bebida&&!esAdicCat(item.categoria||"");
-  if(adicSec){adicSec.style.display=mostrarAdic?"block":"none";}
-  if(mostrarAdic){
-    var grid=document.getElementById("prodDetAdicGrid");if(grid){grid.innerHTML="";
-    ADICIONALES.forEach(function(a){
-      var div=document.createElement("div");div.className="adic-opt";div.id="pda-"+a.id;
-      div.innerHTML='<div class="adic-emo">'+a.emoji+'</div><div class="adic-nm">'+a.nombre+'</div><div class="adic-pr">+'+fmt(a.precio)+'</div>';
-      div.onclick=function(){prodDetAdicSel[a.id]=!prodDetAdicSel[a.id];div.classList.toggle("on",prodDetAdicSel[a.id]);actualizarTotalDet();};
-      grid.appendChild(div);});}
-  }
-  var salsaSec=document.getElementById("prodDetSalsaSec");
-  var esAlit=esAlitas(item.nombre);
-  if(salsaSec)salsaSec.style.display=esAlit?"block":"none";
-  if(esAlit){var row=document.getElementById("prodDetSalsaRow");if(row){row.innerHTML="";
-    SALSAS.forEach(function(s){var btn=document.createElement("button");btn.className="sopt";btn.textContent=s;
-      btn.onclick=function(){var idx=prodDetSalsaSel.indexOf(s);if(idx===-1){prodDetSalsaSel.push(s);btn.classList.add("on");}else{prodDetSalsaSel.splice(idx,1);btn.classList.remove("on");}};
-      row.appendChild(btn);});}}
-  actualizarTotalDet();
-  var ov=document.getElementById("prodDetOv"),sh=document.getElementById("prodDetSheet");
-  if(ov)ov.classList.add("on");if(sh)sh.classList.add("on");
-}
-
-function cerrarProdDetalle(){
-  var ov=document.getElementById("prodDetOv"),sh=document.getElementById("prodDetSheet");
-  if(ov)ov.classList.remove("on");if(sh)sh.classList.remove("on");prodDetActual=null;
-}
-
-function cambiarCantDet(delta){
-  prodDetCant=Math.max(1,prodDetCant+delta);
-  var ec=document.getElementById("prodDetCant");if(ec)ec.textContent=prodDetCant;
-  actualizarTotalDet();
-}
-
-function actualizarTotalDet(){
-  if(!prodDetActual)return;
-  var extra=Object.keys(prodDetAdicSel).filter(function(k){return prodDetAdicSel[k];})
-    .reduce(function(s,k){var a=ADICIONALES.find(function(x){return x.id===k;});return s+(a?a.precio:0);},0);
-  var tb=document.getElementById("prodDetTotalBtn");if(tb)tb.textContent=fmt((prodDetActual.precio+extra)*prodDetCant);
-}
-
-function agregarDesdeDet(){
-  if(!prodDetActual)return;
-  var selArr=Object.keys(prodDetAdicSel).filter(function(k){return prodDetAdicSel[k];});
-  var extraP=selArr.reduce(function(s,k){var a=ADICIONALES.find(function(x){return x.id===k;});return s+(a?a.precio:0);},0);
-  var extraN=selArr.map(function(k){var a=ADICIONALES.find(function(x){return x.id===k;});return a?a.nombre:"";}).filter(Boolean);
-  var totalP=prodDetActual.precio+extraP;
-  var nomC=prodDetActual.nombre+(extraN.length?" + "+extraN.join(", "):"")+(prodDetSalsaSel.length?" 🌶️ "+prodDetSalsaSel.join(" + "):"");
-  var _nom=prodDetActual.nombre;
-  var _id=prodDetActual.id;
-  for(var q=0;q<prodDetCant;q++){
-    setQty(_id,totalP,nomC,(carrito[_id]?carrito[_id].qty:0)+1);
-  }
-  cerrarProdDetalle();
-  showToast("✅ "+_nom+" agregado");
-  // Sugerencia bebida inteligente
-  var totalComida=Object.values(carrito).filter(function(ci){
-    var m=menuItems.find(function(x){return x.id===ci.id;});
-    return m&&!m.es_bebida&&!(m.categoria||"").toLowerCase().includes("bebida");
-  }).reduce(function(a,b){return a+b.qty;},0);
-  var tieneBebida=Object.values(carrito).some(function(ci){
-    var m=menuItems.find(function(x){return x.id===ci.id;});
-    return m&&(m.es_bebida||(m.categoria||"").toLowerCase().includes("bebida"));
-  });
-  if(!tieneBebida && (totalComida===2 || (totalComida>2 && totalComida%3===0))){
-    sugerirBebida();
-  }
-}
-
-// ── MIS PEDIDOS ──
-var misPedidosTimer=null;
-function abrirMisPedidos(){
-  var s=document.getElementById("misPedidosScreen");if(s){s.style.display="flex";cargarMisPedidos();misPedidosTimer=setInterval(cargarMisPedidos,10000);}
-}
-function cerrarMisPedidos(){
-  var s=document.getElementById("misPedidosScreen");if(s)s.style.display="none";
-  if(misPedidosTimer){clearInterval(misPedidosTimer);misPedidosTimer=null;}
-}
-async function cargarMisPedidos(){
-  var tel=document.getElementById("iTel")?document.getElementById("iTel").value.trim().replace(/\D/g,""):"";
-  var lista=document.getElementById("misPedidosLista");if(!lista)return;
-  if(!tel||tel.length<10||!rest){
-    lista.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">📱</div><div style="font-size:14px">Ingresa tu WhatsApp en el carrito<br>para ver tus pedidos</div></div>';
-    return;
-  }
-  var tl=tel.replace(/^57/,"");
-  try{
-    var r=await fetch("/api/mis-pedidos/"+tl+"?restaurante_id="+rest.id);
-    var data=await r.json();var pedidos=data.pedidos||[];
-    if(!pedidos.length){
-      lista.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--t3)"><div style="font-size:40px;margin-bottom:12px">✅</div><div style="font-size:14px">No tienes pedidos activos</div></div>';
-      return;
-    }
-    var ei={
-      confirmado:{ico:"✅",label:"Confirmado",c:"rgba(16,185,129,0.15)",b:"rgba(16,185,129,0.3)",t:"#34d399"},
-      en_preparacion:{ico:"🔥",label:"En preparación",c:"rgba(249,115,22,0.12)",b:"rgba(249,115,22,0.3)",t:"#fb923c"},
-      listo:{ico:"🎉",label:"¡Listo!",c:"rgba(234,179,8,0.12)",b:"rgba(234,179,8,0.3)",t:"#fbbf24"},
-      en_camino:{ico:"🛵",label:"En camino",c:"rgba(59,130,246,0.12)",b:"rgba(59,130,246,0.3)",t:"#60a5fa"}
-    };
-    lista.innerHTML="";
-    pedidos.forEach(function(p){
-      var e=ei[p.estado]||{ico:"⏳",label:p.estado,c:"rgba(255,255,255,0.05)",b:"rgba(255,255,255,0.1)",t:"var(--t2)"};
-      var items=Array.isArray(p.items)?p.items:(p.items||"").split("\n").filter(Boolean);
-      var fecha=new Date(p.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});
-      var div=document.createElement("div");
-      div.style.cssText="background:"+e.c+";border:1px solid "+e.b+";border-radius:18px;padding:16px;margin-bottom:12px";
-      div.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
-        +'<div style="display:flex;align-items:center;gap:8px"><span style="font-size:24px">'+e.ico+'</span>'
-        +'<div><div style="font-family:var(--font-disp);font-size:18px;font-weight:800;color:'+e.t+'">'+e.label+'</div>'
-        +'<div style="font-size:11px;color:var(--t3)">Pedido #'+p.numero_pedido+' · '+fecha+'</div></div></div>'
-        +'<div style="font-family:var(--font-disp);font-size:20px;font-weight:800;color:var(--orange)">'+fmt(p.total)+'</div>'
-        +'</div>'
-        +'<div style="background:rgba(0,0,0,0.2);border-radius:12px;padding:10px 12px;margin-bottom:8px">'
-        +items.slice(0,4).map(function(it){return '<div style="font-size:12px;color:var(--t2);padding:2px 0">'+it+'</div>';}).join("")
-        +(items.length>4?'<div style="font-size:11px;color:var(--t3)">+'+(items.length-4)+' más</div>':'')
-        +'</div>'
-        +(p.direccion?'<div style="font-size:11px;color:var(--t3);margin-bottom:8px">📍 '+p.direccion+'</div>':'');
-      // Pasos de tracking
-      var stepsEl=document.createElement("div");
-      stepsEl.style.cssText="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:8px";
-      var steps=["confirmado","en_preparacion","listo","en_camino"];
-      var labels=["✅ Recibido","🔥 Prep","🎉 Listo","🛵 Camino"];
-      var curIdx=steps.indexOf(p.estado);
-      steps.forEach(function(st,i){
-        var done=i<=curIdx;
-        var s=document.createElement("div");
-        s.style.cssText="flex-shrink:0;padding:4px 10px;border-radius:8px;font-size:10px;font-weight:700;background:"+(done?"rgba(16,185,129,0.2)":"rgba(255,255,255,0.05)")+";color:"+(done?"#34d399":"var(--t3)")+(i===curIdx?";border:1px solid rgba(16,185,129,0.4)":"");
-        s.textContent=labels[i];
-        stepsEl.appendChild(s);
-      });
-      div.appendChild(stepsEl);
-      // Info domiciliario + mapa si está en camino
-      if(p.estado==="en_camino"&&p.id){
-        // Info del domiciliario
-        if(p.domiciliario_nombre){
-          var domiInfo=document.createElement("div");
-          domiInfo.style.cssText="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:12px;margin-bottom:8px;font-size:13px;font-weight:700;color:#60a5fa";
-          domiInfo.innerHTML="🛵 "+p.domiciliario_nombre+" está en camino";
-          div.appendChild(domiInfo);
-        }
-        // Mapa
-        var mapDiv=document.createElement("div");
-        mapDiv.id="trackMap-"+p.id;
-        mapDiv.style.cssText="width:100%;height:220px;border-radius:14px;overflow:hidden;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.3);margin-top:4px";
-        div.appendChild(mapDiv);
-        cargarMapaDomiciliario(p.id, mapDiv);
-      }
-      lista.appendChild(div);
-    });
-  }catch(e){lista.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">Error cargando pedidos.</div>';}
-}
-
-async function cargarMapaDomiciliario(pedidoId, mapEl){
-  if(!mapEl||!mapEl.isConnected)return;
-  try{
-    var r=await fetch(SU+"/rest/v1/domiciliario_ubicacion?pedido_id=eq."+pedidoId+"&select=lat,lng",
-      {headers:{"apikey":SK,"Authorization":"Bearer "+SK}});
-    var d=await r.json();
-    if(!d||!d.length||!d[0].lat){
-      mapEl.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;gap:8px"><span style="font-size:28px">🛵</span><span style="color:var(--t2);font-size:12px;text-align:center">El domiciliario activará el GPS al salir</span></div>';
-      setTimeout(function(){cargarMapaDomiciliario(pedidoId,mapEl);},8000);
-      return;
-    }
-    var lat=parseFloat(d[0].lat),lng=parseFloat(d[0].lng);
-
-    // Si ya hay mapa, solo mover marker
-    if(mapEl._lmap&&mapEl._lmarker){
-      mapEl._lmarker.setLatLng([lat,lng]);
-      mapEl._lmap.panTo([lat,lng]);
-      setTimeout(function(){cargarMapaDomiciliario(pedidoId,mapEl);},8000);
-      return;
-    }
-
-    // Crear contenedor con altura FIJA explícita
-    var mapId="lmap"+Date.now();
-    mapEl.innerHTML='';
-    mapEl.style.height="220px";
-    mapEl.style.borderRadius="14px";
-    mapEl.style.overflow="hidden";
-
-    var inner=document.createElement("div");
-    inner.id=mapId;
-    inner.style.cssText="width:100%;height:220px;";
-    mapEl.appendChild(inner);
-
-    // Cargar Leaflet
-    if(!window.L){
-      if(!document.getElementById("leafCSS")){
-        var lc=document.createElement("link");
-        lc.id="leafCSS";lc.rel="stylesheet";
-        lc.href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(lc);
-      }
-      await new Promise(function(res,rej){
-        var ls=document.createElement("script");
-        ls.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-        ls.onload=res;ls.onerror=rej;
-        document.head.appendChild(ls);
-      });
-    }
-
-    // Esperar DOM + CSS
-    await new Promise(function(res){setTimeout(res,200);});
-
-    var el=document.getElementById(mapId);
-    if(!el){setTimeout(function(){cargarMapaDomiciliario(pedidoId,mapEl);},2000);return;}
-
-    var lmap=L.map(el,{
-      center:[lat,lng],zoom:16,
-      zoomControl:false,attributionControl:false,
-      dragging:true,scrollWheelZoom:false
-    });
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(lmap);
-
-    var icon=L.divIcon({
-      className:"",
-      html:'<div style="background:#3b82f6;width:24px;height:24px;border-radius:50%;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,0.5)"></div>',
-      iconSize:[24,24],iconAnchor:[12,12]
-    });
-
-    var lmarker=L.marker([lat,lng],{icon:icon}).addTo(lmap);
-
-    // CRÍTICO: invalidateSize después de que el mapa sea visible
-    setTimeout(function(){
-      lmap.invalidateSize();
-      lmap.setView([lat,lng],16);
-    },300);
-
-    mapEl._lmap=lmap;
-    mapEl._lmarker=lmarker;
-    setTimeout(function(){cargarMapaDomiciliario(pedidoId,mapEl);},8000);
-
-  }catch(e){
-    console.error("mapa error:",e);
-    mapEl.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100px;color:var(--t3);font-size:12px">Error cargando mapa</div>';
-  }
-}
-function actualizarBtnMisPedidos(){
-  var tel=document.getElementById("iTel")?document.getElementById("iTel").value.trim().replace(/\D/g,""):"";
-  var btn=document.getElementById("btnMisPedidos");if(btn)btn.style.display=tel&&tel.length>=10?"flex":"none";
-}
-
-// ── REGISTRO RAPIDO ──
-var regRapidoData=null,regRapidoTimer=null;
-function abrirRegistroRapido(){
-  var telCart=document.getElementById("iTel");
-  if(telCart&&telCart.value.trim().replace(/\D/g,"").length>=10){abrirRewards();return;}
-  var ov=document.getElementById("regRapidoOv");if(ov)ov.style.display="flex";
-  setTimeout(function(){var t=document.getElementById("regRapidoTel");if(t)t.focus();},200);
-}
-function cerrarRegistroRapido(){var ov=document.getElementById("regRapidoOv");if(ov)ov.style.display="none";}
-function buscarClienteRapido(val){
-  clearTimeout(regRapidoTimer);var tel=val.replace(/\D/g,"");
-  if(tel.length<10){var i=document.getElementById("regRapidoInfo");if(i)i.style.display="none";regRapidoData=null;return;}
-  regRapidoTimer=setTimeout(async function(){
-    var tl=tel.replace(/^57/,"");
-    try{
-      var r=await api("clientes_frecuentes","restaurante_id=eq."+rest.id+"&telefono=eq."+encodeURIComponent(tl)+"&select=nombre_cliente,puntos,nivel_fidelidad,total_pedidos");
-      var info=document.getElementById("regRapidoInfo");
-      if(r&&r.length){regRapidoData=r[0];regRapidoData.telefono=tl;document.getElementById("regRapidoNombre").textContent=(r[0].nombre_cliente||"Cliente")+" · Nivel "+(r[0].nivel_fidelidad||"bronce").toUpperCase();document.getElementById("regRapidoPts").textContent="⭐ "+(r[0].puntos||0)+" puntos · "+r[0].total_pedidos+" pedidos";}
-      else{regRapidoData={telefono:tl,puntos:0,nuevo:true};document.getElementById("regRapidoNombre").textContent="¡Cliente nuevo!";document.getElementById("regRapidoPts").textContent="Empieza a acumular puntos ⭐";}
-      if(info)info.style.display="block";
-    }catch(e){}
-  },500);
-}
-function confirmarRegistroRapido(){
-  var tel=document.getElementById("regRapidoTel").value.replace(/\D/g,"");
-  if(tel.length<10){showToast("Ingresa tu número completo");return;}
-  var telCart=document.getElementById("iTel");if(telCart)telCart.value=tel;
-  actualizarBannerRewards(regRapidoData);cerrarRegistroRapido();
-  if(regRapidoData&&!regRapidoData.nuevo){puntosCliente=regRapidoData.puntos||0;clienteData=regRapidoData;var fab=document.getElementById("rewardsFab");if(fab){document.getElementById("rewardsFabPts").textContent=puntosCliente+" pts";fab.classList.remove("hidden");}abrirRewards();}
-  else showToast("¡Listo! Ganarás puntos en tu primer pedido ⭐");
-}
-function actualizarBannerRewards(data){
-  var txt=document.getElementById("rwBannerTxt"),sub=document.getElementById("rwBannerSub");
-  var ptsDiv=document.getElementById("rwBannerPts"),ptsNum=document.getElementById("rwBannerPtsNum"),arrow=document.getElementById("rwBannerArrow");
-  if(!txt)return;
-  if(data&&!data.nuevo&&data.puntos!==undefined){var pts=data.puntos||0;txt.textContent=(data.nombre_cliente||"Cliente")+" — Nivel "+(data.nivel_fidelidad||"bronce").toUpperCase();if(sub)sub.textContent=pts>0?"Toca para ver y canjear tus recompensas":"Haz tu primer pedido ⭐";if(ptsNum)ptsNum.textContent=pts;if(ptsDiv)ptsDiv.style.display="block";if(arrow)arrow.style.display="none";}
-  else if(data&&data.nuevo){txt.textContent="¡Bienvenido!";if(sub)sub.textContent="Cada pedido suma puntos canjeables ⭐";}
-}
-
-// ── NOTIFICACIONES ──
-var _ultimoEstado={};
-function notificarEstadoLocal(estado,num){
-  if(!("Notification" in window)||Notification.permission!=="granted")return;
-  var msgs={en_preparacion:{titulo:"🔥 En preparación",body:"Pedido #"+num+" ya está en cocina"},listo:{titulo:"🎉 ¡Listo!",body:"Pedido #"+num+" listo para entrega"},en_camino:{titulo:"🛵 En camino",body:"Domiciliario en camino con pedido #"+num}};
-  var m=msgs[estado];if(!m)return;
-  try{var n=new Notification(m.titulo,{body:m.body,icon:"/favicon.ico"});setTimeout(function(){n.close();},5000);}catch(e){}
-}
-function mostrarBannerNotif(){
-  if(!("Notification" in window)||Notification.permission==="granted"||Notification.permission==="denied")return;
-  var b=document.getElementById("notifBanner");if(b)b.style.display="flex";
-}
-async function pedirPermisoNotif(){
-  try{var p=await Notification.requestPermission();showToast(p==="granted"?"🔔 Notificaciones activadas":"Notificaciones no activadas");}catch(e){}
-  var b=document.getElementById("notifBanner");if(b)b.style.display="none";
-}
-
-
-
-if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(function(r){}).catch(function(){});}
-
-
-// ── ADMIN ──
-var admAuthed=false;
-var ADMIN_PIN="2025";
-var admTabActual="nuevo";
-
-function abrirAdmin(){
-  if(!admAuthed){
-    document.getElementById("adminPinInput").value="";
-    document.getElementById("pinErr").textContent="";
-    document.getElementById("adminPinOv").style.display="flex";
-    setTimeout(function(){document.getElementById("adminPinInput").focus();},200);
-  } else {
-    document.getElementById("adminScreen").classList.add("show");
-    admCargarCats();
-    if(admTabActual==="lista")admCargarLista();
-  }
-}
-
-function verificarPin(){
-  var pin=document.getElementById("adminPinInput").value.trim();
-  if(pin===ADMIN_PIN){
-    admAuthed=true;
-    document.getElementById("adminPinOv").style.display="none";
-    document.getElementById("adminScreen").classList.add("show");
-    admCargarCats();
-  } else {
-    document.getElementById("pinErr").textContent="PIN incorrecto";
-    document.getElementById("adminPinInput").value="";
-  }
-}
-
-function cerrarAdmin(){
-  document.getElementById("adminScreen").classList.remove("show");
-}
-
-function admSetTab(t){
-  admTabActual=t;
-  ["nuevo","lista"].forEach(function(k){
-    document.getElementById("admTab-"+k).classList.toggle("on",k===t);
-    document.getElementById("admPanel-"+k).style.display=k===t?"block":"none";
-  });
-  if(t==="lista")admCargarLista();
-}
-
-function admCargarCats(){
-  var cats=[...new Set(menuItems.map(function(i){return i.categoria;}))].filter(Boolean);
-  var dl=document.getElementById("admCatList");
-  if(dl)dl.innerHTML=cats.map(function(c){return'<option value="'+c+'">';}).join("");
-}
-
-async function admGuardarProducto(){
-  var nombre=document.getElementById("admNombre").value.trim();
-  var cat=document.getElementById("admCategoria").value.trim();
-  var precio=parseInt(document.getElementById("admPrecio").value)||0;
-  var desc=document.getElementById("admDesc").value.trim();
-  var img=document.getElementById("admImg").value.trim();
-  var emoji=document.getElementById("admEmoji").value.trim();
-  var msg=document.getElementById("admMsg");
-
-  if(!nombre||!cat||!precio){msg.style.color="var(--accent)";msg.textContent="❌ Nombre, categoría y precio son obligatorios";return;}
-  if(!rest){msg.style.color="var(--accent)";msg.textContent="❌ Sin restaurante";return;}
-
-  msg.style.color="var(--t2)";msg.textContent="Guardando...";
-
-  try{
-    var payload={
-      restaurante_id:rest.id,nombre:nombre,categoria:cat,
-      precio:precio,descripcion:desc||null,
-      imagen_url:img||null,emoji:emoji||null,
-      disponible:true,en_oferta:false
-    };
-    var r=await fetch(SU+"/rest/v1/menu_items",{
-      method:"POST",
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
-      body:JSON.stringify(payload)
-    });
-    if(r.ok||r.status===201){
-      msg.style.color="var(--green)";msg.textContent="✅ Producto guardado";
-      // Limpiar form
-      ["admNombre","admCategoria","admPrecio","admDesc","admImg","admEmoji"].forEach(function(id){
-        var el=document.getElementById(id);if(el)el.value="";
-      });
-      // Recargar menú
-      await cargarMenu();
-    } else {
-      var err=await r.json();
-      msg.style.color="var(--accent)";msg.textContent="❌ Error: "+(err.message||r.status);
-    }
-  }catch(e){
-    msg.style.color="var(--accent)";msg.textContent="❌ Error: "+e.message;
-  }
-}
-
-var admTodosProds=[];
-async function admCargarLista(){
-  var lista=document.getElementById("admLista");
-  lista.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">Cargando...</div>';
-  try{
-    var r=await fetch("/api/menu?restaurante_id="+rest.id);
-    admTodosProds=await r.json()||[];
-    admRenderLista(admTodosProds);
-  }catch(e){lista.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">Error cargando</div>';}
-}
-
-function admFiltrar(q){
-  var res=!q?admTodosProds:admTodosProds.filter(function(p){
-    return (p.nombre||"").toLowerCase().includes(q.toLowerCase())||(p.categoria||"").toLowerCase().includes(q.toLowerCase());
-  });
-  admRenderLista(res);
-}
-
-function admRenderLista(prods){
-  var lista=document.getElementById("admLista");
-  if(!prods.length){lista.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">Sin resultados</div>';return;}
-  lista.innerHTML="";
-  prods.forEach(function(p){
-    var div=document.createElement("div");
-    div.className="adm-prod";
-    var imgEl=document.createElement(p.imagen_url?"img":"div");
-    if(p.imagen_url){imgEl.src=p.imagen_url;imgEl.style.cssText="width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0";}
-    else{imgEl.className="adm-prod-img";imgEl.textContent=p.emoji||"🍔";}
-    var info=document.createElement("div");
-    info.className="adm-prod-info";
-    info.innerHTML='<div class="adm-prod-name">'+p.nombre+'</div><div class="adm-prod-cat">'+p.categoria+'</div>';
-    var price=document.createElement("div");
-    price.style.cssText="font-family:var(--font-disp);font-size:17px;font-weight:700;color:var(--orange);flex-shrink:0;margin-right:8px";
-    price.textContent=fmt(p.precio);
-    var tog=document.createElement("button");
-    tog.style.cssText="width:40px;height:24px;border-radius:12px;border:none;background:"+(p.disponible?"var(--green)":"var(--s3)")+";cursor:pointer;flex-shrink:0;font-size:10px;color:#fff;font-weight:700";
-    tog.textContent=p.disponible?"ON":"OFF";
-    var pid=p.id,pdis=!p.disponible;
-    tog.onclick=function(){admToggle(pid,pdis);};
-    div.appendChild(imgEl);div.appendChild(info);div.appendChild(price);div.appendChild(tog);
-    lista.appendChild(div);
-  });
-}
-
-async function admToggle(id, disponible){
-  try{
-    await fetch(SU+"/rest/v1/menu_items?id=eq."+id,{
-      method:"PATCH",
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
-      body:JSON.stringify({disponible:disponible})
-    });
-    await admCargarLista();
-    await cargarMenu();
-    showToast(disponible?"✅ Producto activado":"⭕ Producto desactivado");
-  }catch(e){showToast("Error actualizando");}
-}
-
 </script>
-
-<div id="bsug" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:480px;background:rgba(20,17,30,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:16px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,0.7)">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-    <span style="font-weight:800;font-size:15px;color:#f0ecf8">🥤 ¿Agregas una bebida?</span>
-    <button onclick="closeBsug()" style="background:none;border:none;color:rgba(240,236,248,0.5);font-size:22px;cursor:pointer;padding:0 4px;line-height:1">✕</button>
-  </div>
-  <div id="bsugItems" style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px"></div>
-</div>
-
-<!-- ADMIN FAB -->
-<button class="admin-fab" onclick="abrirAdmin()" title="Admin">⚙️</button>
-
-<!-- ADMIN SCREEN -->
-<div id="adminScreen">
-  <div class="adm-hdr">
-    <div class="adm-title">⚙️ ADMIN</div>
-    <button class="adm-close" onclick="cerrarAdmin()">✕</button>
-  </div>
-  <div class="adm-body">
-    <div class="adm-tabs">
-      <button class="adm-tab on" id="admTab-nuevo" onclick="admSetTab('nuevo')">+ Nuevo producto</button>
-      <button class="adm-tab" id="admTab-lista" onclick="admSetTab('lista')">Lista</button>
-    </div>
-
-    <!-- TAB NUEVO PRODUCTO -->
-    <div id="admPanel-nuevo">
-      <div class="adm-field">
-        <label class="adm-label">Nombre *</label>
-        <input class="adm-input" id="admNombre" placeholder="Ej: Hamburguesa Especial">
-      </div>
-      <div class="adm-field">
-        <label class="adm-label">Categoría *</label>
-        <input class="adm-input" id="admCategoria" placeholder="Ej: Hamburguesas Tradicionales" list="admCatList">
-        <datalist id="admCatList"></datalist>
-      </div>
-      <div class="adm-field">
-        <label class="adm-label">Precio *</label>
-        <input class="adm-input" id="admPrecio" type="number" placeholder="18900">
-      </div>
-      <div class="adm-field">
-        <label class="adm-label">Descripción</label>
-        <input class="adm-input" id="admDesc" placeholder="Ingredientes, detalles...">
-      </div>
-      <div class="adm-field">
-        <label class="adm-label">URL de imagen</label>
-        <input class="adm-input" id="admImg" placeholder="https://...jpg">
-      </div>
-      <div class="adm-field">
-        <label class="adm-label">Emoji (si no hay imagen)</label>
-        <input class="adm-input" id="admEmoji" placeholder="🍔" maxlength="4">
-      </div>
-      <button class="adm-btn" onclick="admGuardarProducto()">Guardar producto →</button>
-      <div id="admMsg" style="text-align:center;font-size:13px;margin-top:12px;min-height:20px;font-family:var(--font-ui);font-weight:600"></div>
-    </div>
-
-    <!-- TAB LISTA -->
-    <div id="admPanel-lista" style="display:none">
-      <input class="adm-input" id="admSearch" placeholder="🔍 Buscar producto..." oninput="admFiltrar(this.value)" style="margin-bottom:14px">
-      <div id="admLista"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ADMIN PIN -->
-<div id="adminPinOv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(8px)" onclick="if(event.target===this)document.getElementById('adminPinOv').style.display='none'">
-  <div style="background:var(--s1);border:1px solid var(--border);border-radius:24px;padding:28px 24px;width:280px;text-align:center">
-    <div style="font-size:32px;margin-bottom:8px">🔐</div>
-    <div style="font-family:var(--font-disp);font-size:22px;font-weight:800;margin-bottom:4px">Acceso Admin</div>
-    <div style="font-size:12px;color:var(--t3);margin-bottom:20px">Ingresa el PIN</div>
-    <input id="adminPinInput" type="password" class="adm-input" placeholder="••••" maxlength="6" style="text-align:center;font-size:24px;letter-spacing:8px;margin-bottom:14px" onkeydown="if(event.key==='Enter')verificarPin()">
-    <button class="adm-btn" onclick="verificarPin()">Entrar</button>
-    <div id="pinErr" style="color:var(--accent);font-size:12px;margin-top:10px;font-family:var(--font-ui);font-weight:700;min-height:16px"></div>
-  </div>
-</div>
-
 </body>
 </html>
