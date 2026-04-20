@@ -1340,22 +1340,53 @@ async function cargarMenu(){
   try{
     var r=await fetch("/api/menu?restaurante_id="+rest.id);
     var data=await r.json();
+    console.log("═══ DIAGNÓSTICO MENÚ ═══");
+    console.log("Backend devolvió:",data.length,"productos totales");
+
+    // DIAGNÓSTICO 1: ¿Llegan las tradicionales desde el backend?
+    var tradicionalesRaw=data.filter(function(i){return (i.categoria||"").toLowerCase().indexOf("tradicional")!==-1;});
+    console.log("🔍 Tradicionales en backend:",tradicionalesRaw.length);
+    tradicionalesRaw.forEach(function(t){
+      console.log("   →",t.nombre,"| categoria:",JSON.stringify(t.categoria),"| disponible:",t.disponible,"| es_adicional?",esAdicCat(t.categoria));
+    });
+
     // Normalizar categoria_slug - blindado contra mayúsculas, espacios y tildes
     menuItems=(data||[])
-      .filter(function(i){return !esAdicCat(i.categoria) && i.disponible!==false;})
+      .filter(function(i){
+        var adic=esAdicCat(i.categoria);
+        var noDispo=i.disponible===false;
+        if(adic)console.log("⚠️ Filtrado por adicional:",i.nombre,"cat:",i.categoria);
+        if(noDispo)console.log("⚠️ Filtrado por no disponible:",i.nombre);
+        return !adic && !noDispo;
+      })
       .map(function(i){
         var slug=(i.categoria_slug||i.categoria||"")
           .toLowerCase().trim()
           .normalize("NFD").replace(/[\u0300-\u036f]/g,"");
         return Object.assign({},i,{categoria_slug:slug});
       });
-    console.log("Menu cargado:",menuItems.length,"productos");
-    // DIAGNÓSTICO: cuántos productos tienen imagen
+    console.log("✅ Menu filtrado:",menuItems.length,"productos");
+
+    // DIAGNÓSTICO 2: ¿Quedaron las tradicionales después del filtro?
+    var tradicionalesFiltradas=menuItems.filter(function(i){return (i.categoria||"").toLowerCase().indexOf("tradicional")!==-1;});
+    console.log("🔍 Tradicionales DESPUÉS del filtro:",tradicionalesFiltradas.length);
+    if(tradicionalesFiltradas.length>0){
+      console.log("   Slug generado:",tradicionalesFiltradas[0].categoria_slug);
+    }
+
+    // DIAGNÓSTICO 3: agrupación por slug (puede haber colisiones)
+    var slugsCount={};
+    menuItems.forEach(function(i){
+      slugsCount[i.categoria_slug]=(slugsCount[i.categoria_slug]||0)+1;
+    });
+    console.log("📊 Slugs únicos generados:",Object.keys(slugsCount).length);
+    console.log("   Distribución:",slugsCount);
+
+    // DIAGNÓSTICO 4: cuántos productos tienen imagen
     var conImg=menuItems.filter(function(i){return i.imagen_url&&i.imagen_url.trim();}).length;
-    console.log("  📷 con imagen:",conImg,"/",menuItems.length);
-    // DIAGNÓSTICO: categorías únicas (para detectar problemas)
-    var catsUnicas={};menuItems.forEach(function(i){catsUnicas[i.categoria||"(sin categoría)"]=(catsUnicas[i.categoria||"(sin categoría)"]||0)+1;});
-    console.log("  🏷 categorías:",catsUnicas);
+    console.log("📷 con imagen:",conImg,"/",menuItems.length);
+
+    console.log("═══════════════════════════");
   }catch(e){
     console.error("cargarMenu error:",e);
     menuItems=[];
@@ -1472,12 +1503,20 @@ function addItem(id,precio,nombre){
   if(!carrito[id])carrito[id]={id:id,precio:precio,nombre:nombre,qty:0};
   carrito[id].qty++;
   updateCartUI();
-  // Sugerencia bebida cada 3 comidas
+  // Sugerencia bebida: dispara al tener 2+ comidas si no hay bebida en carrito
   var totalComida=Object.values(carrito).filter(function(ci){
     var m=menuItems.find(function(x){return x.id===ci.id;});
     return m&&!m.es_bebida&&!(m.categoria||"").toLowerCase().includes("bebida");
   }).reduce(function(a,b){return a+b.qty;},0);
-  if(totalComida>0&&totalComida%3===0)sugerirBebida();
+  var tieneBebida=Object.values(carrito).some(function(ci){
+    var m=menuItems.find(function(x){return x.id===ci.id;});
+    return m&&(m.es_bebida||(m.categoria||"").toLowerCase().includes("bebida"));
+  });
+  console.log("[addItem] totalComida:",totalComida,"| tieneBebida:",tieneBebida);
+  // Mostrar al llegar a 2 comidas o cada 3 si sigue sumando, y solo si no hay bebida
+  if(!tieneBebida && (totalComida===2 || (totalComida>2 && totalComida%3===0))){
+    sugerirBebida();
+  }
 }
 
 function qDec(id){
@@ -2048,14 +2087,28 @@ function filtrarBusqueda(q){
 }
 
 function sugerirBebida(){
-  var bs=menuItems.filter(function(i){return i.es_bebida||(i.categoria||"").toLowerCase().includes("bebida");});
-  if(!bs.length)return;
+  // Detectar bebidas por múltiples criterios para máxima compatibilidad
+  var bs=menuItems.filter(function(i){
+    if(!i||i.disponible===false)return false;
+    if(i.es_bebida===true)return true;
+    var cat=(i.categoria||"").toLowerCase();
+    if(cat.indexOf("bebida")!==-1)return true;
+    if(cat.indexOf("jugo")!==-1||cat.indexOf("gaseosa")!==-1||cat.indexOf("agua")!==-1||cat.indexOf("drink")!==-1)return true;
+    var nombre=(i.nombre||"").toLowerCase();
+    if(nombre.indexOf("coca")!==-1||nombre.indexOf("pepsi")!==-1||nombre.indexOf("jugo")!==-1||nombre.indexOf("limonada")!==-1||nombre.indexOf("agua ")!==-1)return true;
+    return false;
+  });
+  console.log("[sugerirBebida] bebidas encontradas:",bs.length);
+  if(!bs.length){console.warn("[sugerirBebida] Sin bebidas — marca productos con es_bebida=true o categoria 'Bebidas'");return;}
   var s=document.getElementById("bsug");
-  if(!s)return;
+  if(!s){console.warn("[sugerirBebida] elemento #bsug no existe");return;}
   var wrap=document.getElementById("bsugItems");
   if(wrap){
     wrap.innerHTML="";
-    bs.slice(0,6).forEach(function(b){
+    // Evitar sugerir bebidas que ya están en el carrito
+    var bebidasNoEnCarrito=bs.filter(function(b){return !carrito[b.id];});
+    var bebidasAMostrar=bebidasNoEnCarrito.length>0?bebidasNoEnCarrito:bs;
+    bebidasAMostrar.slice(0,6).forEach(function(b){
       var div=document.createElement("div");
       div.style.cssText="flex-shrink:0;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 14px;cursor:pointer;text-align:center;min-width:100px;transition:background 0.15s";
       div.innerHTML='<div style="font-size:11px;font-weight:700;color:#f0ecf8;margin-bottom:5px;line-height:1.3">'+b.nombre+'</div>'
@@ -2231,12 +2284,18 @@ function agregarDesdeDet(){
   }
   cerrarProdDetalle();
   showToast("✅ "+_nom+" agregado");
-  // Sugerencia bebida
+  // Sugerencia bebida inteligente
   var totalComida=Object.values(carrito).filter(function(ci){
     var m=menuItems.find(function(x){return x.id===ci.id;});
     return m&&!m.es_bebida&&!(m.categoria||"").toLowerCase().includes("bebida");
   }).reduce(function(a,b){return a+b.qty;},0);
-  if(totalComida>0&&totalComida%3===0)sugerirBebida();
+  var tieneBebida=Object.values(carrito).some(function(ci){
+    var m=menuItems.find(function(x){return x.id===ci.id;});
+    return m&&(m.es_bebida||(m.categoria||"").toLowerCase().includes("bebida"));
+  });
+  if(!tieneBebida && (totalComida===2 || (totalComida>2 && totalComida%3===0))){
+    sugerirBebida();
+  }
 }
 
 // ── MIS PEDIDOS ──
