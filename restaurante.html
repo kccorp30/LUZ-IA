@@ -1408,7 +1408,9 @@ function loadPedidos(){
       if(p.domiciliario_nombre)h+='<div class="chip" style="background:rgba(16,185,129,0.1);color:#6ee7b7;border-color:rgba(16,185,129,0.25);">🛵 '+p.domiciliario_nombre+'</div>';
       h+='</div>';
       h+='<div class="desglose"><div class="desglose-row"><span>Subtotal</span><span>'+fmt(subtotal)+'</span></div><div class="desglose-row"><span>Desechables</span><span>'+fmt(desechables)+'</span></div><div class="desglose-row"><span>Domicilio</span><span>'+fmt(domicilio)+'</span></div><div class="desglose-row total"><span>TOTAL</span><span>'+fmt(total)+'</span></div></div>';
+      // Comprobante: puede venir por WhatsApp (media_id) o por menu web (url directa)
       if(p.comprobante_media_id)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" onerror="this.style.display=\'none\'"></div>';
+      else if(p.comprobante_url)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante</div><img class="comprobante-img" src="'+escHtml(p.comprobante_url)+'" onerror="this.style.display=\'none\'"></div>';
       h+='<div class="ebtns">';
       var bEstado=cfg.n,bLabel=cfg.bl,bClass=cfg.bc;
       if(esMesa&&p.estado==="listo"){bEstado="entregado";bLabel="💳 Cobrar y cerrar";bClass="bcerrar";}
