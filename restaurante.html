@@ -615,7 +615,24 @@ select.finput{cursor:pointer}
       </div>
       <!-- PRODUCTOS -->
       <div class="met-section active" id="metsec-productos">
+        <div class="editor-toolbar" style="padding:10px 12px 6px;display:flex;flex-direction:column;gap:10px;">
+          <!-- Barra de búsqueda -->
+          <div style="position:relative;">
+            <input type="text" class="finput" id="editorBusqueda" placeholder="🔍 Buscar producto en todo el menú..." oninput="filtrarProductosEditor(this.value)" style="padding-left:14px;font-size:14px;font-weight:500;">
+            <button id="editorLimpiarBusq" onclick="limpiarBusquedaEditor()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:10px;width:28px;height:28px;font-size:13px;color:var(--text2);cursor:pointer;display:none;font-family:inherit;">✕</button>
+          </div>
+          <!-- Stats rápidos -->
+          <div id="editorStats" style="font-size:11px;color:var(--text3);font-weight:600;padding:0 2px;"></div>
+        </div>
+        <!-- Filtro categorías (se oculta al buscar) -->
         <div class="cat-filter-wrap" id="editorCatFilter"></div>
+        <!-- Botón crear categoría nueva -->
+        <div style="padding:0 12px 10px;">
+          <button onclick="abrirCrearCategoria()" style="width:100%;padding:11px;background:rgba(124,58,237,0.1);border:1px dashed rgba(124,58,237,0.35);border-radius:13px;color:#c4b5fd;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <span style="font-size:15px;">➕</span>
+            <span>Crear nueva categoría</span>
+          </button>
+        </div>
         <div id="editorProdList"><div class="empty"><div class="et">Cargando...</div></div></div>
       </div>
       <!-- NUEVO -->
@@ -990,6 +1007,23 @@ select.finput{cursor:pointer}
 <div class="confirm-overlay" id="confirmEliminar"><div class="confirm-box"><div class="confirm-icon">🗑</div><div class="confirm-title">Eliminar pedido?</div><div class="confirm-sub">Esta accion no se puede deshacer.</div><div class="confirm-btns"><button class="confirm-cancel" id="confirmEliminarCancel">Cancelar</button><button class="confirm-ok" id="confirmEliminarOk">Eliminar</button></div></div></div>
 <div class="confirm-overlay" id="confirmBorrarHist"><div class="confirm-box"><div class="confirm-icon">&#9888;</div><div class="confirm-title">Borrar historial?</div><div class="confirm-sub">Se eliminaran todos los pedidos del periodo.</div><div class="confirm-btns"><button class="confirm-cancel" id="confirmBorrarHistCancel">Cancelar</button><button class="confirm-ok" id="confirmBorrarHistOk">Borrar todo</button></div></div></div>
 <div class="img-overlay" id="imgOverlay"><button class="img-overlay-close" id="imgOverlayClose">✕</button><img id="imgOverlayImg" src="" alt="Imagen"></div>
+
+<!-- MODAL CREAR CATEGORIA NUEVA -->
+<div class="confirm-overlay" id="crearCatOverlay">
+  <div class="confirm-box" style="max-width:360px;">
+    <div class="confirm-icon" style="background:linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.2));">🏷️</div>
+    <div class="confirm-title">Nueva categoría</div>
+    <div class="confirm-sub" style="margin-bottom:14px;">Crea una categoría nueva. Aparecerá al crear/editar productos.</div>
+    <input type="text" id="nuevaCatNombre" class="finput" placeholder="Ej: Hamburguesas Tradicionales" style="margin-bottom:10px;font-size:14px;" maxlength="50">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:14px;text-align:left;padding:0 2px;">
+      💡 Una vez creada, edita los productos existentes y asígnales esta categoría, o crea productos nuevos en ella.
+    </div>
+    <div class="confirm-btns">
+      <button class="confirm-cancel" onclick="cerrarCrearCategoria()">Cancelar</button>
+      <button class="confirm-ok" onclick="guardarNuevaCategoria()" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);">Crear categoría</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL ASIGNAR DOMICILIARIO -->
 <div class="domi-overlay" id="domiOverlay">
@@ -2259,17 +2293,70 @@ function dibujarTodasZonas(zonas){
     });
   });
 }
-var geoCache={};
+// ── GEOCODING HÍBRIDO ──
+// 1ro: diccionario hardcodeado con 50+ barrios de Cali (instantáneo, sin red)
+// 2do: si no está en el diccionario, proxy al backend (evita CORS de Nominatim)
+var BARRIOS_CALI={
+  // ── NORTE ──
+  "versalles":[3.4656,-76.5326],"granada":[3.4558,-76.5377],"santa monica":[3.4672,-76.5395],
+  "san vicente":[3.4644,-76.5440],"chipichape":[3.4721,-76.5325],"vipasa":[3.4765,-76.5250],
+  "la flora":[3.4818,-76.5155],"calima":[3.4742,-76.5200],"la rivera":[3.4800,-76.5110],
+  "menga":[3.4900,-76.5250],"el bosque":[3.4550,-76.5270],"juanambu":[3.4680,-76.5285],
+  "centenario":[3.4520,-76.5432],"san fernando":[3.4405,-76.5420],"el peñon":[3.4510,-76.5505],
+  // ── SUR ──
+  "canaveral":[3.3770,-76.5400],"canaveralejo":[3.3770,-76.5400],"la hacienda":[3.3810,-76.5380],
+  "ciudad jardin":[3.3730,-76.5280],"pance":[3.3350,-76.5460],"valle del lili":[3.3620,-76.5230],
+  "el ingenio":[3.3660,-76.5305],"el caney":[3.3720,-76.5180],"capri":[3.3820,-76.5260],
+  "el limonar":[3.3900,-76.5320],"limonar":[3.3900,-76.5320],"la flora del sur":[3.3810,-76.5390],
+  "tequendama":[3.4185,-76.5475],"miraflores":[3.4090,-76.5480],"pasoancho":[3.3870,-76.5350],
+  "melendez":[3.3530,-76.5380],"napoles":[3.3850,-76.5390],"el lido":[3.3950,-76.5430],
+  // ── ORIENTE ──
+  "alameda":[3.4430,-76.5200],"aguablanca":[3.3950,-76.4750],"el vallado":[3.3820,-76.4850],
+  "marroquin":[3.4150,-76.4780],"el retiro":[3.4190,-76.4650],"desepaz":[3.4850,-76.4700],
+  "puertas del sol":[3.4030,-76.4950],"ciudad cordoba":[3.3950,-76.4850],
+  "mojica":[3.4230,-76.4850],"comuneros":[3.4100,-76.4900],"manuela beltran":[3.4280,-76.4820],
+  "poblado":[3.4080,-76.4800],"el poblado":[3.4080,-76.4800],"las americas":[3.4100,-76.5000],
+  "compartir":[3.4030,-76.5100],"alfonso bonilla aragon":[3.4280,-76.4650],
+  // ── OCCIDENTE ──
+  "terron colorado":[3.4540,-76.5700],"siloé":[3.4430,-76.5600],"siloe":[3.4430,-76.5600],
+  "belen":[3.4380,-76.5650],"belén":[3.4380,-76.5650],"normandia":[3.4540,-76.5480],
+  "el refugio":[3.3720,-76.5220],"camino real":[3.3780,-76.5160],"mayapan":[3.3960,-76.5130],
+  "quintas de don simon":[3.3830,-76.5110],"naciones unidas":[3.3910,-76.5180],
+  // ── CENTRO ──
+  "san nicolas":[3.4475,-76.5300],"san antonio":[3.4460,-76.5470],"san pedro":[3.4510,-76.5360],
+  "san pascual":[3.4520,-76.5280],"san juan bosco":[3.4400,-76.5260],"el calvario":[3.4530,-76.5260],
+  "obrero":[3.4350,-76.5250],"libertadores":[3.4420,-76.5170],
+  // ── NORTE ALTA ──
+  "salomia":[3.4700,-76.4950],"floralia":[3.4730,-76.5020],"popular":[3.4680,-76.4880],
+  "san judas":[3.4620,-76.5070],"guadalupe":[3.4590,-76.5050],"petecuy":[3.4890,-76.4940],
+  "el troncal":[3.4810,-76.5020],"alfonso lopez":[3.4720,-76.5180],"el poblado ii":[3.4810,-76.4850],
+  // ── BULEVARES / COMUNES ──
+  "alamos":[3.4700,-76.5400],"samanes":[3.3880,-76.5420],"los angeles":[3.4600,-76.5420],
+  "villa del rey":[3.3700,-76.5330],"el jardin":[3.3800,-76.5280],"univalle":[3.3750,-76.5330]
+};
+
 function geocodificarBarrio(query){
   if(!window._geocache)window._geocache={};
-  var key=query.toLowerCase();
+  var key=query.toLowerCase().trim();
+  // 1. Cache en memoria
   if(window._geocache[key])return Promise.resolve(window._geocache[key]);
-  return fetch("https://nominatim.openstreetmap.org/search?format=json&q="+encodeURIComponent(query)+"&limit=1",{
-    headers:{"Accept-Language":"es","User-Agent":"LuzIA/1.0"}
-  })
-  .then(function(r){return r.json();})
+  // 2. Diccionario hardcodeado — intenta varias variantes del nombre
+  var soloBarrio=key.split(",")[0].trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  if(BARRIOS_CALI[soloBarrio]){
+    window._geocache[key]=BARRIOS_CALI[soloBarrio];
+    return Promise.resolve(BARRIOS_CALI[soloBarrio]);
+  }
+  // Variante sin "el/la/los/las"
+  var sinArt=soloBarrio.replace(/^(el |la |los |las )/,"").trim();
+  if(BARRIOS_CALI[sinArt]){
+    window._geocache[key]=BARRIOS_CALI[sinArt];
+    return Promise.resolve(BARRIOS_CALI[sinArt]);
+  }
+  // 3. Proxy al backend (evita CORS de Nominatim)
+  return fetch("/api/geocode?q="+encodeURIComponent(query))
+  .then(function(r){return r.ok?r.json():null;})
   .then(function(d){
-    if(d&&d.length){var c=[parseFloat(d[0].lat),parseFloat(d[0].lon)];window._geocache[key]=c;return c;}
+    if(d&&d.lat&&d.lon){var c=[d.lat,d.lon];window._geocache[key]=c;return c;}
     return null;
   })
   .catch(function(){return null;});
@@ -2325,24 +2412,79 @@ function loadMenuEditor(){
   fetch(SU+"/rest/v1/menu_items?restaurante_id=eq."+rest.id+"&order=categoria,orden",{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
   .then(function(r){return r.json();})
   .then(function(items){
+    // Categorías que ya existen en la BD
     var cats=["Todos"];var catSet={};
     items.forEach(function(i){if(!catSet[i.categoria]){catSet[i.categoria]=true;cats.push(i.categoria);}});
+
+    // === NUEVO: Mezclar con categorías extra creadas manualmente ===
+    cargarCategoriasExtra();
+    _categoriasExtra.forEach(function(c){
+      if(!catSet[c]){ catSet[c]=true; cats.push(c); }
+    });
+
+    // Renderizar filtro de categorías (se oculta si hay búsqueda activa)
     var filterWrap=document.getElementById("editorCatFilter");
     if(filterWrap){
-      filterWrap.innerHTML=cats.map(function(c){return'<button class="cat-fpill'+(c===editorFiltroActual||(!editorFiltroActual&&c==="Todos")?" active":"")+'" data-cat="'+c+'">'+c+'</button>';}).join("");
-      filterWrap.querySelectorAll(".cat-fpill").forEach(function(b){b.addEventListener("click",function(){editorFiltroActual=this.getAttribute("data-cat")==="Todos"?"":this.getAttribute("data-cat");loadMenuEditor();});});
+      filterWrap.innerHTML=cats.map(function(c){
+        var esExtra = _categoriasExtra.indexOf(c) !== -1;
+        var extraIco = esExtra ? ' ✨' : '';
+        return '<button class="cat-fpill'+(c===editorFiltroActual||(!editorFiltroActual&&c==="Todos")?" active":"")+'" data-cat="'+c+'">'+c+extraIco+'</button>';
+      }).join("");
+      filterWrap.querySelectorAll(".cat-fpill").forEach(function(b){
+        b.addEventListener("click",function(){
+          editorFiltroActual=this.getAttribute("data-cat")==="Todos"?"":this.getAttribute("data-cat");
+          loadMenuEditor();
+        });
+      });
     }
+
+    // === NUEVO: Filtrado por búsqueda (prioridad sobre filtro de categoría) ===
+    var filtered;
+    if(_editorBusquedaActiva){
+      var q = _editorBusquedaActiva;
+      filtered = items.filter(function(i){
+        return (i.nombre||"").toLowerCase().includes(q)
+          || (i.descripcion||"").toLowerCase().includes(q)
+          || (i.categoria||"").toLowerCase().includes(q);
+      });
+    } else {
+      filtered = editorFiltroActual ? items.filter(function(i){return i.categoria===editorFiltroActual;}) : items;
+    }
+
+    // === NUEVO: Stats rápidos ===
+    var statsEl = document.getElementById("editorStats");
+    if(statsEl){
+      var totalProds = items.length;
+      var activos = items.filter(function(i){return i.disponible!==false;}).length;
+      var conFoto = items.filter(function(i){return i.imagen_url && i.imagen_url.trim();}).length;
+      if(_editorBusquedaActiva){
+        statsEl.innerHTML = '🔍 <b style="color:var(--text2)">'+filtered.length+'</b> resultado'+(filtered.length!==1?'s':'')+' para "<b style="color:#c4b5fd">'+escHtml(_editorBusquedaActiva)+'</b>"';
+      } else {
+        statsEl.innerHTML = '<b style="color:var(--text2)">'+totalProds+'</b> productos · '+
+                            '<b style="color:#34d399">'+activos+'</b> activos · '+
+                            '<b style="color:#a78bfa">'+conFoto+'</b> con foto · '+
+                            '<b style="color:#fbbf24">'+(cats.length-1)+'</b> categorías';
+      }
+    }
+
+    // === Actualizar datalist de categorías (combina BD + extras) ===
+    actualizarDatalistCategorias(Object.keys(catSet));
+
     var editorProdActivo=null;
-    var filtered=editorFiltroActual?items.filter(function(i){return i.categoria===editorFiltroActual;}):items;
     var lista=document.getElementById("editorProdList");
-    if(!filtered.length){lista.innerHTML='<div class="empty"><div class="et">No hay productos en esta categoría</div></div>';return;}
+    if(!filtered.length){
+      if(_editorBusquedaActiva){
+        lista.innerHTML='<div class="empty" style="padding:30px 20px;text-align:center;"><div style="font-size:40px;margin-bottom:10px;opacity:0.4">🔍</div><div class="et">Sin resultados para "<b>'+escHtml(_editorBusquedaActiva)+'</b>"</div><div style="font-size:11px;color:var(--text3);margin-top:4px">Prueba con otra palabra</div></div>';
+      } else {
+        lista.innerHTML='<div class="empty"><div class="et">No hay productos en esta categoría</div><div style="font-size:11px;color:var(--text3);margin-top:4px">Crea uno nuevo desde la pestaña ➕ Nuevo</div></div>';
+      }
+      return;
+    }
+
     var cats2={};filtered.forEach(function(i){if(!cats2[i.categoria])cats2[i.categoria]=[];cats2[i.categoria].push(i);});
     var h="";
-    var catList=document.getElementById("cats-list");var catOpts="";
-    Object.keys(catSet).forEach(function(c){catOpts+='<option value="'+c+'">'+c+'</option>';});
-    if(catList)catList.innerHTML=catOpts;
  Object.keys(cats2).forEach(function(cat){
-      h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;padding:10px 0 8px">'+cat+'</div>';
+      h+='<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;padding:10px 0 8px">'+cat+' <span style="color:#c4b5fd;margin-left:4px">('+cats2[cat].length+')</span></div>';
       h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">';
       cats2[cat].forEach(function(i){
         var img=i.imagen_url||"";
@@ -3090,6 +3232,102 @@ async function cargarZonasPredefinidas(){
   }
   notif(errores===0?"✅ Zonas cargadas!":"Cargadas con "+errores+" errores");
   cargarZonas();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BÚSQUEDA RÁPIDA + CREAR CATEGORÍA (Editor de menú)
+   ═══════════════════════════════════════════════════════════ */
+
+var _editorBusquedaActiva = "";
+var _categoriasExtra = [];
+
+// Carga categorías extra guardadas en localStorage (por restaurante)
+function cargarCategoriasExtra(){
+  if(!rest)return;
+  try{
+    var raw = localStorage.getItem("luzCatsExtra_"+rest.id);
+    _categoriasExtra = raw ? JSON.parse(raw) : [];
+  }catch(e){ _categoriasExtra = []; }
+}
+
+function guardarCategoriasExtra(){
+  if(!rest)return;
+  try{
+    localStorage.setItem("luzCatsExtra_"+rest.id, JSON.stringify(_categoriasExtra));
+  }catch(e){}
+}
+
+// Abre modal para crear categoría nueva
+function abrirCrearCategoria(){
+  document.getElementById("nuevaCatNombre").value = "";
+  document.getElementById("crearCatOverlay").classList.add("open");
+  setTimeout(function(){
+    var inp = document.getElementById("nuevaCatNombre");
+    if(inp) inp.focus();
+  }, 100);
+}
+
+function cerrarCrearCategoria(){
+  document.getElementById("crearCatOverlay").classList.remove("open");
+}
+
+// Guarda la categoría nueva (localmente + en datalist)
+function guardarNuevaCategoria(){
+  var nombre = document.getElementById("nuevaCatNombre").value.trim();
+  if(!nombre){
+    notif("Escribe el nombre de la categoría");
+    return;
+  }
+  if(nombre.length < 3){
+    notif("Mínimo 3 caracteres");
+    return;
+  }
+  cargarCategoriasExtra();
+  // Verificar que no exista ya
+  if(_categoriasExtra.indexOf(nombre) !== -1){
+    notif("Esa categoría ya existe");
+    return;
+  }
+  _categoriasExtra.push(nombre);
+  guardarCategoriasExtra();
+  cerrarCrearCategoria();
+  notif("✅ Categoría '"+nombre+"' creada. Ya puedes asignarla a productos.");
+  // Recargar editor para ver la nueva categoría en el filtro y datalist
+  loadMenuEditor();
+}
+
+// Filtrado en tiempo real de productos por búsqueda
+function filtrarProductosEditor(q){
+  _editorBusquedaActiva = (q||"").trim().toLowerCase();
+  var limpiarBtn = document.getElementById("editorLimpiarBusq");
+  if(limpiarBtn) limpiarBtn.style.display = _editorBusquedaActiva ? "flex" : "none";
+  // Ocultar filtro de categorías cuando se busca
+  var filterWrap = document.getElementById("editorCatFilter");
+  if(filterWrap) filterWrap.style.display = _editorBusquedaActiva ? "none" : "";
+  loadMenuEditor();
+}
+
+function limpiarBusquedaEditor(){
+  var inp = document.getElementById("editorBusqueda");
+  if(inp) inp.value = "";
+  filtrarProductosEditor("");
+}
+
+// Actualiza el datalist de categorías combinando las de la BD + las extra
+function actualizarDatalistCategorias(categoriasEnBD){
+  cargarCategoriasExtra();
+  var todas = [].concat(categoriasEnBD || []);
+  _categoriasExtra.forEach(function(c){
+    if(todas.indexOf(c) === -1) todas.push(c);
+  });
+  todas.sort();
+  var catList = document.getElementById("cats-list");
+  if(catList){
+    catList.innerHTML = todas.map(function(c){
+      return '<option value="'+escHtml(c)+'">';
+    }).join("");
+  }
+  return todas;
 }
 </script>
 </body>
