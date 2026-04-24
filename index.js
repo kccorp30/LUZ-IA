@@ -63,11 +63,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-// Servir assets estáticos (CSS compilado de Tailwind, imágenes, etc.)
-app.use('/dist', express.static(path.join(__dirname, 'dist'), {
-  maxAge: '7d',
-  etag: true
-}));
 
 const conversations = {};
 const orderState    = {};
@@ -1317,6 +1312,72 @@ app.patch("/api/menu-item/:id", async function(req, res) {
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════
+// Endpoint: productos destacados (Top vendidos + manuales)
+// Devuelve hasta 3 top automáticos + hasta 2 manuales
+// ═══════════════════════════════════════════════════════════
+app.get("/api/destacados", async function(req, res) {
+  if (!req.query.restaurante_id) return res.json({ top_vendidos: [], manuales: [] });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var restId = req.query.restaurante_id;
+
+    // 1. Obtener top vendidos (máx 3)
+    var topP = axios.get(
+      SUPABASE_URL + "/rest/v1/v_productos_top_vendidos?restaurante_id=eq." + restId + "&limit=3&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    ).catch(function(e) { 
+      console.warn("[destacados] vista no disponible:", e.message);
+      return { data: [] }; 
+    });
+
+    // 2. Obtener destacados manuales (máx 2, excluyendo los que ya están en top)
+    var manP = axios.get(
+      SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restId +
+      "&es_destacado=eq.true&disponible=eq.true&order=orden_destacado.asc&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+
+    var results = await Promise.all([topP, manP]);
+    var topVendidos = results[0].data || [];
+    var manualesTodos = results[1].data || [];
+
+    // IDs ya en top para filtrar de manuales
+    var idsEnTop = topVendidos.map(function(t) { return t.id; });
+    var manuales = manualesTodos
+      .filter(function(m) { return idsEnTop.indexOf(m.id) === -1; })
+      .slice(0, 2);
+
+    res.json({
+      top_vendidos: topVendidos,
+      manuales: manuales
+    });
+  } catch(e) {
+    console.error("[destacados] error:", e.message);
+    res.json({ top_vendidos: [], manuales: [] });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// Endpoint: productos "Clásicas" (tradicionales editables)
+// Devuelve todos los productos de la categoría "Clásicas de La Curva"
+// ═══════════════════════════════════════════════════════════
+app.get("/api/clasicas", async function(req, res) {
+  if (!req.query.restaurante_id) return res.json([]);
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + req.query.restaurante_id +
+      "&categoria=eq.Cl%C3%A1sicas%20de%20La%20Curva&disponible=eq.true&order=orden_destacado.asc,precio.asc&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json(r.data || []);
+  } catch(e) {
+    console.error("[clasicas] error:", e.message);
+    res.json([]);
+  }
 });
 
 app.get("/api/zonas", async function(req, res) {
