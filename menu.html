@@ -1509,87 +1509,10 @@ var carrito = {};            // { id: { id, nombre, precio, qty, adic, salsa } }
 var catActiva = "todas";
 var busquedaActual = "";
 
-// ── HARDCODED: Las 7 Hamburguesas Tradicionales de La Curva ──
-// Garantiza que SIEMPRE aparezcan, sin depender del bug de Supabase
-var TRADICIONALES = [
-  {
-    id: "trad_sencilla",
-    nombre: "La Sencilla",
-    descripcion: "Carne artesanal · pan brioche · ripio · queso · lechuga",
-    precio: 16900,
-    emoji: "🍔",
-    imagen_url: null,
-    categoria: "Hamburguesas Tradicionales",
-    es_tradicional: true,
-    disponible: true
-  },
-  {
-    id: "trad_especial",
-    nombre: "La Especial",
-    descripcion: "Carne artesanal · pan brioche · ripio · queso · tocineta · jamón · lechuga",
-    precio: 18900,
-    emoji: "🍔",
-    imagen_url: null,
-    categoria: "Hamburguesas Tradicionales",
-    es_tradicional: true,
-    disponible: true
-  },
-  {
-    id: "trad_pollo",
-    nombre: "La de Pollo",
-    descripcion: "Pan brioche · ripio · lechuga · tomate · filete de pollo · tocineta · jamón",
-    precio: 19900,
-    emoji: "🍗",
-    imagen_url: null,
-    categoria: "Hamburguesas Tradicionales",
-    es_tradicional: true,
-    disponible: true
-  },
-  {
-    id: "trad_queso",
-    nombre: "La Super Queso",
-    descripcion: "Carne artesanal · pan brioche · lechuga · ripio · mucho queso fundido",
-    precio: 22900,
-    emoji: "🧀",
-    imagen_url: null,
-    categoria: "Hamburguesas Tradicionales",
-    es_tradicional: true,
-    disponible: true
-  },
-  {
-    id: "trad_doble",
-    nombre: "La Doble Carne",
-    descripcion: "Dos carnes · pan brioche · queso · tocinetas · jamón",
-    precio: 24900,
-    emoji: "🍔",
-    imagen_url: null,
-    categoria: "Hamburguesas Tradicionales",
-    es_tradicional: true,
-    disponible: true
-  },
-  {
-    id: "trad_curva",
-    nombre: "La Curva",
-    descripcion: "Pan brioche · ripio · lechuga · carne · queso fundido · maicitos · tocineta",
-    precio: 29900,
-    emoji: "🔥",
-    imagen_url: null,
-    categoria: "Hamburguesas Tradicionales",
-    es_tradicional: true,
-    disponible: true
-  },
-  {
-    id: "trad_mega",
-    nombre: "La Mega Especial",
-    descripcion: "Carne artesanal · filetes de pollo · queso · lechuga · tomate · tocineta",
-    precio: 37900,
-    emoji: "👑",
-    imagen_url: null,
-    categoria: "Hamburguesas Tradicionales",
-    es_tradicional: true,
-    disponible: true
-  }
-];
+// ── DESTACADOS dinámicos (cargados desde BD) ──
+var TOP_VENDIDOS = [];       // Top 3 automático por ventas (últimos 30 días)
+var MANUALES = [];           // Hasta 2 marcados como destacados
+var CLASICAS = [];           // Categoría "Clásicas de La Curva"
 
 // ── Utilidades ──
 function fmt(n) { return "$" + Number(n||0).toLocaleString("es-CO"); }
@@ -1662,34 +1585,48 @@ function setTipo(t) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// CARGAR MENÚ DESDE SUPABASE
+// CARGAR MENÚ + DESTACADOS + CLÁSICAS
 // ═══════════════════════════════════════════════════════════
 async function cargarMenu() {
   if (!rest) return;
-  try {
-    var r = await fetch("/api/menu?restaurante_id=" + rest.id);
-    var data = await r.json();
 
-    // Filtrar adicionales y no disponibles
-    // IMPORTANTE: excluir categoría "Hamburguesas Tradicionales" del backend
-    // porque las tenemos HARDCODED para evitar el bug
-    menuItems = (data || [])
+  try {
+    // 3 llamadas en paralelo: menú completo, destacados, clásicas
+    var [menuResp, destacadosResp, clasicasResp] = await Promise.all([
+      fetch("/api/menu?restaurante_id=" + rest.id).then(function(r){ return r.json(); }),
+      fetch("/api/destacados?restaurante_id=" + rest.id).then(function(r){ return r.json(); }).catch(function(){ return { top_vendidos: [], manuales: [] }; }),
+      fetch("/api/clasicas?restaurante_id=" + rest.id).then(function(r){ return r.json(); }).catch(function(){ return []; })
+    ]);
+
+    // 1. Clásicas - categoría "Clásicas de La Curva"
+    CLASICAS = (clasicasResp || []).map(function(i) {
+      return Object.assign({}, i, { es_clasica: true });
+    });
+
+    // 2. Top vendidos (automático)
+    TOP_VENDIDOS = (destacadosResp.top_vendidos || []).map(function(i) {
+      return Object.assign({}, i, { es_top_vendido: true });
+    });
+
+    // 3. Manuales (destacados con switch manual)
+    MANUALES = (destacadosResp.manuales || []).map(function(i) {
+      return Object.assign({}, i, { es_manual: true });
+    });
+
+    // 4. Resto del menú - excluir adicionales + no disponibles + clásicas (ya están arriba)
+    menuItems = (menuResp || [])
       .filter(function(i) {
         if (esAdicCat(i.categoria)) return false;
         if (i.disponible === false) return false;
-        // Excluir las tradicionales del backend — las tenemos hardcoded
-        if (String(i.categoria||"").toLowerCase().includes("tradicional")) {
-          console.log("[menu] Saltando del backend (tenemos hardcoded):", i.nombre);
-          return false;
-        }
+        // No excluimos clásicas — el user dijo que sí aparezcan como categoría normal
         return true;
-      })
-      .map(function(i) {
-        return Object.assign({}, i, { es_tradicional: false });
       });
 
-    console.log("[menu] Supabase:", menuItems.length, "productos");
-    console.log("[menu] Hardcoded tradicionales:", TRADICIONALES.length, "hamburguesas");
+    console.log("[menu] Cargado:");
+    console.log("   📊 Menú completo:", menuItems.length, "productos");
+    console.log("   🔥 Top vendidos:", TOP_VENDIDOS.length);
+    console.log("   ⭐ Manuales:", MANUALES.length);
+    console.log("   🏆 Clásicas:", CLASICAS.length);
   } catch (e) {
     console.error("[menu] Error cargando:", e);
     menuItems = [];
@@ -1706,18 +1643,20 @@ function renderCategorias() {
   var cats = [];
   var seen = {};
 
-  // Siempre primero "Clásicas" si hay tradicionales
-  if (TRADICIONALES.length > 0) {
-    cats.push({ id: "clasicas", label: "🔥 Clásicas", special: true });
-    seen["clasicas"] = true;
+  // Pill "Más Vendidos" si hay top o manuales (esta sí se queda arriba)
+  var hayDestacados = TOP_VENDIDOS.length > 0 || MANUALES.length > 0;
+  if (hayDestacados) {
+    cats.push({ id: "destacados", label: "🔥 Más Vendidos", special: true });
+    seen["destacados"] = true;
   }
 
-  // Después las de Supabase
+  // Todas las categorías desde Supabase (incluida "Clásicas de La Curva" como normal)
   menuItems.forEach(function(i) {
-    var slug = slugify(i.categoria || "otros");
+    var cat = i.categoria || "otros";
+    var slug = slugify(cat);
     if (!seen[slug]) {
       seen[slug] = true;
-      cats.push({ id: slug, label: i.categoria || "Otros", special: false });
+      cats.push({ id: slug, label: cat, special: false });
     }
   });
 
@@ -1775,17 +1714,15 @@ function renderProductos() {
 
   var h = "";
 
-  // ── Siempre renderizar Clásicas (tradicionales) primero ──
-  // A menos que el filtro sea otra categoría específica que no sea "clasicas"
-  var mostrarClasicas = (catActiva === "todas" || catActiva === "clasicas");
+  // ─── Orden: Más Vendidos ARRIBA → Resto de categorías (incluye Clásicas como categoría normal) ───
+  var mostrarDestacados = (catActiva === "todas" || catActiva === "destacados");
 
-  if (mostrarClasicas && TRADICIONALES.length > 0) {
-    h += renderClasicasSection();
+  if (mostrarDestacados && (TOP_VENDIDOS.length > 0 || MANUALES.length > 0)) {
+    h += renderDestacadosSection();
   }
 
-  // ── Renderizar resto de categorías ──
-  // Si filtro es "clasicas", solo mostrar las clásicas
-  if (catActiva !== "clasicas") {
+  // Render del resto de categorías (incluyendo Clásicas como categoría normal)
+  if (catActiva !== "destacados") {
     h += renderCategoriasNormales();
   }
 
@@ -1797,16 +1734,38 @@ function renderProductos() {
   wrap.innerHTML = h;
 }
 
+// ═══════════════════════════════════════════════════════════
+// SECCIÓN "🔥 Más Vendidos" — top automático + manuales
+// ═══════════════════════════════════════════════════════════
+function renderDestacadosSection() {
+  var destacados = TOP_VENDIDOS.concat(MANUALES);
+  if (!destacados.length) return "";
+
+  var h = '<section class="clasicas-section" id="sec-destacados">';
+  h += '<div class="clasicas-header" style="background:linear-gradient(135deg,rgba(255,59,0,0.14) 0%,rgba(255,122,26,0.08) 100%);border-color:rgba(255,59,0,0.22)">';
+  h += '<div class="clasicas-badge" style="background:linear-gradient(135deg,#FF3B00,#FF7A1A);">🔥 Más Vendidos</div>';
+  h += '<div class="clasicas-title">Los Favoritos de La Curva</div>';
+  h += '<div class="clasicas-sub">Lo que más piden nuestros clientes · ' + destacados.length + ' opción' + (destacados.length !== 1 ? 'es' : '') + '</div>';
+  h += '</div>';
+  h += '<div class="prods-grid">';
+  destacados.forEach(function(i, idx) {
+    h += renderProductCard(i, idx, false, i.es_top_vendido ? "top" : "manual");
+  });
+  h += '</div>';
+  h += '</section>';
+  return h;
+}
+
 function renderClasicasSection() {
   var h = '<section class="clasicas-section" id="sec-clasicas">';
   h += '<div class="clasicas-header">';
   h += '<div class="clasicas-badge">🔥 Tradicionales</div>';
   h += '<div class="clasicas-title">Las Clásicas de La Curva</div>';
-  h += '<div class="clasicas-sub">Las de toda la vida, hechas artesanales · ' + TRADICIONALES.length + ' opciones</div>';
+  h += '<div class="clasicas-sub">Las de toda la vida, hechas artesanales · ' + CLASICAS.length + ' opciones</div>';
   h += '</div>';
   h += '<div class="prods-grid">';
-  TRADICIONALES.forEach(function(i, idx) {
-    h += renderProductCard(i, idx, true);
+  CLASICAS.forEach(function(i, idx) {
+    h += renderProductCard(i, idx, true, "clasica");
   });
   h += '</div>';
   h += '</section>';
@@ -1817,10 +1776,15 @@ function renderCategoriasNormales() {
   if (!menuItems.length) return "";
 
   // Agrupar por categoría (usando el string original, no el slug, para el display)
+  // IMPORTANTE: excluir "Clásicas de La Curva" porque ya se renderiza en su sección destacada
   var grupos = {};
   var orden = [];
   menuItems.forEach(function(i) {
     var cat = i.categoria || "Otros";
+    // Saltar clásicas - ya aparecen en la sección destacada arriba
+    if (String(cat).toLowerCase().includes("clásicas") || String(cat).toLowerCase().includes("clasicas")) {
+      return;
+    }
     if (!grupos[cat]) {
       grupos[cat] = [];
       orden.push(cat);
@@ -1855,12 +1819,13 @@ function renderCategoriasNormales() {
 
 // ═══════════════════════════════════════════════════════════
 // CARD DE PRODUCTO (horizontal DoorDash style)
+// tipoDestacado: null | "top" | "manual" | "clasica"
 // ═══════════════════════════════════════════════════════════
-function renderProductCard(item, idx, esTradicional) {
+function renderProductCard(item, idx, esClasica, tipoDestacado) {
   var qty = carrito[item.id] ? carrito[item.id].qty : 0;
   var delay = Math.min(idx * 40, 300);
   var classes = ["pcard"];
-  if (esTradicional) classes.push("tradicional");
+  if (esClasica) classes.push("tradicional");
   if (qty > 0) classes.push("in-cart");
 
   // Imagen
@@ -1871,7 +1836,7 @@ function renderProductCard(item, idx, esTradicional) {
     imgHtml = '<span class="pcard-img-emoji">' + (item.emoji || "🍔") + '</span>';
   }
 
-  // Badge en imagen
+  // Badge en imagen (oferta)
   var imgBadge = "";
   if (item.en_oferta) {
     imgBadge = '<div class="pcard-img-badge oferta">🔥 Oferta</div>';
@@ -1889,12 +1854,20 @@ function renderProductCard(item, idx, esTradicional) {
     ctrlHtml = '<button class="pcard-add" onclick="event.stopPropagation();agregarProducto(\''+item.id+'\')" aria-label="Agregar ' + escHtml(item.nombre) + '">+</button>';
   }
 
-  var tradBadge = esTradicional ? '<div class="pcard-trad-badge">⭐ Clásica</div>' : '';
+  // Badge de destacado (según tipo)
+  var destBadge = "";
+  if (tipoDestacado === "top") {
+    destBadge = '<div class="pcard-trad-badge" style="background:rgba(255,59,0,0.18);border-color:rgba(255,59,0,0.35);color:#FF7A1A">🔥 Top vendida</div>';
+  } else if (tipoDestacado === "manual") {
+    destBadge = '<div class="pcard-trad-badge" style="background:rgba(124,58,237,0.18);border-color:rgba(124,58,237,0.35);color:#c4b5fd">⭐ Destacada</div>';
+  } else if (tipoDestacado === "clasica") {
+    destBadge = '<div class="pcard-trad-badge">⭐ Clásica</div>';
+  }
 
   return '<article class="' + classes.join(" ") + '" id="pc-' + item.id + '" style="animation-delay:' + delay + 'ms" onclick="abrirDetalleProducto(\''+item.id+'\')">'
     + '<div class="pcard-body">'
     + '<div class="pcard-top">'
-    + tradBadge
+    + destBadge
     + '<div class="pcard-name">' + escHtml(item.nombre) + '</div>'
     + (item.descripcion ? '<div class="pcard-desc">' + escHtml(item.descripcion) + '</div>' : '')
     + '</div>'
@@ -1935,9 +1908,9 @@ function limpiarBusqueda() {
 
 function renderResultadosBusqueda() {
   var q = busquedaActual;
-  // Buscar en tradicionales + menuItems
-  var todos = TRADICIONALES.concat(menuItems);
-  var resultados = todos.filter(function(i) {
+  // Buscar en menú general (ya incluye clásicas por ser categoría normal)
+  // No incluimos TOP_VENDIDOS ni MANUALES porque son subconjuntos de menuItems
+  var resultados = menuItems.filter(function(i) {
     var nombre = String(i.nombre||"").toLowerCase();
     var desc = String(i.descripcion||"").toLowerCase();
     var cat = String(i.categoria||"").toLowerCase();
@@ -1959,7 +1932,9 @@ function renderResultadosBusqueda() {
 
   var h = '<div class="prods-grid">';
   resultados.forEach(function(i, idx) {
-    h += renderProductCard(i, idx, i.es_tradicional);
+    // Si el resultado es una clásica, lo mostramos con badge
+    var esClasica = String(i.categoria||"").toLowerCase().includes("clásica") || String(i.categoria||"").toLowerCase().includes("clasica");
+    h += renderProductCard(i, idx, esClasica, esClasica ? "clasica" : null);
   });
   h += '</div>';
   wrap.innerHTML = h;
@@ -1969,9 +1944,13 @@ function renderResultadosBusqueda() {
 // CARRITO — operaciones
 // ═══════════════════════════════════════════════════════════
 function getItemById(id) {
-  // Buscar primero en tradicionales, luego en menuItems
-  var t = TRADICIONALES.find(function(x) { return x.id === id; });
-  if (t) return t;
+  // Buscar en TODOS los arrays: top vendidos, manuales, clásicas, menú general
+  var found = TOP_VENDIDOS.find(function(x) { return x.id === id; });
+  if (found) return found;
+  found = MANUALES.find(function(x) { return x.id === id; });
+  if (found) return found;
+  found = CLASICAS.find(function(x) { return x.id === id; });
+  if (found) return found;
   return menuItems.find(function(x) { return x.id === id; });
 }
 
