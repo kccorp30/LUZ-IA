@@ -2642,8 +2642,9 @@ function autoEmoji(nombre){
   var header=document.createElement("div");
   header.className="pei-header";
 header.innerHTML='<div class="pei-emoji">'+(i.emoji||autoEmoji(i.nombre))+'</div>'
-  +'<div class="pei-info"><div class="pei-name">'+i.nombre+(i.en_oferta?" 🔥":"")+'</div>'
+  +'<div class="pei-info"><div class="pei-name">'+i.nombre+(i.en_oferta?" 🔥":"")+(i.es_destacado?" ⭐":"")+'</div>'
     +'<div class="pei-meta">'+i.categoria+' · <span style="color:'+(i.disponible?"#34d399":"#fca5a5")+'">'+(i.disponible?"✓ Activo":"✗ Oculto")+'</span>'
+    +(i.es_destacado?' · <span style="color:#FFB800">⭐ Destacado</span>':'')
     +(imgUrl?' · <span style="color:#a78bfa">📷 Con foto</span>':'')
     +'</div></div>'
     +'<div class="pei-price">'+fmt(i.precio)+'</div>';
@@ -2667,6 +2668,11 @@ header.innerHTML='<div class="pei-emoji">'+(i.emoji||autoEmoji(i.nombre))+'</div
     +'<option value="false"'+((!i.en_oferta)?" selected":"")+'">No</option>'
     +'<option value="true"'+((i.en_oferta)?" selected":"")+'">🔥 Sí</option>'
     +'</select></div></div>'
+    +'<div class="frow" style="margin-bottom:8px"><div class="ffield"><label class="flabel">⭐ Destacar en menú</label><select class="finput" id="pei-destacado-'+i.id+'">'
+    +'<option value="false"'+((!i.es_destacado)?" selected":"")+'">No</option>'
+    +'<option value="true"'+((i.es_destacado)?" selected":"")+'">⭐ Sí, destacar</option>'
+    +'</select></div>'
+    +'<div class="ffield"><label class="flabel">Orden destacado</label><input class="finput" id="pei-ordest-'+i.id+'" type="number" value="'+(i.orden_destacado||0)+'" placeholder="0" title="Menor número = aparece primero"></div></div>'
     +'<div class="ffield" style="margin-bottom:12px"><label class="flabel">Foto del producto</label>'
     +'<div class="foto-upload-wrap">'
     +'<div class="foto-upload-btn'+(imgUrl?" tiene-foto":"")+'" id="fub-'+i.id+'">'
@@ -2690,6 +2696,11 @@ function guardarProdEditor(id,btn){
   if(!rest||!id)return;
   var tipo=document.getElementById("pei-tipo-"+id).value;
   var payload={nombre:(document.getElementById("pei-nombre-"+id)||{value:""}).value.trim(),categoria:(document.getElementById("pei-cat-"+id)||{value:""}).value.trim(),precio:Number((document.getElementById("pei-precio-"+id)||{value:0}).value)||0,"descripcion":(document.getElementById("pei-desc-"+id)||{value:""}).value.trim()||null,emoji:(document.getElementById("pei-emoji-"+id)||{value:""}).value.trim()||null,en_oferta:(document.getElementById("pei-oferta-"+id)||{value:"false"}).value==="true"};
+  // Nuevos campos: destacado + orden
+  var destEl=document.getElementById("pei-destacado-"+id);
+  var ordEl=document.getElementById("pei-ordest-"+id);
+  if(destEl) payload.es_destacado = destEl.value === "true";
+  if(ordEl) payload.orden_destacado = Number(ordEl.value) || 0;
   var imgEl=document.getElementById("pei-img-"+id);
   if(imgEl&&imgEl.value.trim())payload.imagen_url=imgEl.value.trim();
   if(!payload.nombre||!payload.precio){notif("Nombre y precio son obligatorios");return;}
