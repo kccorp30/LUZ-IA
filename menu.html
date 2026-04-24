@@ -1653,6 +1653,421 @@ body::after {
   padding: 60px 20px;
   text-align: center;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   CHECKOUT — formulario completo
+   ═══════════════════════════════════════════════════════════ */
+.fld {
+  margin-bottom: 14px;
+}
+
+.fld-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--t2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 7px;
+  letter-spacing: 0.08em;
+}
+
+.fld-input,
+.fld-textarea,
+.fld-select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 500;
+  outline: none;
+  transition: all var(--t-fast) var(--ease-out);
+  letter-spacing: -0.005em;
+}
+
+.fld-input:focus,
+.fld-textarea:focus,
+.fld-select:focus {
+  border-color: rgba(255,122,26,0.45);
+  background: var(--bg-elev-2);
+  box-shadow: 0 0 0 3px rgba(255,122,26,0.10);
+}
+
+.fld-input::placeholder,
+.fld-textarea::placeholder {
+  color: var(--t3);
+}
+
+.fld-textarea {
+  resize: vertical;
+  min-height: 60px;
+  max-height: 120px;
+}
+
+.fld-row {
+  display: flex;
+  gap: 8px;
+}
+
+.fld-row .fld {
+  flex: 1;
+}
+
+.fld-hint {
+  font-size: 11px;
+  color: var(--t3);
+  margin-top: 5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+.fld-hint.success {
+  color: var(--success);
+}
+
+.fld-hint.warning {
+  color: var(--gold);
+}
+
+/* Tipo pedido tabs (dentro del checkout) */
+.tipos-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.tipos-tab {
+  flex: 1;
+  padding: 9px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all var(--t-fast) var(--ease-out);
+  border: none;
+}
+
+.tipos-tab.on {
+  background: var(--bg-elev-3);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Cliente reconocido */
+.cli-card {
+  margin: 4px 0 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(34,197,94,0.10) 0%, rgba(34,197,94,0.04) 100%);
+  border: 1px solid rgba(34,197,94,0.25);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cli-card-ico {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--success) 0%, #16A34A 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: white;
+  flex-shrink: 0;
+}
+
+.cli-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.cli-card-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.cli-card-pts {
+  font-size: 11px;
+  color: var(--t2);
+  font-weight: 500;
+  margin-top: 1px;
+}
+
+/* Dropdown barrios */
+.brr-drp {
+  position: relative;
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 6px;
+  display: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.brr-drp.open {
+  display: block;
+  animation: fadeUp 200ms var(--ease-out);
+}
+
+.brr-item {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease-out);
+}
+
+.brr-item:hover,
+.brr-item:active {
+  background: var(--bg-elev-2);
+}
+
+.brr-item:last-child {
+  border-bottom: none;
+}
+
+.brr-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.brr-item-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.brr-item-zone {
+  font-size: 10px;
+  color: var(--t3);
+  font-weight: 500;
+  margin-top: 1px;
+}
+
+.brr-item-price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--success);
+}
+
+/* Pagos grid */
+.pagos {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.pago-opt {
+  padding: 14px 10px;
+  border-radius: 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  transition: all var(--t-fast) var(--ease-out);
+  color: var(--t2);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.pago-opt:active {
+  transform: scale(0.97);
+}
+
+.pago-opt.on {
+  background: rgba(255,122,26,0.10);
+  border-color: rgba(255,122,26,0.40);
+  color: var(--text);
+  box-shadow: 0 0 0 1px rgba(255,122,26,0.20);
+}
+
+.pago-opt-ico {
+  font-size: 20px;
+}
+
+/* Comprobante upload */
+.uz {
+  position: relative;
+  border: 2px dashed var(--border-2);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  background: var(--bg-elev);
+  transition: all var(--t-fast) var(--ease-out);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.uz:hover, .uz:active {
+  background: var(--bg-elev-2);
+  border-color: rgba(255,122,26,0.4);
+}
+
+.uz input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.uz-ico {
+  font-size: 28px;
+  opacity: 0.5;
+}
+
+.uz-txt {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--t2);
+}
+
+.uz-prev {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 10px;
+  display: none;
+  margin-top: 10px;
+}
+
+/* Cupón */
+.cup-row {
+  display: flex;
+  gap: 8px;
+}
+
+.cup-row .fld-input {
+  flex: 1;
+  text-transform: uppercase;
+}
+
+.cup-applied {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(34,197,94,0.10);
+  border: 1px solid rgba(34,197,94,0.30);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--success);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PANTALLA ÉXITO
+   ═══════════════════════════════════════════════════════════ */
+.exito {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: var(--bg);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  text-align: center;
+}
+
+.exito.show {
+  display: flex;
+}
+
+.exito-ico {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--success) 0%, #16A34A 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: white;
+  margin-bottom: 20px;
+  box-shadow: 0 16px 40px rgba(34,197,94,0.4);
+  animation: exitoPop 500ms var(--ease-bounce);
+}
+
+@keyframes exitoPop {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.exito-title {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 8px;
+  line-height: 1.1;
+}
+
+.exito-sub {
+  font-size: 14px;
+  color: var(--t2);
+  font-weight: 500;
+  max-width: 320px;
+  margin-bottom: 8px;
+}
+
+.exito-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--brand-2);
+  margin: 4px 0 20px;
+  padding: 10px 18px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  letter-spacing: -0.01em;
+}
+
+.exito-pts {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255,184,0,0.12) 0%, rgba(255,122,26,0.06) 100%);
+  border: 1px solid rgba(255,184,0,0.25);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  max-width: 320px;
+}
 </style>
 </head>
 <body>
@@ -1766,6 +2181,109 @@ body::after {
 </button>
 
 <div class="toast" id="toast"></div>
+
+<!-- ═══ CHECKOUT SHEET ═══ -->
+<div class="sheet-bg" id="checkoutOv">
+  <div class="sheet">
+    <div class="sheet-handle-wrap"><div class="sheet-handle"></div></div>
+    <div class="sheet-head">
+      <div class="sheet-title">Confirmar pedido</div>
+      <button class="sheet-close" onclick="cerrarCheckout()">✕</button>
+    </div>
+    <div class="sheet-body">
+      <!-- Tipo pedido -->
+      <div class="tipos-tabs">
+        <button class="tipos-tab on" data-tipo="domicilio" onclick="setTipoCheckout('domicilio')">🛵 Domicilio</button>
+        <button class="tipos-tab" data-tipo="recoger" onclick="setTipoCheckout('recoger')">🏪 Recoger</button>
+      </div>
+
+      <!-- Cliente: WhatsApp -->
+      <div class="fld">
+        <label class="fld-label">📱 WhatsApp</label>
+        <input type="tel" class="fld-input" id="cliTel" placeholder="3001234567" maxlength="10" oninput="checkCliente()">
+      </div>
+
+      <!-- Card cliente reconocido -->
+      <div id="cliCard" class="hide"></div>
+
+      <!-- Cliente: Nombre -->
+      <div class="fld">
+        <label class="fld-label">👤 Nombre</label>
+        <input type="text" class="fld-input" id="cliNom" placeholder="Tu nombre">
+      </div>
+
+      <!-- Dirección domicilio -->
+      <div id="flDomicilio">
+        <div class="fld">
+          <label class="fld-label">🏠 Dirección</label>
+          <input type="text" class="fld-input" id="cliDir" placeholder="Calle 1 #2-34, Canaveral">
+        </div>
+        <div class="fld" style="position:relative">
+          <label class="fld-label">📍 Barrio</label>
+          <input type="text" class="fld-input" id="cliBarrio" placeholder="Escribe tu barrio..." oninput="buscarBarrio(this.value)">
+          <div class="brr-drp" id="barrioDrp"></div>
+          <div class="fld-hint" id="barrioInfo"></div>
+        </div>
+      </div>
+
+      <!-- Cupón -->
+      <div class="fld">
+        <label class="fld-label">🎟 Cupón (opcional)</label>
+        <div class="cup-row">
+          <input type="text" class="fld-input" id="cupCode" placeholder="CUPON10">
+          <button class="btn-md ghost" onclick="aplicarCupon()">Aplicar</button>
+        </div>
+        <div id="cupApplied"></div>
+      </div>
+
+      <!-- Pago -->
+      <div class="fld">
+        <label class="fld-label">💳 Método de pago</label>
+        <div class="pagos">
+          <button class="pago-opt" data-pago="efectivo" onclick="setPago('efectivo')"><span class="pago-opt-ico">💵</span><span>Efectivo</span></button>
+          <button class="pago-opt" data-pago="nequi" onclick="setPago('nequi')"><span class="pago-opt-ico">📱</span><span>Nequi</span></button>
+          <button class="pago-opt" data-pago="bancolombia" onclick="setPago('bancolombia')"><span class="pago-opt-ico">🏦</span><span>Bancolombia</span></button>
+          <button class="pago-opt" data-pago="datafono" onclick="setPago('datafono')"><span class="pago-opt-ico">💳</span><span>Datáfono</span></button>
+        </div>
+      </div>
+
+      <!-- Comprobante -->
+      <div class="fld hide" id="flComp">
+        <label class="fld-label">📎 Comprobante de pago</label>
+        <label class="uz">
+          <input type="file" accept="image/*" onchange="handleComp(event)">
+          <div class="uz-ico">📸</div>
+          <div class="uz-txt">Toca para subir comprobante</div>
+        </label>
+        <img class="uz-prev" id="uzPrev">
+      </div>
+
+      <!-- Notas -->
+      <div class="fld">
+        <label class="fld-label">📝 Notas (opcional)</label>
+        <textarea class="fld-textarea" id="cliNotas" placeholder="Ej: sin cebolla, timbre dañado..."></textarea>
+      </div>
+
+      <!-- Totales -->
+      <div class="cart-total-box" id="checkoutTotales"></div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-xl primary" id="btnEnviar" onclick="enviarPedido()">
+        <span>Enviar pedido por WhatsApp</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PANTALLA ÉXITO ═══ -->
+<div class="exito" id="exito">
+  <div class="exito-ico">✓</div>
+  <div class="exito-title" id="exitoTitle">Pedido enviado</div>
+  <div class="exito-sub" id="exitoSub">Tu pedido va en camino</div>
+  <div class="exito-num" id="exitoNum"></div>
+  <div class="exito-pts hide" id="exitoPts"></div>
+  <button class="btn-xl ghost" onclick="nuevoPedido()" style="max-width:320px">Hacer otro pedido</button>
+</div>
 
 <div class="sheet-bg" id="cartOv">
   <div class="sheet">
@@ -1916,44 +2434,59 @@ async function cargarMenu() {
   if (!rest) return;
 
   try {
-    // 3 llamadas en paralelo: menú completo, destacados, clásicas
-    var [menuResp, destacadosResp, clasicasResp] = await Promise.all([
-      fetch("/api/menu?restaurante_id=" + rest.id).then(function(r){ return r.json(); }),
-      fetch("/api/destacados?restaurante_id=" + rest.id).then(function(r){ return r.json(); }).catch(function(){ return { top_vendidos: [], manuales: [] }; }),
-      fetch("/api/clasicas?restaurante_id=" + rest.id).then(function(r){ return r.json(); }).catch(function(){ return []; })
-    ]);
+    // 2 llamadas en paralelo: menú completo + destacados
+    // Cada una con su propio catch para no romper las demás si falla
+    var menuP = fetch("/api/menu?restaurante_id=" + rest.id)
+      .then(function(r){ return r.json(); })
+      .catch(function(e){ console.error("[menu] /api/menu falló:", e); return []; });
 
-    // 1. Clásicas - categoría "Clásicas de La Curva"
-    CLASICAS = (clasicasResp || []).map(function(i) {
-      return Object.assign({}, i, { es_clasica: true });
-    });
+    var destacadosP = fetch("/api/destacados?restaurante_id=" + rest.id)
+      .then(function(r){ return r.json(); })
+      .catch(function(e){ console.warn("[menu] /api/destacados falló:", e); return { top_vendidos: [], manuales: [] }; });
 
-    // 2. Top vendidos (automático)
+    var [menuResp, destacadosResp] = await Promise.all([menuP, destacadosP]);
+
+    // 1. Top vendidos (automático)
     TOP_VENDIDOS = (destacadosResp.top_vendidos || []).map(function(i) {
       return Object.assign({}, i, { es_top_vendido: true });
     });
 
-    // 3. Manuales (destacados con switch manual)
+    // 2. Manuales (destacados con switch manual)
     MANUALES = (destacadosResp.manuales || []).map(function(i) {
       return Object.assign({}, i, { es_manual: true });
     });
 
-    // 4. Resto del menú - excluir adicionales + no disponibles + clásicas (ya están arriba)
+    // 3. Menú completo - solo filtramos adicionales y no disponibles
+    // Las "Hamburguesas Tradicionales" aparecen como categoría normal
     menuItems = (menuResp || [])
       .filter(function(i) {
         if (esAdicCat(i.categoria)) return false;
         if (i.disponible === false) return false;
-        // No excluimos clásicas — el user dijo que sí aparezcan como categoría normal
         return true;
       });
+
+    // Ya no usamos CLASICAS — todo viene en menuItems
+    CLASICAS = [];
 
     console.log("[menu] Cargado:");
     console.log("   📊 Menú completo:", menuItems.length, "productos");
     console.log("   🔥 Top vendidos:", TOP_VENDIDOS.length);
     console.log("   ⭐ Manuales:", MANUALES.length);
-    console.log("   🏆 Clásicas:", CLASICAS.length);
+
+    // DIAGNÓSTICO especial: ¿hay tradicionales?
+    var tradicionales = menuItems.filter(function(i) {
+      return String(i.categoria || "").toLowerCase().indexOf("tradicional") !== -1;
+    });
+    console.log("   🍔 Hamburguesas Tradicionales:", tradicionales.length);
+    if (tradicionales.length > 0) {
+      tradicionales.forEach(function(t) {
+        console.log("      → " + t.nombre + " ($" + t.precio + ")");
+      });
+    } else {
+      console.warn("   ⚠️ NO se encontraron Hamburguesas Tradicionales en /api/menu");
+    }
   } catch (e) {
-    console.error("[menu] Error cargando:", e);
+    console.error("[menu] Error general:", e);
     menuItems = [];
   }
 
@@ -2547,9 +3080,406 @@ function decCarritoSheet(id) {
 }
 
 function irCheckout() {
-  // Placeholder por ahora — aquí iría el flujo de checkout completo
-  showToast("✨ Checkout próximamente");
-  console.log("[checkout] Items en carrito:", carrito);
+  closeCart();
+  setTimeout(function() { abrirCheckout(); }, 350); // Esperar que se cierre el carrito
+}
+
+// ═══════════════════════════════════════════════════════════
+// CHECKOUT: ESTADO Y LÓGICA
+// ═══════════════════════════════════════════════════════════
+var pagoSel = null;
+var compB64 = null;
+var clienteData = null;
+var chkTimer = null;
+var descVal = 0;
+var descTipo = null;
+var domCalculado = null;
+var zonasData = [];
+
+function abrirCheckout() {
+  document.getElementById('checkoutOv').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTipoCheckout(tipoPedido);
+  cargarZonas();
+  actualizarTotalesCheckout();
+  // Pre-llenar si hay cliente conocido
+  try {
+    var telGuardado = localStorage.getItem("luzCli_" + (rest ? rest.id : ""));
+    if (telGuardado && !document.getElementById("cliTel").value) {
+      document.getElementById("cliTel").value = telGuardado;
+      checkCliente();
+    }
+  } catch(e) {}
+}
+
+function cerrarCheckout() {
+  document.getElementById('checkoutOv').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function setTipoCheckout(t) {
+  tipoPedido = t;
+  document.querySelectorAll('.tipos-tab').forEach(function(el){
+    el.classList.toggle('on', el.getAttribute('data-tipo') === t);
+  });
+  // Mostrar/ocultar dirección
+  var fd = document.getElementById('flDomicilio');
+  if (fd) fd.style.display = (t === 'domicilio' ? '' : 'none');
+  actualizarTotalesCheckout();
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLIENTE: detectar por teléfono
+// ═══════════════════════════════════════════════════════════
+function checkCliente() {
+  clearTimeout(chkTimer);
+  var tel = document.getElementById("cliTel").value.trim();
+  if (tel.length !== 10) {
+    document.getElementById("cliCard").classList.add("hide");
+    return;
+  }
+  chkTimer = setTimeout(async function() {
+    try {
+      var r = await fetch("/api/cliente/" + tel);
+      var d = await r.json();
+      if (d && d.nombre) {
+        clienteData = d;
+        document.getElementById("cliNom").value = d.nombre;
+        var card = document.getElementById("cliCard");
+        card.className = "cli-card";
+        card.innerHTML = '<div class="cli-card-ico">👤</div>'
+          + '<div class="cli-card-body">'
+          + '<div class="cli-card-name">Hola, ' + escHtml(d.nombre) + '</div>'
+          + '<div class="cli-card-pts">⭐ ' + (d.puntos || 0) + ' puntos acumulados</div>'
+          + '</div>';
+        try { localStorage.setItem("luzCli_" + rest.id, tel); } catch(e) {}
+      }
+    } catch(e) { console.warn("[cliente] error:", e); }
+  }, 500);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ZONAS Y BARRIOS
+// ═══════════════════════════════════════════════════════════
+async function cargarZonas() {
+  if (zonasData.length > 0 || !rest) return; // Cache
+  try {
+    var r = await fetch("/api/zonas?restaurante_id=" + rest.id);
+    if (r.ok) {
+      var d = await r.json();
+      if (d && d.length) zonasData = d;
+    }
+  } catch(e) { console.warn("[zonas] error:", e); }
+
+  // Fallback con zonas default
+  if (!zonasData.length) {
+    zonasData = [
+      { nombre: "Zona 1", precio_domicilio: 3000, barrios: "Canaveral,Granada,Versalles,Centenario,San Fernando,Alameda,Ciudad Jardin,Tequendama,Miraflores,Chipichape,Normandia,Belalcazar" },
+      { nombre: "Zona 2", precio_domicilio: 4000, barrios: "San Judas,Guadalupe,Calima,Alfonso Lopez,Limonar,El Ingenio,Naciones Unidas,Quintas de Don Simon,La Flora,Mayapan,El Refugio,Camino Real" },
+      { nombre: "Zona 3", precio_domicilio: 5000, barrios: "Salomia,Floralia,El Troncal,Petecuy,Terron Colorado,Siloé,Marroquin,El Poblado,Compartir,Las Americas,Univalle,Meléndez,Pance" },
+      { nombre: "Zona 4", precio_domicilio: 6000, barrios: "Aguablanca,Villanueva,El Vallado,Ciudad Cordoba,Puertas del Sol,Manuela Beltran,El Retiro,Alfonso Bonilla Aragon,Mojica,Desepaz" }
+    ];
+  }
+}
+
+function buscarBarrio(q) {
+  var drp = document.getElementById("barrioDrp");
+  if (!drp) return;
+  if (!q || q.length < 2) {
+    drp.classList.remove("open");
+    drp.innerHTML = "";
+    return;
+  }
+  var ql = q.toLowerCase().trim();
+  var resultados = [];
+  zonasData.forEach(function(z) {
+    var precio = z.precio_domicilio || z.precio || 4000;
+    var barrios = (z.barrios || "").split(",").map(function(b){ return b.trim(); }).filter(Boolean);
+    barrios.forEach(function(b) {
+      if (b.toLowerCase().includes(ql)) {
+        resultados.push({ barrio: b, zona: z.nombre, precio: precio });
+      }
+    });
+  });
+
+  drp.classList.add("open");
+  if (!resultados.length) {
+    drp.innerHTML = '<div class="brr-item" onclick="seleccionarBarrioManual(\'' + esc(q) + '\')">'
+      + '<div class="brr-item-info">'
+      + '<div class="brr-item-name">📍 Usar "' + escHtml(q) + '"</div>'
+      + '<div class="brr-item-zone">El domiciliario confirma al entregar</div>'
+      + '</div></div>';
+    return;
+  }
+  drp.innerHTML = resultados.slice(0, 8).map(function(r) {
+    return '<div class="brr-item" onclick="seleccionarBarrio(\'' + esc(r.barrio) + '\',\'' + esc(r.zona) + '\',' + r.precio + ')">'
+      + '<div class="brr-item-info">'
+      + '<div class="brr-item-name">📍 ' + escHtml(r.barrio) + '</div>'
+      + '<div class="brr-item-zone">' + escHtml(r.zona) + '</div>'
+      + '</div>'
+      + '<div class="brr-item-price">' + fmt(r.precio) + '</div>'
+      + '</div>';
+  }).join("");
+}
+
+function seleccionarBarrio(barrio, zona, precio) {
+  document.getElementById("cliBarrio").value = barrio;
+  document.getElementById("barrioDrp").classList.remove("open");
+  var info = document.getElementById("barrioInfo");
+  info.className = "fld-hint success";
+  info.textContent = "✓ " + zona + " · Domicilio " + fmt(precio);
+  domCalculado = precio;
+  actualizarTotalesCheckout();
+}
+
+function seleccionarBarrioManual(barrio) {
+  document.getElementById("cliBarrio").value = barrio;
+  document.getElementById("barrioDrp").classList.remove("open");
+  var info = document.getElementById("barrioInfo");
+  info.className = "fld-hint warning";
+  info.textContent = "⚠ El domiciliario confirma el valor del domicilio";
+  domCalculado = 5000;
+  actualizarTotalesCheckout();
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGO
+// ═══════════════════════════════════════════════════════════
+function setPago(p) {
+  pagoSel = p;
+  document.querySelectorAll(".pago-opt").forEach(function(el) {
+    el.classList.toggle("on", el.getAttribute("data-pago") === p);
+  });
+  var flComp = document.getElementById("flComp");
+  if (p === "nequi" || p === "bancolombia") {
+    flComp.classList.remove("hide");
+  } else {
+    flComp.classList.add("hide");
+  }
+}
+
+function handleComp(e) {
+  var f = e.target.files[0];
+  if (!f) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    comprimirImg(ev.target.result, 1200, 0.8).then(function(comp) {
+      compB64 = comp.split(",")[1];
+      var p = document.getElementById("uzPrev");
+      p.src = comp;
+      p.style.display = "block";
+    });
+  };
+  reader.readAsDataURL(f);
+}
+
+function comprimirImg(b64, maxW, q) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement("canvas");
+      var ratio = Math.min(maxW / img.width, maxW / img.height, 1);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", q || 0.7));
+    };
+    img.onerror = function() { resolve(b64); };
+    img.src = b64;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// CUPÓN
+// ═══════════════════════════════════════════════════════════
+async function aplicarCupon() {
+  var code = document.getElementById("cupCode").value.trim().toUpperCase();
+  if (!code) {
+    showToast("Ingresa un código");
+    return;
+  }
+  try {
+    var r = await fetch(SU + "/rest/v1/cupones?codigo=eq." + code + "&activo=eq.true&restaurante_id=eq." + rest.id + "&select=*", {
+      headers: { "apikey": SK, "Authorization": "Bearer " + SK }
+    });
+    var d = await r.json();
+    if (!d || !d.length) {
+      showToast("❌ Cupón inválido");
+      document.getElementById("cupApplied").innerHTML = "";
+      descVal = 0;
+      descTipo = null;
+      actualizarTotalesCheckout();
+      return;
+    }
+    var cup = d[0];
+    descVal = cup.valor || 0;
+    descTipo = cup.tipo_descuento || "porcentaje";
+    document.getElementById("cupApplied").innerHTML = '<div class="cup-applied">'
+      + '<span>✓ Cupón ' + escHtml(code) + ' aplicado</span>'
+      + '<span>' + (descTipo === "porcentaje" ? descVal + "% OFF" : fmt(descVal) + " OFF") + '</span>'
+      + '</div>';
+    showToast("🎉 Cupón aplicado");
+    actualizarTotalesCheckout();
+  } catch(e) {
+    showToast("Error al validar cupón");
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TOTALES CHECKOUT
+// ═══════════════════════════════════════════════════════════
+function actualizarTotalesCheckout() {
+  var items = Object.values(carrito);
+  var subtotal = items.reduce(function(s, x) { return s + (x.precio * x.qty); }, 0);
+  var domi = (tipoPedido === "domicilio") ? (domCalculado || 0) : 0;
+  var desc = 0;
+  if (descTipo === "porcentaje") desc = Math.round(subtotal * descVal / 100);
+  else if (descTipo === "fijo") desc = descVal;
+  var total = subtotal + domi - desc;
+
+  var h = '<div class="cart-total-row"><span>Subtotal</span><span class="val">' + fmt(subtotal) + '</span></div>';
+  if (tipoPedido === "domicilio") {
+    if (domi > 0) {
+      h += '<div class="cart-total-row"><span>Domicilio</span><span class="val">' + fmt(domi) + '</span></div>';
+    } else {
+      h += '<div class="cart-total-row"><span>Domicilio</span><span style="color:var(--t3);font-size:11px">Ingresa barrio</span></div>';
+    }
+  }
+  if (desc > 0) {
+    h += '<div class="cart-total-row" style="color:var(--success)"><span>Descuento</span><span class="val">-' + fmt(desc) + '</span></div>';
+  }
+  h += '<div class="cart-total-row grand"><span>Total</span><span class="val">' + fmt(total) + '</span></div>';
+  document.getElementById("checkoutTotales").innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════════════════
+// ENVIAR PEDIDO
+// ═══════════════════════════════════════════════════════════
+async function enviarPedido() {
+  var tel = document.getElementById("cliTel").value.trim();
+  var nom = document.getElementById("cliNom").value.trim();
+
+  // Validaciones
+  if (Object.keys(carrito).length === 0) { showToast("Carrito vacío"); return; }
+  if (tel.length !== 10) { showToast("Ingresa tu WhatsApp (10 dígitos)"); return; }
+  if (!nom) { showToast("Ingresa tu nombre"); return; }
+  if (!pagoSel) { showToast("Selecciona método de pago"); return; }
+  if (tipoPedido === "domicilio") {
+    var dir = document.getElementById("cliDir").value.trim();
+    if (!dir) { showToast("Ingresa tu dirección"); return; }
+  }
+  if ((pagoSel === "nequi" || pagoSel === "bancolombia") && !compB64) {
+    showToast("Sube el comprobante");
+    return;
+  }
+
+  var btn = document.getElementById("btnEnviar");
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳ Enviando...</span>';
+
+  try {
+    // CRÍTICO: items como STRINGS (formato del backend original) — NO objetos
+    // Esto evita el bug "[object Object]"
+    var items = Object.values(carrito);
+    var itemsStr = items.map(function(ci) {
+      return ci.qty + "x " + ci.nombre + " " + fmt(ci.precio * ci.qty);
+    });
+
+    var subtotal = items.reduce(function(s, x) { return s + (x.precio * x.qty); }, 0);
+    var domi = (tipoPedido === "domicilio") ? (domCalculado || 0) : 0;
+    var desc = 0;
+    if (descTipo === "porcentaje") desc = Math.round(subtotal * descVal / 100);
+    else if (descTipo === "fijo") desc = descVal;
+    var total = subtotal + domi - desc;
+
+    // Subir comprobante primero si aplica
+    var compUrl = null;
+    if (compB64) {
+      try {
+        var compResp = await fetch("/api/subir-comprobante", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ b64: compB64, restaurante_id: rest.id, telefono: tel })
+        });
+        var compData = await compResp.json();
+        if (compData.url) compUrl = compData.url;
+      } catch(e) { console.warn("[comp] subida falló:", e); }
+    }
+
+    // Payload con nombres EXACTOS del backend
+    var payload = {
+      restaurante_id: rest.id,
+      cliente_tel: tel,
+      nombre_cliente: nom,
+      direccion: tipoPedido === "domicilio" ? document.getElementById("cliDir").value.trim() : "",
+      barrio: tipoPedido === "domicilio" ? document.getElementById("cliBarrio").value.trim() : "",
+      tipo_pedido: tipoPedido,
+      metodo_pago: pagoSel,
+      notas_especiales: document.getElementById("cliNotas").value.trim() || null,
+      items: itemsStr,                  // ← Array de strings, NO objetos
+      subtotal: subtotal,
+      domicilio: domi,
+      desechables: 0,
+      descuento: desc,
+      total: total,
+      comprobante_url: compUrl,
+      cupon: descVal > 0 ? document.getElementById("cupCode").value.trim().toUpperCase() : null
+    };
+
+    var r = await fetch("/api/pedido-manual", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    var d = await r.json();
+    if (!d.ok) throw new Error(d.error || "Error al enviar");
+
+    cerrarCheckout();
+    var ptsGanados = Math.floor(total / 1000);
+    mostrarExito(d.numero || "?", nom, ptsGanados);
+  } catch(e) {
+    showToast("❌ " + (e.message || "Error de conexión"));
+    console.error("[enviar] error:", e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span>Enviar pedido por WhatsApp</span>';
+  }
+}
+
+function mostrarExito(num, nombre, ptsGanados) {
+  document.getElementById("exitoTitle").textContent = "Pedido enviado, " + nombre.split(" ")[0];
+  document.getElementById("exitoSub").textContent = tipoPedido === "domicilio"
+    ? "Tu pedido va en camino"
+    : "Tu pedido estará listo para recoger";
+  document.getElementById("exitoNum").textContent = "#" + num;
+  if (ptsGanados > 0) {
+    var p = document.getElementById("exitoPts");
+    p.classList.remove("hide");
+    p.innerHTML = '<span style="font-size:20px">⭐</span><span>Ganaste <b>' + ptsGanados + ' puntos</b> con esta compra</span>';
+  }
+  document.getElementById("exito").classList.add("show");
+}
+
+function nuevoPedido() {
+  carrito = {};
+  compB64 = null;
+  descVal = 0;
+  descTipo = null;
+  pagoSel = null;
+  domCalculado = null;
+  document.getElementById("exito").classList.remove("show");
+  document.getElementById("cliDir").value = "";
+  document.getElementById("cliBarrio").value = "";
+  document.getElementById("cliNotas").value = "";
+  document.getElementById("cupCode").value = "";
+  document.getElementById("cupApplied").innerHTML = "";
+  document.getElementById("uzPrev").style.display = "none";
+  document.getElementById("barrioInfo").innerHTML = "";
+  document.querySelectorAll(".pago-opt.on").forEach(function(el){ el.classList.remove("on"); });
+  document.getElementById("flComp").classList.add("hide");
+  actualizarCarrito();
+  // Scroll al top
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function abrirMisPedidos(){ document.getElementById('mpOv').classList.add('open'); document.body.style.overflow='hidden'; }
 function cerrarMisPedidos(){ document.getElementById('mpOv').classList.remove('open'); document.body.style.overflow=''; }
