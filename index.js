@@ -1380,6 +1380,105 @@ app.get("/api/clasicas", async function(req, res) {
   }
 });
 
+// ═══════════════════════════════════════════════════════════
+// Endpoint: productos para UPSELL
+// Devuelve mezcla de: fijos (es_upsell=true) + top vendidos
+// Filtrado por categorías: Bebidas, Papas, Postres
+// ═══════════════════════════════════════════════════════════
+app.get("/api/upsell", async function(req, res) {
+  if (!req.query.restaurante_id) return res.json([]);
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var restId = req.query.restaurante_id;
+
+    // Items que ya están en el carrito (ignorar estos)
+    var enCarrito = (req.query.in_cart || "").split(",").filter(function(x){ return x; });
+
+    // 1. FIJOS: productos con es_upsell=true
+    var fijosP = axios.get(
+      SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restId +
+      "&es_upsell=eq.true&disponible=eq.true&order=precio.asc&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    ).catch(function() { return { data: [] }; });
+
+    // 2. TOP VENDIDOS dentro de categorías Bebidas/Papas/Postres
+    var topP = axios.get(
+      SUPABASE_URL + "/rest/v1/v_productos_top_vendidos?restaurante_id=eq." + restId +
+      "&or=(categoria.ilike.*bebida*,categoria.ilike.*papa*,categoria.ilike.*postre*,categoria.ilike.*juego*,categoria.ilike.*gaseosa*)" +
+      "&limit=8&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    ).catch(function() { return { data: [] }; });
+
+    var results = await Promise.all([fijosP, topP]);
+    var fijos = (results[0].data || []).map(function(x) { x.origen = "fijo"; return x; });
+    var topVendidos = (results[1].data || []).map(function(x) { x.origen = "top_vendido"; return x; });
+
+    // Combinar: fijos primero, luego top vendidos (sin duplicar)
+    var combinado = [];
+    var seen = {};
+    
+    fijos.forEach(function(p) {
+      if (!seen[p.id] && enCarrito.indexOf(p.id) === -1) {
+        seen[p.id] = true;
+        combinado.push(p);
+      }
+    });
+    
+    topVendidos.forEach(function(p) {
+      if (!seen[p.id] && enCarrito.indexOf(p.id) === -1 && combinado.length < 6) {
+        seen[p.id] = true;
+        combinado.push(p);
+      }
+    });
+
+    // Fallback: si no hay suficientes top vendidos, buscar cualquier bebida/papa/postre disponible
+    if (combinado.length < 3) {
+      var fallbackP = await axios.get(
+        SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restId +
+        "&disponible=eq.true&or=(categoria.ilike.*bebida*,categoria.ilike.*papa*,categoria.ilike.*postre*,categoria.ilike.*gaseosa*)" +
+        "&order=precio.asc&limit=8&select=*",
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+      ).catch(function() { return { data: [] }; });
+
+      (fallbackP.data || []).forEach(function(p) {
+        if (!seen[p.id] && enCarrito.indexOf(p.id) === -1 && combinado.length < 6) {
+          seen[p.id] = true;
+          p.origen = "fallback";
+          combinado.push(p);
+        }
+      });
+    }
+
+    res.json(combinado.slice(0, 6)); // Máximo 6 productos
+  } catch(e) {
+    console.error("[upsell] error:", e.message);
+    res.json([]);
+  }
+});
+
+// Endpoint para registrar eventos de upsell (analytics)
+app.post("/api/upsell-event", async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var payload = {
+      restaurante_id: req.body.restaurante_id,
+      pedido_id: req.body.pedido_id || null,
+      producto_id: req.body.producto_id,
+      producto_nombre: req.body.producto_nombre,
+      producto_precio: req.body.producto_precio,
+      origen: req.body.origen || "fijo",
+      accepted: req.body.accepted === true
+    };
+    await axios.post(SUPABASE_URL + "/rest/v1/upsell_events", payload, {
+      headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" }
+    });
+    res.json({ ok: true });
+  } catch(e) {
+    console.error("[upsell-event] error:", e.message);
+    res.json({ ok: false });
+  }
+});
+
 app.get("/api/zonas", async function(req, res) {
   if (!req.query.restaurante_id) return res.json([]);
   try {
