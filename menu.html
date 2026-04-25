@@ -2485,6 +2485,13 @@ async function cargarMenu() {
     } else {
       console.warn("   ⚠️ NO se encontraron Hamburguesas Tradicionales en /api/menu");
     }
+
+    // Llenar CLASICAS automáticamente con las hamburguesas tradicionales
+    // (ordenadas por precio ascendente para mostrar arriba como sección destacada)
+    CLASICAS = tradicionales.slice().sort(function(a, b) {
+      return (a.precio || 0) - (b.precio || 0);
+    });
+    console.log("   ⭐ CLASICAS para sección destacada:", CLASICAS.length);
   } catch (e) {
     console.error("[menu] Error general:", e);
     menuItems = [];
@@ -2501,16 +2508,24 @@ function renderCategorias() {
   var cats = [];
   var seen = {};
 
-  // Pill "Más Vendidos" si hay top o manuales (esta sí se queda arriba)
+  // Pill "Más Vendidos" si hay top o manuales
   var hayDestacados = TOP_VENDIDOS.length > 0 || MANUALES.length > 0;
   if (hayDestacados) {
     cats.push({ id: "destacados", label: "🔥 Más Vendidos", special: true });
     seen["destacados"] = true;
   }
 
-  // Todas las categorías desde Supabase (incluida "Clásicas de La Curva" como normal)
+  // Pill "⭐ Clásicas" si hay tradicionales (sección destacada dorada)
+  if (CLASICAS.length > 0) {
+    cats.push({ id: "clasicas", label: "⭐ Clásicas", special: true });
+    seen["clasicas"] = true;
+  }
+
+  // Resto de categorías desde Supabase
+  // EXCLUIR Hamburguesas Tradicionales — ya tienen su pill ⭐ Clásicas arriba
   menuItems.forEach(function(i) {
     var cat = i.categoria || "otros";
+    if (String(cat).toLowerCase().indexOf("tradicional") !== -1) return;
     var slug = slugify(cat);
     if (!seen[slug]) {
       seen[slug] = true;
@@ -2572,15 +2587,21 @@ function renderProductos() {
 
   var h = "";
 
-  // ─── Orden: Más Vendidos ARRIBA → Resto de categorías (incluye Clásicas como categoría normal) ───
+  // ─── Orden: Más Vendidos → Las Clásicas → Resto ───
   var mostrarDestacados = (catActiva === "todas" || catActiva === "destacados");
+  var mostrarClasicas = (catActiva === "todas" || catActiva === "clasicas");
 
   if (mostrarDestacados && (TOP_VENDIDOS.length > 0 || MANUALES.length > 0)) {
     h += renderDestacadosSection();
   }
 
-  // Render del resto de categorías (incluyendo Clásicas como categoría normal)
-  if (catActiva !== "destacados") {
+  // Las Clásicas como sección destacada arriba (estilo dorado)
+  if (mostrarClasicas && CLASICAS.length > 0) {
+    h += renderClasicasSection();
+  }
+
+  // Resto de categorías (sin tradicionales para no duplicar)
+  if (catActiva !== "destacados" && catActiva !== "clasicas") {
     h += renderCategoriasNormales();
   }
 
@@ -2639,8 +2660,8 @@ function renderCategoriasNormales() {
   var orden = [];
   menuItems.forEach(function(i) {
     var cat = i.categoria || "Otros";
-    // Saltar clásicas - ya aparecen en la sección destacada arriba
-    if (String(cat).toLowerCase().includes("clásicas") || String(cat).toLowerCase().includes("clasicas")) {
+    // Saltar tradicionales - ya aparecen en la sección destacada arriba
+    if (String(cat).toLowerCase().indexOf("tradicional") !== -1) {
       return;
     }
     if (!grupos[cat]) {
