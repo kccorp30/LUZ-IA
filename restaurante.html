@@ -1968,7 +1968,32 @@ document.getElementById("btnAdd").addEventListener("click",function(){
 // CONSTRUCTOR DE PEDIDO
 var cartItems={},MENU_PROD=[];
 function fmtCOP(n){return"$"+Number(n||0).toLocaleString("es-CO");}
-function cargarProd(){if(!rest||!rest.id)return;fetch(SU+"/rest/v1/menu_items?restaurante_id=eq."+rest.id+"&disponible=eq.true&select=*",{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json();}).then(function(d){MENU_PROD=d||[];}).catch(function(){});}
+function cargarProd(){
+  if(!rest||!rest.id){console.warn("[cargarProd] rest no disponible aún");return;}
+  console.log("[cargarProd] Cargando productos desde /api/menu...");
+  fetch("/api/menu?restaurante_id="+rest.id)
+    .then(function(r){
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      return r.json();
+    })
+    .then(function(d){
+      MENU_PROD = (d||[]).filter(function(p){return p.disponible !== false;});
+      console.log("[cargarProd] ✅ Cargados:",MENU_PROD.length,"productos disponibles");
+    })
+    .catch(function(e){
+      console.error("[cargarProd] ❌ Error /api/menu:",e.message);
+      // Fallback: Supabase directo (por si /api/menu falla)
+      fetch(SU+"/rest/v1/menu_items?restaurante_id=eq."+rest.id+"&disponible=eq.true&select=*",{
+        headers:{"apikey":SK,"Authorization":"Bearer "+SK}
+      })
+      .then(function(r){return r.json();})
+      .then(function(d){
+        MENU_PROD=d||[];
+        console.log("[cargarProd] ✅ Fallback Supabase:",MENU_PROD.length,"productos");
+      })
+      .catch(function(e2){console.error("[cargarProd] ❌ Fallback también falló:",e2.message);});
+    });
+}
 function renderCarrito(){
   var cart=document.getElementById("prodCart"),totEl=document.getElementById("conTotalDisplay");if(!cart)return;
   var items=Object.values(cartItems);
@@ -2642,9 +2667,10 @@ function autoEmoji(nombre){
   var header=document.createElement("div");
   header.className="pei-header";
 header.innerHTML='<div class="pei-emoji">'+(i.emoji||autoEmoji(i.nombre))+'</div>'
-  +'<div class="pei-info"><div class="pei-name">'+i.nombre+(i.en_oferta?" 🔥":"")+(i.es_destacado?" ⭐":"")+'</div>'
+  +'<div class="pei-info"><div class="pei-name">'+i.nombre+(i.en_oferta?" 🔥":"")+(i.es_destacado?" ⭐":"")+(i.es_upsell?" 📌":"")+'</div>'
     +'<div class="pei-meta">'+i.categoria+' · <span style="color:'+(i.disponible?"#34d399":"#fca5a5")+'">'+(i.disponible?"✓ Activo":"✗ Oculto")+'</span>'
     +(i.es_destacado?' · <span style="color:#FFB800">⭐ Destacado</span>':'')
+    +(i.es_upsell?' · <span style="color:#3b82f6">📌 Upsell</span>':'')
     +(imgUrl?' · <span style="color:#a78bfa">📷 Con foto</span>':'')
     +'</div></div>'
     +'<div class="pei-price">'+fmt(i.precio)+'</div>';
@@ -2673,6 +2699,10 @@ header.innerHTML='<div class="pei-emoji">'+(i.emoji||autoEmoji(i.nombre))+'</div
     +'<option value="true"'+((i.es_destacado)?" selected":"")+'">⭐ Sí, destacar</option>'
     +'</select></div>'
     +'<div class="ffield"><label class="flabel">Orden destacado</label><input class="finput" id="pei-ordest-'+i.id+'" type="number" value="'+(i.orden_destacado||0)+'" placeholder="0" title="Menor número = aparece primero"></div></div>'
+    +'<div class="ffield" style="margin-bottom:8px"><label class="flabel">📌 Upsell (aparece en carrito como sugerencia)</label><select class="finput" id="pei-upsell-'+i.id+'">'
+    +'<option value="false"'+((!i.es_upsell)?" selected":"")+'">No</option>'
+    +'<option value="true"'+((i.es_upsell)?" selected":"")+'">📌 Sí, ofrecer en carrito</option>'
+    +'</select></div>'
     +'<div class="ffield" style="margin-bottom:12px"><label class="flabel">Foto del producto</label>'
     +'<div class="foto-upload-wrap">'
     +'<div class="foto-upload-btn'+(imgUrl?" tiene-foto":"")+'" id="fub-'+i.id+'">'
@@ -2701,6 +2731,9 @@ function guardarProdEditor(id,btn){
   var ordEl=document.getElementById("pei-ordest-"+id);
   if(destEl) payload.es_destacado = destEl.value === "true";
   if(ordEl) payload.orden_destacado = Number(ordEl.value) || 0;
+  // Nuevo campo: upsell (sugerencia en carrito)
+  var upsellEl=document.getElementById("pei-upsell-"+id);
+  if(upsellEl) payload.es_upsell = upsellEl.value === "true";
   var imgEl=document.getElementById("pei-img-"+id);
   if(imgEl&&imgEl.value.trim())payload.imagen_url=imgEl.value.trim();
   if(!payload.nombre||!payload.precio){notif("Nombre y precio son obligatorios");return;}
