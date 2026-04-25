@@ -1101,9 +1101,8 @@ app.post("/api/subir-comprobante", async function(req, res) {
     var { imagen_base64, restaurante_id } = req.body;
     if (!imagen_base64) return res.status(400).json({ error: "Sin imagen" });
     
-    // Extraer datos del base64
     var matches = imagen_base64.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
-    if (!matches) return res.status(400).json({ error: "Formato inválido" });
+    if (!matches) return res.status(400).json({ error: "Formato inválido - debe empezar con data:image/..." });
     
     var mimeType = matches[1];
     var base64Data = matches[2];
@@ -1114,7 +1113,8 @@ app.post("/api/subir-comprobante", async function(req, res) {
     
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     
-    // Subir a Supabase Storage bucket 'comprobantes'
+    console.log("[subir-comp] Subiendo", (buffer.length/1024).toFixed(1) + "KB a comprobantes/" + filePath);
+    
     var uploadResp = await axios.post(
       SUPABASE_URL + "/storage/v1/object/comprobantes/" + filePath,
       buffer,
@@ -1131,10 +1131,16 @@ app.post("/api/subir-comprobante", async function(req, res) {
     );
     
     var publicUrl = SUPABASE_URL + "/storage/v1/object/public/comprobantes/" + filePath;
+    console.log("[subir-comp] ✅ Subido:", publicUrl);
     res.json({ ok: true, url: publicUrl });
   } catch(e) {
-    console.error("Error subiendo comprobante:", e.response?.data || e.message);
-    res.status(500).json({ ok: false, error: e.message });
+    console.error("[subir-comp] ❌ Error:", e.response?.data || e.message);
+    // Si el error es que el bucket no existe, intentar crear
+    if (e.response?.status === 404 || (e.response?.data?.message || "").includes("not found")) {
+      console.error("[subir-comp] 🚨 El bucket 'comprobantes' probablemente no existe en Supabase Storage");
+      console.error("[subir-comp] Crea el bucket manualmente en Supabase → Storage → New bucket → nombre: comprobantes → público");
+    }
+    res.status(500).json({ ok: false, error: e.response?.data?.message || e.message });
   }
 });
 
