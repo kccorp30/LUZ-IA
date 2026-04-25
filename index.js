@@ -1139,28 +1139,55 @@ app.post("/api/subir-comprobante", async function(req, res) {
 });
 
 app.post("/api/pedido-manual", async function(req, res) {
-  var { restaurante_id, telefono, items, total, desechables, domicilio, direccion, metodo_pago, notas_especiales } = req.body;
-  if (!restaurante_id || !telefono || !items || !total) return res.status(400).json({ error: "Faltan datos" });
+  var restaurante_id = req.body.restaurante_id;
+  var telefono = req.body.telefono || req.body.cliente_tel;
+  var items = req.body.items;
+  var total = req.body.total;
+  var desechables = req.body.desechables || 0;
+  var domicilio = req.body.domicilio || 0;
+  var direccion = req.body.direccion || "Por confirmar";
+  var metodo_pago = req.body.metodo_pago || "digital";
+  var notas_especiales = req.body.notas_especiales || null;
+  var nombre_cliente = req.body.nombre_cliente || null;
+  var comprobante_url = req.body.comprobante_url || null;
+  var descuento = req.body.descuento || 0;
+  var barrio = req.body.barrio || null;
+  var tipo_pedido = req.body.tipo_pedido || "domicilio";
+
+  if (!restaurante_id || !telefono || !items || !total) return res.status(400).json({ ok: false, error: "Faltan datos: restaurante_id, telefono, items, total" });
   try {
     var num = ++orderCounter;
-    var subtotal = Number(total) - Number(desechables||0) - Number(domicilio||0);
+    var subtotal = req.body.subtotal || (Number(total) - Number(desechables) - Number(domicilio) + Number(descuento));
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-    var payload = {cliente_nombre: req.body.nombre_cliente || null,
-comprobante_url: req.body.comprobante_url || null,
-      restaurante_id, numero_pedido: num,
+    var payload = {
+      restaurante_id: restaurante_id,
+      numero_pedido: num,
       cliente_tel: telefono,
       items: Array.isArray(items) ? items : items.split("\n").filter(function(l){return l.trim();}),
-      subtotal, desechables: Number(desechables||0), domicilio: Number(domicilio||0),
-      total: Number(total), direccion: direccion || "Por confirmar",
-      metodo_pago: metodo_pago || "digital", estado: "confirmado",
-      notas_especiales: notas_especiales || null
+      subtotal: subtotal,
+      desechables: Number(desechables),
+      domicilio: Number(domicilio),
+      total: Number(total),
+      direccion: direccion + (barrio ? " (" + barrio + ")" : ""),
+      metodo_pago: metodo_pago,
+      estado: "confirmado",
+      notas_especiales: notas_especiales
     };
+    // Agregar campos opcionales solo si tienen valor (para no romper si la columna no existe)
+    if (nombre_cliente) payload.cliente_nombre = nombre_cliente;
+    if (comprobante_url) payload.comprobante_url = comprobante_url;
+    if (descuento) payload.descuento = Number(descuento);
+    if (tipo_pedido && tipo_pedido !== "domicilio") payload.tipo_pedido = tipo_pedido;
     var response = await axios.post(SUPABASE_URL + "/rest/v1/pedidos", payload, {
       headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
     });
-    if (direccion) guardarDireccionFrecuente(restaurante_id, telefono, direccion);
-    res.json({ ok: true, numero_pedido: num, id: response.data[0]?.id });
-  } catch (e) { res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message }); }
+    if (direccion && direccion !== "Por confirmar") guardarDireccionFrecuente(restaurante_id, telefono, direccion);
+    console.log("[pedido-manual] ✅ Pedido #" + num + " creado desde menú web | " + nombre_cliente + " | " + metodo_pago + " | $" + total);
+    res.json({ ok: true, numero: num, numero_pedido: num, id: response.data[0]?.id });
+  } catch (e) {
+    console.error("[pedido-manual] ❌ Error:", e.response ? JSON.stringify(e.response.data) : e.message);
+    res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message });
+  }
 });
 
 app.post("/notificar-cliente", async function(req, res) {
