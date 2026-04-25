@@ -2068,6 +2068,267 @@ body::after {
   color: var(--text);
   max-width: 320px;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   MODAL DETALLE DE PRODUCTO
+   ═══════════════════════════════════════════════════════════ */
+.det-img {
+  width: 100%;
+  aspect-ratio: 16/10;
+  background: linear-gradient(135deg, var(--bg-2) 0%, var(--bg-3) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 0 0 20px 20px;
+  margin: -16px -16px 16px;
+  width: calc(100% + 32px);
+}
+
+.det-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.det-img-emoji {
+  font-size: 72px;
+  opacity: 0.4;
+}
+
+.det-name {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.det-desc {
+  font-size: 13px;
+  color: var(--t2);
+  line-height: 1.5;
+  font-weight: 500;
+  margin-bottom: 14px;
+}
+
+.det-price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--brand-2);
+  margin-bottom: 18px;
+}
+
+.det-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--t2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.det-notas {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  resize: none;
+  min-height: 50px;
+  outline: none;
+  margin-bottom: 16px;
+}
+
+.det-notas:focus {
+  border-color: rgba(255,122,26,0.4);
+}
+
+.det-notas::placeholder {
+  color: var(--t3);
+}
+
+.det-qty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.det-qty-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border-2);
+  border-radius: 14px;
+  padding: 3px;
+}
+
+.det-qty-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  background: transparent;
+  transition: all var(--t-fast) var(--ease-out);
+  border: none;
+}
+
+.det-qty-btn:active {
+  background: var(--bg-elev-3);
+  transform: scale(0.92);
+}
+
+.det-qty-num {
+  min-width: 32px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.det-add-btn {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  color: white;
+  font-size: 15px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px var(--brand-glow);
+  transition: all var(--t-fast) var(--ease-out);
+  border: none;
+}
+
+.det-add-btn:active {
+  transform: scale(0.97);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MIS PEDIDOS
+   ═══════════════════════════════════════════════════════════ */
+.mp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mp-card {
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+}
+
+.mp-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.mp-card-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--brand-2);
+}
+
+.mp-card-date {
+  font-size: 11px;
+  color: var(--t3);
+  font-weight: 500;
+}
+
+.mp-card-status {
+  display: inline-flex;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mp-card-status.confirmado { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.mp-card-status.preparando { background: rgba(255,184,0,0.15); color: #FFB800; }
+.mp-card-status.en_camino { background: rgba(168,85,247,0.15); color: #c4b5fd; }
+.mp-card-status.entregado { background: rgba(34,197,94,0.15); color: #34d399; }
+
+.mp-card-items {
+  font-size: 12px;
+  color: var(--t2);
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.mp-card-total {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   REWARDS / PUNTOS
+   ═══════════════════════════════════════════════════════════ */
+.rew-hero {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.rew-pts-big {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 48px;
+  font-weight: 900;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 4px;
+  text-shadow: 0 0 24px rgba(255,184,0,0.3);
+}
+
+.rew-pts-label {
+  font-size: 13px;
+  color: var(--t2);
+  font-weight: 600;
+}
+
+.rew-info {
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  margin-top: 16px;
+}
+
+.rew-info-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.rew-info-text {
+  font-size: 12px;
+  color: var(--t2);
+  line-height: 1.5;
+}
 </style>
 </head>
 <body>
@@ -2179,6 +2440,19 @@ body::after {
   </span>
   <span class="cart-fab-price" id="cartFabPrice">$0</span>
 </button>
+
+<!-- ═══ MODAL DETALLE PRODUCTO ═══ -->
+<div class="sheet-bg" id="detOv">
+  <div class="sheet">
+    <div class="sheet-handle-wrap"><div class="sheet-handle"></div></div>
+    <div class="sheet-head">
+      <div class="sheet-title" id="detTitle">Producto</div>
+      <button class="sheet-close" onclick="cerrarDetalle()">✕</button>
+    </div>
+    <div class="sheet-body" id="detBody"></div>
+    <div class="sheet-foot" id="detFoot"></div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -2308,12 +2582,8 @@ body::after {
       <div class="sheet-title">Mis Pedidos</div>
       <button class="sheet-close" onclick="cerrarMisPedidos()">✕</button>
     </div>
-    <div class="sheet-body">
-      <div class="empty">
-        <div class="empty-ico">📦</div>
-        <div class="empty-txt">En construcción</div>
-        <div class="empty-sub">Se activa en Fase 4</div>
-      </div>
+    <div class="sheet-body" id="mpBody">
+      <div class="empty"><div class="empty-ico">📦</div><div class="empty-txt">Cargando...</div></div>
     </div>
   </div>
 </div>
@@ -2325,12 +2595,8 @@ body::after {
       <div class="sheet-title">⭐ Mis Puntos</div>
       <button class="sheet-close" onclick="cerrarRewards()">✕</button>
     </div>
-    <div class="sheet-body">
-      <div class="empty">
-        <div class="empty-ico">🎁</div>
-        <div class="empty-txt">En construcción</div>
-        <div class="empty-sub">Se activa en Fase 4</div>
-      </div>
+    <div class="sheet-body" id="rewBody">
+      <div class="empty"><div class="empty-ico">⭐</div><div class="empty-txt">Cargando...</div></div>
     </div>
   </div>
 </div>
@@ -2355,7 +2621,15 @@ var busquedaActual = "";
 // ── DESTACADOS dinámicos (cargados desde BD) ──
 var TOP_VENDIDOS = [];       // Top 3 automático por ventas (últimos 30 días)
 var MANUALES = [];           // Hasta 2 marcados como destacados
-var CLASICAS = [];           // Categoría "Clásicas de La Curva"
+var CLASICAS = [
+  { id:"cl_sencilla", nombre:"La Sencilla", descripcion:"Carne artesanal · pan brioche · ripio · queso · lechuga", precio:16900, emoji:"🍔", imagen_url:null, categoria:"Clásicas de La Curva" },
+  { id:"cl_especial", nombre:"La Especial", descripcion:"Carne artesanal · pan brioche · ripio · queso · tocineta · jamón · lechuga", precio:18900, emoji:"🍔", imagen_url:null, categoria:"Clásicas de La Curva" },
+  { id:"cl_pollo", nombre:"La de Pollo", descripcion:"Pan brioche · ripio · lechuga · tomate · filete de pollo · tocineta · jamón", precio:19900, emoji:"🍗", imagen_url:null, categoria:"Clásicas de La Curva" },
+  { id:"cl_queso", nombre:"La Super Queso", descripcion:"Carne artesanal · pan brioche · lechuga · ripio · mucho queso fundido", precio:22900, emoji:"🧀", imagen_url:null, categoria:"Clásicas de La Curva" },
+  { id:"cl_doble", nombre:"La Doble Carne", descripcion:"Dos carnes · pan brioche · queso · tocinetas · jamón", precio:24900, emoji:"🍔", imagen_url:null, categoria:"Clásicas de La Curva" },
+  { id:"cl_curva", nombre:"La Curva", descripcion:"Pan brioche · ripio · lechuga · carne · queso fundido · maicitos · tocineta", precio:29900, emoji:"🔥", imagen_url:null, categoria:"Clásicas de La Curva" },
+  { id:"cl_mega", nombre:"La Mega Especial", descripcion:"Carne artesanal · filetes de pollo · queso · lechuga · tomate · tocineta", precio:37900, emoji:"👑", imagen_url:null, categoria:"Clásicas de La Curva" }
+];
 
 // ── Utilidades ──
 function fmt(n) { return "$" + Number(n||0).toLocaleString("es-CO"); }
@@ -2465,33 +2739,11 @@ async function cargarMenu() {
         return true;
       });
 
-    // Ya no usamos CLASICAS — todo viene en menuItems
-    CLASICAS = [];
-
     console.log("[menu] Cargado:");
     console.log("   📊 Menú completo:", menuItems.length, "productos");
     console.log("   🔥 Top vendidos:", TOP_VENDIDOS.length);
     console.log("   ⭐ Manuales:", MANUALES.length);
-
-    // DIAGNÓSTICO especial: ¿hay tradicionales?
-    var tradicionales = menuItems.filter(function(i) {
-      return String(i.categoria || "").toLowerCase().indexOf("tradicional") !== -1;
-    });
-    console.log("   🍔 Hamburguesas Tradicionales:", tradicionales.length);
-    if (tradicionales.length > 0) {
-      tradicionales.forEach(function(t) {
-        console.log("      → " + t.nombre + " ($" + t.precio + ")");
-      });
-    } else {
-      console.warn("   ⚠️ NO se encontraron Hamburguesas Tradicionales en /api/menu");
-    }
-
-    // Llenar CLASICAS automáticamente con las hamburguesas tradicionales
-    // (ordenadas por precio ascendente para mostrar arriba como sección destacada)
-    CLASICAS = tradicionales.slice().sort(function(a, b) {
-      return (a.precio || 0) - (b.precio || 0);
-    });
-    console.log("   ⭐ CLASICAS para sección destacada:", CLASICAS.length);
+    console.log("   🍔 Clásicas (hardcoded):", CLASICAS.length);
   } catch (e) {
     console.error("[menu] Error general:", e);
     menuItems = [];
@@ -2893,11 +3145,70 @@ function actualizarCarrito() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// DETALLE PRODUCTO (stub para Fase 3/4)
+// MODAL DETALLE DE PRODUCTO
 // ═══════════════════════════════════════════════════════════
+var detQty = 1;
+var detItemId = null;
+
 function abrirDetalleProducto(id) {
-  // Por ahora, solo agregar al carrito al tocar la card (Fase 4 abrirá modal)
-  console.log("[fase4] abrirá modal detalle de:", id);
+  var item = getItemById(id);
+  if (!item) return;
+  detItemId = id;
+  detQty = carrito[id] ? carrito[id].qty : 1;
+  if (detQty < 1) detQty = 1;
+
+  document.getElementById("detTitle").textContent = item.nombre;
+
+  var imgHtml;
+  if (item.imagen_url) {
+    imgHtml = '<img src="' + escHtml(item.imagen_url) + '" onerror="this.parentElement.innerHTML=\'<span class=det-img-emoji>' + (item.emoji || '🍔') + '</span>\'">';
+  } else {
+    imgHtml = '<span class="det-img-emoji">' + (item.emoji || '🍔') + '</span>';
+  }
+
+  var h = '<div class="det-img">' + imgHtml + '</div>';
+  h += '<div class="det-name">' + escHtml(item.nombre) + '</div>';
+  if (item.descripcion) h += '<div class="det-desc">' + escHtml(item.descripcion) + '</div>';
+  h += '<div class="det-price">' + fmt(item.precio) + '</div>';
+  h += '<div class="det-section-title">📝 Notas especiales</div>';
+  h += '<textarea class="det-notas" id="detNotas" placeholder="Ej: sin cebolla, extra queso..."></textarea>';
+
+  document.getElementById("detBody").innerHTML = h;
+  renderDetFoot();
+  document.getElementById("detOv").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function cerrarDetalle() {
+  document.getElementById("detOv").classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+function renderDetFoot() {
+  var item = getItemById(detItemId);
+  if (!item) return;
+  document.getElementById("detFoot").innerHTML = '<div class="det-qty-row">'
+    + '<div class="det-qty-ctrl">'
+    + '<button class="det-qty-btn" onclick="detQty=Math.max(1,detQty-1);renderDetFoot()">−</button>'
+    + '<span class="det-qty-num">' + detQty + '</span>'
+    + '<button class="det-qty-btn" onclick="detQty++;renderDetFoot()">+</button>'
+    + '</div>'
+    + '<button class="det-add-btn" onclick="detAgregar()">'
+    + '<span>Agregar</span><span>' + fmt(item.precio * detQty) + '</span></button></div>';
+}
+
+function detAgregar() {
+  var item = getItemById(detItemId);
+  if (!item) return;
+  var notas = (document.getElementById("detNotas") || {}).value || "";
+  if (!carrito[detItemId]) {
+    carrito[detItemId] = { id: item.id, nombre: item.nombre, precio: item.precio, qty: 0 };
+  }
+  carrito[detItemId].qty = detQty;
+  if (notas.trim()) carrito[detItemId].notas = notas.trim();
+  cerrarDetalle();
+  actualizarCarrito();
+  showToast("✓ " + item.nombre + " × " + detQty);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3416,6 +3727,7 @@ async function enviarPedido() {
     // Subir comprobante primero si aplica
     var compUrl = null;
     if (compB64) {
+      console.log("[comp] Subiendo comprobante...");
       try {
         var compResp = await fetch("/api/subir-comprobante", {
           method: "POST",
@@ -3423,8 +3735,19 @@ async function enviarPedido() {
           body: JSON.stringify({ imagen_base64: "data:image/jpeg;base64," + compB64, restaurante_id: rest.id, telefono: tel })
         });
         var compData = await compResp.json();
-        if (compData.url) compUrl = compData.url;
-      } catch(e) { console.warn("[comp] subida falló:", e); }
+        console.log("[comp] Respuesta:", JSON.stringify(compData));
+        if (compData.url) {
+          compUrl = compData.url;
+          console.log("[comp] ✅ URL:", compUrl);
+        } else if (compData.error) {
+          console.error("[comp] ❌ Error del servidor:", compData.error);
+          // Fallback: guardar como data URI directamente
+          compUrl = "data:image/jpeg;base64," + compB64.substring(0, 100) + "...";
+          console.warn("[comp] ⚠️ Usando fallback - comprobante no se subió al storage");
+        }
+      } catch(e) {
+        console.error("[comp] ❌ Error de red:", e);
+      }
     }
 
     // Payload con nombres EXACTOS del backend
@@ -3502,10 +3825,114 @@ function nuevoPedido() {
   // Scroll al top
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
-function abrirMisPedidos(){ document.getElementById('mpOv').classList.add('open'); document.body.style.overflow='hidden'; }
-function cerrarMisPedidos(){ document.getElementById('mpOv').classList.remove('open'); document.body.style.overflow=''; }
-function abrirRewards(){ document.getElementById('rewOv').classList.add('open'); document.body.style.overflow='hidden'; }
-function cerrarRewards(){ document.getElementById('rewOv').classList.remove('open'); document.body.style.overflow=''; }
+function abrirMisPedidos() {
+  document.getElementById('mpOv').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  cargarMisPedidos();
+}
+function cerrarMisPedidos() { document.getElementById('mpOv').classList.remove('open'); document.body.style.overflow = ''; }
+
+async function cargarMisPedidos() {
+  var body = document.getElementById("mpBody");
+  body.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-txt">Cargando...</div></div>';
+  var tel = "";
+  try { tel = localStorage.getItem("luzCli_" + (rest ? rest.id : "")) || ""; } catch(e) {}
+  if (!tel) {
+    body.innerHTML = '<div class="empty"><div class="empty-ico">📱</div><div class="empty-txt">Ingresa tu WhatsApp para ver pedidos</div>'
+      + '<div style="padding:16px 0"><input type="tel" class="fld-input" id="mpTelInput" placeholder="3001234567" maxlength="10">'
+      + '<button class="btn-md primary" style="margin-top:8px;width:100%" onclick="buscarPedidosPorTel()">Buscar mis pedidos</button></div></div>';
+    return;
+  }
+  await fetchPedidos(tel);
+}
+
+function buscarPedidosPorTel() {
+  var tel = (document.getElementById("mpTelInput") || {}).value || "";
+  if (tel.length !== 10) { showToast("Ingresa 10 dígitos"); return; }
+  try { localStorage.setItem("luzCli_" + rest.id, tel); } catch(e) {}
+  fetchPedidos(tel);
+}
+
+async function fetchPedidos(tel) {
+  var body = document.getElementById("mpBody");
+  try {
+    var r = await fetch(SU + "/rest/v1/pedidos?cliente_tel=eq." + tel + "&restaurante_id=eq." + rest.id + "&order=created_at.desc&limit=20&select=numero_pedido,items,total,estado,created_at,metodo_pago", {
+      headers: { "apikey": SK, "Authorization": "Bearer " + SK }
+    });
+    var pedidos = await r.json();
+    if (!pedidos || !pedidos.length) {
+      body.innerHTML = '<div class="empty"><div class="empty-ico">📭</div><div class="empty-txt">Aún no tienes pedidos</div><div class="empty-sub">Haz tu primer pedido desde el menú</div></div>';
+      return;
+    }
+    var h = '<div class="mp-list">';
+    pedidos.forEach(function(p) {
+      var fecha = new Date(p.created_at);
+      var fechaStr = fecha.toLocaleDateString("es-CO", { day:"numeric", month:"short" }) + " " + fecha.toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit" });
+      var estado = p.estado || "confirmado";
+      var estadoLabel = { confirmado:"Confirmado", preparando:"Preparando", en_camino:"En camino", entregado:"Entregado" };
+      var itemsStr = "";
+      try {
+        var its = Array.isArray(p.items) ? p.items : JSON.parse(p.items);
+        itemsStr = its.map(function(i) { return typeof i === "string" ? i : (i.qty + "x " + i.nombre); }).join(" · ");
+      } catch(e) { itemsStr = String(p.items || ""); }
+      h += '<div class="mp-card"><div class="mp-card-head"><div class="mp-card-num">#' + (p.numero_pedido || "?") + '</div><div class="mp-card-date">' + fechaStr + '</div></div>'
+        + '<div class="mp-card-status ' + estado + '">' + (estadoLabel[estado] || estado) + '</div>'
+        + '<div class="mp-card-items">' + escHtml(itemsStr).substring(0, 120) + '</div>'
+        + '<div class="mp-card-total">' + fmt(p.total) + '</div></div>';
+    });
+    h += '</div>';
+    body.innerHTML = h;
+  } catch(e) {
+    body.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-txt">Error cargando pedidos</div></div>';
+  }
+}
+
+function abrirRewards() {
+  document.getElementById('rewOv').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  cargarRewards();
+}
+function cerrarRewards() { document.getElementById('rewOv').classList.remove('open'); document.body.style.overflow = ''; }
+
+async function cargarRewards() {
+  var body = document.getElementById("rewBody");
+  body.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-txt">Cargando...</div></div>';
+  var tel = "";
+  try { tel = localStorage.getItem("luzCli_" + (rest ? rest.id : "")) || ""; } catch(e) {}
+  if (!tel) {
+    body.innerHTML = '<div class="empty"><div class="empty-ico">📱</div><div class="empty-txt">Ingresa tu WhatsApp para ver tus puntos</div>'
+      + '<div style="padding:16px 0"><input type="tel" class="fld-input" id="rewTelInput" placeholder="3001234567" maxlength="10">'
+      + '<button class="btn-md primary" style="margin-top:8px;width:100%" onclick="buscarRewardsPorTel()">Ver mis puntos</button></div></div>';
+    return;
+  }
+  await fetchRewards(tel);
+}
+
+function buscarRewardsPorTel() {
+  var tel = (document.getElementById("rewTelInput") || {}).value || "";
+  if (tel.length !== 10) { showToast("Ingresa 10 dígitos"); return; }
+  try { localStorage.setItem("luzCli_" + rest.id, tel); } catch(e) {}
+  fetchRewards(tel);
+}
+
+async function fetchRewards(tel) {
+  var body = document.getElementById("rewBody");
+  try {
+    var r = await fetch("/api/cliente/" + tel);
+    var cli = await r.json();
+    var puntos = (cli && cli.puntos) ? cli.puntos : 0;
+    var nombre = (cli && cli.nombre) ? cli.nombre : "";
+    var h = '<div class="rew-hero"><div class="rew-pts-big">' + puntos + '</div><div class="rew-pts-label">puntos acumulados</div>';
+    if (nombre) h += '<div style="margin-top:6px;font-size:13px;color:var(--t2)">Hola, ' + escHtml(nombre) + '</div>';
+    h += '</div><div class="rew-info"><div class="rew-info-title">¿Cómo funcionan los puntos?</div>'
+      + '<div class="rew-info-text">🛒 Ganas <b>1 punto por cada $1.000</b> en compras<br>'
+      + '🎁 Acumula puntos y canjéalos por descuentos<br>'
+      + '⭐ Mientras más compres, más puntos acumulas</div></div>';
+    body.innerHTML = h;
+  } catch(e) {
+    body.innerHTML = '<div class="rew-hero"><div class="rew-pts-big">0</div><div class="rew-pts-label">puntos</div></div>';
+  }
+}
 
 // ═══════════════════════════════════════════════════════════
 // DRAG-TO-DISMISS sheets
@@ -3576,16 +4003,31 @@ window.addEventListener("load", async function() {
   }
 
   try {
-    var url = restId
-      ? SU + "/rest/v1/restaurantes?id=eq." + restId + "&select=*"
-      : SU + "/rest/v1/restaurantes?estado=eq.activo&limit=1&select=*";
-    var r = await fetch(url, {
-      headers: { "apikey": SK, "Authorization": "Bearer " + SK }
-    });
+    // Cargar restaurante desde el backend (no Supabase directo)
+    var restUrl = restId
+      ? "/api/restaurante?id=" + restId
+      : "/api/restaurante";
+    var r = await fetch(restUrl);
+    if (!r.ok) throw new Error("HTTP " + r.status);
     var d = await r.json();
-    rest = Array.isArray(d) && d.length ? d[0] : null;
+    rest = Array.isArray(d) ? (d.length ? d[0] : null) : (d || null);
+    console.log("[init] Restaurante:", rest ? rest.nombre : "NO ENCONTRADO");
   } catch (e) {
-    console.error("[init] Error cargando restaurante:", e);
+    console.warn("[init] /api/restaurante falló, intentando Supabase directo...", e.message);
+    // Fallback: Supabase directo
+    try {
+      var url = restId
+        ? SU + "/rest/v1/restaurantes?id=eq." + restId + "&select=*"
+        : SU + "/rest/v1/restaurantes?estado=eq.activo&limit=1&select=*";
+      var r2 = await fetch(url, {
+        headers: { "apikey": SK, "Authorization": "Bearer " + SK }
+      });
+      var d2 = await r2.json();
+      rest = Array.isArray(d2) && d2.length ? d2[0] : null;
+      console.log("[init] Fallback Supabase:", rest ? rest.nombre : "NO ENCONTRADO");
+    } catch (e2) {
+      console.error("[init] Ambos métodos fallaron:", e2.message);
+    }
   }
 
   if (!rest) {
