@@ -3420,7 +3420,7 @@ async function enviarPedido() {
         var compResp = await fetch("/api/subir-comprobante", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ b64: compB64, restaurante_id: rest.id, telefono: tel })
+          body: JSON.stringify({ imagen_base64: "data:image/jpeg;base64," + compB64, restaurante_id: rest.id, telefono: tel })
         });
         var compData = await compResp.json();
         if (compData.url) compUrl = compData.url;
