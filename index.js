@@ -1195,14 +1195,19 @@ app.post("/api/pedido-manual", async function(req, res) {
     // ══ SUMAR PUNTOS al cliente ══
     try {
       var telLocal = telefono.replace(/^57/, "");
-      var countResp = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id + "&cliente_tel=eq." + encodeURIComponent(telefono) + "&select=id", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+      // Contar pedidos del cliente (buscar con y sin indicativo)
+      var countResp = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id + "&or=(cliente_tel.eq." + encodeURIComponent(telefono) + ",cliente_tel.eq." + encodeURIComponent(telLocal) + ")&select=id", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
       var totalPedidos = (countResp.data || []).length;
       var nivel = totalPedidos >= 25 ? "oro" : totalPedidos >= 10 ? "plata" : "bronce";
-      var puntos = Math.floor(Number(total) / 1000);
+      var puntosNuevos = Math.floor(Number(total) / 1000);
+      // Leer puntos actuales para SUMAR (no sobrescribir)
+      var cliActual = await axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante_id + "&telefono=eq." + encodeURIComponent(telLocal) + "&select=puntos", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+      var puntosActuales = (cliActual.data && cliActual.data[0] && cliActual.data[0].puntos) ? cliActual.data[0].puntos : 0;
+      var puntosTotal = puntosActuales + puntosNuevos;
       await axios.post(SUPABASE_URL + "/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",
-        { restaurante_id: restaurante_id, telefono: telLocal, nombre_cliente: nombre_cliente, total_pedidos: totalPedidos, nivel_fidelidad: nivel, puntos: puntos, updated_at: new Date().toISOString() },
+        { restaurante_id: restaurante_id, telefono: telLocal, nombre_cliente: nombre_cliente, total_pedidos: totalPedidos, nivel_fidelidad: nivel, puntos: puntosTotal, updated_at: new Date().toISOString() },
         { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } });
-      console.log("[pedido-manual] ✅ Cliente " + telLocal + " -> " + totalPedidos + " pedidos, nivel: " + nivel + ", +" + puntos + " puntos");
+      console.log("[pedido-manual] ✅ Cliente " + telLocal + " -> " + totalPedidos + " pedidos, nivel: " + nivel + ", puntos: " + puntosActuales + " + " + puntosNuevos + " = " + puntosTotal);
     } catch(e) { console.error("[pedido-manual] Error actualizando cliente:", e.message); }
 
     // ══ ENVIAR CONFIRMACIÓN POR WHATSAPP ══
