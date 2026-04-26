@@ -2226,44 +2226,52 @@ body::after {
 .mp-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
+/* Card pedido activo (el más reciente no entregado) */
 .mp-card {
-  padding: 14px;
-  border-radius: 14px;
+  padding: 16px;
+  border-radius: 16px;
   background: var(--bg-elev);
   border: 1px solid var(--border);
+  transition: all var(--t-fast) var(--ease-out);
+}
+
+.mp-card.activo {
+  border-color: rgba(255,122,26,0.35);
+  background: linear-gradient(180deg, rgba(255,122,26,0.06) 0%, var(--bg-elev) 100%);
 }
 
 .mp-card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .mp-card-num {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--brand-2);
 }
 
 .mp-card-date {
   font-size: 11px;
-  color: var(--t3);
-  font-weight: 500;
+  color: var(--t2);
+  font-weight: 600;
 }
 
 .mp-card-status {
   display: inline-flex;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
+  margin-bottom: 10px;
 }
 
 .mp-card-status.confirmado { background: rgba(59,130,246,0.20); color: #93bbfd; border: 1px solid rgba(59,130,246,0.3); }
@@ -2271,19 +2279,123 @@ body::after {
 .mp-card-status.en_camino { background: rgba(168,85,247,0.20); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); }
 .mp-card-status.entregado { background: rgba(34,197,94,0.20); color: #6ee7b7; border: 1px solid rgba(34,197,94,0.3); }
 
+/* ── Tracking visual (pasos) ── */
+.mp-track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 14px 0;
+  padding: 0 4px;
+}
+
+.mp-track-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+}
+
+.mp-track-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-elev-2);
+  border: 2px solid var(--border-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  z-index: 2;
+  transition: all 300ms var(--ease-out);
+}
+
+.mp-track-step.done .mp-track-dot {
+  background: linear-gradient(135deg, var(--success) 0%, #16A34A 100%);
+  border-color: var(--success);
+  color: white;
+  box-shadow: 0 2px 8px rgba(34,197,94,0.35);
+}
+
+.mp-track-step.current .mp-track-dot {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  border-color: var(--brand);
+  color: white;
+  box-shadow: 0 2px 10px var(--brand-glow);
+  animation: dotPulse 1.5s var(--ease-smooth) infinite alternate;
+}
+
+.mp-track-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--t3);
+  text-align: center;
+  letter-spacing: 0.03em;
+}
+
+.mp-track-step.done .mp-track-label,
+.mp-track-step.current .mp-track-label {
+  color: var(--t2);
+}
+
+.mp-track-line {
+  flex: 1;
+  height: 2px;
+  background: var(--border-2);
+  margin: 0 -2px;
+  margin-top: -18px;
+  z-index: 1;
+}
+
+.mp-track-line.done {
+  background: var(--success);
+}
+
 .mp-card-items {
   font-size: 13px;
   color: var(--text);
-  line-height: 1.5;
-  margin: 8px 0;
+  line-height: 1.6;
+  margin: 10px 0;
   font-weight: 500;
+}
+
+.mp-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
 
 .mp-card-total {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--brand-2);
+}
+
+.mp-card-pago {
+  font-size: 11px;
+  color: var(--t2);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mp-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 18px 0 8px;
+}
+
+.mp-section-title:first-child {
+  margin-top: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -3877,10 +3989,12 @@ function buscarPedidosPorTel() {
   fetchPedidos(tel);
 }
 
+var mpRefreshInterval = null;
+
 async function fetchPedidos(tel) {
   var body = document.getElementById("mpBody");
   try {
-    var r = await fetch(SU + "/rest/v1/pedidos?cliente_tel=eq." + tel + "&restaurante_id=eq." + rest.id + "&order=created_at.desc&limit=20&select=numero_pedido,items,total,estado,created_at,metodo_pago", {
+    var r = await fetch(SU + "/rest/v1/pedidos?or=(cliente_tel.eq." + tel + ",cliente_tel.eq.57" + tel + ")&restaurante_id=eq." + rest.id + "&order=created_at.desc&limit=20&select=numero_pedido,items,total,estado,created_at,metodo_pago,direccion,tipo_pedido,notas_especiales", {
       headers: { "apikey": SK, "Authorization": "Bearer " + SK }
     });
     var pedidos = await r.json();
@@ -3888,27 +4002,93 @@ async function fetchPedidos(tel) {
       body.innerHTML = '<div class="empty"><div class="empty-ico">📭</div><div class="empty-txt">Aún no tienes pedidos</div><div class="empty-sub">Haz tu primer pedido desde el menú</div></div>';
       return;
     }
-    var h = '<div class="mp-list">';
-    pedidos.forEach(function(p) {
-      var fecha = new Date(p.created_at);
-      var fechaStr = fecha.toLocaleDateString("es-CO", { day:"numeric", month:"short" }) + " " + fecha.toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit" });
-      var estado = p.estado || "confirmado";
-      var estadoLabel = { confirmado:"Confirmado", preparando:"Preparando", en_camino:"En camino", entregado:"Entregado" };
-      var itemsStr = "";
-      try {
-        var its = Array.isArray(p.items) ? p.items : JSON.parse(p.items);
-        itemsStr = its.map(function(i) { return typeof i === "string" ? i : (i.qty + "x " + i.nombre); }).join(" · ");
-      } catch(e) { itemsStr = String(p.items || ""); }
-      h += '<div class="mp-card"><div class="mp-card-head"><div class="mp-card-num">#' + (p.numero_pedido || "?") + '</div><div class="mp-card-date">' + fechaStr + '</div></div>'
-        + '<div class="mp-card-status ' + estado + '">' + (estadoLabel[estado] || estado) + '</div>'
-        + '<div class="mp-card-items">' + escHtml(itemsStr).substring(0, 120) + '</div>'
-        + '<div class="mp-card-total">' + fmt(p.total) + '</div></div>';
-    });
-    h += '</div>';
+
+    // Separar: activos (no entregados) vs historial
+    var activos = pedidos.filter(function(p) { return p.estado !== "entregado"; });
+    var historial = pedidos.filter(function(p) { return p.estado === "entregado"; });
+
+    var h = '';
+
+    // ── PEDIDOS ACTIVOS con tracking ──
+    if (activos.length > 0) {
+      h += '<div class="mp-section-title">📍 Pedido en curso</div>';
+      h += '<div class="mp-list">';
+      activos.forEach(function(p) {
+        h += renderPedidoCard(p, true);
+      });
+      h += '</div>';
+
+      // Auto-refresh cada 15 segundos si hay pedidos activos
+      clearInterval(mpRefreshInterval);
+      mpRefreshInterval = setInterval(function() {
+        if (document.getElementById("mpOv").classList.contains("open")) {
+          fetchPedidos(tel);
+        } else {
+          clearInterval(mpRefreshInterval);
+        }
+      }, 15000);
+    }
+
+    // ── HISTORIAL ──
+    if (historial.length > 0) {
+      h += '<div class="mp-section-title">📋 Historial</div>';
+      h += '<div class="mp-list">';
+      historial.slice(0, 10).forEach(function(p) {
+        h += renderPedidoCard(p, false);
+      });
+      h += '</div>';
+    }
+
     body.innerHTML = h;
   } catch(e) {
+    console.error("[misPedidos]", e);
     body.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-txt">Error cargando pedidos</div></div>';
   }
+}
+
+function renderPedidoCard(p, esActivo) {
+  var fecha = new Date(p.created_at);
+  var fechaStr = fecha.toLocaleDateString("es-CO", { day:"numeric", month:"short" }) + " " + fecha.toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit" });
+  var estado = p.estado || "confirmado";
+  var estadoLabel = { confirmado:"Recibido", preparando:"Preparando", en_camino:"En camino", entregado:"Entregado" };
+  var estadoEmoji = { confirmado:"📋", preparando:"👨‍🍳", en_camino:"🛵", entregado:"✅" };
+
+  var itemsStr = "";
+  try {
+    var its = Array.isArray(p.items) ? p.items : JSON.parse(p.items);
+    itemsStr = its.map(function(i) { return typeof i === "string" ? i : (i.qty + "x " + i.nombre); }).join("<br>");
+  } catch(e) { itemsStr = String(p.items || ""); }
+
+  var pagoLabel = { efectivo:"💵 Efectivo", nequi:"📱 Nequi", bancolombia:"🏦 Bancolombia", datafono:"💳 Datáfono" };
+
+  var h = '<div class="mp-card' + (esActivo ? " activo" : "") + '">';
+  h += '<div class="mp-card-head"><div class="mp-card-num">#' + (p.numero_pedido || "?") + '</div><div class="mp-card-date">' + fechaStr + '</div></div>';
+  h += '<div class="mp-card-status ' + estado + '">' + (estadoEmoji[estado] || "") + " " + (estadoLabel[estado] || estado) + '</div>';
+
+  // Tracking visual solo para pedidos activos
+  if (esActivo) {
+    var pasos = ["confirmado", "preparando", "en_camino", "entregado"];
+    var idxActual = pasos.indexOf(estado);
+    h += '<div class="mp-track">';
+    pasos.forEach(function(paso, i) {
+      var cls = i < idxActual ? "done" : i === idxActual ? "current" : "";
+      var ico = i < idxActual ? "✓" : (estadoEmoji[paso] || "");
+      var labels = { confirmado:"Recibido", preparando:"Preparando", en_camino:"En camino", entregado:"Entregado" };
+      h += '<div class="mp-track-step ' + cls + '"><div class="mp-track-dot">' + ico + '</div><div class="mp-track-label">' + labels[paso] + '</div></div>';
+      if (i < pasos.length - 1) {
+        h += '<div class="mp-track-line' + (i < idxActual ? " done" : "") + '"></div>';
+      }
+    });
+    h += '</div>';
+  }
+
+  h += '<div class="mp-card-items">' + itemsStr + '</div>';
+  h += '<div class="mp-card-bottom">';
+  h += '<div class="mp-card-total">' + fmt(p.total) + '</div>';
+  h += '<div class="mp-card-pago">' + (pagoLabel[p.metodo_pago] || p.metodo_pago || "") + '</div>';
+  h += '</div>';
+  h += '</div>';
+  return h;
 }
 
 function abrirRewards() {
