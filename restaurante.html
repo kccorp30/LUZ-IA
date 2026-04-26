@@ -1387,6 +1387,8 @@ function loadPedidos(){
       if(esAdicional)h+='<div style="padding:8px 16px"><span class="adicional-badge">➕ ADICIONAL al pedido #'+p.pedido_adicional_de+'</span></div>';
       if(esRecoger)h+='<div style="background:linear-gradient(90deg,rgba(245,158,11,0.25),rgba(245,158,11,0.1));padding:10px 16px;font-size:13px;font-weight:800;color:#fcd34d;display:flex;align-items:center;gap:8px;"><span style="font-size:18px">🏂</span> PEDIDO PARA RECOGER EN TIENDA</div>';
       h+='<div class="ph"><div><div class="pnum">#'+p.numero_pedido+'</div><div class="ptime">'+ago(p.created_at)+'</div></div><span class="etag '+cfg.c+'">'+cfg.l+'</span></div>';
+      // Badge canal: web vs whatsapp
+      if(p.canal==="web")h+='<div style="padding:4px 16px 2px;"><span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);font-size:10px;font-weight:800;color:#93bbfd;letter-spacing:0.05em">🌐 MENÚ WEB</span></div>';
       if(p.cliente_nombre||p.cliente_nivel){
         var niv=p.cliente_nivel||"bronce";
         var nivIcos={oro:"🥇",plata:"🥈",bronce:"🥉"};
