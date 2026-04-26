@@ -55,7 +55,7 @@ async function enviarPushPorRol(restauranteId, rol, payload) {
   } catch (e) { console.error("enviarPush error:", e.message); }
 }
 app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 // Forzar HTTPS en Railway
 app.use((req, res, next) => {
   if (req.headers['x-forwarded-proto'] === 'http') {
