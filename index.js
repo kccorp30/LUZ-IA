@@ -1165,11 +1165,12 @@ app.post("/api/pedido-manual", async function(req, res) {
     var num = ++orderCounter;
     var subtotal = req.body.subtotal || (Number(total) - Number(desechables) - Number(domicilio) + Number(descuento));
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var itemsArr = Array.isArray(items) ? items : items.split("\n").filter(function(l){return l.trim();});
     var payload = {
       restaurante_id: restaurante_id,
       numero_pedido: num,
       cliente_tel: telefono,
-      items: Array.isArray(items) ? items : items.split("\n").filter(function(l){return l.trim();}),
+      items: itemsArr,
       subtotal: subtotal,
       desechables: Number(desechables),
       domicilio: Number(domicilio),
@@ -1177,18 +1178,51 @@ app.post("/api/pedido-manual", async function(req, res) {
       direccion: direccion + (barrio ? " (" + barrio + ")" : ""),
       metodo_pago: metodo_pago,
       estado: "confirmado",
-      notas_especiales: notas_especiales
+      notas_especiales: notas_especiales,
+      canal: "web"
     };
-    // Agregar campos opcionales solo si tienen valor (para no romper si la columna no existe)
     if (nombre_cliente) payload.cliente_nombre = nombre_cliente;
     if (comprobante_url) payload.comprobante_url = comprobante_url;
     if (descuento) payload.descuento = Number(descuento);
-    if (tipo_pedido && tipo_pedido !== "domicilio") payload.tipo_pedido = tipo_pedido;
+    if (tipo_pedido) payload.tipo_pedido = tipo_pedido;
+    
     var response = await axios.post(SUPABASE_URL + "/rest/v1/pedidos", payload, {
       headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
     });
     if (direccion && direccion !== "Por confirmar") guardarDireccionFrecuente(restaurante_id, telefono, direccion);
-    console.log("[pedido-manual] ✅ Pedido #" + num + " creado desde menú web | " + nombre_cliente + " | " + metodo_pago + " | $" + total);
+    console.log("[pedido-manual] ✅ Pedido #" + num + " desde WEB | " + nombre_cliente + " | " + metodo_pago + " | $" + total);
+
+    // ══ SUMAR PUNTOS al cliente ══
+    try {
+      var telLocal = telefono.replace(/^57/, "");
+      var countResp = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id + "&cliente_tel=eq." + encodeURIComponent(telefono) + "&select=id", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+      var totalPedidos = (countResp.data || []).length;
+      var nivel = totalPedidos >= 25 ? "oro" : totalPedidos >= 10 ? "plata" : "bronce";
+      var puntos = Math.floor(Number(total) / 1000);
+      await axios.post(SUPABASE_URL + "/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",
+        { restaurante_id: restaurante_id, telefono: telLocal, nombre_cliente: nombre_cliente, total_pedidos: totalPedidos, nivel_fidelidad: nivel, puntos: puntos, updated_at: new Date().toISOString() },
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } });
+      console.log("[pedido-manual] ✅ Cliente " + telLocal + " -> " + totalPedidos + " pedidos, nivel: " + nivel + ", +" + puntos + " puntos");
+    } catch(e) { console.error("[pedido-manual] Error actualizando cliente:", e.message); }
+
+    // ══ ENVIAR CONFIRMACIÓN POR WHATSAPP ══
+    try {
+      var restData = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=whatsapp_phone_id,nombre", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+      var restInfo = restData.data && restData.data[0];
+      if (restInfo && restInfo.whatsapp_phone_id) {
+        var itemsResumen = itemsArr.slice(0, 5).join("\n• ");
+        var msgCliente = "✅ *Pedido #" + num + " confirmado*\n\n"
+          + "Hola" + (nombre_cliente ? " " + nombre_cliente.split(" ")[0] : "") + ", tu pedido ha sido recibido.\n\n"
+          + "📋 *Resumen:*\n• " + itemsResumen + "\n\n"
+          + "💰 *Total:* $" + Number(total).toLocaleString("es-CO") + "\n"
+          + "💳 *Pago:* " + metodo_pago + "\n"
+          + (tipo_pedido === "domicilio" ? "🛵 *Domicilio a:* " + direccion + (barrio ? " (" + barrio + ")" : "") + "\n" : "🏪 *Para recoger en el local*\n")
+          + "\nTe avisaremos cuando esté listo. Si necesitas algo, escríbenos por aquí.";
+        await sendWhatsAppMessage(telefono, msgCliente, restInfo.whatsapp_phone_id);
+        console.log("[pedido-manual] ✅ WhatsApp enviado a " + telefono);
+      }
+    } catch(e) { console.error("[pedido-manual] Error enviando WhatsApp:", e.message); }
+
     res.json({ ok: true, numero: num, numero_pedido: num, id: response.data[0]?.id });
   } catch (e) {
     console.error("[pedido-manual] ❌ Error:", e.response ? JSON.stringify(e.response.data) : e.message);
