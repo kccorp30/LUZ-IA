@@ -2266,23 +2266,24 @@ body::after {
   text-transform: uppercase;
 }
 
-.mp-card-status.confirmado { background: rgba(59,130,246,0.15); color: #60a5fa; }
-.mp-card-status.preparando { background: rgba(255,184,0,0.15); color: #FFB800; }
-.mp-card-status.en_camino { background: rgba(168,85,247,0.15); color: #c4b5fd; }
-.mp-card-status.entregado { background: rgba(34,197,94,0.15); color: #34d399; }
+.mp-card-status.confirmado { background: rgba(59,130,246,0.20); color: #93bbfd; border: 1px solid rgba(59,130,246,0.3); }
+.mp-card-status.preparando { background: rgba(255,184,0,0.20); color: #FFD466; border: 1px solid rgba(255,184,0,0.3); }
+.mp-card-status.en_camino { background: rgba(168,85,247,0.20); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); }
+.mp-card-status.entregado { background: rgba(34,197,94,0.20); color: #6ee7b7; border: 1px solid rgba(34,197,94,0.3); }
 
 .mp-card-items {
-  font-size: 12px;
-  color: var(--t2);
+  font-size: 13px;
+  color: var(--text);
   line-height: 1.5;
-  margin-bottom: 6px;
+  margin: 8px 0;
+  font-weight: 500;
 }
 
 .mp-card-total {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--brand-2);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -3472,17 +3473,19 @@ function checkCliente() {
   }
   chkTimer = setTimeout(async function() {
     try {
-      var r = await fetch("/api/cliente/" + tel);
-      var d = await r.json();
-      if (d && d.nombre) {
+      var r = await fetch("/api/cliente/" + tel + "?restaurante_id=" + rest.id);
+      var data = await r.json();
+      var d = data.cliente || data;
+      if (d && (d.nombre_cliente || d.nombre)) {
         clienteData = d;
-        document.getElementById("cliNom").value = d.nombre;
+        var nombre = d.nombre_cliente || d.nombre;
+        document.getElementById("cliNom").value = nombre;
         var card = document.getElementById("cliCard");
         card.className = "cli-card";
         card.innerHTML = '<div class="cli-card-ico">👤</div>'
           + '<div class="cli-card-body">'
-          + '<div class="cli-card-name">Hola, ' + escHtml(d.nombre) + '</div>'
-          + '<div class="cli-card-pts">⭐ ' + (d.puntos || 0) + ' puntos acumulados</div>'
+          + '<div class="cli-card-name">Hola, ' + escHtml(nombre) + '</div>'
+          + '<div class="cli-card-pts">⭐ ' + (d.puntos || 0) + ' puntos · ' + (d.nivel_fidelidad || "bronce") + '</div>'
           + '</div>';
         try { localStorage.setItem("luzCli_" + rest.id, tel); } catch(e) {}
       }
@@ -3664,12 +3667,22 @@ function actualizarTotalesCheckout() {
   var items = Object.values(carrito);
   var subtotal = items.reduce(function(s, x) { return s + (x.precio * x.qty); }, 0);
   var domi = (tipoPedido === "domicilio") ? (domCalculado || 0) : 0;
+  var desech = 0;
+  items.forEach(function(ci) {
+    var item = getItemById(ci.id);
+    if (item && !item.es_bebida && !item.es_arepa && !String(item.categoria||"").toLowerCase().includes("bebida") && !String(item.categoria||"").toLowerCase().includes("arepa")) {
+      desech += 500 * ci.qty;
+    }
+  });
   var desc = 0;
   if (descTipo === "porcentaje") desc = Math.round(subtotal * descVal / 100);
   else if (descTipo === "fijo") desc = descVal;
-  var total = subtotal + domi - desc;
+  var total = subtotal + desech + domi - desc;
 
   var h = '<div class="cart-total-row"><span>Subtotal</span><span class="val">' + fmt(subtotal) + '</span></div>';
+  if (desech > 0) {
+    h += '<div class="cart-total-row"><span>Desechables</span><span class="val">' + fmt(desech) + '</span></div>';
+  }
   if (tipoPedido === "domicilio") {
     if (domi > 0) {
       h += '<div class="cart-total-row"><span>Domicilio</span><span class="val">' + fmt(domi) + '</span></div>';
@@ -3714,15 +3727,26 @@ async function enviarPedido() {
     // Esto evita el bug "[object Object]"
     var items = Object.values(carrito);
     var itemsStr = items.map(function(ci) {
-      return ci.qty + "x " + ci.nombre + " " + fmt(ci.precio * ci.qty);
+      var line = ci.qty + "x " + ci.nombre + " " + fmt(ci.precio * ci.qty);
+      if (ci.notas) line += " (" + ci.notas + ")";
+      if (ci.gaseosa) line += " [Gaseosa: " + ci.gaseosa + "]";
+      return line;
     });
 
     var subtotal = items.reduce(function(s, x) { return s + (x.precio * x.qty); }, 0);
+    // Desechables: $500 por cada COMIDA (no bebidas ni arepas)
+    var desechTotal = 0;
+    items.forEach(function(ci) {
+      var item = getItemById(ci.id);
+      if (item && !item.es_bebida && !item.es_arepa && !String(item.categoria||"").toLowerCase().includes("bebida") && !String(item.categoria||"").toLowerCase().includes("arepa")) {
+        desechTotal += 500 * ci.qty;
+      }
+    });
     var domi = (tipoPedido === "domicilio") ? (domCalculado || 0) : 0;
     var desc = 0;
     if (descTipo === "porcentaje") desc = Math.round(subtotal * descVal / 100);
     else if (descTipo === "fijo") desc = descVal;
-    var total = subtotal + domi - desc;
+    var total = subtotal + desechTotal + domi - desc;
 
     // Subir comprobante primero si aplica
     var compUrl = null;
@@ -3763,7 +3787,7 @@ async function enviarPedido() {
       items: itemsStr,                  // ← Array de strings, NO objetos
       subtotal: subtotal,
       domicilio: domi,
-      desechables: 0,
+      desechables: desechTotal,
       descuento: desc,
       total: total,
       comprobante_url: compUrl,
@@ -3918,16 +3942,23 @@ function buscarRewardsPorTel() {
 async function fetchRewards(tel) {
   var body = document.getElementById("rewBody");
   try {
-    var r = await fetch("/api/cliente/" + tel);
-    var cli = await r.json();
+    var r = await fetch("/api/cliente/" + tel + "?restaurante_id=" + rest.id);
+    var data = await r.json();
+    var cli = data.cliente || data;
     var puntos = (cli && cli.puntos) ? cli.puntos : 0;
-    var nombre = (cli && cli.nombre) ? cli.nombre : "";
+    var nombre = (cli && cli.nombre_cliente) ? cli.nombre_cliente : (cli && cli.nombre) ? cli.nombre : "";
+    var nivel = (cli && cli.nivel_fidelidad) ? cli.nivel_fidelidad : "bronce";
+    var totalPedidos = (cli && cli.total_pedidos) ? cli.total_pedidos : 0;
+    var nivelEmoji = nivel === "oro" ? "🥇" : nivel === "plata" ? "🥈" : "🥉";
     var h = '<div class="rew-hero"><div class="rew-pts-big">' + puntos + '</div><div class="rew-pts-label">puntos acumulados</div>';
-    if (nombre) h += '<div style="margin-top:6px;font-size:13px;color:var(--t2)">Hola, ' + escHtml(nombre) + '</div>';
+    if (nombre) h += '<div style="margin-top:6px;font-size:14px;color:var(--text);font-weight:700">' + escHtml(nombre) + '</div>';
+    h += '<div style="margin-top:4px;font-size:12px;color:var(--t2)">' + nivelEmoji + ' Nivel ' + nivel.charAt(0).toUpperCase() + nivel.slice(1) + ' · ' + totalPedidos + ' pedidos</div>';
     h += '</div><div class="rew-info"><div class="rew-info-title">¿Cómo funcionan los puntos?</div>'
       + '<div class="rew-info-text">🛒 Ganas <b>1 punto por cada $1.000</b> en compras<br>'
-      + '🎁 Acumula puntos y canjéalos por descuentos<br>'
-      + '⭐ Mientras más compres, más puntos acumulas</div></div>';
+      + '🥉 <b>Bronce</b> (0-9 pedidos): acumulas puntos<br>'
+      + '🥈 <b>Plata</b> (10-24 pedidos): 5% descuento automático<br>'
+      + '🥇 <b>Oro</b> (25+ pedidos): 10% descuento automático<br>'
+      + '⭐ Mientras más compres, más beneficios</div></div>';
     body.innerHTML = h;
   } catch(e) {
     body.innerHTML = '<div class="rew-hero"><div class="rew-pts-big">0</div><div class="rew-pts-label">puntos</div></div>';
