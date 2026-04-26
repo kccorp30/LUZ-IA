@@ -2153,6 +2153,44 @@ body::after {
   color: var(--t3);
 }
 
+/* ── Selector de gaseosa (combos) ── */
+.det-gaseosa-wrap {
+  margin-bottom: 14px;
+}
+
+.det-gaseosa-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.det-gaseosa-opt {
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--t2);
+  transition: all var(--t-fast) var(--ease-out);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.det-gaseosa-opt:active {
+  transform: scale(0.96);
+}
+
+.det-gaseosa-opt.on {
+  background: rgba(255,122,26,0.12);
+  border-color: rgba(255,122,26,0.4);
+  color: var(--text);
+  box-shadow: 0 0 0 1px rgba(255,122,26,0.2);
+}
+
 .det-qty-row {
   display: flex;
   align-items: center;
@@ -3263,12 +3301,22 @@ function actualizarCarrito() {
 var detQty = 1;
 var detItemId = null;
 
+var GASEOSAS_COMBO = ["Coca-Cola", "Sprite", "Quatro", "Manzana Postobón", "Uva Postobón", "Colombiana"];
+var detGaseosaSel = null;
+
+function esCombo(item) {
+  var nom = String(item.nombre || "").toLowerCase();
+  var cat = String(item.categoria || "").toLowerCase();
+  return nom.includes("combo") || cat.includes("combo");
+}
+
 function abrirDetalleProducto(id) {
   var item = getItemById(id);
   if (!item) return;
   detItemId = id;
   detQty = carrito[id] ? carrito[id].qty : 1;
   if (detQty < 1) detQty = 1;
+  detGaseosaSel = carrito[id] ? carrito[id].gaseosa : null;
 
   document.getElementById("detTitle").textContent = item.nombre;
 
@@ -3283,13 +3331,32 @@ function abrirDetalleProducto(id) {
   h += '<div class="det-name">' + escHtml(item.nombre) + '</div>';
   if (item.descripcion) h += '<div class="det-desc">' + escHtml(item.descripcion) + '</div>';
   h += '<div class="det-price">' + fmt(item.precio) + '</div>';
+
+  // Selector de gaseosa si es combo
+  if (esCombo(item)) {
+    h += '<div class="det-gaseosa-wrap">';
+    h += '<div class="det-section-title">🥤 Gaseosa 250ml (incluida)</div>';
+    h += '<div class="det-gaseosa-grid">';
+    GASEOSAS_COMBO.forEach(function(g) {
+      var on = detGaseosaSel === g ? " on" : "";
+      h += '<button class="det-gaseosa-opt' + on + '" onclick="selGaseosa(\'' + esc(g) + '\',this)">🥤 ' + escHtml(g) + '</button>';
+    });
+    h += '</div></div>';
+  }
+
   h += '<div class="det-section-title">📝 Notas especiales</div>';
-  h += '<textarea class="det-notas" id="detNotas" placeholder="Ej: sin cebolla, extra queso..."></textarea>';
+  h += '<textarea class="det-notas" id="detNotas" placeholder="Ej: sin cebolla, extra queso...">' + (carrito[id] && carrito[id].notas ? escHtml(carrito[id].notas) : '') + '</textarea>';
 
   document.getElementById("detBody").innerHTML = h;
   renderDetFoot();
   document.getElementById("detOv").classList.add("open");
   document.body.style.overflow = "hidden";
+}
+
+function selGaseosa(g, btn) {
+  detGaseosaSel = g;
+  document.querySelectorAll(".det-gaseosa-opt").forEach(function(el) { el.classList.remove("on"); });
+  btn.classList.add("on");
 }
 
 function cerrarDetalle() {
@@ -3313,15 +3380,21 @@ function renderDetFoot() {
 function detAgregar() {
   var item = getItemById(detItemId);
   if (!item) return;
+  // Validar gaseosa si es combo
+  if (esCombo(item) && !detGaseosaSel) {
+    showToast("Elige la gaseosa del combo");
+    return;
+  }
   var notas = (document.getElementById("detNotas") || {}).value || "";
   if (!carrito[detItemId]) {
     carrito[detItemId] = { id: item.id, nombre: item.nombre, precio: item.precio, qty: 0 };
   }
   carrito[detItemId].qty = detQty;
   if (notas.trim()) carrito[detItemId].notas = notas.trim();
+  if (detGaseosaSel) carrito[detItemId].gaseosa = detGaseosaSel;
   cerrarDetalle();
   actualizarCarrito();
-  showToast("✓ " + item.nombre + " × " + detQty);
+  showToast("✓ " + item.nombre + (detGaseosaSel ? " (" + detGaseosaSel + ")" : "") + " × " + detQty);
 }
 
 // ═══════════════════════════════════════════════════════════
