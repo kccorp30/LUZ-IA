@@ -2676,7 +2676,7 @@ body::after {
       <div class="fld hide" id="flComp">
         <label class="fld-label">📎 Comprobante de pago</label>
         <label class="uz">
-          <input type="file" accept="image/*" onchange="handleComp(event)">
+          <input type="file" accept="image/*" capture="environment" onchange="handleComp(event)">
           <div class="uz-ico">📸</div>
           <div class="uz-txt">Toca para subir comprobante</div>
         </label>
@@ -3781,31 +3781,56 @@ function setPago(p) {
 function handleComp(e) {
   var f = e.target.files[0];
   if (!f) return;
+  console.log("[comp] Archivo seleccionado:", f.name, (f.size/1024).toFixed(0) + "KB", f.type);
+  // Si es mayor a 8MB, avisar
+  if (f.size > 8 * 1024 * 1024) {
+    showToast("Imagen muy pesada, comprimiendo...");
+  }
   var reader = new FileReader();
   reader.onload = function(ev) {
-    comprimirImg(ev.target.result, 1200, 0.8).then(function(comp) {
+    comprimirImg(ev.target.result, 800, 0.6).then(function(comp) {
       compB64 = comp.split(",")[1];
+      console.log("[comp] Comprimido a:", (compB64.length/1024).toFixed(0) + "KB");
       var p = document.getElementById("uzPrev");
       p.src = comp;
       p.style.display = "block";
+      showToast("✓ Comprobante listo");
+    }).catch(function(err) {
+      console.error("[comp] Error comprimiendo:", err);
+      // Fallback: usar original sin comprimir
+      compB64 = ev.target.result.split(",")[1];
+      var p = document.getElementById("uzPrev");
+      p.src = ev.target.result;
+      p.style.display = "block";
+      showToast("✓ Comprobante cargado");
     });
+  };
+  reader.onerror = function() {
+    console.error("[comp] Error leyendo archivo");
+    showToast("Error al leer la imagen");
   };
   reader.readAsDataURL(f);
 }
 
 function comprimirImg(b64, maxW, q) {
-  return new Promise(function(resolve) {
-    var img = new Image();
-    img.onload = function() {
-      var canvas = document.createElement("canvas");
-      var ratio = Math.min(maxW / img.width, maxW / img.height, 1);
-      canvas.width = img.width * ratio;
-      canvas.height = img.height * ratio;
-      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", q || 0.7));
-    };
-    img.onerror = function() { resolve(b64); };
-    img.src = b64;
+  return new Promise(function(resolve, reject) {
+    try {
+      var img = new Image();
+      img.onload = function() {
+        try {
+          var canvas = document.createElement("canvas");
+          var ratio = Math.min(maxW / img.width, maxW / img.height, 1);
+          canvas.width = Math.round(img.width * ratio);
+          canvas.height = Math.round(img.height * ratio);
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          var result = canvas.toDataURL("image/jpeg", q || 0.6);
+          resolve(result);
+        } catch(e) { reject(e); }
+      };
+      img.onerror = function() { resolve(b64); };
+      img.src = b64;
+    } catch(e) { reject(e); }
   });
 }
 
@@ -3936,7 +3961,7 @@ async function enviarPedido() {
     // Subir comprobante primero si aplica
     var compUrl = null;
     if (compB64) {
-      console.log("[comp] Subiendo comprobante...");
+      console.log("[comp] Subiendo comprobante... (" + (compB64.length/1024).toFixed(0) + "KB)");
       try {
         var compResp = await fetch("/api/subir-comprobante", {
           method: "POST",
@@ -3944,18 +3969,21 @@ async function enviarPedido() {
           body: JSON.stringify({ imagen_base64: "data:image/jpeg;base64," + compB64, restaurante_id: rest.id, telefono: tel })
         });
         var compData = await compResp.json();
-        console.log("[comp] Respuesta:", JSON.stringify(compData));
-        if (compData.url) {
+        console.log("[comp] Respuesta:", JSON.stringify(compData).substring(0, 200));
+        if (compData.ok && compData.url) {
           compUrl = compData.url;
-          console.log("[comp] ✅ URL:", compUrl);
-        } else if (compData.error) {
-          console.error("[comp] ❌ Error del servidor:", compData.error);
-          // Fallback: guardar como data URI directamente
-          compUrl = "data:image/jpeg;base64," + compB64.substring(0, 100) + "...";
-          console.warn("[comp] ⚠️ Usando fallback - comprobante no se subió al storage");
+          console.log("[comp] ✅ Subido a Storage:", compUrl);
+        } else {
+          console.error("[comp] ❌ Storage falló:", compData.error || "sin url");
+          // Fallback: guardar data URI completo para que al menos se vea la imagen
+          compUrl = "data:image/jpeg;base64," + compB64;
+          console.warn("[comp] ⚠️ Guardando como data URI (" + (compUrl.length/1024).toFixed(0) + "KB)");
         }
       } catch(e) {
         console.error("[comp] ❌ Error de red:", e);
+        // Fallback: guardar data URI completo
+        compUrl = "data:image/jpeg;base64," + compB64;
+        console.warn("[comp] ⚠️ Guardando como data URI (fallback red)");
       }
     }
 
