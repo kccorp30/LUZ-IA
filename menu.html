@@ -2800,6 +2800,10 @@ function slugify(s) {
     .replace(/\s+/g,"-").replace(/[^a-z0-9-]/g,"");
 }
 function esAdicCat(cat) { return String(cat||"").toLowerCase().includes("adicional"); }
+function esClasicaCat(cat) {
+  var c = String(cat||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  return c.indexOf("tradicional") !== -1 || c.indexOf("clasica") !== -1 || c.indexOf("clasicas de la curva") !== -1;
+}
 
 function showToast(msg) {
   var t = document.getElementById("toast");
@@ -2959,10 +2963,10 @@ function renderCategorias() {
   }
 
   // Resto de categorías desde Supabase
-  // EXCLUIR Hamburguesas Tradicionales — ya tienen su pill ⭐ Clásicas arriba
+  // EXCLUIR Hamburguesas Tradicionales / Clásicas de La Curva — ya tienen su pill ⭐ Clásicas arriba
   menuItems.forEach(function(i) {
     var cat = i.categoria || "otros";
-    if (String(cat).toLowerCase().indexOf("tradicional") !== -1) return;
+    if (esClasicaCat(cat)) return;
     var slug = slugify(cat);
     if (!seen[slug]) {
       seen[slug] = true;
@@ -3097,10 +3101,8 @@ function renderCategoriasNormales() {
   var orden = [];
   menuItems.forEach(function(i) {
     var cat = i.categoria || "Otros";
-    // Saltar tradicionales - ya aparecen en la sección destacada arriba
-    if (String(cat).toLowerCase().indexOf("tradicional") !== -1) {
-      return;
-    }
+    // Saltar tradicionales/clásicas - ya aparecen en la sección destacada arriba
+    if (esClasicaCat(cat)) return;
     if (!grupos[cat]) {
       grupos[cat] = [];
       orden.push(cat);
@@ -3249,7 +3251,7 @@ function renderResultadosBusqueda() {
   var h = '<div class="prods-grid">';
   resultados.forEach(function(i, idx) {
     // Si el resultado es una clásica, lo mostramos con badge
-    var esClasica = String(i.categoria||"").toLowerCase().includes("clásica") || String(i.categoria||"").toLowerCase().includes("clasica");
+    var esClasica = esClasicaCat(i.categoria);
     h += renderProductCard(i, idx, esClasica, esClasica ? "clasica" : null);
   });
   h += '</div>';
@@ -4264,19 +4266,112 @@ async function fetchRewards(tel) {
     var nombre = (cli && cli.nombre_cliente) ? cli.nombre_cliente : (cli && cli.nombre) ? cli.nombre : "";
     var nivel = (cli && cli.nivel_fidelidad) ? cli.nivel_fidelidad : "bronce";
     var totalPedidos = (cli && cli.total_pedidos) ? cli.total_pedidos : 0;
+
     var nivelEmoji = nivel === "oro" ? "🥇" : nivel === "plata" ? "🥈" : "🥉";
-    var h = '<div class="rew-hero"><div class="rew-pts-big">' + puntos + '</div><div class="rew-pts-label">puntos acumulados</div>';
-    if (nombre) h += '<div style="margin-top:6px;font-size:14px;color:var(--text);font-weight:700">' + escHtml(nombre) + '</div>';
-    h += '<div style="margin-top:4px;font-size:12px;color:var(--t2)">' + nivelEmoji + ' Nivel ' + nivel.charAt(0).toUpperCase() + nivel.slice(1) + ' · ' + totalPedidos + ' pedidos</div>';
-    h += '</div><div class="rew-info"><div class="rew-info-title">¿Cómo funcionan los puntos?</div>'
-      + '<div class="rew-info-text">🛒 Ganas <b>1 punto por cada $1.000</b> en compras<br>'
-      + '🥉 <b>Bronce</b> (0-9 pedidos): acumulas puntos<br>'
-      + '🥈 <b>Plata</b> (10-24 pedidos): 5% descuento automático<br>'
-      + '🥇 <b>Oro</b> (25+ pedidos): 10% descuento automático<br>'
-      + '⭐ Mientras más compres, más beneficios</div></div>';
+    var nivelColor = nivel === "oro" ? "#fbbf24" : nivel === "plata" ? "#d1d5db" : "#cd7f32";
+    var nivelBg = nivel === "oro" ? "rgba(245,158,11,0.15)" : nivel === "plata" ? "rgba(156,163,175,0.12)" : "rgba(205,127,50,0.1)";
+    var siguienteNivel = nivel === "bronce" ? { nombre: "Plata", faltan: 10 - totalPedidos, emoji: "🥈" } : nivel === "plata" ? { nombre: "Oro", faltan: 25 - totalPedidos, emoji: "🥇" } : null;
+
+    var h = '';
+    // Hero con nivel prominente
+    h += '<div style="text-align:center;padding:20px 16px;background:linear-gradient(135deg,' + nivelBg + ',rgba(0,0,0,0.1));border-radius:18px;margin-bottom:14px">';
+    h += '<div style="font-size:44px;margin-bottom:4px">' + nivelEmoji + '</div>';
+    h += '<div style="font-size:26px;font-weight:900;color:' + nivelColor + ';letter-spacing:0.02em">Nivel ' + nivel.charAt(0).toUpperCase() + nivel.slice(1) + '</div>';
+    if (nombre) h += '<div style="font-size:14px;color:var(--text);font-weight:600;margin-top:4px">' + escHtml(nombre) + '</div>';
+    h += '<div style="display:flex;justify-content:center;gap:20px;margin-top:14px">';
+    h += '<div style="text-align:center"><div style="font-size:28px;font-weight:900;font-family:\'JetBrains Mono\',monospace;color:var(--accent,#e8341c)">' + puntos + '</div><div style="font-size:10px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em">Puntos</div></div>';
+    h += '<div style="text-align:center"><div style="font-size:28px;font-weight:900;font-family:\'JetBrains Mono\',monospace;color:var(--text)">' + totalPedidos + '</div><div style="font-size:10px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em">Pedidos</div></div>';
+    h += '</div>';
+    // Progreso al siguiente nivel
+    if (siguienteNivel && siguienteNivel.faltan > 0) {
+      var progreso = nivel === "bronce" ? Math.round((totalPedidos / 10) * 100) : Math.round((totalPedidos / 25) * 100);
+      if (progreso > 100) progreso = 100;
+      h += '<div style="margin-top:14px;padding:10px 16px;background:rgba(255,255,255,0.06);border-radius:12px">';
+      h += '<div style="font-size:11px;color:var(--t2);margin-bottom:6px">' + siguienteNivel.emoji + ' Te faltan <b style="color:' + nivelColor + '">' + siguienteNivel.faltan + ' pedidos</b> para ' + siguienteNivel.nombre + '</div>';
+      h += '<div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden"><div style="width:' + progreso + '%;height:100%;background:' + nivelColor + ';border-radius:3px;transition:width 0.6s ease"></div></div>';
+      h += '</div>';
+    }
+    h += '</div>';
+
+    // Beneficios del nivel
+    h += '<div style="padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;margin-bottom:14px">';
+    h += '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:8px">Tus beneficios</div>';
+    h += '<div style="font-size:12px;color:var(--t2);line-height:1.7">';
+    h += '🛒 <b>1 punto por cada $1.000</b> en compras<br>';
+    if (nivel === "plata" || nivel === "oro") h += '🏷️ <b>' + (nivel === "oro" ? "10" : "5") + '% descuento</b> automático en todo<br>';
+    h += '🎁 Canjea tus puntos por productos gratis';
+    h += '</div></div>';
+
+    // Sección de canje
+    h += '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:10px">🎁 Canjear puntos</div>';
+    h += '<div id="canjeProductos"><div style="text-align:center;color:var(--t3);font-size:12px;padding:12px">Cargando productos...</div></div>';
+
     body.innerHTML = h;
+
+    // Actualizar banner de rewards en la página principal
+    var rewTitle = document.getElementById("rewTitle");
+    var rewSub = document.getElementById("rewSub");
+    if (rewTitle) rewTitle.textContent = nivelEmoji + " " + puntos + " puntos · " + nivel.charAt(0).toUpperCase() + nivel.slice(1);
+    if (rewSub) rewSub.textContent = nombre ? "Hola, " + nombre.split(" ")[0] : "Toca para ver tus beneficios";
+
+    // Cargar productos de canje
+    cargarProductosCanje(tel, puntos);
+
   } catch(e) {
-    body.innerHTML = '<div class="rew-hero"><div class="rew-pts-big">0</div><div class="rew-pts-label">puntos</div></div>';
+    body.innerHTML = '<div style="text-align:center;padding:30px"><div style="font-size:40px;margin-bottom:8px">⭐</div><div style="font-size:14px;color:var(--t2)">No pudimos cargar tus puntos</div></div>';
+  }
+}
+
+async function cargarProductosCanje(tel, puntosCliente) {
+  var container = document.getElementById("canjeProductos");
+  if (!container) return;
+  try {
+    var r = await fetch("/api/productos-canje?restaurante_id=" + rest.id);
+    var productos = await r.json();
+    if (!productos || !productos.length) {
+      container.innerHTML = '<div style="text-align:center;color:var(--t3);font-size:12px;padding:16px;background:rgba(255,255,255,0.03);border-radius:12px">Pronto habrá productos para canjear con tus puntos</div>';
+      return;
+    }
+    var h = '';
+    productos.forEach(function(p) {
+      var puedeCanjar = puntosCliente >= (p.puntos_requeridos || 999999);
+      h += '<div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(255,255,255,' + (puedeCanjar ? "0.06" : "0.02") + ');border:1px solid rgba(255,255,255,' + (puedeCanjar ? "0.12" : "0.05") + ');border-radius:14px;margin-bottom:8px;' + (puedeCanjar ? "" : "opacity:0.5;") + '">';
+      h += '<div style="font-size:28px;flex-shrink:0">' + (p.emoji || "🎁") + '</div>';
+      h += '<div style="flex:1;min-width:0">';
+      h += '<div style="font-size:13px;font-weight:700;color:var(--text)">' + escHtml(p.nombre) + '</div>';
+      if (p.descripcion) h += '<div style="font-size:11px;color:var(--t3);margin-top:1px">' + escHtml(p.descripcion) + '</div>';
+      h += '<div style="font-size:12px;font-weight:800;color:#fbbf24;margin-top:3px">⭐ ' + (p.puntos_requeridos || 0) + ' puntos</div>';
+      h += '</div>';
+      if (puedeCanjar) {
+        h += '<button onclick="canjearProducto(\'' + p.id + '\',\'' + encodeURIComponent(p.nombre) + '\',' + (p.puntos_requeridos || 0) + ',\'' + tel + '\')" style="padding:8px 14px;background:linear-gradient(135deg,#f59e0b,#f97316);border:none;border-radius:10px;color:white;font-size:11px;font-weight:800;cursor:pointer;flex-shrink:0;font-family:inherit">Canjear</button>';
+      } else {
+        h += '<div style="font-size:10px;color:var(--t3);font-weight:600;flex-shrink:0;text-align:right">Faltan<br>' + ((p.puntos_requeridos || 0) - puntosCliente) + ' pts</div>';
+      }
+      h += '</div>';
+    });
+    container.innerHTML = h;
+  } catch(e) {
+    container.innerHTML = '<div style="text-align:center;color:var(--t3);font-size:12px;padding:12px">Error cargando productos</div>';
+  }
+}
+
+async function canjearProducto(productoId, nombreEnc, puntosReq, tel) {
+  if (!confirm("¿Canjear " + decodeURIComponent(nombreEnc) + " por " + puntosReq + " puntos?")) return;
+  try {
+    var r = await fetch("/api/canjear", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ restaurante_id: rest.id, telefono: tel, producto_canje_id: productoId })
+    });
+    var d = await r.json();
+    if (d.ok) {
+      showToast("🎁 ¡" + decodeURIComponent(nombreEnc) + " canjeado! Menciónalo en tu próximo pedido.");
+      fetchRewards(tel);
+    } else {
+      showToast("❌ " + (d.error || "No se pudo canjear"));
+    }
+  } catch(e) {
+    showToast("❌ Error de conexión");
   }
 }
 
@@ -4395,6 +4490,28 @@ window.addEventListener("load", async function() {
 
   // Re-renderizar promos con datos del restaurante (banners_json)
   renderPromos();
+
+  // Auto-cargar nivel del cliente si ya está registrado
+  try {
+    var telAuto = localStorage.getItem("luzCli_" + rest.id);
+    if (telAuto && telAuto.length === 10) {
+      fetch("/api/cliente/" + telAuto + "?restaurante_id=" + rest.id)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var cli = data.cliente || data;
+          if (cli && (cli.nombre_cliente || cli.puntos)) {
+            var puntos = cli.puntos || 0;
+            var nivel = cli.nivel_fidelidad || "bronce";
+            var nombre = cli.nombre_cliente || "";
+            var nivelEmoji = nivel === "oro" ? "🥇" : nivel === "plata" ? "🥈" : "🥉";
+            var rewTitle = document.getElementById("rewTitle");
+            var rewSub = document.getElementById("rewSub");
+            if (rewTitle) rewTitle.textContent = nivelEmoji + " " + puntos + " puntos · " + nivel.charAt(0).toUpperCase() + nivel.slice(1);
+            if (rewSub) rewSub.textContent = nombre ? "Hola, " + nombre.split(" ")[0] : "Toca para ver tus beneficios";
+          }
+        }).catch(function() {});
+    }
+  } catch(e) {}
 
   // Ocultar splash con fade
   setTimeout(function() {
