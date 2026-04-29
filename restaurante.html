@@ -904,6 +904,24 @@ select.finput{cursor:pointer}
         <button onclick="mostrarResetFidelidad()" style="padding:8px 14px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:12px;color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;font-family:'Plus Jakarta Sans',sans-serif">🔄 Reiniciar rangos</button>
       </div>
       <div style="padding:4px 12px 0">
+        <!-- PRODUCTOS DE CANJE -->
+        <div class="aform" style="margin-bottom:12px;background:linear-gradient(135deg,rgba(245,158,11,0.08),rgba(249,115,22,0.04));border-color:rgba(245,158,11,0.2)">
+          <div class="aft">🎁 Productos de canje</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Los clientes canjean puntos por estos productos desde el menú.</div>
+          <div id="canjeAdminLista"><div style="color:var(--text3);font-size:12px;text-align:center;padding:8px">Cargando...</div></div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06)">
+            <div class="frow" style="margin-bottom:8px">
+              <div class="ffield" style="max-width:60px"><label class="flabel">Emoji</label><input class="finput" id="canje-emoji" value="🎁" style="font-size:18px;text-align:center" maxlength="4"></div>
+              <div class="ffield"><label class="flabel">Nombre</label><input class="finput" id="canje-nombre" placeholder="Gaseosa gratis"></div>
+            </div>
+            <div class="frow" style="margin-bottom:8px">
+              <div class="ffield"><label class="flabel">Puntos requeridos</label><input class="finput" id="canje-puntos" type="number" placeholder="50"></div>
+              <div class="ffield"><label class="flabel">Stock (vacío=ilimitado)</label><input class="finput" id="canje-stock" type="number" placeholder="∞"></div>
+            </div>
+            <div class="ffield" style="margin-bottom:8px"><label class="flabel">Descripción</label><input class="finput" id="canje-desc" placeholder="Gaseosa 250ml a elegir"></div>
+            <button class="badd" onclick="agregarProductoCanje()" style="background:linear-gradient(135deg,#f59e0b,#f97316);box-shadow:0 4px 16px rgba(245,158,11,0.35)">🎁 Agregar producto de canje</button>
+          </div>
+        </div>
         <div class="clientes-resumen" id="clientesResumen">
           <div style="font-size:12px;font-weight:700;color:rgba(196,181,253,0.7);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px">Resumen</div>
           <div style="font-size:20px;font-weight:900">Tu base de clientes</div>
@@ -951,10 +969,11 @@ select.finput{cursor:pointer}
     </div>
 
     <!-- MAPA -->
+    <!-- MAPA/ZONAS - MEJORADO -->
     <div class="page" id="page-mapa">
       <div style="padding:16px 12px 8px">
         <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Zonas de domicilio</div>
-        <div style="font-size:13px;color:var(--text3);margin-top:2px">Define barrios por zona y el mapa los muestra automaticamente</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:2px">Toca una zona para editarla. Define barrios y precio.</div>
       </div>
       <div style="padding:0 12px 8px">
         <div class="aform">
@@ -985,6 +1004,56 @@ select.finput{cursor:pointer}
       </div>
     </div>
 
+    <!-- CEREBRO DE LUZ -->
+    <div class="page" id="page-cerebro">
+      <div style="padding:16px 12px 4px">
+        <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">🧠 Cerebro de Luz</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:2px">Luz aprende y mejora con cada interacción</div>
+      </div>
+      <div style="padding:8px 12px">
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+          <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);border-radius:14px;padding:14px;text-align:center">
+            <div style="font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace;color:#c4b5fd" id="cerebroTotal">0</div>
+            <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-top:3px">Total</div>
+          </div>
+          <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:14px;padding:14px;text-align:center">
+            <div style="font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace;color:#6ee7b7" id="cerebroActivos">0</div>
+            <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-top:3px">Activos</div>
+          </div>
+          <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:14px;padding:14px;text-align:center">
+            <div style="font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace;color:#fcd34d" id="cerebroPendientes">0</div>
+            <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-top:3px">Pendientes</div>
+          </div>
+        </div>
+        <!-- Agregar nueva regla -->
+        <div class="aform" style="margin-bottom:12px">
+          <div class="aft">➕ Enseñar a Luz</div>
+          <div class="ffield"><label class="flabel">Tipo</label>
+            <select class="finput" id="cerebro-tipo">
+              <option value="regla_negocio">📋 Regla del negocio</option>
+              <option value="correccion">⚠️ Corrección</option>
+              <option value="faq">❓ Pregunta frecuente</option>
+              <option value="producto_info">🍔 Info de producto</option>
+              <option value="preferencia_cliente">👤 Preferencia de cliente</option>
+            </select>
+          </div>
+          <div class="ffield"><label class="flabel">¿Qué debe saber Luz?</label><textarea class="finput" id="cerebro-contenido" placeholder="Ej: No ofrecemos domicilio después de las 11pm&#10;Ej: La sencilla NO lleva tocineta, solo carne y queso&#10;Ej: Si preguntan por el WiFi, la clave es LACURVA2024" rows="3" style="resize:none"></textarea></div>
+          <button class="badd" onclick="agregarAprendizaje()">🧠 Enseñar a Luz</button>
+        </div>
+        <!-- Filtros -->
+        <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none" id="cerebroFiltros">
+          <button class="filtro-btn active" onclick="filtrarCerebro('todos')">Todos</button>
+          <button class="filtro-btn" onclick="filtrarCerebro('regla_negocio')">📋 Reglas</button>
+          <button class="filtro-btn" onclick="filtrarCerebro('correccion')">⚠️ Correcciones</button>
+          <button class="filtro-btn" onclick="filtrarCerebro('faq')">❓ FAQs</button>
+          <button class="filtro-btn" onclick="filtrarCerebro('producto_info')">🍔 Productos</button>
+        </div>
+        <!-- Lista -->
+        <div id="cerebroLista"><div class="empty"><div class="et">Cargando...</div></div></div>
+      </div>
+    </div>
+
   <div class="float-nav">
     <div class="float-nav-inner">
       <div class="fnav-tab active" id="tab-pedidos"><div class="fnav-icon">🛒</div><div class="fnav-label">Pedidos</div><div class="nav-badge" id="pedidosBadge"></div></div>
@@ -998,6 +1067,7 @@ select.finput{cursor:pointer}
       <div class="fnav-tab" id="tab-clientes"><div class="fnav-icon">👥</div><div class="fnav-label">Clientes</div></div>
       <div class="fnav-tab" id="tab-mesas"><div class="fnav-icon">🪑</div><div class="fnav-label">Mesas</div></div>
       <div class="fnav-tab" id="tab-mapa"><div class="fnav-icon">🗺️</div><div class="fnav-label">Mapa</div></div>
+      <div class="fnav-tab" id="tab-cerebro"><div class="fnav-icon">🧠</div><div class="fnav-label">Cerebro</div></div>
     </div>
   </div>
 </div>
@@ -1217,7 +1287,7 @@ function checkNuevosMensajes(){
   }).catch(function(){});
 }
 
-["pedidos","historial","menu","chat","promo","cupones","config","domis","clientes","mesas","mapa"].forEach(function(n){
+["pedidos","historial","menu","chat","promo","cupones","config","domis","clientes","mesas","mapa","cerebro"].forEach(function(n){
   var el=document.getElementById("tab-"+n);if(!el)return;
   el.addEventListener("click",function(){showTab(n);if(n==="pedidos"){pedidosBadgeCount=0;document.getElementById("pedidosBadge").classList.remove("show");}if(n==="chat"){chatBadgeCount=0;document.getElementById("chatBadge").classList.remove("show");}});
 });
@@ -1232,7 +1302,8 @@ function showTab(n){
   if(n==="chat")loadChatUniversal();if(n==="cupones")renderCupones();
   if(n==="mapa"){setTimeout(function(){cargarZonas();initMapa();},80);}
   if(n==="config")cargarDomiciliarios();if(n==="domis")loadDomiPanel();
-  if(n==="clientes")loadClientes();if(n==="mesas"){loadMesas();cargarMeseros();}
+  if(n==="clientes"){loadClientes();loadCanjeAdmin();}if(n==="mesas"){loadMesas();cargarMeseros();}
+  if(n==="cerebro")loadCerebro();
 }
 
 // DOMICILIARIOS
@@ -1402,7 +1473,11 @@ function loadPedidos(){
       }
       h+='<div class="pbody">';
       h+='<div>'+items.map(function(i){return'<div class="pitem">• '+i+'</div>';}).join("")+'</div>';
-      if(p.notas_especiales){h+='<div class="notas-especiales"><span class="notas-icon">📝</span><div><strong>Notas especiales:</strong> '+p.notas_especiales+'</div></div>';}
+      if(p.notas_especiales){
+        var esModificado=p.notas_especiales.indexOf("✏️ MODIFICADO")!==-1||p.notas_especiales.indexOf("📝")!==-1;
+        if(esModificado)h+='<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);border-radius:10px;margin:6px 0;animation:fadeUp 0.3s ease"><span style="font-size:14px">✏️</span><span style="font-size:12px;font-weight:700;color:#fbbf24">MODIFICADO POR LUZ</span></div>';
+        h+='<div class="notas-especiales"><span class="notas-icon">📝</span><div><strong>Notas especiales:</strong> '+p.notas_especiales+'</div></div>';
+      }
       h+='<div class="pmeta">';
       h+='<div class="chip'+(esRecoger?" recoger":"")+'">📍 '+(p.direccion||"Sin direccion")+'</div>';
       if(p.cliente_tel)h+='<div class="chip">📱 '+p.cliente_tel+'</div>';
@@ -2341,10 +2416,43 @@ function renderZonasTabla(zonas){
     var color=z.color||ZONA_COLORES[idx%ZONA_COLORES.length];
     var barrios=Array.isArray(z.barrios)?z.barrios.join(", "):(z.barrios||"");
     var precio=z.precio_domicilio||z.precio||0;
-    h+='<div class="mapa-zona-card"><div style="width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;box-shadow:0 0 6px '+color+'"></div><div style="flex:1;min-width:0"><div class="mapa-zona-name">'+z.nombre+'</div><div class="mapa-zona-barrios">'+barrios.substring(0,80)+(barrios.length>80?"...":"")+'</div></div><div class="mapa-zona-price">'+fmt(precio)+'</div><button data-zid="'+z.id+'" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#fca5a5;border-radius:8px;padding:4px 9px;font-size:11px;cursor:pointer">🗑</button></div>';
+    h+='<div class="mapa-zona-card" style="flex-direction:column;align-items:stretch;gap:8px;padding:12px 14px;cursor:pointer" onclick="toggleEditZona(\''+z.id+'\')">';
+    h+='<div style="display:flex;align-items:center;gap:8px">';
+    h+='<div style="width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;box-shadow:0 0 6px '+color+'"></div>';
+    h+='<div style="flex:1;min-width:0"><div class="mapa-zona-name">'+escHtml(z.nombre)+'</div><div class="mapa-zona-barrios">'+escHtml(barrios.substring(0,120))+(barrios.length>120?"...":"")+'</div></div>';
+    h+='<div class="mapa-zona-price">'+fmt(precio)+'</div>';
+    h+='</div>';
+    // Inline edit (hidden by default)
+    h+='<div id="editZona-'+z.id+'" style="display:none;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06)">';
+    h+='<div class="frow" style="margin-bottom:8px"><div class="ffield"><label class="flabel">Nombre</label><input class="finput" id="zn-'+z.id+'" value="'+escHtml(z.nombre)+'" style="font-size:13px"></div>';
+    h+='<div class="ffield"><label class="flabel">Precio $</label><input class="finput" type="number" id="zp-'+z.id+'" value="'+precio+'" style="font-size:13px"></div></div>';
+    h+='<div class="ffield" style="margin-bottom:8px"><label class="flabel">Barrios (separados por coma)</label><textarea class="finput" id="zb-'+z.id+'" rows="3" style="font-size:12px;resize:none">'+escHtml(barrios)+'</textarea></div>';
+    h+='<div style="display:flex;gap:7px">';
+    h+='<button onclick="event.stopPropagation();guardarZonaEdit(\''+z.id+'\')" style="flex:2;padding:9px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">💾 Guardar</button>';
+    h+='<button onclick="event.stopPropagation();eliminarZona(\''+z.id+'\')" style="flex:1;padding:9px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:10px;color:#fca5a5;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">🗑</button>';
+    h+='</div></div>';
+    h+='</div>';
   });
   tabla.innerHTML=h;
-  tabla.querySelectorAll("[data-zid]").forEach(function(b){b.addEventListener("click",function(){var zid=this.getAttribute("data-zid");if(confirm("¿Eliminar esta zona?"))fetch(SU+"/rest/v1/zonas_domicilio?id=eq."+zid,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(){cargarZonas();notif("Zona eliminada");}).catch(function(){});});});
+}
+function toggleEditZona(id){
+  var el=document.getElementById("editZona-"+id);
+  if(el)el.style.display=el.style.display==="none"?"block":"none";
+}
+function guardarZonaEdit(id){
+  var nombre=(document.getElementById("zn-"+id)||{}).value||"";
+  var precio=Number((document.getElementById("zp-"+id)||{}).value)||0;
+  var barrios=(document.getElementById("zb-"+id)||{}).value||"";
+  if(!nombre||!precio){notif("Nombre y precio obligatorios");return;}
+  fetch("/api/zonas/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({nombre:nombre.trim(),precio_domicilio:precio,barrios:barrios.trim()})})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.ok){notif("✅ Zona actualizada");cargarZonas();}else notif("Error");})
+  .catch(function(){notif("Error de conexión");});
+}
+function eliminarZona(id){
+  if(!confirm("¿Eliminar esta zona?"))return;
+  fetch(SU+"/rest/v1/zonas_domicilio?id=eq."+id,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+  .then(function(){cargarZonas();notif("Zona eliminada");}).catch(function(){notif("Error");});
 }
 function dibujarTodasZonas(zonas){
   if(!mapaObj)return;
@@ -3429,6 +3537,173 @@ function actualizarDatalistCategorias(categoriasEnBD){
     }).join("");
   }
   return todas;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   🎁 PRODUCTOS DE CANJE — Admin
+   ═══════════════════════════════════════════════════════════ */
+function loadCanjeAdmin(){
+  if(!rest)return;
+  var lista=document.getElementById("canjeAdminLista");
+  if(!lista)return;
+  fetch("/api/productos-canje?restaurante_id="+rest.id)
+  .then(function(r){return r.json();})
+  .then(function(data){
+    if(!data||!data.length){lista.innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:8px">No hay productos de canje. Agrega el primero abajo.</div>';return;}
+    var h="";
+    data.forEach(function(p){
+      h+='<div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 12px;margin-bottom:6px">';
+      h+='<div style="font-size:22px;flex-shrink:0">'+(p.emoji||"🎁")+'</div>';
+      h+='<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--text)">'+escHtml(p.nombre)+'</div>';
+      if(p.descripcion)h+='<div style="font-size:11px;color:var(--text3)">'+escHtml(p.descripcion)+'</div>';
+      h+='</div>';
+      h+='<div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:800;color:#fbbf24">⭐ '+p.puntos_requeridos+'</div>';
+      if(p.stock!==null&&p.stock!==undefined)h+='<div style="font-size:10px;color:var(--text3)">Stock: '+p.stock+'</div>';
+      h+='</div>';
+      h+='<button onclick="eliminarProductoCanje(\''+p.id+'\')" style="padding:6px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#fca5a5;font-size:12px;cursor:pointer;flex-shrink:0">🗑</button>';
+      h+='</div>';
+    });
+    lista.innerHTML=h;
+  })
+  .catch(function(){lista.innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:8px">Error cargando</div>';});
+}
+
+function agregarProductoCanje(){
+  if(!rest)return;
+  var nombre=document.getElementById("canje-nombre").value.trim();
+  var puntos=Number(document.getElementById("canje-puntos").value);
+  if(!nombre||!puntos){notif("Nombre y puntos son obligatorios");return;}
+  var stockVal=document.getElementById("canje-stock").value.trim();
+  fetch("/api/productos-canje",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+    restaurante_id:rest.id,
+    nombre:nombre,
+    descripcion:document.getElementById("canje-desc").value.trim()||null,
+    emoji:document.getElementById("canje-emoji").value.trim()||"🎁",
+    puntos_requeridos:puntos,
+    stock:stockVal?Number(stockVal):null
+  })})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.ok){notif("🎁 Producto de canje agregado!");["canje-nombre","canje-puntos","canje-stock","canje-desc"].forEach(function(id){document.getElementById(id).value="";});document.getElementById("canje-emoji").value="🎁";loadCanjeAdmin();}
+    else notif("Error: "+(d.error||""));
+  })
+  .catch(function(){notif("Error de conexión");});
+}
+
+function eliminarProductoCanje(id){
+  if(!confirm("¿Eliminar este producto de canje?"))return;
+  fetch("/api/productos-canje/"+id,{method:"DELETE"})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.ok){notif("Eliminado");loadCanjeAdmin();}})
+  .catch(function(){notif("Error");});
+}
+
+/* ═══════════════════════════════════════════════════════════
+   🧠 CEREBRO DE LUZ — Auto-Learning UI
+   ═══════════════════════════════════════════════════════════ */
+var cerebroData=[], cerebroFiltroActual="todos";
+
+function loadCerebro(){
+  if(!rest)return;
+  var lista=document.getElementById("cerebroLista");
+  lista.innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
+  fetch("/api/aprendizajes?restaurante_id="+rest.id)
+  .then(function(r){return r.json();})
+  .then(function(data){
+    cerebroData=data||[];
+    renderCerebro();
+  })
+  .catch(function(){lista.innerHTML='<div class="empty"><div class="et">Error cargando</div></div>';});
+}
+
+function renderCerebro(){
+  var lista=document.getElementById("cerebroLista");
+  var datos=cerebroData;
+  if(cerebroFiltroActual!=="todos")datos=datos.filter(function(a){return a.tipo===cerebroFiltroActual;});
+  var activos=cerebroData.filter(function(a){return a.activo;}).length;
+  var pendientes=cerebroData.filter(function(a){return a.activo&&a.contenido&&a.contenido.indexOf("PREGUNTA SIN RESPUESTA")===0;}).length;
+  document.getElementById("cerebroTotal").textContent=cerebroData.length;
+  document.getElementById("cerebroActivos").textContent=activos;
+  document.getElementById("cerebroPendientes").textContent=pendientes;
+  if(!datos.length){lista.innerHTML='<div class="empty"><div class="ei">🧠</div><div class="et">Sin aprendizajes aún</div><div style="font-size:11px;color:var(--text3);margin-top:4px">Agrega reglas arriba o Luz aprenderá automáticamente</div></div>';return;}
+  var iconos={correccion:"⚠️",faq:"❓",regla_negocio:"📋",producto_info:"🍔",preferencia_cliente:"👤"};
+  var h="";
+  datos.forEach(function(a){
+    var ico=iconos[a.tipo]||"📝";
+    var esPendiente=a.contenido&&a.contenido.indexOf("PREGUNTA SIN RESPUESTA")===0;
+    var borderCol=a.activo?(esPendiente?"rgba(245,158,11,0.3)":"rgba(16,185,129,0.2)"):"rgba(255,255,255,0.06)";
+    h+='<div style="background:var(--glass-bg);border:1px solid '+borderCol+';border-radius:14px;padding:12px 14px;margin-bottom:8px;'+(a.activo?"":"opacity:0.5;")+'">';
+    h+='<div style="display:flex;align-items:flex-start;gap:8px">';
+    h+='<div style="font-size:18px;flex-shrink:0;margin-top:2px">'+ico+'</div>';
+    h+='<div style="flex:1;min-width:0">';
+    h+='<div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.4" id="ct-'+a.id+'">'+escHtml(a.contenido)+'</div>';
+    h+='<div style="font-size:10px;color:var(--text3);margin-top:4px">'+a.fuente+' · '+new Date(a.created_at).toLocaleDateString("es-CO")+'</div>';
+    h+='</div></div>';
+    h+='<div style="display:flex;gap:6px;margin-top:8px">';
+    if(esPendiente){
+      h+='<button onclick="resolverPendiente(\''+a.id+'\')" style="flex:2;padding:7px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:8px;color:#6ee7b7;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✅ Resolver</button>';
+    }
+    h+='<button onclick="editarAprendizaje(\''+a.id+'\')" style="flex:1;padding:7px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);border-radius:8px;color:#c4b5fd;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✏️</button>';
+    h+='<button onclick="toggleAprendizaje(\''+a.id+'\','+(!a.activo)+')" style="flex:1;padding:7px;background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:8px;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.activo?"🙈":"👁")+'</button>';
+    h+='<button onclick="borrarAprendizaje(\''+a.id+'\')" style="padding:7px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#fca5a5;font-size:11px;cursor:pointer;font-family:inherit">🗑</button>';
+    h+='</div></div>';
+  });
+  lista.innerHTML=h;
+}
+
+function filtrarCerebro(tipo){
+  cerebroFiltroActual=tipo;
+  var btns=document.getElementById("cerebroFiltros");
+  if(btns)btns.querySelectorAll(".filtro-btn").forEach(function(b){b.classList.remove("active");});
+  event.target.classList.add("active");
+  renderCerebro();
+}
+
+function agregarAprendizaje(){
+  if(!rest)return;
+  var tipo=document.getElementById("cerebro-tipo").value;
+  var contenido=document.getElementById("cerebro-contenido").value.trim();
+  if(!contenido){notif("Escribe qué debe aprender Luz");return;}
+  fetch("/api/aprendizajes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,tipo:tipo,contenido:contenido,fuente:"admin"})})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.ok){notif("🧠 Luz aprendió algo nuevo!");document.getElementById("cerebro-contenido").value="";loadCerebro();}else notif("Error");})
+  .catch(function(){notif("Error de conexión");});
+}
+
+function toggleAprendizaje(id,activo){
+  fetch("/api/aprendizajes/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({activo:activo,restaurante_id:rest?rest.id:null})})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.ok){notif(activo?"✅ Activado":"🙈 Desactivado");loadCerebro();}})
+  .catch(function(){notif("Error");});
+}
+
+function borrarAprendizaje(id){
+  if(!confirm("¿Eliminar este aprendizaje?"))return;
+  fetch("/api/aprendizajes/"+id,{method:"DELETE"})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.ok){notif("Eliminado");loadCerebro();}})
+  .catch(function(){notif("Error");});
+}
+
+function editarAprendizaje(id){
+  var el=document.getElementById("ct-"+id);
+  if(!el)return;
+  var actual=el.textContent;
+  var nuevo=prompt("Editar aprendizaje:",actual);
+  if(nuevo===null||nuevo.trim()===actual)return;
+  fetch("/api/aprendizajes/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({contenido:nuevo.trim(),restaurante_id:rest?rest.id:null})})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.ok){notif("✅ Actualizado");loadCerebro();}})
+  .catch(function(){notif("Error");});
+}
+
+function resolverPendiente(id){
+  var respuesta=prompt("¿Cuál es la respuesta correcta a esta pregunta?\nLuz la usará en futuras conversaciones:");
+  if(!respuesta)return;
+  fetch("/api/aprendizajes/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({contenido:respuesta.trim(),tipo:"faq",restaurante_id:rest?rest.id:null})})
+  .then(function(r){return r.json();})
+  .then(function(d){if(d.ok){notif("🧠 Luz ya sabe la respuesta!");loadCerebro();}})
+  .catch(function(){notif("Error");});
 }
 </script>
 </body>
