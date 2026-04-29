@@ -231,6 +231,10 @@ var promosText = restaurante ? (restaurante.promos_semanales || "") : "";
   }
   var infoAdicional = restaurante ? (restaurante.info_adicional || "") : "";
 
+  // ── LUZ AUTO-LEARNING: cargar aprendizajes dinámicos ──
+  var aprendizajesText = "";
+  // placeholder — se inyecta dinámicamente en systemFinal
+  
   return `Eres ${nombreLuz}, la encargada de atencion al cliente de ${nombreRest} en ${ciudad}.${direccion ? " Direccion: " + direccion + "." : ""}
 
 PERSONALIDAD:
@@ -507,6 +511,83 @@ async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo, co
       { restaurante_id: restauranteId, telefono, mensaje, tipo, comprobante_media_id: comprobanteMediaId || null },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
   } catch (e) { console.error("guardarMensaje:", e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LUZ AUTO-LEARNING SYSTEM
+// Tabla: luz_aprendizajes (restaurante_id, tipo, contenido, fuente, activo, created_at)
+// Tipos: correccion, faq, preferencia_cliente, regla_negocio, producto_info
+// ═══════════════════════════════════════════════════════════════════════════════
+var aprendizajesCache = {};
+var APRENDIZAJES_TTL = 10 * 60 * 1000; // 10 min cache
+
+async function cargarAprendizajes(restauranteId) {
+  var now = Date.now();
+  if (aprendizajesCache[restauranteId] && (now - aprendizajesCache[restauranteId].ts) < APRENDIZAJES_TTL) {
+    return aprendizajesCache[restauranteId].data;
+  }
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/luz_aprendizajes?restaurante_id=eq." + restauranteId +
+      "&activo=eq.true&order=created_at.desc&limit=50&select=tipo,contenido,fuente",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    var data = r.data || [];
+    aprendizajesCache[restauranteId] = { data: data, ts: now };
+    return data;
+  } catch (e) {
+    console.error("cargarAprendizajes:", e.message);
+    return [];
+  }
+}
+
+function formatearAprendizajes(aprendizajes) {
+  if (!aprendizajes || !aprendizajes.length) return "";
+  var secciones = { correccion: [], faq: [], regla_negocio: [], preferencia_cliente: [], producto_info: [] };
+  aprendizajes.forEach(function(a) {
+    var tipo = a.tipo || "regla_negocio";
+    if (!secciones[tipo]) secciones[tipo] = [];
+    secciones[tipo].push(a.contenido);
+  });
+  var texto = "\n\nAPRENDIZAJES Y REGLAS APRENDIDAS (sigue estas instrucciones con prioridad):";
+  if (secciones.correccion.length) texto += "\n\nCORRECCIONES (errores que NO debes cometer):\n" + secciones.correccion.map(function(c) { return "- " + c; }).join("\n");
+  if (secciones.regla_negocio.length) texto += "\n\nREGLAS DEL NEGOCIO:\n" + secciones.regla_negocio.map(function(c) { return "- " + c; }).join("\n");
+  if (secciones.faq.length) texto += "\n\nPREGUNTAS FRECUENTES (responde con esta info):\n" + secciones.faq.map(function(c) { return "- " + c; }).join("\n");
+  if (secciones.producto_info.length) texto += "\n\nINFO DE PRODUCTOS:\n" + secciones.producto_info.map(function(c) { return "- " + c; }).join("\n");
+  if (secciones.preferencia_cliente.length) texto += "\n\nPREFERENCIAS DE CLIENTES:\n" + secciones.preferencia_cliente.map(function(c) { return "- " + c; }).join("\n");
+  return texto;
+}
+
+async function guardarAprendizaje(restauranteId, tipo, contenido, fuente) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(SUPABASE_URL + "/rest/v1/luz_aprendizajes",
+      { restaurante_id: restauranteId, tipo: tipo, contenido: contenido, fuente: fuente || "auto", activo: true },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    // Invalidate cache
+    delete aprendizajesCache[restauranteId];
+    console.log("[aprendizaje] ✅ Guardado:", tipo, "->", contenido.substring(0, 60));
+  } catch (e) { console.error("[aprendizaje] Error:", e.message); }
+}
+
+// Auto-detectar aprendizajes de las alertas de pregunta (preguntas que LUZ no supo responder)
+async function autoAprendizajeDePregunta(restauranteId, pregunta) {
+  if (!pregunta || pregunta.length < 10) return;
+  // Guardar como FAQ pendiente para que el admin la resuelva
+  await guardarAprendizaje(restauranteId, "faq", "PREGUNTA SIN RESPUESTA: " + pregunta + " (pendiente de respuesta del admin)", "alerta_pregunta");
+}
+
+// Auto-detectar cuando el admin interviene en un chat (respuesta tipo "restaurante_manual")
+async function autoAprendizajeDeCorreccion(restauranteId, mensajeAdmin, contextoCliente) {
+  if (!mensajeAdmin || mensajeAdmin.length < 5) return;
+  // Solo guardar si parece una corrección o info nueva (no saludos genéricos)
+  var lower = mensajeAdmin.toLowerCase();
+  var esChatNormal = ["hola","ok","listo","gracias","perfecto","dale","ya","si","no"].some(function(p) { return lower === p || lower === p + "!"; });
+  if (esChatNormal) return;
+  // Guardar como posible corrección/regla
+  await guardarAprendizaje(restauranteId, "correccion", "El admin le dijo al cliente: \"" + mensajeAdmin.substring(0, 200) + "\"" + (contextoCliente ? " (contexto: " + contextoCliente.substring(0, 100) + ")" : ""), "chat_admin");
 }
 
 async function getOrderState(telefono) {
@@ -1476,6 +1557,178 @@ app.get("/api/clasicas", async function(req, res) {
 });
 
 // ═══════════════════════════════════════════════════════════
+// LUZ AUTO-LEARNING API
+// ═══════════════════════════════════════════════════════════
+app.get("/api/aprendizajes", async function(req, res) {
+  if (!req.query.restaurante_id) return res.json([]);
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/luz_aprendizajes?restaurante_id=eq." + req.query.restaurante_id +
+      "&order=created_at.desc&limit=100&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json(r.data || []);
+  } catch (e) { res.json([]); }
+});
+
+app.post("/api/aprendizajes", async function(req, res) {
+  if (!req.body.restaurante_id || !req.body.contenido) return res.status(400).json({ ok: false, error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(SUPABASE_URL + "/rest/v1/luz_aprendizajes",
+      { restaurante_id: req.body.restaurante_id, tipo: req.body.tipo || "regla_negocio", contenido: req.body.contenido, fuente: req.body.fuente || "admin", activo: true },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    delete aprendizajesCache[req.body.restaurante_id];
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.patch("/api/aprendizajes/:id", async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var patch = {};
+    if (req.body.contenido !== undefined) patch.contenido = req.body.contenido;
+    if (req.body.activo !== undefined) patch.activo = req.body.activo;
+    if (req.body.tipo !== undefined) patch.tipo = req.body.tipo;
+    await axios.patch(SUPABASE_URL + "/rest/v1/luz_aprendizajes?id=eq." + req.params.id, patch,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    if (req.body.restaurante_id) delete aprendizajesCache[req.body.restaurante_id];
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.delete("/api/aprendizajes/:id", async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.delete(SUPABASE_URL + "/rest/v1/luz_aprendizajes?id=eq." + req.params.id,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════
+// ZONAS CRUD API (editar barrios y precios inline)
+// ═══════════════════════════════════════════════════════════
+app.get("/api/zonas", async function(req, res) {
+  if (!req.query.restaurante_id) return res.json([]);
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/zonas_domicilio?restaurante_id=eq." + req.query.restaurante_id +
+      "&order=precio_domicilio.asc&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json(r.data || []);
+  } catch (e) { res.json([]); }
+});
+
+app.patch("/api/zonas/:id", async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var patch = {};
+    if (req.body.nombre !== undefined) patch.nombre = req.body.nombre;
+    if (req.body.precio_domicilio !== undefined) patch.precio_domicilio = Number(req.body.precio_domicilio);
+    if (req.body.barrios !== undefined) patch.barrios = req.body.barrios;
+    if (req.body.color !== undefined) patch.color = req.body.color;
+    await axios.patch(SUPABASE_URL + "/rest/v1/zonas_domicilio?id=eq." + req.params.id, patch,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════
+// CANJE DE PUNTOS API
+// Tabla: productos_canje (restaurante_id, nombre, descripcion, emoji, puntos_requeridos, activo, stock)
+// ═══════════════════════════════════════════════════════════
+app.get("/api/productos-canje", async function(req, res) {
+  if (!req.query.restaurante_id) return res.json([]);
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/productos_canje?restaurante_id=eq." + req.query.restaurante_id +
+      "&activo=eq.true&order=puntos_requeridos.asc&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json(r.data || []);
+  } catch (e) { res.json([]); }
+});
+
+app.post("/api/productos-canje", async function(req, res) {
+  if (!req.body.restaurante_id || !req.body.nombre || !req.body.puntos_requeridos) return res.status(400).json({ ok: false, error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(SUPABASE_URL + "/rest/v1/productos_canje",
+      { restaurante_id: req.body.restaurante_id, nombre: req.body.nombre, descripcion: req.body.descripcion || null, emoji: req.body.emoji || "🎁", puntos_requeridos: Number(req.body.puntos_requeridos), activo: true, stock: req.body.stock || null },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.delete("/api/productos-canje/:id", async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.delete(SUPABASE_URL + "/rest/v1/productos_canje?id=eq." + req.params.id,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/canjear", async function(req, res) {
+  var { restaurante_id, telefono, producto_canje_id } = req.body;
+  if (!restaurante_id || !telefono || !producto_canje_id) return res.status(400).json({ ok: false, error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    // 1. Get producto canje
+    var prodR = await axios.get(SUPABASE_URL + "/rest/v1/productos_canje?id=eq." + producto_canje_id + "&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    if (!prodR.data || !prodR.data.length) return res.status(404).json({ ok: false, error: "Producto no encontrado" });
+    var prod = prodR.data[0];
+    // 2. Get cliente
+    var telLocal = telefono.replace(/^57/, "");
+    var cliR = await axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante_id + "&telefono=eq." + encodeURIComponent(telLocal) + "&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    if (!cliR.data || !cliR.data.length) return res.status(404).json({ ok: false, error: "Cliente no encontrado" });
+    var cli = cliR.data[0];
+    // 3. Check puntos
+    if ((cli.puntos || 0) < prod.puntos_requeridos) return res.json({ ok: false, error: "No tienes suficientes puntos (" + (cli.puntos||0) + " de " + prod.puntos_requeridos + " necesarios)" });
+    // 4. Check stock
+    if (prod.stock !== null && prod.stock <= 0) return res.json({ ok: false, error: "Este producto está agotado" });
+    // 5. Descontar puntos
+    var nuevosPuntos = (cli.puntos || 0) - prod.puntos_requeridos;
+    await axios.patch(SUPABASE_URL + "/rest/v1/clientes_frecuentes?id=eq." + cli.id,
+      { puntos: nuevosPuntos, updated_at: new Date().toISOString() },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    // 6. Reducir stock si aplica
+    if (prod.stock !== null) {
+      await axios.patch(SUPABASE_URL + "/rest/v1/productos_canje?id=eq." + prod.id,
+        { stock: prod.stock - 1 },
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+      );
+    }
+    // 7. Guardar registro del canje
+    try {
+      await axios.post(SUPABASE_URL + "/rest/v1/canjes",
+        { restaurante_id, telefono: telLocal, producto_canje_id: prod.id, producto_nombre: prod.nombre, puntos_usados: prod.puntos_requeridos, estado: "pendiente" },
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+      );
+    } catch(eCanjeLog) { console.error("[canje] Error log:", eCanjeLog.message); }
+    console.log("[canje] ✅ " + telLocal + " canjeó " + prod.nombre + " por " + prod.puntos_requeridos + " pts. Puntos restantes: " + nuevosPuntos);
+    res.json({ ok: true, puntos_restantes: nuevosPuntos });
+  } catch (e) {
+    console.error("[canje] Error:", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
 // Endpoint: productos para UPSELL
 // Devuelve mezcla de: fijos (es_upsell=true) + top vendidos
 // Filtrado por categorías: Bebidas, Papas, Postres
@@ -1811,6 +2064,36 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       } catch(ePA) { console.error("pedidoActivo Supabase check:", ePA.message); }
     }
 
+    // ── CARGAR APRENDIZAJES DE LUZ ─────────────────────────────────────────────
+    var aprendizajesTexto = "";
+    if (restaurante) {
+      try {
+        var aprendizajes = await cargarAprendizajes(restaurante.id);
+        aprendizajesTexto = formatearAprendizajes(aprendizajes);
+      } catch(eAp) { console.error("aprendizajes:", eAp.message); }
+    }
+
+    // ── CARGAR HISTORIAL DE CONVERSACIÓN DE SUPABASE (continuidad entre reinicios) ──
+    if (conversations[from].length <= 1 && restaurante) {
+      try {
+        var telHist = stripCountryCode(from);
+        var svcHist = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        var histResp = await axios.get(
+          SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + restaurante.id +
+          "&telefono=eq." + encodeURIComponent(telHist) +
+          "&tipo=in.(cliente,restaurante,estado_luz)&order=created_at.desc&limit=10&select=mensaje,tipo,created_at",
+          { headers: { "apikey": svcHist, "Authorization": "Bearer " + svcHist } }
+        );
+        if (histResp.data && histResp.data.length > 1) {
+          var histMsgs = histResp.data.reverse();
+          var resumenHist = histMsgs.map(function(m) {
+            return (m.tipo === "cliente" ? "CLIENTE" : "TU") + ": " + (m.mensaje || "").substring(0, 120);
+          }).join("\n");
+          aprendizajesTexto += "\n\nHISTORIAL RECIENTE DE ESTE CLIENTE (para contexto, no lo repitas):\n" + resumenHist;
+        }
+      } catch(eHist) { console.error("historial:", eHist.message); }
+    }
+
     var systemFinal = buildSystemPrompt(restaurante)
       .replace(/MENU_URL_PLACEHOLDER/g, getMenuUrl(restaurante))
       .replace(/MENU_PLACEHOLDER/g, "MENU ACTIVO:\n" + menuParaPrompt)
@@ -1821,7 +2104,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       .replace(/NOMBRE_CLIENTE_PLACEHOLDER/g, nombreClienteTexto)
       .replace(/NIVEL_CLIENTE_PLACEHOLDER/g, nivelClienteTexto)
       .replace(/FECHA_INICIO_PLACEHOLDER/g, fechaInicioFidelidad)
-      + bienvenidaExtra + pedidoActivoTexto;
+      + bienvenidaExtra + pedidoActivoTexto + aprendizajesTexto;
 
     var claudeResponse = await axios.post(
       "https://api.anthropic.com/v1/messages",
@@ -1865,6 +2148,8 @@ async function procesarMensaje(msg, from, phoneNumberId) {
 
     if (sideEffect === "alerta_pregunta" && restaurante && orderState[from]?.alertaPregunta) {
       guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "ALERTA_PREGUNTA: " + orderState[from].alertaPregunta, "alerta_pregunta", null).catch(function(){});
+      // Auto-learning: guardar pregunta sin respuesta
+      autoAprendizajeDePregunta(restaurante.id, orderState[from].alertaPregunta).catch(function(){});
     }
 
     if (sideEffect === "modificar_pedido") { console.log("MODIFICAR intent:", JSON.stringify(orderState[from]?.modificarPedido)); }
