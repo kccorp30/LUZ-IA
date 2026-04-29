@@ -252,7 +252,6 @@ PROGRAMA DE FIDELIDAD (explica si te preguntan):
 - Si un cliente menciona su nivel en el chat (ej: "soy cliente Oro"): NO apliques ningun descuento manualmente. El descuento ya fue aplicado en el menu antes de que enviara el pedido, o no le corresponde.
 - Si el cliente pregunta como subir de nivel: "Cada pedido cuenta. Con 10 pedidos llegas a Plata con 5% de descuento, y con 25 pedidos llegas a Oro con 10% en todo."
 - Si preguntan donde ver su nivel: "En nuestro menu online puedes ver tu nivel al registrarte con tu numero."
-- si un cliente pregunta por el menu de almuerzos, dile que este chat solo es para el ervicio de noche y que puede llamar al 3116890996 para ordenar su almuerzo."
 - Cuando un cliente confirme un pedido, puedes felicitarlo si subio de nivel o esta cerca: ej: "Por cierto, ya llevas X pedidos con nosotros — te faltan Y para llegar a nivel Plata con 5% de descuento en todo!"
 
 HORARIO_PLACEHOLDER
@@ -1216,6 +1215,9 @@ app.post("/api/pedido-manual", async function(req, res) {
       var restData = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=whatsapp_phone_id,nombre", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
       var restInfo = restData.data && restData.data[0];
       if (restInfo && restInfo.whatsapp_phone_id) {
+        // Ensure phone has country code for WhatsApp API
+        var telWA = String(telefono).replace(/[^0-9]/g, "");
+        if (telWA.length === 10 && !telWA.startsWith("57")) telWA = "57" + telWA;
         var itemsResumen = itemsArr.slice(0, 5).join("\n• ");
         var msgCliente = "✅ *Pedido #" + num + " confirmado*\n\n"
           + "Hola" + (nombre_cliente ? " " + nombre_cliente.split(" ")[0] : "") + ", tu pedido ha sido recibido.\n\n"
@@ -1224,8 +1226,12 @@ app.post("/api/pedido-manual", async function(req, res) {
           + "💳 *Pago:* " + metodo_pago + "\n"
           + (tipo_pedido === "domicilio" ? "🛵 *Domicilio a:* " + direccion + (barrio ? " (" + barrio + ")" : "") + "\n" : "🏪 *Para recoger en el local*\n")
           + "\nTe avisaremos cuando esté listo. Si necesitas algo, escríbenos por aquí.";
-        await sendWhatsAppMessage(telefono, msgCliente, restInfo.whatsapp_phone_id);
-        console.log("[pedido-manual] ✅ WhatsApp enviado a " + telefono);
+        await sendWhatsAppMessage(telWA, msgCliente, restInfo.whatsapp_phone_id);
+        console.log("[pedido-manual] ✅ WhatsApp enviado a " + telWA);
+        // Guardar mensaje en historial de chat
+        guardarMensajeSupabase(restaurante_id, telefono, msgCliente, "estado_luz", null).catch(function(){});
+      } else {
+        console.warn("[pedido-manual] ⚠️ Sin whatsapp_phone_id — confirmación no enviada");
       }
     } catch(e) { console.error("[pedido-manual] Error enviando WhatsApp:", e.message); }
 
@@ -1261,7 +1267,14 @@ app.post("/api/enviar-promo", async function(req, res) {
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
     var unicos = {};
     (resp.data||[]).forEach(function(p) { if (p.cliente_tel) unicos[p.cliente_tel] = true; });
-    var telefonos = Object.keys(unicos);
+    var telefonos = Object.keys(unicos).map(function(t) {
+      // Ensure country code prefix for WhatsApp API
+      var clean = t.replace(/[^0-9]/g, "");
+      if (clean.length === 10 && !clean.startsWith("57")) clean = "57" + clean;
+      return clean;
+    }).filter(function(t) { return t.length >= 10; });
+    // Deduplicate after normalization
+    telefonos = [...new Set(telefonos)];
     if (!telefonos.length) return res.json({ ok: true, enviados: 0, fallidos: 0, total: 0 });
     // Obtener phone_id del restaurante
     var pid = process.env.WHATSAPP_PHONE_ID;
@@ -1448,9 +1461,11 @@ app.get("/api/clasicas", async function(req, res) {
   if (!req.query.restaurante_id) return res.json([]);
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    // Search both possible category names
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + req.query.restaurante_id +
-      "&categoria=eq.Cl%C3%A1sicas%20de%20La%20Curva&disponible=eq.true&order=orden_destacado.asc,precio.asc&select=*",
+      "&or=(categoria.eq.Hamburguesas%20Tradicionales,categoria.eq.Cl%C3%A1sicas%20de%20La%20Curva)" +
+      "&disponible=eq.true&order=orden_destacado.asc,precio.asc&select=*",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
     );
     res.json(r.data || []);
@@ -1775,6 +1790,26 @@ async function procesarMensaje(msg, from, phoneNumberId) {
         pedidoActivoTexto = "\nPEDIDO ACTIVO #" + st.orderNumber + " ($" + (st.total||0).toLocaleString("es-CO") + ", estado:" + (st.status||"?") + "). Si agrega algo: MODIFICAR_PEDIDO:" + st.orderNumber + "|AGREGAR:[item $precio]";
       }
     }
+    // FIX 6: If no in-memory orderState, check Supabase for active orders from this client
+    if (!pedidoActivoTexto && restaurante) {
+      try {
+        var telBuscar = stripCountryCode(from);
+        var svcPA = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        var pedActResp = await axios.get(
+          SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id +
+          "&cliente_tel=eq." + encodeURIComponent(telBuscar) +
+          "&estado=in.(confirmado,en_preparacion,listo,en_camino)&order=created_at.desc&limit=1&select=numero_pedido,estado,total,items,direccion",
+          { headers: { "apikey": svcPA, "Authorization": "Bearer " + svcPA } }
+        );
+        if (pedActResp.data && pedActResp.data.length > 0) {
+          var pa = pedActResp.data[0];
+          var estadoLabel = {confirmado:"recibido",en_preparacion:"en preparación",listo:"listo",en_camino:"en camino"}[pa.estado] || pa.estado;
+          pedidoActivoTexto = "\nPEDIDO ACTIVO DEL CLIENTE en Supabase: #" + pa.numero_pedido + " ($" + Number(pa.total||0).toLocaleString("es-CO") + ", estado: " + estadoLabel + ")."
+            + " El cliente YA tiene un pedido en curso. Si pregunta por su pedido, dale info del estado. Si quiere agregar algo: MODIFICAR_PEDIDO:" + pa.numero_pedido + "|AGREGAR:[item $precio]."
+            + " NO tomes un pedido nuevo a menos que el cliente lo pida explícitamente.";
+        }
+      } catch(ePA) { console.error("pedidoActivo Supabase check:", ePA.message); }
+    }
 
     var systemFinal = buildSystemPrompt(restaurante)
       .replace(/MENU_URL_PLACEHOLDER/g, getMenuUrl(restaurante))
@@ -1833,8 +1868,17 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     }
 
     if (sideEffect === "modificar_pedido") { console.log("MODIFICAR intent:", JSON.stringify(orderState[from]?.modificarPedido)); }
-    if (sideEffect === "modificar_pedido" && orderState[from]?.modificarPedido && restaurante) {
-      var mod = orderState[from].modificarPedido;
+    if (sideEffect === "modificar_pedido" && restaurante) {
+      // Support modification even without in-memory orderState (e.g. after server restart)
+      var mod = orderState[from]?.modificarPedido;
+      if (!mod) {
+        // Try to extract from the raw reply again
+        var modRetry = rawReply.match(/MODIFICAR_PEDIDO:([^|\n]+)[|]([^\n]+)/);
+        if (modRetry) {
+          mod = { numero: modRetry[1].trim(), accion: modRetry[2].trim() };
+        }
+      }
+      if (mod) {
       try {
         var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
         var pedResp = await axios.get(
@@ -1881,6 +1925,7 @@ async function procesarMensaje(msg, from, phoneNumberId) {
           guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "✏️ Pedido #" + mod.numero + " modificado: +" + mod.accion.replace("AGREGAR:",""), "alerta_pregunta", null).catch(function(){});
         }
       } catch(e) { console.error("modificar_pedido error:", e.message); }
+      } // end if (mod)
     }
 
     if (sideEffect === "cancelar_pedido" && orderState[from]?.cancelarPedido && restaurante) {
