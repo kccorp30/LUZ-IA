@@ -2772,15 +2772,18 @@ var busquedaActual = "";
 // ── DESTACADOS dinámicos (cargados desde BD) ──
 var TOP_VENDIDOS = [];       // Top 3 automático por ventas (últimos 30 días)
 var MANUALES = [];           // Hasta 2 marcados como destacados
-var CLASICAS = [
-  { id:"cl_sencilla", nombre:"La Sencilla", descripcion:"Carne artesanal · pan brioche · ripio · queso · lechuga", precio:16900, emoji:"🍔", imagen_url:null, categoria:"Clásicas de La Curva" },
-  { id:"cl_especial", nombre:"La Especial", descripcion:"Carne artesanal · pan brioche · ripio · queso · tocineta · jamón · lechuga", precio:18900, emoji:"🍔", imagen_url:null, categoria:"Clásicas de La Curva" },
-  { id:"cl_pollo", nombre:"La de Pollo", descripcion:"Pan brioche · ripio · lechuga · tomate · filete de pollo · tocineta · jamón", precio:19900, emoji:"🍗", imagen_url:null, categoria:"Clásicas de La Curva" },
-  { id:"cl_queso", nombre:"La Super Queso", descripcion:"Carne artesanal · pan brioche · lechuga · ripio · mucho queso fundido", precio:22900, emoji:"🧀", imagen_url:null, categoria:"Clásicas de La Curva" },
-  { id:"cl_doble", nombre:"La Doble Carne", descripcion:"Dos carnes · pan brioche · queso · tocinetas · jamón", precio:24900, emoji:"🍔", imagen_url:null, categoria:"Clásicas de La Curva" },
-  { id:"cl_curva", nombre:"La Curva", descripcion:"Pan brioche · ripio · lechuga · carne · queso fundido · maicitos · tocineta", precio:29900, emoji:"🔥", imagen_url:null, categoria:"Clásicas de La Curva" },
-  { id:"cl_mega", nombre:"La Mega Especial", descripcion:"Carne artesanal · filetes de pollo · queso · lechuga · tomate · tocineta", precio:37900, emoji:"👑", imagen_url:null, categoria:"Clásicas de La Curva" }
+// Clásicas se cargan dinámicamente desde el admin (antes eran hardcodeadas)
+// Fallback por si /api/clasicas falla
+var CLASICAS_FALLBACK = [
+  { id:"cl_sencilla", nombre:"La Sencilla", descripcion:"Carne artesanal · pan brioche · ripio · queso · lechuga", precio:16900, emoji:"🍔", imagen_url:null, categoria:"Hamburguesas Tradicionales" },
+  { id:"cl_especial", nombre:"La Especial", descripcion:"Carne artesanal · pan brioche · ripio · queso · tocineta · jamón · lechuga", precio:18900, emoji:"🍔", imagen_url:null, categoria:"Hamburguesas Tradicionales" },
+  { id:"cl_pollo", nombre:"La de Pollo", descripcion:"Pan brioche · ripio · lechuga · tomate · filete de pollo · tocineta · jamón", precio:19900, emoji:"🍗", imagen_url:null, categoria:"Hamburguesas Tradicionales" },
+  { id:"cl_queso", nombre:"La Super Queso", descripcion:"Carne artesanal · pan brioche · lechuga · ripio · mucho queso fundido", precio:22900, emoji:"🧀", imagen_url:null, categoria:"Hamburguesas Tradicionales" },
+  { id:"cl_doble", nombre:"La Doble Carne", descripcion:"Dos carnes · pan brioche · queso · tocinetas · jamón", precio:24900, emoji:"🍔", imagen_url:null, categoria:"Hamburguesas Tradicionales" },
+  { id:"cl_curva", nombre:"La Curva", descripcion:"Pan brioche · ripio · lechuga · carne · queso fundido · maicitos · tocineta", precio:29900, emoji:"🔥", imagen_url:null, categoria:"Hamburguesas Tradicionales" },
+  { id:"cl_mega", nombre:"La Mega Especial", descripcion:"Carne artesanal · filetes de pollo · queso · lechuga · tomate · tocineta", precio:37900, emoji:"👑", imagen_url:null, categoria:"Hamburguesas Tradicionales" }
 ];
+var CLASICAS = [];
 
 // ── Utilidades ──
 function fmt(n) { return "$" + Number(n||0).toLocaleString("es-CO"); }
@@ -2832,11 +2835,30 @@ var PROMOS_DEFAULT = [
 function renderPromos() {
   var wrap = document.getElementById("prmsWrap");
   if (!wrap) return;
-  wrap.innerHTML = PROMOS_DEFAULT.map(function(p){
-    var bg = 'linear-gradient(135deg, '+p.c1+' 0%, '+p.c2+' 100%)';
-    return '<div class="prm" style="background:'+bg+'">'
-      + '<div class="prm-ico">'+p.ico+'</div>'
-      + '<div class="prm-txt">'
+  // Usar banners del admin (banners_json) si existen, si no defaults
+  var promos = PROMOS_DEFAULT;
+  if (rest && rest.banners_json) {
+    try {
+      var parsed = typeof rest.banners_json === "string" ? JSON.parse(rest.banners_json) : rest.banners_json;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        promos = parsed.map(function(b) {
+          return { titulo: b.titulo || "Promo", desc: b.descripcion || "", c1: b.color1 || "#7c1a08", c2: b.color2 || "#3d0d04", ico: b.emoji || "🔥", imagen_url: b.imagen_url || null };
+        });
+      }
+    } catch(e) { console.warn("[promos] Error parsing banners_json:", e); }
+  }
+  wrap.innerHTML = promos.map(function(p){
+    var bg = p.imagen_url
+      ? 'linear-gradient(135deg, '+p.c1+' 0%, '+p.c2+' 100%)'
+      : 'linear-gradient(135deg, '+p.c1+' 0%, '+p.c2+' 100%)';
+    var imgHtml = p.imagen_url
+      ? '<img src="'+escHtml(p.imagen_url)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;border-radius:20px" onerror="this.style.display=\'none\'">'
+      + '<div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,0.6) 0%,transparent 80%);border-radius:20px;pointer-events:none"></div>'
+      : '';
+    return '<div class="prm" style="background:'+bg+';position:relative">'
+      + imgHtml
+      + '<div class="prm-ico" style="position:relative;z-index:1">'+p.ico+'</div>'
+      + '<div class="prm-txt" style="position:relative;z-index:1">'
       + '<div class="prm-t">'+escHtml(p.titulo)+'</div>'
       + '<div class="prm-d">'+escHtml(p.desc)+'</div>'
       + '</div></div>';
@@ -2859,8 +2881,7 @@ async function cargarMenu() {
   if (!rest) return;
 
   try {
-    // 2 llamadas en paralelo: menú completo + destacados
-    // Cada una con su propio catch para no romper las demás si falla
+    // 3 llamadas en paralelo: menú completo + destacados + clásicas
     var menuP = fetch("/api/menu?restaurante_id=" + rest.id)
       .then(function(r){ return r.json(); })
       .catch(function(e){ console.error("[menu] /api/menu falló:", e); return []; });
@@ -2869,7 +2890,20 @@ async function cargarMenu() {
       .then(function(r){ return r.json(); })
       .catch(function(e){ console.warn("[menu] /api/destacados falló:", e); return { top_vendidos: [], manuales: [] }; });
 
-    var [menuResp, destacadosResp] = await Promise.all([menuP, destacadosP]);
+    var clasicasP = fetch("/api/clasicas?restaurante_id=" + rest.id)
+      .then(function(r){ return r.json(); })
+      .catch(function(e){ console.warn("[menu] /api/clasicas falló:", e); return []; });
+
+    var [menuResp, destacadosResp, clasicasResp] = await Promise.all([menuP, destacadosP, clasicasP]);
+
+    // Clásicas dinámicas desde admin (fallback a hardcoded si API vacía)
+    if (Array.isArray(clasicasResp) && clasicasResp.length > 0) {
+      CLASICAS = clasicasResp.map(function(i) {
+        return Object.assign({}, i, { categoria: "Hamburguesas Tradicionales" });
+      });
+    } else {
+      CLASICAS = CLASICAS_FALLBACK.slice();
+    }
 
     // 1. Top vendidos (automático)
     TOP_VENDIDOS = (destacadosResp.top_vendidos || []).map(function(i) {
@@ -4358,6 +4392,9 @@ window.addEventListener("load", async function() {
 
   // Cargar menú (tradicionales se renderizan siempre, menuItems desde Supabase)
   await cargarMenu();
+
+  // Re-renderizar promos con datos del restaurante (banners_json)
+  renderPromos();
 
   // Ocultar splash con fade
   setTimeout(function() {
