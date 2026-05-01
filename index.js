@@ -55,6 +55,8 @@ async function enviarPushPorRol(restauranteId, rol, payload) {
   } catch (e) { console.error("enviarPush error:", e.message); }
 }
 app.use(express.urlencoded({ extended: false }));
+// Raw body parser for storage upload proxy (must be before json parser)
+app.use("/api/storage-upload", express.raw({ type: "*/*", limit: "10mb" }));
 app.use(express.json({ limit: "10mb" }));
 // Forzar HTTPS en Railway
 app.use((req, res, next) => {
@@ -112,15 +114,35 @@ function sbH(svc) {
 }
 
 // ── RESTAURANTE ───────────────────────────────────────────────────────────────
+var restCache = {};
+var REST_CACHE_TTL = 60000; // 1 min cache — refreshes on every new message after 1 min
+
 async function getRestaurante(phoneNumberId) {
   try {
-    if (phoneNumberId) {
-      var r = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?whatsapp_phone_id=eq." + phoneNumberId + "&select=*", { headers: sbH(false) });
-      if (r.data && r.data.length > 0) return r.data[0];
+    var cacheKey = phoneNumberId || "_default";
+    var now = Date.now();
+    if (restCache[cacheKey] && (now - restCache[cacheKey].ts) < REST_CACHE_TTL) {
+      return restCache[cacheKey].data;
     }
-    var fb = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=*&limit=1", { headers: sbH(false) });
-    return fb.data && fb.data.length > 0 ? fb.data[0] : null;
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var headers = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    if (phoneNumberId) {
+      var r = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?whatsapp_phone_id=eq." + phoneNumberId + "&select=*", { headers: headers });
+      if (r.data && r.data.length > 0) {
+        restCache[cacheKey] = { data: r.data[0], ts: now };
+        return r.data[0];
+      }
+    }
+    var fb = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=*&limit=1", { headers: headers });
+    var result = fb.data && fb.data.length > 0 ? fb.data[0] : null;
+    if (result) restCache[cacheKey] = { data: result, ts: now };
+    return result;
   } catch (e) { console.error("getRestaurante:", e.message); return null; }
+}
+
+// Invalidar cache cuando se actualiza config
+function invalidarCacheRestaurante() {
+  restCache = {};
 }
 
 // ── SILENCIO ──────────────────────────────────────────────────────────────────
@@ -1105,6 +1127,7 @@ app.post("/api/restaurante-config", async function(req, res) {
   try {
     await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id, req.body.config,
       { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    invalidarCacheRestaurante();
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message }); }
 });
@@ -1851,6 +1874,99 @@ app.get("/api/restaurante", async function(req, res) {
   } catch(e) { res.json([]); }
 });
 
+// ═══════════════════════════════════════════════════════════
+// SUPABASE PROXY — Route ALL panel Supabase calls through backend
+// Fixes ERR_NETWORK_IO_SUSPENDED / CORS / network blocks
+// ═══════════════════════════════════════════════════════════
+app.all("/api/supabase/*", async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var restPath = req.params[0]; // everything after /api/supabase/
+    if (!restPath || restPath.indexOf("..") !== -1) return res.status(400).json({ error: "Invalid path" });
+    var targetUrl = SUPABASE_URL + "/rest/v1/" + restPath;
+    // Preserve query string
+    var qs = require("url").parse(req.url).query;
+    if (qs) targetUrl += (targetUrl.indexOf("?") === -1 ? "?" : "&") + qs;
+
+    var headers = {
+      "apikey": svcKey,
+      "Authorization": "Bearer " + svcKey,
+      "Content-Type": "application/json"
+    };
+    // Forward Prefer header if present in request
+    var prefer = req.headers["prefer"] || req.body?._prefer;
+    if (prefer) headers["Prefer"] = prefer;
+    // Check common Prefer patterns from the frontend
+    if (req.method === "POST" || req.method === "PATCH") {
+      if (!headers["Prefer"]) headers["Prefer"] = "return=minimal";
+    }
+
+    var axiosConfig = { method: req.method.toLowerCase(), url: targetUrl, headers: headers };
+    if (req.method !== "GET" && req.method !== "DELETE" && req.body) {
+      // Remove internal proxy keys
+      var body = Object.assign({}, req.body);
+      delete body._prefer;
+      axiosConfig.data = body;
+    }
+
+    var r = await axios(axiosConfig);
+    if (r.data !== undefined && r.data !== null && r.data !== "") {
+      res.json(r.data);
+    } else {
+      res.json({ ok: true });
+    }
+  } catch(e) {
+    var status = e.response ? e.response.status : 500;
+    console.error("[supabase-proxy " + req.method + "]", req.params[0], e.message);
+    if (status === 201 || status === 204) return res.json({ ok: true });
+    res.status(status).json({ error: e.message, ok: false });
+  }
+});
+
+// Legacy proxy-db for get() function
+app.get("/api/proxy-db", async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var q = decodeURIComponent(req.query.q || "");
+    if (!q) return res.json([]);
+    if (q.indexOf("..") !== -1) return res.status(400).json({ error: "Invalid query" });
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/" + q,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json(r.data || []);
+  } catch(e) {
+    console.error("[proxy-db GET]", e.message);
+    res.json([]);
+  }
+});
+
+// Storage proxy for image uploads
+app.post("/api/storage-upload/:path(*)", async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var filePath = req.params.path;
+    if (!filePath || filePath.indexOf("..") !== -1) return res.status(400).json({ error: "Invalid path" });
+    var r = await axios.post(
+      SUPABASE_URL + "/storage/v1/object/media/" + filePath,
+      req.body,
+      {
+        headers: {
+          "apikey": svcKey,
+          "Authorization": "Bearer " + svcKey,
+          "Content-Type": req.headers["content-type"] || "application/octet-stream",
+          "x-upsert": "true"
+        },
+        maxBodyLength: 10 * 1024 * 1024
+      }
+    );
+    res.json(r.data || { ok: true });
+  } catch(e) {
+    console.error("[storage-upload]", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get("/webhook", function(req, res) {
   var mode = req.query["hub.mode"], token = req.query["hub.verify_token"], challenge = req.query["hub.challenge"];
   var VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || "luz_verify_token_2026";
@@ -1913,7 +2029,8 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     if (restaurante) {
       if (restaurante.estado !== "activo") { console.log("Restaurante inactivo"); return; }
       if (!estaEnHorario(restaurante)) {
-        console.log("Fuera de horario - avisando cliente");
+        var col = getHoraColombia();
+        console.log("Fuera de horario - avisando cliente. Hora Colombia:", col.getHours()+":"+String(col.getMinutes()).padStart(2,"0"), "| Apertura:", restaurante.hora_apertura, "| Cierre:", restaurante.hora_cierre, "| Días:", restaurante.dias_activos);
         var horaAp = (restaurante.hora_apertura||"16:00:00").substring(0,5);
         var horaCi = (restaurante.hora_cierre||"00:00:00").substring(0,5);
         var diasAct = (restaurante.dias_activos||"lunes a domingo").replace(/,/g," | ");
