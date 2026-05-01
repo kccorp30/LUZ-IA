@@ -1220,7 +1220,11 @@ function playSound(tipo){
   }catch(e){}
 }
 
-function get(t,f){return fetch(SU+"/rest/v1/"+t+"?"+(f||""),{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json();});}
+function get(t,f){
+  // Proxy through backend to avoid CORS/network blocks on direct Supabase calls
+  var qs = encodeURIComponent(t + "?" + (f||""));
+  return fetch("/api/proxy-db?q=" + qs).then(function(r){return r.json();});
+}
 function patchPedido(id,estado,tel,num){return fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
 function notif(m,color){var e=document.getElementById("notif");e.textContent=m;e.style.background=color||"rgba(124,58,237,0.9)";e.classList.add("show");setTimeout(function(){e.classList.remove("show");},2800);}
 function fmt(n){return"$"+Number(n||0).toLocaleString("es-CO");}
@@ -1388,14 +1392,14 @@ document.getElementById("btnAgregarDomi").addEventListener("click",function(){
   var tel=document.getElementById("domi-tel-input").value.trim();
   if(!nombre){notif("Escribe el nombre");return;}
   var btn=this;btn.textContent="Guardando...";btn.disabled=true;
-  fetch(SU+"/rest/v1/domiciliarios",{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({restaurante_id:rest.id,nombre:nombre,telefono:tel||null,activo:true})})
+  fetch("/api/supabase/domiciliarios",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,nombre:nombre,telefono:tel||null,activo:true})})
   .then(function(r){if(r.ok||r.status===201){notif("Agregado: "+nombre);document.getElementById("domi-nombre-input").value="";document.getElementById("domi-tel-input").value="";cargarDomiciliarios();}else{notif("Error al guardar");}})
   .catch(function(){notif("Error de conexion");})
   .finally(function(){btn.textContent="+ Agregar domiciliario";btn.disabled=false;});
 });
 function eliminarDomiciliario(id){
   if(!confirm("Eliminar este domiciliario?"))return;
-  fetch(SU+"/rest/v1/domiciliarios?id=eq."+id,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({activo:false})})
+  fetch("/api/supabase/domiciliarios?id=eq."+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({activo:false})})
   .then(function(r){if(r.ok||r.status===204){notif("Domiciliario eliminado");cargarDomiciliarios();}})
   .catch(function(){notif("Error");});
 }
@@ -1423,7 +1427,7 @@ function renderDomiModalLista(){
 document.getElementById("domiAsignarBtn").addEventListener("click",function(){
   if(!domiPedidoId||!domiSelId){notif("Selecciona un domiciliario");return;}
   var btn=this;btn.textContent="Asignando...";btn.disabled=true;
-  fetch(SU+"/rest/v1/pedidos?id=eq."+domiPedidoId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({domiciliario_id:domiSelId,domiciliario_nombre:domiSelNombre})})
+  fetch("/api/supabase/pedidos?id=eq."+domiPedidoId,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({domiciliario_id:domiSelId,domiciliario_nombre:domiSelNombre})})
   .then(function(r){
     if(r.ok||r.status===204){notif("Asignado: "+domiSelNombre,"rgba(16,185,129,0.9)");document.getElementById("domiOverlay").classList.remove("open");domiPedidoId=null;domiSelId=null;loadPedidos();}
     else{notif("Error al asignar");}
@@ -1575,7 +1579,7 @@ document.getElementById("editGuardar").addEventListener("click",function(){
   var itemsRaw=document.getElementById("edit-items").value.trim().split("\n").filter(function(l){return l.trim();});
   var payload={direccion:document.getElementById("edit-dir").value.trim()||null,metodo_pago:document.getElementById("edit-met").value,total:Number(document.getElementById("edit-total").value)||0,domicilio:Number(document.getElementById("edit-domi").value)||0,items:itemsRaw};
   var btn=this;btn.textContent="Guardando...";btn.disabled=true;
-  fetch(SU+"/rest/v1/pedidos?id=eq."+editPedidoId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
+  fetch("/api/supabase/pedidos?id=eq."+editPedidoId,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
   .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t);});return r.text();})
   .then(function(){notif("Pedido actualizado");document.getElementById("editOverlay").classList.remove("open");editPedidoId=null;loadPedidos();loadStats();})
   .catch(function(e){notif("Error: "+e.message.substring(0,40));})
@@ -1704,7 +1708,7 @@ document.getElementById("confirmBorrarHistOk").addEventListener("click",function
   if(!rest)return;
   document.getElementById("confirmBorrarHist").classList.remove("open");notif("Borrando...");
   var fecha=getFechaFiltro(),filtro="restaurante_id=eq."+rest.id;if(fecha)filtro+="&created_at=gte."+fecha;
-  fetch(SU+"/rest/v1/pedidos?"+filtro,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Prefer":"return=minimal"}})
+  fetch("/api/supabase/pedidos?"+filtro,{method:"DELETE"})
     .then(function(r){if(r.ok||r.status===204){notif("Historial borrado");loadHistorial();loadStats();}})
     .catch(function(){notif("Error");});
 });
@@ -1843,7 +1847,7 @@ document.getElementById("toggleSilencio").addEventListener("click",function(){
   silencioPorTel[tel]=!silencioPorTel[tel];
   this.className="big-toggle "+(silencioPorTel[tel]?"on":"off");
   notif(silencioPorTel[tel]?"Luz en silencio":"Luz reactivada",silencioPorTel[tel]?"rgba(168,85,247,0.9)":"rgba(34,197,94,0.9)");
-  if(rest){fetch(SU+"/rest/v1/silencio_conversacion?on_conflict=restaurante_id,telefono",{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({restaurante_id:rest.id,telefono:tel,activo:silencioPorTel[tel],updated_at:new Date().toISOString()})}).catch(function(){});}
+  if(rest){fetch("/api/supabase/silencio_conversacion?on_conflict=restaurante_id,telefono",{method:"POST",headers:{"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({restaurante_id:rest.id,telefono:tel,activo:silencioPorTel[tel],updated_at:new Date().toISOString()})}).catch(function(){});}
 });
 document.getElementById("msgEnviar").addEventListener("click",enviarMensaje);
 document.getElementById("msgTexto").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();enviarMensaje();}});
@@ -1907,7 +1911,7 @@ function subirImagenSupabase(file){
   var uploading=document.getElementById("imgUploading");uploading.style.display="block";promoImgUrl=null;
   var ext=file.name.split(".").pop()||"jpg";
   var fileName="promos/"+Date.now()+"."+ext;
-  fetch(SU+"/storage/v1/object/media/"+fileName,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":file.type,"x-upsert":"true"},body:file})
+  fetch("/api/storage-upload/"+fileName,{method:"POST",headers:{"Content-Type":file.type},body:file})
   .then(function(r){if(r.ok){promoImgUrl=SU+"/storage/v1/object/public/media/"+fileName;notif("✅ Imagen lista","rgba(16,185,129,0.8)");}else{return r.text().then(function(t){throw new Error(t);});}})
   .catch(function(e){notif("❌ Error subiendo imagen","rgba(239,68,68,0.8)");clearPromoImg();})
   .finally(function(){uploading.style.display="none";});
@@ -1947,7 +1951,7 @@ function checkResetSilencios(){
   var horaActual=col.getHours()*60+col.getMinutes();
   if(horaActual<6*60)return;
   ultimoDiaReset=diaActual;
-  fetch(SU+"/rest/v1/silencio_conversacion?restaurante_id=eq."+rest.id+"&activo=eq.true",{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({activo:false,updated_at:new Date().toISOString()})})
+  fetch("/api/supabase/silencio_conversacion?restaurante_id=eq."+rest.id+"&activo=eq.true",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({activo:false,updated_at:new Date().toISOString()})})
   .then(function(){var ts=Object.keys(silencioPorTel).filter(function(t){return silencioPorTel[t];});ts.forEach(function(t){silencioPorTel[t]=false;});}).catch(function(){});
 }
 function getDiaCol(){return["domingo","lunes","martes","miercoles","jueves","viernes","sabado"][getHoraColombia().getDay()];}
@@ -2060,9 +2064,7 @@ function cargarProd(){
     .catch(function(e){
       console.error("[cargarProd] ❌ Error /api/menu:",e.message);
       // Fallback: Supabase directo (por si /api/menu falla)
-      fetch(SU+"/rest/v1/menu_items?restaurante_id=eq."+rest.id+"&disponible=eq.true&select=*",{
-        headers:{"apikey":SK,"Authorization":"Bearer "+SK}
-      })
+      fetch("/api/supabase/menu_items?restaurante_id=eq."+rest.id+"&disponible=eq.true&select=*")
       .then(function(r){return r.json();})
       .then(function(d){
         MENU_PROD=d||[];
@@ -2216,7 +2218,7 @@ function filtrarClientes(filtro){
 function loadClientes(){
   if(!rest)return;
   document.getElementById("clientesLista").innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
-  fetch(SU+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+rest.id+"&order=total_pedidos.desc&limit=200",{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+  fetch("/api/supabase/clientes_frecuentes?restaurante_id=eq."+rest.id+"&order=total_pedidos.desc&limit=200")
   .then(function(r){return r.json();})
   .then(function(d){
     clientesData=d||[];
@@ -2300,7 +2302,7 @@ function ejecutarResetFidelidad(){
   if(!rest){notif("Error: sin restaurante");return;}
   document.getElementById("resetFidelidadModal").style.display="none";
   notif("Reiniciando fidelidad...");
-  fetch(SU+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+rest.id,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({total_pedidos:0,nivel_fidelidad:"bronce",updated_at:new Date().toISOString()})})
+  fetch("/api/supabase/clientes_frecuentes?restaurante_id=eq."+rest.id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({total_pedidos:0,nivel_fidelidad:"bronce",updated_at:new Date().toISOString()})})
   .then(function(r){
     if(r.ok||r.status===204){
       notif("✅ Fidelidad reiniciada","rgba(16,185,129,0.9)");
@@ -2345,7 +2347,7 @@ function descargarQR(mesa){
 }
 function cargarMeseros(){
   if(!rest)return;
-  fetch(SU+"/rest/v1/meseros?restaurante_id=eq."+rest.id+"&activo=eq.true&order=created_at.asc",{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+  fetch("/api/supabase/meseros?restaurante_id=eq."+rest.id+"&activo=eq.true&order=created_at.asc")
   .then(function(r){return r.json();})
   .then(function(d){
     var lista=document.getElementById("meserosList");if(!lista)return;
@@ -2358,13 +2360,13 @@ function agregarMesero(){
   if(!rest)return;
   var nombre=document.getElementById("meseroNombreInput").value.trim();
   if(!nombre){notif("Escribe el nombre del mesero");return;}
-  fetch(SU+"/rest/v1/meseros",{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({restaurante_id:rest.id,nombre:nombre,activo:true})})
+  fetch("/api/supabase/meseros",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,nombre:nombre,activo:true})})
   .then(function(r){if(r.ok||r.status===201){notif("Mesero agregado");document.getElementById("meseroNombreInput").value="";cargarMeseros();}else{notif("Error al agregar");}})
   .catch(function(){notif("Error de conexion");});
 }
 function eliminarMesero(id){
   if(!confirm("Eliminar este mesero?"))return;
-  fetch(SU+"/rest/v1/meseros?id=eq."+id,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({activo:false})})
+  fetch("/api/supabase/meseros?id=eq."+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({activo:false})})
   .then(function(r){if(r.ok||r.status===204){notif("Mesero eliminado");cargarMeseros();}})
   .catch(function(){notif("Error");});
 }
@@ -2403,7 +2405,7 @@ function initMapa(reintentos){
 }
 function cargarZonas(){
   if(!rest)return;
-  fetch(SU+"/rest/v1/zonas_domicilio?restaurante_id=eq."+rest.id+"&order=precio_domicilio.asc",{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+  fetch("/api/supabase/zonas_domicilio?restaurante_id=eq."+rest.id+"&order=precio_domicilio.asc")
   .then(function(r){return r.json();})
   .then(function(zonas){renderZonasTabla(zonas);if(mapaObj)dibujarTodasZonas(zonas);})
   .catch(function(e){console.error("cargarZonas error:",e);});
@@ -2451,7 +2453,7 @@ function guardarZonaEdit(id){
 }
 function eliminarZona(id){
   if(!confirm("¿Eliminar esta zona?"))return;
-  fetch(SU+"/rest/v1/zonas_domicilio?id=eq."+id,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+  fetch("/api/supabase/zonas_domicilio?id=eq."+id,{method:"DELETE"})
   .then(function(){cargarZonas();notif("Zona eliminada");}).catch(function(){notif("Error");});
 }
 function dibujarTodasZonas(zonas){
@@ -2562,9 +2564,9 @@ document.getElementById("btnAgregarZona").addEventListener("click",function(){
   var btn=this;btn.textContent="Guardando...";btn.disabled=true;
   // Asignar color automático basado en cantidad de zonas existentes
   var colorAuto=ZONA_COLORES[(document.querySelectorAll(".mapa-zona-card").length||0)%ZONA_COLORES.length];
-  fetch(SU+"/rest/v1/zonas_domicilio",{
+  fetch("/api/supabase/zonas_domicilio",{
     method:"POST",
-    headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+    headers:{"Content-Type":"application/json"},
     body:JSON.stringify({
       restaurante_id:rest.id,
       nombre:nombre,
@@ -2599,7 +2601,7 @@ function showMetTab(tab){
 }
 function loadMenuEditor(){
   if(!rest)return;
-  fetch(SU+"/rest/v1/menu_items?restaurante_id=eq."+rest.id+"&order=categoria,orden",{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+  fetch("/api/supabase/menu_items?restaurante_id=eq."+rest.id+"&order=categoria,orden")
   .then(function(r){return r.json();})
   .then(function(items){
     // Categorías que ya existen en la BD
@@ -2848,7 +2850,7 @@ function guardarProdEditor(id,btn){
   if(imgEl&&imgEl.value.trim())payload.imagen_url=imgEl.value.trim();
   if(!payload.nombre||!payload.precio){notif("Nombre y precio son obligatorios");return;}
   var orig=btn.textContent;btn.textContent="Guardando...";btn.disabled=true;
-  fetch(SU+"/rest/v1/menu_items?id=eq."+id,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
+  fetch("/api/supabase/menu_items?id=eq."+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
   .then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(t);});return r.text();})
   .then(function(){notif("✅ Guardado");loadMenuEditor();loadMenu();})
   .catch(function(e){notif("Error: "+e.message.substring(0,40));})
@@ -3041,12 +3043,12 @@ async function subirFotoProd(prodId,file){
     var ext=file.name.split(".").pop()||"jpg";
     var path="menu-productos/"+rest.id+"/"+prodId+"-"+Date.now()+"."+ext;
     if(bar)bar.style.width="60%";
-    var r=await fetch(SU+"/storage/v1/object/media/"+path,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":blob.type||"image/jpeg","x-upsert":"true"},body:blob});
+    var r=await fetch("/api/storage-upload/"+path,{method:"POST",headers:{"Content-Type":blob.type||"image/jpeg"},body:blob});
     if(!r.ok)throw new Error(await r.text());
     var url=SU+"/storage/v1/object/public/media/"+path;
     if(bar)bar.style.width="100%";
     setFotoProdUI(prodId,url);
-    await fetch(SU+"/rest/v1/menu_items?id=eq."+prodId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({imagen_url:url})});
+    await fetch("/api/supabase/menu_items?id=eq."+prodId,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({imagen_url:url})});
     notif("✅ Foto guardada!","rgba(16,185,129,0.9)");
     loadMenuEditor();
   }catch(e){console.error(e);notif("❌ Error: "+e.message.substring(0,50));}
@@ -3071,7 +3073,7 @@ function limpiarFotoProdUI(prodId){
 }
 function limpiarFotoProd(prodId){
   limpiarFotoProdUI(prodId);
-  fetch(SU+"/rest/v1/menu_items?id=eq."+prodId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({imagen_url:null})})
+  fetch("/api/supabase/menu_items?id=eq."+prodId,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({imagen_url:null})})
   .then(function(){notif("🗑 Foto eliminada");loadMenuEditor();}).catch(function(){notif("Error");});
 }
 function comprimirBlob(file,maxW,quality){
@@ -3102,7 +3104,7 @@ async function subirFotoNuevoProd(input){
     var ext=file.name.split(".").pop()||"jpg";
     var path="menu-productos/"+(rest?rest.id:"tmp")+"/nuevo-"+Date.now()+"."+ext;
     if(bar)bar.style.width="70%";
-    var r=await fetch(SU+"/storage/v1/object/media/"+path,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":blob.type||"image/jpeg","x-upsert":"true"},body:blob});
+    var r=await fetch("/api/storage-upload/"+path,{method:"POST",headers:{"Content-Type":blob.type||"image/jpeg"},body:blob});
     if(!r.ok)throw new Error(await r.text());
     nuevoProdImgUrl=SU+"/storage/v1/object/public/media/"+path;
     if(bar)bar.style.width="100%";
@@ -3134,7 +3136,7 @@ async function subirAparienciaImg(file, inputId, uploadingId){
     var blob=await comprimirBlob(file,1600,0.85);
     var ext=file.name.split(".").pop()||"jpg";
     var path="apariencia/"+rest.id+"/"+inputId+"-"+Date.now()+"."+ext;
-    var r=await fetch(SU+"/storage/v1/object/media/"+path,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":blob.type||"image/jpeg","x-upsert":"true"},body:blob});
+    var r=await fetch("/api/storage-upload/"+path,{method:"POST",headers:{"Content-Type":blob.type||"image/jpeg"},body:blob});
     if(!r.ok)throw new Error(await r.text());
     var url=SU+"/storage/v1/object/public/media/"+path;
     var inp=document.getElementById(inputId);
@@ -3165,7 +3167,7 @@ function abrirEditProd(id){
   if(MENU_PROD&&MENU_PROD.length){item=MENU_PROD.find(function(x){return x.id===id;});}
   if(item){_llenarEditProd(item);}
   else{
-    fetch(SU+"/rest/v1/menu_items?id=eq."+id,{headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+    fetch("/api/supabase/menu_items?id=eq."+id)
     .then(function(r){return r.json();})
     .then(function(d){if(d&&d.length)_llenarEditProd(d[0]);})
     .catch(function(){notif("Error cargando producto");});
@@ -3201,7 +3203,7 @@ async function epSubirFoto(file){
     var ext=file.name.split(".").pop()||"jpg";
     var path="menu-productos/"+rest.id+"/"+(editProdId||"tmp")+"-"+Date.now()+"."+ext;
     if(bar)bar.style.width="70%";
-    var r=await fetch(SU+"/storage/v1/object/media/"+path,{method:"POST",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":blob.type||"image/jpeg","x-upsert":"true"},body:blob});
+    var r=await fetch("/api/storage-upload/"+path,{method:"POST",headers:{"Content-Type":blob.type||"image/jpeg"},body:blob});
     if(!r.ok)throw new Error(await r.text());
     var url=SU+"/storage/v1/object/public/media/"+path;
     if(bar)bar.style.width="100%";
@@ -3240,7 +3242,7 @@ document.addEventListener("DOMContentLoaded",function(){
     if(!editProdId)return;
     var nuevoDispo=!editProdDispo;
     var btn=this;btn.textContent="Guardando...";btn.disabled=true;
-    fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({disponible:nuevoDispo})})
+    fetch("/api/supabase/menu_items?id=eq."+editProdId,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({disponible:nuevoDispo})})
     .then(function(r){
       if(r.ok||r.status===204){
         editProdDispo=nuevoDispo;
@@ -3275,9 +3277,9 @@ document.addEventListener("DOMContentLoaded",function(){
     if(emojiVal)payload.emoji=emojiVal;
     if(!payload.nombre||!payload.precio){notif("Nombre y precio son obligatorios");return;}
     var btn=this;btn.textContent="Guardando...";btn.disabled=true;
-    fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{
+    fetch("/api/supabase/menu_items?id=eq."+editProdId,{
       method:"PATCH",
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+      headers:{"Content-Type":"application/json"},
       body:JSON.stringify(payload)
     })
     .then(function(r){
@@ -3291,7 +3293,7 @@ document.addEventListener("DOMContentLoaded",function(){
           // Si falla imagen_url (columna no existe aún), reintentar sin ella
           if(t.indexOf("imagen_url")!==-1){
             delete payload.imagen_url;
-            return fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{method:"PATCH",headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify(payload)})
+            return fetch("/api/supabase/menu_items?id=eq."+editProdId,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
             .then(function(r2){
               if(r2.ok||r2.status===204){notif("✅ Guardado (sin foto — ejecuta el SQL primero)","rgba(245,158,11,0.9)");document.getElementById("epOverlay").classList.remove("open");editProdId=null;loadMenuEditor();loadMenu();cargarProd();}
               else{return r2.text().then(function(t2){notif("Error: "+t2.substring(0,80));});}
@@ -3306,7 +3308,7 @@ document.addEventListener("DOMContentLoaded",function(){
   });
   document.getElementById("epEliminar").addEventListener("click",function(){
     if(!editProdId||!confirm("¿Eliminar este producto?"))return;
-    fetch(SU+"/rest/v1/menu_items?id=eq."+editProdId,{method:"DELETE",headers:{"apikey":SK,"Authorization":"Bearer "+SK}})
+    fetch("/api/supabase/menu_items?id=eq."+editProdId,{method:"DELETE"})
     .then(function(r){if(r.ok||r.status===204){notif("Producto eliminado");document.getElementById("epOverlay").classList.remove("open");editProdId=null;loadMenuEditor();loadMenu();cargarProd();}else{notif("Error al eliminar");}})
     .catch(function(){notif("Error de conexion");});
   });
@@ -3320,9 +3322,9 @@ function guardarPromosEditor(){
   var btn=document.querySelector("#metsec-promos .edit-save-btn");
   if(btn){btn.textContent="Guardando...";btn.disabled=true;}
   // Guardar promos_semanales y banners_json directo a Supabase
-  fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{
+  fetch("/api/supabase/restaurantes?id=eq."+rest.id,{
     method:"PATCH",
-    headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+    headers:{"Content-Type":"application/json"},
     body:JSON.stringify({promos_semanales:promosText,banners_json:bannersStr})
   })
   .then(function(r){
@@ -3334,9 +3336,9 @@ function guardarPromosEditor(){
       return r.text().then(function(t){
         // Si falla por columna inexistente, intentar solo promos_semanales
         if(t.indexOf("PGRST204")!==-1||t.indexOf("banners_json")!==-1){
-          return fetch(SU+"/rest/v1/restaurantes?id=eq."+rest.id,{
+          return fetch("/api/supabase/restaurantes?id=eq."+rest.id,{
             method:"PATCH",
-            headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+            headers:{"Content-Type":"application/json"},
             body:JSON.stringify({promos_semanales:promosText})
           }).then(function(r2){
             if(r2.ok||r2.status===204){
@@ -3425,9 +3427,9 @@ async function cargarZonasPredefinidas(){
     var z=ZONAS_PREDEFINIDAS[i];
     try{
       var colorAuto=ZONA_COLORES[i%ZONA_COLORES.length];
-      var r=await fetch(SU+"/rest/v1/zonas_domicilio",{
+      var r=await fetch("/api/supabase/zonas_domicilio",{
         method:"POST",
-        headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":"return=minimal"},
+        headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           restaurante_id:rest.id,
           nombre:z.nombre,
