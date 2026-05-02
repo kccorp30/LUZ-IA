@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LUZ IA — Panel Vendedor</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#07070c;--s1:#0e0f16;--s2:#151620;--s3:#1e1f2e;--bdr:rgba(255,255,255,.06);--bdr2:rgba(255,255,255,.1);--p:#7c3aed;--p2:#a78bfa;--g:#10b981;--r:#ef4444;--a:#f59e0b;--bl:#3b82f6;--cy:#06b6d4;--w:#f0eeff;--m:#666;--m2:#444}
+*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--w);font-family:'DM Sans',sans-serif}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--m2);border-radius:2px}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 0%,rgba(124,58,237,.1),transparent 60%)}
+.login-box{width:360px;padding:44px 36px;background:var(--s1);border:1px solid var(--bdr2);border-radius:22px;text-align:center}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:46px;letter-spacing:.06em}.logo b{background:linear-gradient(135deg,var(--p),var(--cy));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:12px;color:var(--p2);letter-spacing:.12em;text-transform:uppercase;margin-bottom:28px}
+.inp{width:100%;padding:13px 15px;background:var(--s2);border:1px solid var(--bdr2);border-radius:11px;color:var(--w);font-family:inherit;font-size:13px;outline:none;margin-bottom:10px;transition:border .2s}.inp:focus{border-color:var(--p)}
+.btn-main{width:100%;padding:13px;background:linear-gradient(135deg,var(--p),#4f46e5);border:none;border-radius:11px;color:#fff;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:4px}.btn-main:hover{box-shadow:0 6px 20px rgba(124,58,237,.4);transform:translateY(-1px)}
+.err{color:var(--r);font-size:11px;margin-top:8px;min-height:14px}
+#app{display:none}
+.topbar{height:56px;background:var(--s1);border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:50}
+.topbar-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em}.topbar-logo b{color:var(--p2)}
+.topbar-user{font-size:12px;color:var(--m);display:flex;align-items:center;gap:8px}
+.topbar-user span{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--p),var(--bl));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.tabs{display:flex;gap:6px;padding:16px 24px 0;border-bottom:1px solid var(--bdr);overflow-x:auto}
+.tab{padding:10px 16px;font-size:12px;font-weight:600;color:var(--m);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--w)}.tab.on{color:var(--p2);border-color:var(--p)}
+.content{padding:20px 24px;max-width:1200px}
+.page{display:none}.page.on{display:block;animation:fi .3s ease}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+/* STATS */
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.sc{background:var(--s2);border:1px solid var(--bdr);border-radius:14px;padding:16px 18px}
+.sc-l{font-size:10px;color:var(--m);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.sc-v{font-family:'Bebas Neue',sans-serif;font-size:32px}
+/* PIPELINE */
+.pipe{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.pipe-col{background:var(--s2);border:1px solid var(--bdr);border-radius:14px;min-height:200px}
+.pipe-head{padding:12px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:8px}
+.pipe-head .cnt{font-family:'JetBrains Mono',monospace;font-size:11px;background:rgba(255,255,255,.06);padding:2px 8px;border-radius:20px}
+.pipe-body{padding:8px}
+.rcard{background:var(--s3);border:1px solid var(--bdr);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s}
+.rcard:hover{border-color:var(--bdr2);transform:translateY(-1px)}
+.rcard-n{font-size:13px;font-weight:600;margin-bottom:2px}
+.rcard-m{font-size:10px;color:var(--m)}
+.rcard-badges{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.rbadge{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700;letter-spacing:.02em}
+.rbadge.trial{background:rgba(6,182,212,.12);color:#67e8f9}
+.rbadge.activo{background:rgba(16,185,129,.12);color:#6ee7b7}
+.rbadge.vencido{background:rgba(245,158,11,.12);color:#fcd34d}
+.rbadge.suspendido{background:rgba(239,68,68,.12);color:#fca5a5}
+.rbadge.emprendedor{background:rgba(245,158,11,.08);color:#fcd34d}
+.rbadge.crecimiento{background:rgba(124,58,237,.08);color:#c4b5fd}
+.rbadge.dominante{background:rgba(6,182,212,.08);color:#67e8f9}
+/* ALERT */
+.alert{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#fcd34d;display:none}.alert.show{display:block}
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:10px 14px;text-align:left;font-size:10px;color:var(--m);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--bdr);font-weight:600}
+.tbl td{padding:11px 14px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.03)}
+.tbl tr:hover td{background:rgba(255,255,255,.01)}
+/* BUTTONS */
+.btn{padding:7px 14px;border-radius:9px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;border:none;display:inline-flex;align-items:center;gap:5px}
+.btn-p{background:linear-gradient(135deg,var(--p),#4f46e5);color:#fff}.btn-p:hover{box-shadow:0 4px 14px rgba(124,58,237,.35)}
+.btn-g{background:var(--s3);color:var(--w);border:1px solid var(--bdr2)}.btn-g:hover{border-color:var(--p)}
+.btn-d{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.15)}
+.btn-s{background:rgba(16,185,129,.1);color:#6ee7b7;border:1px solid rgba(16,185,129,.15)}
+.btn-xl{padding:12px 20px;font-size:13px;border-radius:12px}
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);backdrop-filter:blur(3px);align-items:center;justify-content:center;overflow-y:auto;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--s1);border:1px solid var(--bdr2);border-radius:18px;padding:28px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto}
+.mt{font-family:'Bebas Neue',sans-serif;font-size:26px;margin-bottom:18px}
+.fg{margin-bottom:12px}
+.fl{font-size:10px;color:var(--m);margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.fi{width:100%;padding:10px 13px;background:var(--s2);border:1px solid var(--bdr2);border-radius:9px;color:var(--w);font-family:inherit;font-size:13px;outline:none;transition:border .2s}.fi:focus{border-color:var(--p)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fgrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.section-t{font-size:9px;color:var(--p2);font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid rgba(124,58,237,.12)}
+.ma{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+/* ONBOARDING CHECKLIST */
+.check-list{list-style:none}
+.check-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;margin-bottom:6px;font-size:12px;cursor:pointer;transition:all .15s}
+.check-item:hover{border-color:var(--bdr2)}
+.check-item.done{opacity:.5}
+.check-dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--m2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;transition:all .2s}
+.check-item.done .check-dot{background:var(--g);border-color:var(--g);color:#fff}
+.check-label{flex:1}
+.check-label strong{display:block;margin-bottom:1px}
+.check-label span{font-size:10px;color:var(--m)}
+/* MENU PHOTO */
+.upload-zone{border:2px dashed var(--bdr2);border-radius:14px;padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.upload-zone:hover{border-color:var(--p);background:rgba(124,58,237,.04)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-preview{max-width:100%;max-height:260px;border-radius:10px;margin-top:12px;display:none}
+/* RULES */
+.rule-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;margin-bottom:6px}
+.rule-item .ico{font-size:18px;flex-shrink:0;margin-top:2px}
+.rule-item .txt{flex:1;font-size:12px;line-height:1.4}
+/* TOAST */
+.toast{position:fixed;top:20px;right:20px;background:var(--g);color:#fff;padding:11px 18px;border-radius:10px;font-size:12px;font-weight:600;z-index:999;opacity:0;transform:translateY(-8px);transition:all .3s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+/* ACTIVITY */
+.act-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdr);font-size:12px}
+.act-ico{font-size:16px;flex-shrink:0;margin-top:2px}
+.act-time{font-size:10px;color:var(--m2);margin-top:2px}
+</style>
+</head>
+<body>
+<div id="loginScreen" class="login-wrap">
+  <div class="login-box">
+    <div class="logo">LUZ <b>IA</b></div>
+    <div class="logo-sub">Panel Vendedor</div>
+    <input class="inp" type="text" id="loginUser" placeholder="Email o usuario">
+    <input class="inp" type="password" id="loginPass" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-main" onclick="doLogin()">Entrar</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">LUZ <b>IA</b> &nbsp;Vendedor</div>
+    <div class="topbar-user"><span id="uAvatar">V</span> <span id="uName">Vendedor</span></div>
+  </div>
+  <div class="tabs">
+    <div class="tab on" onclick="showTab('pipeline',this)">📊 Pipeline</div>
+    <div class="tab" onclick="showTab('nuevo',this)">➕ Nuevo Restaurante</div>
+    <div class="tab" onclick="showTab('onboarding',this)">📋 Onboarding</div>
+    <div class="tab" onclick="showTab('actividad',this)">📝 Actividad</div>
+  </div>
+  <div class="content">
+    <!-- PIPELINE -->
+    <div class="page on" id="page-pipeline">
+      <div class="alert" id="alertTrials"></div>
+      <div class="sg">
+        <div class="sc"><div class="sc-l">Mis restaurantes</div><div class="sc-v" style="color:var(--bl)" id="sTotal">0</div></div>
+        <div class="sc"><div class="sc-l">Activos</div><div class="sc-v" style="color:var(--g)" id="sActivos">0</div></div>
+        <div class="sc"><div class="sc-l">En Trial</div><div class="sc-v" style="color:var(--cy)" id="sTrials">0</div></div>
+        <div class="sc"><div class="sc-l">Por vencer (3d)</div><div class="sc-v" style="color:var(--a)" id="sVencen">0</div></div>
+      </div>
+      <div class="pipe">
+        <div class="pipe-col"><div class="pipe-head" style="color:var(--cy)">🧪 Trial <span class="cnt" id="cntTrial">0</span></div><div class="pipe-body" id="pipeTrial"></div></div>
+        <div class="pipe-col"><div class="pipe-head" style="color:var(--g)">✅ Activo <span class="cnt" id="cntActivo">0</span></div><div class="pipe-body" id="pipeActivo"></div></div>
+        <div class="pipe-col"><div class="pipe-head" style="color:var(--a)">⚠️ Vencido <span class="cnt" id="cntVencido">0</span></div><div class="pipe-body" id="pipeVencido"></div></div>
+        <div class="pipe-col"><div class="pipe-head" style="color:var(--r)">⏸ Suspendido <span class="cnt" id="cntSusp">0</span></div><div class="pipe-body" id="pipeSusp"></div></div>
+      </div>
+    </div>
+    <!-- NUEVO RESTAURANTE -->
+    <div class="page" id="page-nuevo">
+      <div style="max-width:600px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;margin-bottom:4px">Crear Restaurante</div>
+        <div style="font-size:12px;color:var(--m);margin-bottom:20px">Se crea con trial de 7 días (Plan Crecimiento)</div>
+        <div class="section-t">Información del restaurante</div>
+        <div class="fg"><label class="fl">Nombre del restaurante</label><input class="fi" id="nr-nombre" placeholder="La Curva Street Food"></div>
+        <div class="fgrid">
+          <div class="fg"><label class="fl">Ciudad</label><input class="fi" id="nr-ciudad" value="Cali"></div>
+          <div class="fg"><label class="fl">Tipo de comida</label><input class="fi" id="nr-tipo" placeholder="Hamburguesas, Pollo..."></div>
+        </div>
+        <div class="fg"><label class="fl">Dirección</label><input class="fi" id="nr-dir" placeholder="Cl. 16 #56-40, Canaveral"></div>
+        <div class="section-t">Dueño / contacto</div>
+        <div class="fgrid">
+          <div class="fg"><label class="fl">Nombre</label><input class="fi" id="nr-contacto" placeholder="José García"></div>
+          <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="nr-tel" placeholder="3001234567"></div>
+        </div>
+        <div class="section-t">WhatsApp Business (si ya lo tiene)</div>
+        <div class="fgrid">
+          <div class="fg"><label class="fl">Número WhatsApp</label><input class="fi" id="nr-wa" placeholder="573001234567"></div>
+          <div class="fg"><label class="fl">Phone ID de Meta</label><input class="fi" id="nr-pid" placeholder="Se obtiene de Meta"></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin:12px 0;font-size:11px;color:var(--m)">
+          <div style="font-weight:700;color:var(--a);margin-bottom:6px">📱 ¿Cómo obtener el Phone ID?</div>
+          1. Ir a <a href="https://developers.facebook.com/apps/" target="_blank" style="color:var(--p2)">developers.facebook.com/apps</a><br>
+          2. Seleccionar la App de LUZ IA → WhatsApp → API Setup<br>
+          3. Click "Add phone number" → Ingresar número del restaurante<br>
+          4. Verificar con SMS → Copiar el Phone Number ID generado<br>
+          5. Pegarlo aquí arriba
+        </div>
+        <div class="section-t">Horario</div>
+        <div class="fgrid">
+          <div class="fg"><label class="fl">Apertura</label><input class="fi" type="time" id="nr-ap" value="10:00"></div>
+          <div class="fg"><label class="fl">Cierre</label><input class="fi" type="time" id="nr-ci" value="22:00"></div>
+        </div>
+        <div class="section-t">Personalización de Luz</div>
+        <div class="fgrid">
+          <div class="fg"><label class="fl">Nombre de la IA</label><input class="fi" id="nr-nLuz" value="Luz" placeholder="Luz"></div>
+          <div class="fg"><label class="fl">Plan</label>
+            <select class="fi" id="nr-plan"><option value="emprendedor">🥉 Emprendedor</option><option value="crecimiento" selected>🥈 Crecimiento</option><option value="dominante">🥇 Dominante</option></select>
+          </div>
+        </div>
+        <div class="fg"><label class="fl">Personalidad</label><input class="fi" id="nr-pers" value="Amable, caleña, servicial" placeholder="Amable, caleña..."></div>
+        <div class="section-t">Reglas iniciales para Luz</div>
+        <div style="font-size:11px;color:var(--m);margin-bottom:8px">Escribe las reglas que Luz debe seguir (una por línea)</div>
+        <div class="fg"><textarea class="fi" id="nr-reglas" rows="5" placeholder="No ofrecemos domicilio después de las 11pm&#10;Solo aceptamos Nequi, Bancolombia y efectivo&#10;La especialidad es pollo a la brasa&#10;El WiFi es RESTAURANTE2024&#10;Los combos incluyen papas y gaseosa"></textarea></div>
+        <button class="btn btn-p btn-xl" style="width:100%;margin-top:10px" onclick="crearRestaurante()">🚀 Crear restaurante con trial 7 días</button>
+        <div id="nr-result" style="margin-top:14px"></div>
+      </div>
+    </div>
+    <!-- ONBOARDING -->
+    <div class="page" id="page-onboarding">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;margin-bottom:4px">Onboarding</div>
+      <div style="font-size:12px;color:var(--m);margin-bottom:16px">Selecciona un restaurante para configurarlo</div>
+      <div class="fg"><select class="fi" id="ob-select" onchange="loadOnboarding()" style="max-width:400px"><option value="">Selecciona...</option></select></div>
+      <div id="ob-panel" style="display:none">
+        <div id="ob-checklist"></div>
+        <!-- MENU FROM PHOTO -->
+        <div style="margin-top:20px">
+          <div class="section-t">📸 Cargar menú desde foto</div>
+          <div style="font-size:11px;color:var(--m);margin-bottom:10px">Toma una foto del menú físico del restaurante. Luz extrae los productos automáticamente.</div>
+          <div class="upload-zone" id="uploadZone">
+            <div style="font-size:36px;margin-bottom:6px">📷</div>
+            <div style="font-size:13px;font-weight:600">Toca para subir foto del menú</div>
+            <div style="font-size:11px;color:var(--m);margin-top:4px">JPG, PNG — máx 10MB</div>
+            <input type="file" accept="image/*" onchange="handleMenuPhoto(this)">
+            <img class="upload-preview" id="menuPreview">
+          </div>
+          <div id="menuPhotoResult" style="margin-top:12px"></div>
+        </div>
+        <!-- RULES -->
+        <div style="margin-top:20px">
+          <div class="section-t">🧠 Reglas de Luz</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input class="fi" id="ob-regla-input" placeholder="Escribir nueva regla..." style="flex:1" onkeydown="if(event.key==='Enter')agregarRegla()">
+            <button class="btn btn-p" onclick="agregarRegla()">+ Agregar</button>
+          </div>
+          <div id="ob-reglas-list"></div>
+        </div>
+        <!-- MENU MANUAL -->
+        <div style="margin-top:20px">
+          <div class="section-t">📋 Menú actual</div>
+          <div id="ob-menu-list"><div style="color:var(--m);font-size:12px;padding:10px 0">Cargando...</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- ACTIVIDAD -->
+    <div class="page" id="page-actividad">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:30px;margin-bottom:4px">Mi Actividad</div>
+      <div style="font-size:12px;color:var(--m);margin-bottom:16px">Historial de acciones</div>
+      <div class="fgrid" style="max-width:600px;margin-bottom:16px">
+        <select class="fi" id="act-tipo"><option value="visita">📍 Visita</option><option value="demo">🎥 Demo</option><option value="llamada">📞 Llamada</option><option value="seguimiento">🔄 Seguimiento</option><option value="cierre">🎉 Cierre</option></select>
+        <select class="fi" id="act-rest"><option value="">Selecciona restaurante</option></select>
+      </div>
+      <div class="fg" style="max-width:600px"><textarea class="fi" id="act-notas" rows="2" placeholder="Notas de la actividad..."></textarea></div>
+      <button class="btn btn-p" onclick="registrarActividad()" style="margin-bottom:20px">📝 Registrar actividad</button>
+      <div id="act-lista"></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN=localStorage.getItem("luzia_vendor_token")||"";
+var USER=null;
+var RESTS=[];
+var obRestId=null;
+
+function authH(){return{"Authorization":"Bearer "+TOKEN,"Content-Type":"application/json"};}
+function toast(m,c){var t=document.getElementById("toast");t.textContent=m;t.style.background=c||"#10b981";t.classList.add("show");setTimeout(function(){t.classList.remove("show");},2500);}
+function fmt(n){return"$"+Number(n||0).toLocaleString("es-CO");}
+function ago(d){if(!d)return"—";var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<1?"ahora":diff<60?diff+" min":diff<1440?Math.floor(diff/60)+"h":new Date(d).toLocaleDateString("es-CO");}
+
+async function doLogin(){
+  var u=document.getElementById("loginUser").value.trim();
+  var p=document.getElementById("loginPass").value.trim();
+  document.getElementById("loginErr").textContent="";
+  if(!u||!p){document.getElementById("loginErr").textContent="Ingresa credenciales";return;}
+  try{
+    var r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:u,password:p})});
+    var d=await r.json();
+    if(!d.ok){var r2=await fetch("/api/admin/login-legacy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user:u,password:p})});d=await r2.json();}
+    if(d.ok){TOKEN=d.token;USER=d.user;localStorage.setItem("luzia_vendor_token",TOKEN);enterApp();}
+    else{document.getElementById("loginErr").textContent=d.error||"Error";}
+  }catch(e){document.getElementById("loginErr").textContent="Error de conexión";}
+}
+function enterApp(){
+  document.getElementById("loginScreen").style.display="none";
+  document.getElementById("app").style.display="block";
+  if(USER){document.getElementById("uName").textContent=USER.nombre||"Vendedor";document.getElementById("uAvatar").textContent=(USER.nombre||"V").charAt(0).toUpperCase();}
+  loadPipeline();
+}
+(async function(){if(TOKEN){try{var r=await fetch("/api/admin/verify",{headers:{"Authorization":"Bearer "+TOKEN}});var d=await r.json();if(d.ok){USER=d.user;enterApp();return;}}catch(e){}localStorage.removeItem("luzia_vendor_token");TOKEN="";}})();
+
+function showTab(name,el){
+  document.querySelectorAll(".page").forEach(function(p){p.classList.remove("on");});
+  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("on");});
+  document.getElementById("page-"+name).classList.add("on");
+  if(el)el.classList.add("on");
+  if(name==="pipeline")loadPipeline();
+  if(name==="onboarding")loadObSelect();
+  if(name==="actividad"){loadActSelect();loadActividad();}
+}
+
+// ── PIPELINE ──
+async function loadPipeline(){
+  try{
+    var r=await fetch("/api/vendedor/dashboard",{headers:authH()});
+    var d=await r.json();if(!d.ok)return;
+    RESTS=d.restaurantes||[];
+    var s=d.stats;
+    document.getElementById("sTotal").textContent=s.total;
+    document.getElementById("sActivos").textContent=s.activos;
+    document.getElementById("sTrials").textContent=s.trials;
+    document.getElementById("sVencen").textContent=s.trialsPorVencer;
+    if(s.trialsPorVencer>0){document.getElementById("alertTrials").textContent="⚠️ "+s.trialsPorVencer+" trial(s) por vencer en 3 días — ¡haz seguimiento!";document.getElementById("alertTrials").classList.add("show");}else{document.getElementById("alertTrials").classList.remove("show");}
+    var cols={trial:[],activo:[],vencido:[],suspendido:[]};
+    RESTS.forEach(function(r){
+      var card='<div class="rcard" onclick="abrirDetalle(\''+r.id+'\')"><div class="rcard-n">'+r.nombre+'</div><div class="rcard-m">'+(r.ciudad_restaurante||r.ciudad||"")+" · "+(r.contacto_telefono||"")+'</div><div class="rcard-badges"><span class="rbadge '+(r.plan||"")+'">'+r.plan+'</span>';
+      if(r._menuCount!==undefined)card+='<span class="rbadge" style="background:rgba(255,255,255,.05);color:var(--m)">'+r._menuCount+' prods</span>';
+      // Onboarding progress
+      if(r._onboarding){var done=Object.values(r._onboarding).filter(Boolean).length;var total=Object.keys(r._onboarding).length;if(done<total)card+='<span class="rbadge" style="background:rgba(245,158,11,.08);color:#fcd34d">'+done+'/'+total+'</span>';}
+      card+='</div></div>';
+      if(r.suscripcion_estado==="trial")cols.trial.push(card);
+      else if(r.estado==="activo")cols.activo.push(card);
+      else if(r.estado==="vencido")cols.vencido.push(card);
+      else cols.suspendido.push(card);
+    });
+    ["trial","activo","vencido","suspendido"].forEach(function(k){
+      var key=k.charAt(0).toUpperCase()+k.slice(1);
+      document.getElementById("pipe"+key).innerHTML=cols[k].join("")||'<div style="color:var(--m2);font-size:11px;padding:10px;text-align:center">Vacío</div>';
+      document.getElementById("cnt"+key).textContent=cols[k].length;
+    });
+    // Capitalize keys properly
+    document.getElementById("pipeActivo").innerHTML=cols.activo.join("")||'<div style="color:var(--m2);font-size:11px;padding:10px;text-align:center">Vacío</div>';
+    document.getElementById("cntActivo").textContent=cols.activo.length;
+    document.getElementById("pipeSusp").innerHTML=cols.suspendido.join("")||'<div style="color:var(--m2);font-size:11px;padding:10px;text-align:center">Vacío</div>';
+    document.getElementById("cntSusp").textContent=cols.suspendido.length;
+    // Actividad
+    if(d.actividad&&d.actividad.length>0){
+      var actH=d.actividad.slice(0,5).map(function(a){var icos={visita:"📍",demo:"🎥",llamada:"📞",seguimiento:"🔄",cierre:"🎉",onboarding:"📋"};return'<div class="act-item"><div class="act-ico">'+(icos[a.tipo]||"📝")+'</div><div style="flex:1"><strong style="font-size:12px">'+(a.restaurante_nombre||"—")+'</strong> — '+(a.notas||a.tipo)+'<div class="act-time">'+ago(a.created_at)+'</div></div></div>';}).join("");
+    }
+  }catch(e){console.error(e);}
+}
+
+function abrirDetalle(id){
+  // Switch to onboarding tab with this restaurant
+  showTab("onboarding",document.querySelectorAll(".tab")[2]);
+  loadObSelect(function(){
+    document.getElementById("ob-select").value=id;
+    loadOnboarding();
+  });
+}
+
+// ── CREAR RESTAURANTE ──
+async function crearRestaurante(){
+  var nombre=document.getElementById("nr-nombre").value.trim();
+  if(!nombre){toast("Nombre obligatorio","#ef4444");return;}
+  try{
+    var body={
+      nombre:nombre,
+      ciudad:document.getElementById("nr-ciudad").value.trim()||"Cali",
+      tipo_comida:document.getElementById("nr-tipo").value.trim()||null,
+      direccion:document.getElementById("nr-dir").value.trim()||null,
+      contacto_nombre:document.getElementById("nr-contacto").value.trim()||null,
+      contacto_telefono:document.getElementById("nr-tel").value.trim()||null,
+      whatsapp:document.getElementById("nr-wa").value.trim()||null,
+      whatsapp_phone_id:document.getElementById("nr-pid").value.trim()||null,
+      hora_apertura:document.getElementById("nr-ap").value||"10:00",
+      hora_cierre:document.getElementById("nr-ci").value||"22:00",
+      nombre_luz:document.getElementById("nr-nLuz").value.trim()||"Luz",
+      personalidad_luz:document.getElementById("nr-pers").value.trim()||null,
+      plan:document.getElementById("nr-plan").value
+    };
+    var r=await fetch("/api/vendedor/crear-restaurante",{method:"POST",headers:authH(),body:JSON.stringify(body)});
+    var d=await r.json();
+    if(d.ok){
+      var rest=d.restaurante;
+      // Save initial rules
+      var reglas=document.getElementById("nr-reglas").value.trim();
+      if(reglas&&rest.id){
+        var lines=reglas.split("\n").filter(function(l){return l.trim().length>3;});
+        for(var i=0;i<lines.length;i++){
+          await fetch("/api/aprendizajes",{method:"POST",headers:authH(),body:JSON.stringify({restaurante_id:rest.id,tipo:"regla_negocio",contenido:lines[i].trim(),fuente:"onboarding"})}).catch(function(){});
+        }
+      }
+      document.getElementById("nr-result").innerHTML='<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);border-radius:12px;padding:16px;text-align:center"><div style="font-size:28px;margin-bottom:6px">🎉</div><div style="font-weight:700;font-size:15px;margin-bottom:6px">¡Restaurante creado!</div><div style="font-size:12px;color:var(--m);margin-bottom:10px">Trial de 7 días activo</div><div style="font-family:JetBrains Mono;font-size:28px;letter-spacing:.2em;color:var(--p);background:var(--s2);border:2px dashed rgba(124,58,237,.3);border-radius:12px;padding:12px;margin:10px 0">PIN: '+d.pin+'</div><div style="font-size:11px;color:var(--m)">Panel: '+location.origin+'/restaurante</div><button class="btn btn-p" style="margin-top:12px" onclick="showTab(\'onboarding\',document.querySelectorAll(\'.tab\')[2])">📋 Ir al onboarding →</button></div>';
+      toast("✅ Restaurante creado");
+      // Clear form
+      ["nr-nombre","nr-tipo","nr-dir","nr-contacto","nr-tel","nr-wa","nr-pid","nr-reglas"].forEach(function(id){document.getElementById(id).value="";});
+    }else{toast("❌ "+(d.error||"Error"),"#ef4444");}
+  }catch(e){toast("❌ Error de conexión","#ef4444");}
+}
+
+// ── ONBOARDING ──
+function loadObSelect(cb){
+  var sel=document.getElementById("ob-select");
+  sel.innerHTML='<option value="">Selecciona...</option>'+RESTS.map(function(r){
+    var done=r._onboarding?Object.values(r._onboarding).filter(Boolean).length:0;
+    var total=r._onboarding?Object.keys(r._onboarding).length:6;
+    return'<option value="'+r.id+'">'+r.nombre+(done<total?" ("+done+"/"+total+")":"  ✅")+'</option>';
+  }).join("");
+  if(cb)setTimeout(cb,50);
+}
+
+async function loadOnboarding(){
+  obRestId=document.getElementById("ob-select").value;
+  if(!obRestId){document.getElementById("ob-panel").style.display="none";return;}
+  document.getElementById("ob-panel").style.display="block";
+  var r=RESTS.find(function(x){return x.id===obRestId;});
+  if(!r)return;
+  var ob=r._onboarding||{};
+  var items=[
+    {key:"info",label:"Información básica",desc:"Nombre, dirección, ciudad",done:ob.info,action:"editInfo"},
+    {key:"whatsapp",label:"WhatsApp conectado",desc:"Phone ID de Meta configurado",done:ob.whatsapp,action:"editWA"},
+    {key:"horario",label:"Horario definido",desc:"Apertura y cierre configurados",done:ob.horario,action:"editHorario"},
+    {key:"menu",label:"Menú cargado",desc:r._menuCount?r._menuCount+" productos":"Sin productos aún",done:ob.menu,action:"scrollMenu"},
+    {key:"logo",label:"Logo subido",desc:"Identidad visual del restaurante",done:ob.logo,action:"editLogo"},
+    {key:"reglas",label:"Reglas para Luz",desc:r._reglasCount?r._reglasCount+" reglas activas":"Sin reglas aún",done:ob.reglas,action:"scrollReglas"}
+  ];
+  document.getElementById("ob-checklist").innerHTML='<div style="font-weight:700;font-size:14px;margin-bottom:12px">'+r.nombre+' — <span style="color:var(--p2)">'+items.filter(function(i){return i.done;}).length+'/'+items.length+' completado</span></div>'+
+    '<ul class="check-list">'+items.map(function(i){
+      return'<li class="check-item'+(i.done?" done":"")+'" onclick="'+i.action+'()"><div class="check-dot">'+(i.done?"✓":"")+'</div><div class="check-label"><strong>'+i.label+'</strong><span>'+i.desc+'</span></div></li>';
+    }).join("")+'</ul>';
+  // Load menu
+  loadObMenu();
+  // Load rules
+  loadObReglas();
+}
+
+async function loadObMenu(){
+  if(!obRestId)return;
+  try{
+    var r=await fetch("/api/admin/sb/menu_items?restaurante_id=eq."+obRestId+"&order=categoria,orden&select=nombre,precio,categoria,disponible,id",{headers:authH()});
+    var items=await r.json();
+    if(!items||!items.length){document.getElementById("ob-menu-list").innerHTML='<div style="color:var(--m);font-size:12px;padding:10px 0">Sin productos. Sube una foto del menú arriba ☝️</div>';return;}
+    var g={};items.forEach(function(i){if(!g[i.categoria])g[i.categoria]=[];g[i.categoria].push(i);});
+    document.getElementById("ob-menu-list").innerHTML=Object.entries(g).map(function(e){
+      return'<div style="font-size:10px;color:var(--p2);font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:12px 0 6px">'+e[0]+' ('+e[1].length+')</div>'+
+      e[1].map(function(i){return'<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:12px"><div style="flex:1">'+i.nombre+'</div><div style="color:var(--g);font-weight:600;font-family:JetBrains Mono;font-size:11px">'+fmt(i.precio)+'</div><button class="btn btn-d" style="padding:3px 8px;font-size:10px" onclick="delItem(\''+i.id+'\')">✕</button></div>';}).join("");
+    }).join("");
+  }catch(e){}
+}
+
+async function loadObReglas(){
+  if(!obRestId)return;
+  try{
+    var r=await fetch("/api/aprendizajes?restaurante_id="+obRestId,{headers:authH()});
+    var reglas=await r.json();
+    if(!reglas||!reglas.length){document.getElementById("ob-reglas-list").innerHTML='<div style="color:var(--m);font-size:12px">Sin reglas aún</div>';return;}
+    var icos={correccion:"⚠️",faq:"❓",regla_negocio:"📋",producto_info:"🍔",preferencia_cliente:"👤"};
+    document.getElementById("ob-reglas-list").innerHTML=reglas.filter(function(r){return r.activo;}).map(function(a){
+      return'<div class="rule-item"><div class="ico">'+(icos[a.tipo]||"📝")+'</div><div class="txt">'+a.contenido+'</div><button class="btn btn-d" style="padding:3px 8px;font-size:10px;flex-shrink:0" onclick="delRegla(\''+a.id+'\')">✕</button></div>';
+    }).join("");
+  }catch(e){}
+}
+
+async function agregarRegla(){
+  var txt=document.getElementById("ob-regla-input").value.trim();
+  if(!txt||!obRestId){toast("Escribe una regla","#ef4444");return;}
+  await fetch("/api/aprendizajes",{method:"POST",headers:authH(),body:JSON.stringify({restaurante_id:obRestId,tipo:"regla_negocio",contenido:txt,fuente:"onboarding"})});
+  document.getElementById("ob-regla-input").value="";
+  toast("🧠 Regla agregada");loadObReglas();loadPipeline();
+}
+
+async function delRegla(id){
+  await fetch("/api/aprendizajes/"+id,{method:"DELETE",headers:authH()});
+  toast("Eliminada");loadObReglas();
+}
+
+async function delItem(id){
+  if(!confirm("¿Eliminar producto?"))return;
+  await fetch("/api/admin/sb/menu_items?id=eq."+id,{method:"DELETE",headers:authH()});
+  toast("Eliminado");loadObMenu();
+}
+
+// ── MENU FROM PHOTO ──
+async function handleMenuPhoto(input){
+  var file=input.files[0];if(!file)return;
+  var preview=document.getElementById("menuPreview");
+  var reader=new FileReader();
+  reader.onload=function(e){
+    preview.src=e.target.result;preview.style.display="block";
+    var base64=e.target.result.split(",")[1];
+    processMenuPhoto(base64,file.type);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function processMenuPhoto(base64,mediaType){
+  var result=document.getElementById("menuPhotoResult");
+  result.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:16px;background:var(--s2);border-radius:12px"><div class="spin" style="font-size:20px">⟳</div><div><div style="font-weight:600;font-size:13px">Luz está leyendo el menú...</div><div style="font-size:11px;color:var(--m)">Extrayendo productos, precios y categorías</div></div></div>';
+  try{
+    var r=await fetch("/api/menu-from-photo",{method:"POST",headers:authH(),body:JSON.stringify({image_base64:base64,restaurante_id:obRestId,media_type:mediaType})});
+    var d=await r.json();
+    if(d.ok){
+      result.innerHTML='<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:12px;padding:14px"><div style="font-weight:700;font-size:14px;color:var(--g);margin-bottom:6px">✅ '+d.inserted+' productos cargados</div><div style="font-size:11px;color:var(--m)">Revisa abajo y elimina los que no correspondan</div></div>';
+      loadObMenu();loadPipeline();
+    }else{
+      result.innerHTML='<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:14px;color:#fca5a5;font-size:12px">❌ '+(d.error||"Error procesando")+'</div>';
+    }
+  }catch(e){result.innerHTML='<div style="color:var(--r);font-size:12px">Error de conexión</div>';}
+}
+
+// ── HELPERS for onboarding actions ──
+function scrollMenu(){document.getElementById("uploadZone").scrollIntoView({behavior:"smooth"});}
+function scrollReglas(){document.getElementById("ob-regla-input").scrollIntoView({behavior:"smooth"});document.getElementById("ob-regla-input").focus();}
+function editInfo(){toast("Edita desde el panel admin","var(--a)");}
+function editWA(){toast("Configura WhatsApp en Meta Developer Console","var(--a)");}
+function editHorario(){toast("Configura horario desde el panel del restaurante","var(--a)");}
+function editLogo(){toast("Sube logo desde el panel del restaurante → Apariencia","var(--a)");}
+
+// ── ACTIVIDAD ──
+function loadActSelect(){
+  document.getElementById("act-rest").innerHTML='<option value="">Sin restaurante</option>'+RESTS.map(function(r){return'<option value="'+r.id+'" data-name="'+r.nombre+'">'+r.nombre+'</option>';}).join("");
+}
+async function loadActividad(){
+  try{
+    var r=await fetch("/api/admin/sb/actividad_vendedor?order=created_at.desc&limit=30&select=*",{headers:authH()});
+    var acts=await r.json();
+    var icos={visita:"📍",demo:"🎥",llamada:"📞",seguimiento:"🔄",cierre:"🎉",onboarding:"📋"};
+    document.getElementById("act-lista").innerHTML=(acts||[]).map(function(a){
+      return'<div class="act-item"><div class="act-ico">'+(icos[a.tipo]||"📝")+'</div><div style="flex:1"><strong>'+(a.restaurante_nombre||"General")+'</strong> — <span style="color:var(--p2)">'+a.tipo+'</span><br><span style="color:var(--m)">'+( a.notas||"")+'</span><div class="act-time">'+ago(a.created_at)+'</div></div></div>';
+    }).join("")||'<div style="color:var(--m);font-size:12px">Sin actividad registrada</div>';
+  }catch(e){}
+}
+async function registrarActividad(){
+  var tipo=document.getElementById("act-tipo").value;
+  var restId=document.getElementById("act-rest").value||null;
+  var sel=document.getElementById("act-rest");
+  var restNombre=sel.selectedOptions[0]?sel.selectedOptions[0].getAttribute("data-name"):null;
+  var notas=document.getElementById("act-notas").value.trim();
+  await fetch("/api/vendedor/actividad",{method:"POST",headers:authH(),body:JSON.stringify({tipo:tipo,restaurante_id:restId,restaurante_nombre:restNombre,notas:notas})});
+  document.getElementById("act-notas").value="";
+  toast("✅ Actividad registrada");loadActividad();
+}
+</script>
+<style>.spin{display:inline-block;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}</style>
+</body>
+</html>
