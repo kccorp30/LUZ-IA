@@ -985,6 +985,7 @@ function parseReply(reply, from) {
 app.get("/menu",        function(req, res) { res.sendFile(path.join(__dirname, "menu.html")); });
 app.get("/mapa",        function(req, res) { res.sendFile(path.join(__dirname, "mapa_zonas.html")); });
 app.get("/admin",       function(req, res) { res.sendFile(path.join(__dirname, "admin.html")); });
+app.get("/vendedor",   function(req, res) { res.sendFile(path.join(__dirname, "vendedor.html")); });
 app.get("/restaurante", function(req, res) { res.sendFile(path.join(__dirname, "restaurante.html")); });
 app.get("/cocina",      function(req, res) { res.sendFile(path.join(__dirname, "cocina.html")); });
 app.get("/domi",        function(req, res) { res.sendFile(path.join(__dirname, "domiciliario.html")); });
@@ -1145,6 +1146,155 @@ app.all("/api/admin/sb/*", requireAdmin, async function(req, res) {
     var status = e.response ? e.response.status : 500;
     if (status === 201 || status === 204) return res.json({ ok: true });
     res.status(status >= 400 ? status : 500).json({ error: e.message, ok: false });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// VENDEDOR API
+// ═══════════════════════════════════════════════════════════
+app.get("/api/vendedor/dashboard", requireAdmin, async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    var vendedorId = req.adminUser.id;
+    // All restaurants (for superadmin) or assigned to vendedor
+    var filter = req.adminUser.rol === "superadmin" ? "" : "&vendedor_id=eq." + vendedorId;
+    var rests = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?select=*&order=created_at.desc" + filter, { headers: h });
+    // Activity log
+    var actFilter = req.adminUser.rol === "superadmin" ? "" : "&vendedor_id=eq." + vendedorId;
+    var actividad = await axios.get(SUPABASE_URL + "/rest/v1/actividad_vendedor?select=*&order=created_at.desc&limit=20" + actFilter, { headers: h });
+    var data = rests.data || [];
+    var activos = data.filter(function(r) { return r.estado === "activo"; }).length;
+    var trials = data.filter(function(r) { return r.suscripcion_estado === "trial"; }).length;
+    var hoy = new Date(); var en3 = new Date(); en3.setDate(en3.getDate() + 3);
+    var trialsPorVencer = data.filter(function(r) {
+      if (r.suscripcion_estado !== "trial" || !r.fecha_vencimiento) return false;
+      var fv = new Date(r.fecha_vencimiento);
+      return fv <= en3 && fv >= hoy;
+    });
+    // Onboarding status per restaurant
+    data.forEach(function(r) {
+      r._onboarding = {
+        info: !!(r.nombre && r.direccion),
+        whatsapp: !!r.whatsapp_phone_id,
+        horario: !!(r.hora_apertura && r.hora_cierre),
+        menu: false, // checked below
+        logo: !!r.logo_url,
+        reglas: false
+      };
+    });
+    // Check menu counts
+    try {
+      var restIds = data.map(function(r) { return r.id; });
+      if (restIds.length > 0) {
+        var menuCounts = await axios.get(SUPABASE_URL + "/rest/v1/menu_items?select=restaurante_id&disponible=eq.true&restaurante_id=in.(" + restIds.join(",") + ")", { headers: h });
+        var mc = {};
+        (menuCounts.data || []).forEach(function(m) { mc[m.restaurante_id] = (mc[m.restaurante_id] || 0) + 1; });
+        data.forEach(function(r) { r._onboarding.menu = (mc[r.id] || 0) > 0; r._menuCount = mc[r.id] || 0; });
+      }
+    } catch(e) {}
+    // Check reglas counts
+    try {
+      if (data.length > 0) {
+        var restIds2 = data.map(function(r) { return r.id; });
+        var reglasCounts = await axios.get(SUPABASE_URL + "/rest/v1/luz_aprendizajes?select=restaurante_id&activo=eq.true&restaurante_id=in.(" + restIds2.join(",") + ")", { headers: h });
+        var rc = {};
+        (reglasCounts.data || []).forEach(function(a) { rc[a.restaurante_id] = (rc[a.restaurante_id] || 0) + 1; });
+        data.forEach(function(r) { r._onboarding.reglas = (rc[r.id] || 0) > 0; r._reglasCount = rc[r.id] || 0; });
+      }
+    } catch(e) {}
+    res.json({ ok: true, restaurantes: data, actividad: actividad.data || [],
+      stats: { total: data.length, activos: activos, trials: trials, trialsPorVencer: trialsPorVencer.length }
+    });
+  } catch (e) { console.error("[vendedor/dashboard]", e.message); res.json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/vendedor/crear-restaurante", requireAdmin, async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var b = req.body;
+    var pin = b.pin || Math.floor(1000 + Math.random() * 9000).toString();
+    var trialFin = new Date(); trialFin.setDate(trialFin.getDate() + 7);
+    var restData = {
+      nombre: b.nombre, ciudad: b.ciudad || "Cali", ciudad_restaurante: b.ciudad || "Cali",
+      direccion: b.direccion || null, tipo_comida: b.tipo_comida || null,
+      contacto_nombre: b.contacto_nombre || null, contacto_telefono: b.contacto_telefono || null,
+      whatsapp: b.whatsapp || null, whatsapp_phone_id: b.whatsapp_phone_id || null,
+      plan: b.plan || "crecimiento", estado: "activo", suscripcion_estado: "trial",
+      fecha_vencimiento: trialFin.toISOString().split("T")[0],
+      pin: pin, vendedor_id: req.adminUser.id,
+      hora_apertura: (b.hora_apertura || "10:00") + ":00",
+      hora_cierre: (b.hora_cierre || "22:00") + ":00",
+      nombre_luz: b.nombre_luz || "Luz",
+      personalidad_luz: b.personalidad_luz || "Amable, caleña, servicial"
+    };
+    var r = await axios.post(SUPABASE_URL + "/rest/v1/restaurantes", restData,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" } });
+    var created = r.data && r.data[0] ? r.data[0] : r.data;
+    // Log activity
+    await axios.post(SUPABASE_URL + "/rest/v1/actividad_vendedor",
+      { vendedor_id: req.adminUser.id, tipo: "cierre", restaurante_id: created.id, restaurante_nombre: b.nombre, notas: "Trial 7 días creado. PIN: " + pin },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    ).catch(function() {});
+    res.json({ ok: true, restaurante: created, pin: pin });
+  } catch (e) { console.error("[vendedor/crear]", e.message); res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/vendedor/actividad", requireAdmin, async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(SUPABASE_URL + "/rest/v1/actividad_vendedor",
+      { vendedor_id: req.adminUser.id, tipo: req.body.tipo, restaurante_id: req.body.restaurante_id || null, restaurante_nombre: req.body.restaurante_nombre || null, notas: req.body.notas || null },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false }); }
+});
+
+// ═══════════════════════════════════════════════════════════
+// MENU FROM PHOTO — Claude Vision extracts menu from image
+// ═══════════════════════════════════════════════════════════
+app.post("/api/menu-from-photo", requireAdmin, async function(req, res) {
+  try {
+    var { image_base64, restaurante_id, media_type } = req.body;
+    if (!image_base64 || !restaurante_id) return res.status(400).json({ ok: false, error: "Faltan datos" });
+    var CLAUDE_KEY = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
+    if (!CLAUDE_KEY) return res.status(500).json({ ok: false, error: "API key de Claude no configurada" });
+    var claudeResp = await axios.post("https://api.anthropic.com/v1/messages", {
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 4000,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: media_type || "image/jpeg", data: image_base64 } },
+          { type: "text", text: "Extrae TODOS los productos del menú de esta imagen. Para cada producto devuelve: nombre, descripcion (ingredientes si se ven), precio (número sin símbolo), categoria (agrupa por tipo: Hamburguesas, Bebidas, Acompañantes, Postres, etc). Si no ves precio, pon 0. Si no ves descripción, pon cadena vacía. Responde SOLO con un JSON array, sin markdown ni backticks ni texto adicional. Ejemplo: [{\"nombre\":\"La Especial\",\"descripcion\":\"Carne, queso, tocineta\",\"precio\":18900,\"categoria\":\"Hamburguesas\"}]" }
+        ]
+      }]
+    }, {
+      headers: { "x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" }
+    });
+    var content = claudeResp.data.content[0].text;
+    // Clean response - remove markdown backticks if present
+    content = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    var items = JSON.parse(content);
+    if (!Array.isArray(items)) throw new Error("Respuesta no es un array");
+    // Insert into menu_items
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var inserted = 0;
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      try {
+        await axios.post(SUPABASE_URL + "/rest/v1/menu_items",
+          { restaurante_id: restaurante_id, nombre: item.nombre, descripcion: item.descripcion || null, precio: Number(item.precio) || 0, categoria: item.categoria || "General", disponible: true, es_bebida: (item.categoria || "").toLowerCase().indexOf("bebida") !== -1, orden: i },
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+        );
+        inserted++;
+      } catch (eIns) { console.error("[menu-photo] Insert error:", eIns.message); }
+    }
+    console.log("[menu-photo] ✅ " + inserted + "/" + items.length + " productos insertados para " + restaurante_id);
+    res.json({ ok: true, items: items, inserted: inserted });
+  } catch (e) {
+    console.error("[menu-photo] Error:", e.message);
+    res.json({ ok: false, error: "Error procesando imagen: " + e.message });
   }
 });
 
