@@ -153,7 +153,8 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard',this)"><span class="nav-icon">📊</span> Dashboard</div>
       <div class="nav-item" id="nav-clientes" onclick="showPage('clientes',this)"><span class="nav-icon">🏪</span> Clientes</div>
       <div class="nav-item" id="nav-pedidos" onclick="showPage('pedidos',this)"><span class="nav-icon">🛒</span> Pedidos</div>
-      <div class="nav-item" id="nav-suscripciones" onclick="showPage('suscripciones',this)"><span class="nav-icon">💰</span> Suscripciones</div>
+      <div class="nav-item" id="nav-suscripciones" onclick="showPage('suscripciones',this)"><span class="nav-icon">💰</span> Pagos</div>
+      <div class="nav-item" id="nav-planes" onclick="showPage('planes',this)"><span class="nav-icon">📦</span> Planes</div>
       <div class="nav-item" id="nav-menus" onclick="showPage('menus',this)"><span class="nav-icon">📋</span> Menús</div>
       <div class="nav-item" id="nav-chat" onclick="showPage('chat',this)"><span class="nav-icon">💬</span> Soporte</div>
     </nav>
@@ -172,6 +173,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <button class="btn btn-ghost" onclick="loadDashboard()">⟳ Actualizar</button>
       </div>
       <div class="alert-banner" id="alertVencen">⚠️ <span id="alertVencenText"></span></div>
+      <div style="background:linear-gradient(135deg,rgba(124,58,237,0.12),rgba(6,182,212,0.08));border:1px solid rgba(124,58,237,0.2);border-radius:20px;padding:24px 28px;margin-bottom:24px">
+        <div style="font-size:10px;color:rgba(196,181,253,0.7);text-transform:uppercase;letter-spacing:0.12em;font-weight:700">MRR — Ingreso Mensual Recurrente</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--white);letter-spacing:0.02em" id="statMRR">$0</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px" id="mrrSub">Cargando...</div>
+      </div>
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-label">Clientes Activos</div><div class="stat-val green" id="statActivos">—</div></div>
         <div class="stat-card"><div class="stat-label">Suspendidos</div><div class="stat-val red" id="statSuspendidos">—</div></div>
@@ -269,6 +275,16 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
     </div>
 
+    <!-- PLANES -->
+    <div class="page" id="page-planes">
+      <div class="page-header"><div class="page-header-left"><div class="page-title">Planes</div><div class="page-sub">Estructura de precios LUZ IA</div></div></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+        <div class="stat-card" style="border-left:3px solid var(--amber)"><div class="stat-label">🥉 Emprendedor</div><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--amber)">$89.900<span style="font-size:14px;color:var(--muted)">/mes</span></div><div style="font-size:11px;color:var(--muted);margin-top:4px">Menú + WhatsApp IA + Panel pedidos</div><div style="font-size:20px;font-family:'Bebas Neue',sans-serif;color:var(--amber);margin-top:8px" id="planCountEmp">0</div></div>
+        <div class="stat-card" style="border-left:3px solid var(--purple)"><div class="stat-label">🥈 Crecimiento</div><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#c4b5fd">$169.900<span style="font-size:14px;color:var(--muted)">/mes</span></div><div style="font-size:11px;color:var(--muted);margin-top:4px">+ Fidelización + Promos + Domiciliarios</div><div style="font-size:20px;font-family:'Bebas Neue',sans-serif;color:#c4b5fd;margin-top:8px" id="planCountCre">0</div></div>
+        <div class="stat-card" style="border-left:3px solid var(--blue)"><div class="stat-label">🥇 Dominante</div><div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#93c5fd">$299.900<span style="font-size:14px;color:var(--muted)">/mes</span></div><div style="font-size:11px;color:var(--muted);margin-top:4px">+ Cocina + Mesas + Reportes IA</div><div style="font-size:20px;font-family:'Bebas Neue',sans-serif;color:#93c5fd;margin-top:8px" id="planCountDom">0</div></div>
+      </div>
+    </div>
+
     <!-- CHAT / SOPORTE -->
     <div class="page" id="page-chat">
       <div class="page-header">
@@ -311,9 +327,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <div class="form-group"><label class="form-label">Ciudad</label><input class="form-input" id="nc-ciudad" placeholder="Cali"></div>
       <div class="form-group"><label class="form-label">Plan</label>
         <select class="form-input" id="nc-plan">
-          <option value="basico">Básico — $150.000</option>
-          <option value="pro" selected>Pro — $280.000</option>
-          <option value="full">Full — $400.000</option>
+          <option value="emprendedor">🥉 Emprendedor — $89.900</option>
+          <option value="crecimiento" selected>🥈 Crecimiento — $169.900</option>
+          <option value="dominante">🥇 Dominante — $299.900</option>
         </select>
       </div>
     </div>
@@ -362,9 +378,9 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </div>
       <div class="form-group"><label class="form-label">Plan</label>
         <select class="form-input" id="edit-plan">
-          <option value="basico">Básico</option>
-          <option value="pro">Pro</option>
-          <option value="full">Full</option>
+          <option value="emprendedor">Emprendedor</option>
+          <option value="crecimiento">Crecimiento</option>
+          <option value="dominante">Dominante</option>
         </select>
       </div>
     </div>
@@ -491,38 +507,37 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 </div>
 
 <script>
-const SU = "https://vbxuwzcfzfjwhllkppkg.supabase.co";
-const SK = "sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
-const ADMIN_URL = window.location.origin;
-const USERS = { "admin": "luzia2024", "asistente": "luzia2024" };
-
-var restaurantesCache = [];
-var clienteEditandoId = null;
-var currentMenuRestId = null;
-var currentChatTel = null;
-var currentChatRestId = null;
+var TOKEN=localStorage.getItem("luzia_admin_token")||"";
+var currentUser=null;
 
 // ── AUTH ──
-function doLogin(){
+async function doLogin(){
   var u=document.getElementById('loginUser').value.trim();
   var p=document.getElementById('loginPass').value.trim();
-  if(USERS[u]&&USERS[u]===p){
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('app').style.display='block';
-    loadDashboard();
-    loadRestaurantesCache();
-  } else {
-    document.getElementById('loginErr').textContent='Usuario o contraseña incorrectos';
-  }
+  document.getElementById('loginErr').textContent='';
+  if(!u||!p){document.getElementById('loginErr').textContent='Ingresa usuario y contraseña';return;}
+  try{
+    var r=await fetch("/api/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:u,password:p})});
+    var d=await r.json();
+    if(!d.ok){var r2=await fetch("/api/admin/login-legacy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user:u,password:p})});d=await r2.json();}
+    if(d.ok){TOKEN=d.token;currentUser=d.user;localStorage.setItem("luzia_admin_token",TOKEN);
+      document.getElementById('loginScreen').style.display='none';document.getElementById('app').style.display='block';loadDashboard();loadRestaurantesCache();
+    }else{document.getElementById('loginErr').textContent=d.error||'Credenciales incorrectas';}
+  }catch(e){document.getElementById('loginErr').textContent='Error de conexión';}
 }
+// Auto-login
+(async function(){if(TOKEN){try{var r=await fetch("/api/admin/verify",{headers:{"Authorization":"Bearer "+TOKEN}});var d=await r.json();if(d.ok){currentUser=d.user;document.getElementById('loginScreen').style.display='none';document.getElementById('app').style.display='block';loadDashboard();loadRestaurantesCache();return;}}catch(e){}localStorage.removeItem("luzia_admin_token");TOKEN="";}})();
 
 // ── HELPERS ──
+function authH(){return{"Authorization":"Bearer "+TOKEN,"Content-Type":"application/json"};}
 async function sb(method, table, data, filters){
-  var url=SU+"/rest/v1/"+table;
+  var url="/api/admin/sb/"+table;
   if(filters) url+="?"+filters;
-  var opts={method:method,headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Content-Type":"application/json","Prefer":method==="POST"?"return=representation":"return=minimal"}};
+  var opts={method:method,headers:authH()};
+  if(method==="POST")opts.headers["Prefer"]="return=representation";
   if(data) opts.body=JSON.stringify(data);
   var res=await fetch(url,opts);
+  if(res.status===401){localStorage.removeItem("luzia_admin_token");location.reload();return null;}
   if(!res.ok) throw new Error(await res.text());
   if(method==="DELETE") return null;
   var txt=await res.text();
@@ -559,6 +574,13 @@ function showPage(name,el){
   if(name==='clientes') loadClientes();
   if(name==='pedidos') {loadRestSelectFiltro();loadPedidos();}
   if(name==='suscripciones') loadPagos();
+  if(name==='planes'){
+    var dist={emprendedor:0,crecimiento:0,dominante:0};
+    restaurantesCache.forEach(function(r){if(r.estado==='activo'&&dist[r.plan]!==undefined)dist[r.plan]++;});
+    document.getElementById('planCountEmp').textContent=dist.emprendedor+' clientes';
+    document.getElementById('planCountCre').textContent=dist.crecimiento+' clientes';
+    document.getElementById('planCountDom').textContent=dist.dominante+' clientes';
+  }
   if(name==='menus') loadMenuRestaurantes();
   if(name==='chat') {loadChatRestSelect();loadChatClientes();}
 }
@@ -573,35 +595,41 @@ async function loadRestaurantesCache(){
 // ── DASHBOARD ──
 async function loadDashboard(){
   try{
-    var rests=await sb("GET","restaurantes",null,"select=*&order=created_at.desc");
-    var pedidos=await sb("GET","pedidos",null,"select=total,created_at&order=created_at.desc&limit=100");
-
-    var activos=rests.filter(function(r){return r.estado==='activo';}).length;
-    var suspendidos=rests.filter(function(r){return r.estado==='suspendido';}).length;
-    var hoy=new Date().toISOString().split('T')[0];
-    var pedidosHoy=pedidos.filter(function(p){return p.created_at&&p.created_at.startsWith(hoy);}).length;
-
-    var en7dias=new Date();en7dias.setDate(en7dias.getDate()+7);
-    var vencen=rests.filter(function(r){
-      if(!r.fecha_vencimiento||r.estado!=='activo') return false;
-      return new Date(r.fecha_vencimiento)<=en7dias;
-    });
-
-    document.getElementById('statActivos').textContent=activos;
-    document.getElementById('statSuspendidos').textContent=suspendidos;
-    document.getElementById('statPedidos').textContent=pedidosHoy;
-    document.getElementById('statVencen').textContent=vencen.length;
-
-    if(vencen.length>0){
-      var nombres=vencen.map(function(r){return r.nombre;}).join(', ');
-      document.getElementById('alertVencenText').textContent='Clientes que vencen en 7 días: '+nombres;
-      document.getElementById('alertVencen').classList.add('show');
-    } else {
-      document.getElementById('alertVencen').classList.remove('show');
+    var r=await fetch("/api/admin/dashboard",{headers:authH()});
+    var d=await r.json();
+    if(!d.ok){
+      // Fallback to direct Supabase query
+      var rests=await sb("GET","restaurantes",null,"select=*&order=created_at.desc");
+      var pedidos=await sb("GET","pedidos",null,"select=total,created_at&order=created_at.desc&limit=100");
+      var activos=(rests||[]).filter(function(r){return r.estado==='activo';}).length;
+      var suspendidos=(rests||[]).filter(function(r){return r.estado==='suspendido';}).length;
+      var hoy=new Date().toISOString().split('T')[0];
+      var pedidosHoy=(pedidos||[]).filter(function(p){return p.created_at&&p.created_at.startsWith(hoy);}).length;
+      var precios={emprendedor:89900,crecimiento:169900,dominante:299900};
+      var mrr=(rests||[]).filter(function(r){return r.estado==='activo';}).reduce(function(s,r){return s+(precios[r.plan]||0);},0);
+      document.getElementById('statActivos').textContent=activos;
+      document.getElementById('statSuspendidos').textContent=suspendidos;
+      document.getElementById('statPedidos').textContent=pedidosHoy;
+      document.getElementById('statMRR').textContent=fmt(mrr);
+      document.getElementById('mrrSub').textContent=activos+' restaurantes activos';
+      var en7=new Date();en7.setDate(en7.getDate()+7);
+      var vencen=(rests||[]).filter(function(r){if(!r.fecha_vencimiento||r.estado!=='activo')return false;return new Date(r.fecha_vencimiento)<=en7;});
+      document.getElementById('statVencen').textContent=vencen.length;
+      if(vencen.length>0){document.getElementById('alertVencenText').textContent='Vencen en 7 días: '+vencen.map(function(r){return r.nombre;}).join(', ');document.getElementById('alertVencen').classList.add('show');}else{document.getElementById('alertVencen').classList.remove('show');}
+      document.getElementById('dashClientesTable').innerHTML=renderClientesTable(rests,false);
+      restaurantesCache=rests||[];
+      return;
     }
-
-    document.getElementById('dashClientesTable').innerHTML=renderClientesTable(rests,false);
-    restaurantesCache=rests;
+    restaurantesCache=d.restaurantes;
+    var s=d.stats;
+    document.getElementById('statActivos').textContent=s.activos;
+    document.getElementById('statSuspendidos').textContent=s.suspendidos;
+    document.getElementById('statPedidos').textContent=s.pedidosHoy;
+    document.getElementById('statVencen').textContent=s.vencen;
+    document.getElementById('statMRR').textContent=fmt(s.mrr);
+    document.getElementById('mrrSub').textContent=s.activos+' restaurantes activos';
+    if(s.vencen>0){document.getElementById('alertVencenText').textContent='Vencen en 7 días: '+s.vencenNombres.join(', ');document.getElementById('alertVencen').classList.add('show');}else{document.getElementById('alertVencen').classList.remove('show');}
+    document.getElementById('dashClientesTable').innerHTML=renderClientesTable(d.restaurantes.slice(0,10),false);
   }catch(err){console.error(err);}
 }
 
@@ -712,7 +740,7 @@ document.getElementById('edit-promos').value        = r.promos_semanales || '';
 document.getElementById('edit-nequi').value         = r.metodo_pago_nequi || '';
 document.getElementById('edit-banco').value         = r.metodo_pago_banco || '';
 document.getElementById('edit-banco-nombre').value  = r.metodo_pago_nombre || '';
-  var panelUrl=ADMIN_URL+'/restaurante?pin='+(r.pin||'');
+  var panelUrl=location.origin+'/restaurante?pin='+(r.pin||'');
   document.getElementById('editPanelUrl').textContent=panelUrl;
   openModal('editar');
 }
@@ -723,7 +751,7 @@ function copiarPanelUrl(){
 }
 
 function copiarEnlacePanel(pin){
-  var url=ADMIN_URL+'/restaurante';
+  var url=location.origin+'/restaurante';
   navigator.clipboard.writeText(url).then(function(){toast('✅ URL copiada: '+url);});
 }
 
@@ -890,7 +918,7 @@ async function loadMenuItems(){
   document.getElementById('menuRestNombre').textContent=rest?rest.nombre:'—';
   document.getElementById('menuRestPanel').style.display='block';
 
-  var menuUrl=ADMIN_URL+'/menu?rest='+currentMenuRestId;
+  var menuUrl=location.origin+'/menu?rest='+currentMenuRestId;
   document.getElementById('menuPageUrl').textContent=menuUrl;
 
   var items=await sb("GET","menu_items",null,"restaurante_id=eq."+currentMenuRestId+"&order=categoria,orden");
