@@ -103,6 +103,9 @@
 .act-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdr);font-size:12px}
 .act-ico{font-size:16px;flex-shrink:0;margin-top:2px}
 .act-time{font-size:10px;color:var(--m2);margin-top:2px}
+.dia-check{display:flex;align-items:center;gap:5px;padding:8px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;font-size:12px;cursor:pointer;transition:all .15s;user-select:none}
+.dia-check:has(input:checked){background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.3);color:var(--p2)}
+.dia-check input{display:none}
 </style>
 </head>
 <body>
@@ -223,7 +226,86 @@
           </div>
           <div id="ob-reglas-list"></div>
         </div>
-        <!-- MENU MANUAL -->
+        <!-- ZONAS DE DOMICILIO -->
+        <div style="margin-top:20px">
+          <div class="section-t">🗺️ Zonas de domicilio</div>
+          <div style="font-size:11px;color:var(--m);margin-bottom:10px">Agrega las zonas con sus barrios y precio de domicilio</div>
+          <div style="background:var(--s2);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:10px">
+            <div class="fgrid" style="margin-bottom:8px">
+              <div class="fg"><label class="fl">Nombre de zona</label><input class="fi" id="ob-zona-nombre" placeholder="Ej: Centro, Norte"></div>
+              <div class="fg"><label class="fl">Precio domicilio</label><input class="fi" type="number" id="ob-zona-precio" placeholder="4000"></div>
+            </div>
+            <div class="fg" style="margin-bottom:8px"><label class="fl">Barrios (separados por coma)</label><textarea class="fi" id="ob-zona-barrios" rows="2" placeholder="Canaveral, Granada, Santa Mónica..." style="resize:none"></textarea></div>
+            <button class="btn btn-p" onclick="agregarZona()" style="width:100%">+ Agregar zona</button>
+          </div>
+          <div id="ob-zonas-list"></div>
+        </div>
+        <!-- METODOS DE PAGO -->
+        <div style="margin-top:20px">
+          <div class="section-t">💳 Métodos de pago del restaurante</div>
+          <div style="font-size:11px;color:var(--m);margin-bottom:10px">Configura cómo los clientes pueden pagar</div>
+          <div style="background:var(--s2);border:1px solid var(--bdr);border-radius:12px;padding:14px">
+            <div class="fgrid" style="margin-bottom:8px">
+              <div class="fg"><label class="fl">Nequi (número)</label><input class="fi" id="ob-nequi" placeholder="3001234567"></div>
+              <div class="fg"><label class="fl">Bancolombia (llave)</label><input class="fi" id="ob-banco" placeholder="@NEQUI123"></div>
+            </div>
+            <div class="fg" style="margin-bottom:8px"><label class="fl">Titular de la cuenta</label><input class="fi" id="ob-titular" placeholder="José García"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="ob-efectivo" checked> 💵 Efectivo</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input type="checkbox" id="ob-datafono"> 💳 Datáfono</label>
+            </div>
+            <button class="btn btn-p" onclick="guardarMetodosPago()" style="width:100%">💾 Guardar métodos de pago</button>
+          </div>
+        </div>
+        <!-- DIAS ACTIVOS -->
+        <div style="margin-top:20px">
+          <div class="section-t">📅 Días activos</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="ob-dias-wrap">
+            <label class="dia-check"><input type="checkbox" value="lunes" checked> Lun</label>
+            <label class="dia-check"><input type="checkbox" value="martes" checked> Mar</label>
+            <label class="dia-check"><input type="checkbox" value="miercoles" checked> Mié</label>
+            <label class="dia-check"><input type="checkbox" value="jueves" checked> Jue</label>
+            <label class="dia-check"><input type="checkbox" value="viernes" checked> Vie</label>
+            <label class="dia-check"><input type="checkbox" value="sabado" checked> Sáb</label>
+            <label class="dia-check"><input type="checkbox" value="domingo"> Dom</label>
+          </div>
+          <div class="fgrid" style="margin-bottom:10px">
+            <div class="fg"><label class="fl">Hora apertura</label><input class="fi" type="time" id="ob-hora-ap" value="10:00"></div>
+            <div class="fg"><label class="fl">Hora cierre</label><input class="fi" type="time" id="ob-hora-ci" value="22:00"></div>
+          </div>
+          <button class="btn btn-p" onclick="guardarHorario()" style="width:100%">💾 Guardar horario y días</button>
+        </div>
+        <!-- LOGO -->
+        <div style="margin-top:20px">
+          <div class="section-t">🖼️ Logo del restaurante</div>
+          <div class="upload-zone" id="logoZone">
+            <div style="font-size:36px;margin-bottom:6px">🖼️</div>
+            <div style="font-size:13px;font-weight:600">Subir logo</div>
+            <div style="font-size:11px;color:var(--m);margin-top:4px">JPG, PNG — cuadrado recomendado</div>
+            <input type="file" accept="image/*" onchange="handleLogoUpload(this)">
+            <img class="upload-preview" id="logoPreview">
+          </div>
+          <div id="logoResult" style="margin-top:8px"></div>
+        </div>
+        <!-- AGREGAR PRODUCTO MANUAL -->
+        <div style="margin-top:20px">
+          <div class="section-t">➕ Agregar producto manual</div>
+          <div style="background:var(--s2);border:1px solid var(--bdr);border-radius:12px;padding:14px">
+            <div class="fgrid" style="margin-bottom:8px">
+              <div class="fg"><label class="fl">Categoría</label><input class="fi" id="ob-prod-cat" placeholder="Hamburguesas"></div>
+              <div class="fg"><label class="fl">Nombre</label><input class="fi" id="ob-prod-nombre" placeholder="La Especial"></div>
+            </div>
+            <div class="fg" style="margin-bottom:8px"><label class="fl">Descripción</label><input class="fi" id="ob-prod-desc" placeholder="Carne, queso, tocineta, lechuga..."></div>
+            <div class="fgrid" style="margin-bottom:8px">
+              <div class="fg"><label class="fl">Precio</label><input class="fi" type="number" id="ob-prod-precio" placeholder="18900"></div>
+              <div class="fg"><label class="fl">Tipo</label>
+                <select class="fi" id="ob-prod-tipo"><option value="comida">🍔 Comida</option><option value="bebida">🥤 Bebida</option><option value="arepa">🫓 Arepa</option><option value="postre">🍰 Postre</option></select>
+              </div>
+            </div>
+            <button class="btn btn-p" onclick="agregarProducto()" style="width:100%">+ Agregar producto</button>
+          </div>
+        </div>
+        <!-- MENU ACTUAL -->
         <div style="margin-top:20px">
           <div class="section-t">📋 Menú actual</div>
           <div id="ob-menu-list"><div style="color:var(--m);font-size:12px;padding:10px 0">Cargando...</div></div>
@@ -399,10 +481,12 @@ async function loadOnboarding(){
   var items=[
     {key:"info",label:"Información básica",desc:"Nombre, dirección, ciudad",done:ob.info,action:"editInfo"},
     {key:"whatsapp",label:"WhatsApp conectado",desc:"Phone ID de Meta configurado",done:ob.whatsapp,action:"editWA"},
-    {key:"horario",label:"Horario definido",desc:"Apertura y cierre configurados",done:ob.horario,action:"editHorario"},
+    {key:"horario",label:"Horario y días",desc:"Apertura, cierre, días activos",done:ob.horario,action:"editHorario"},
     {key:"menu",label:"Menú cargado",desc:r._menuCount?r._menuCount+" productos":"Sin productos aún",done:ob.menu,action:"scrollMenu"},
     {key:"logo",label:"Logo subido",desc:"Identidad visual del restaurante",done:ob.logo,action:"editLogo"},
-    {key:"reglas",label:"Reglas para Luz",desc:r._reglasCount?r._reglasCount+" reglas activas":"Sin reglas aún",done:ob.reglas,action:"scrollReglas"}
+    {key:"reglas",label:"Reglas para Luz",desc:r._reglasCount?r._reglasCount+" reglas activas":"Sin reglas aún",done:ob.reglas,action:"scrollReglas"},
+    {key:"zonas",label:"Zonas de domicilio",desc:"Barrios y precios configurados",done:false,action:"scrollZonas"},
+    {key:"pagos",label:"Métodos de pago",desc:"Nequi, Bancolombia, efectivo",done:!!(r.metodo_pago_nequi||r.metodo_pago_banco),action:"scrollPagos"}
   ];
   document.getElementById("ob-checklist").innerHTML='<div style="font-weight:700;font-size:14px;margin-bottom:12px">'+r.nombre+' — <span style="color:var(--p2)">'+items.filter(function(i){return i.done;}).length+'/'+items.length+' completado</span></div>'+
     '<ul class="check-list">'+items.map(function(i){
@@ -412,6 +496,12 @@ async function loadOnboarding(){
   loadObMenu();
   // Load rules
   loadObReglas();
+  // Load zonas
+  loadObZonas();
+  // Load metodos de pago
+  cargarMetodosPago();
+  // Load horario
+  cargarHorario();
 }
 
 async function loadObMenu(){
@@ -491,11 +581,147 @@ async function processMenuPhoto(base64,mediaType){
 // ── HELPERS for onboarding actions ──
 function scrollMenu(){document.getElementById("uploadZone").scrollIntoView({behavior:"smooth"});}
 function scrollReglas(){document.getElementById("ob-regla-input").scrollIntoView({behavior:"smooth"});document.getElementById("ob-regla-input").focus();}
+function scrollZonas(){document.getElementById("ob-zona-nombre").scrollIntoView({behavior:"smooth"});document.getElementById("ob-zona-nombre").focus();}
+function scrollPagos(){document.getElementById("ob-nequi").scrollIntoView({behavior:"smooth"});document.getElementById("ob-nequi").focus();}
 function editInfo(){toast("Edita desde el panel admin","var(--a)");}
 function editWA(){toast("Configura WhatsApp en Meta Developer Console","var(--a)");}
-function editHorario(){toast("Configura horario desde el panel del restaurante","var(--a)");}
-function editLogo(){toast("Sube logo desde el panel del restaurante → Apariencia","var(--a)");}
+function editHorario(){document.getElementById("ob-hora-ap").scrollIntoView({behavior:"smooth"});}
+function editLogo(){document.getElementById("logoZone").scrollIntoView({behavior:"smooth"});}
 
+// ── ZONAS ──
+async function loadObZonas(){
+  if(!obRestId)return;
+  try{
+    var r=await fetch("/api/zonas?restaurante_id="+obRestId,{headers:authH()});
+    var zonas=await r.json();
+    if(!zonas||!zonas.length){document.getElementById("ob-zonas-list").innerHTML='<div style="color:var(--m);font-size:12px;padding:6px 0">Sin zonas configuradas</div>';return;}
+    var COLORES=["#7c3aed","#10b981","#f59e0b","#3b82f6","#ef4444","#06b6d4","#ec4899"];
+    document.getElementById("ob-zonas-list").innerHTML=zonas.map(function(z,idx){
+      var color=z.color||COLORES[idx%COLORES.length];
+      var barrios=Array.isArray(z.barrios)?z.barrios.join(", "):(z.barrios||"");
+      return'<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;margin-bottom:6px"><div style="width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;box-shadow:0 0 6px '+color+'"></div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">'+z.nombre+'</div><div style="font-size:10px;color:var(--m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+barrios+'</div></div><div style="font-family:JetBrains Mono;font-size:12px;color:var(--g);font-weight:600;flex-shrink:0">'+fmt(z.precio_domicilio||0)+'</div><button class="btn btn-d" style="padding:3px 8px;font-size:10px;flex-shrink:0" onclick="delZona(\''+z.id+'\')">✕</button></div>';
+    }).join("");
+  }catch(e){}
+}
+
+async function agregarZona(){
+  var nombre=document.getElementById("ob-zona-nombre").value.trim();
+  var precio=Number(document.getElementById("ob-zona-precio").value);
+  var barrios=document.getElementById("ob-zona-barrios").value.trim();
+  if(!nombre||!precio){toast("Nombre y precio obligatorios","#ef4444");return;}
+  try{
+    await fetch("/api/admin/sb/zonas_domicilio",{method:"POST",headers:authH(),body:JSON.stringify({restaurante_id:obRestId,nombre:nombre,precio_domicilio:precio,barrios:barrios})});
+    document.getElementById("ob-zona-nombre").value="";
+    document.getElementById("ob-zona-precio").value="";
+    document.getElementById("ob-zona-barrios").value="";
+    toast("✅ Zona agregada");loadObZonas();
+  }catch(e){toast("Error","#ef4444");}
+}
+
+async function delZona(id){
+  if(!confirm("¿Eliminar zona?"))return;
+  await fetch("/api/admin/sb/zonas_domicilio?id=eq."+id,{method:"DELETE",headers:authH()});
+  toast("Zona eliminada");loadObZonas();
+}
+
+// ── METODOS DE PAGO ──
+async function cargarMetodosPago(){
+  if(!obRestId)return;
+  var r=RESTS.find(function(x){return x.id===obRestId;});
+  if(!r)return;
+  document.getElementById("ob-nequi").value=r.metodo_pago_nequi||"";
+  document.getElementById("ob-banco").value=r.metodo_pago_banco||"";
+  document.getElementById("ob-titular").value=r.metodo_pago_nombre||"";
+}
+
+async function guardarMetodosPago(){
+  if(!obRestId)return;
+  var efectivo=document.getElementById("ob-efectivo").checked;
+  var datafono=document.getElementById("ob-datafono").checked;
+  try{
+    await fetch("/api/admin/sb/restaurantes?id=eq."+obRestId,{method:"PATCH",headers:authH(),body:JSON.stringify({
+      metodo_pago_nequi:document.getElementById("ob-nequi").value.trim()||null,
+      metodo_pago_banco:document.getElementById("ob-banco").value.trim()||null,
+      metodo_pago_nombre:document.getElementById("ob-titular").value.trim()||null
+    })});
+    toast("✅ Métodos de pago guardados");
+  }catch(e){toast("Error","#ef4444");}
+}
+
+// ── HORARIO Y DIAS ──
+async function cargarHorario(){
+  if(!obRestId)return;
+  var r=RESTS.find(function(x){return x.id===obRestId;});
+  if(!r)return;
+  if(r.hora_apertura)document.getElementById("ob-hora-ap").value=(r.hora_apertura||"10:00:00").substring(0,5);
+  if(r.hora_cierre)document.getElementById("ob-hora-ci").value=(r.hora_cierre||"22:00:00").substring(0,5);
+  // Días activos
+  var diasActivos=(r.dias_activos||"lunes,martes,miercoles,jueves,viernes,sabado").split(",");
+  document.querySelectorAll("#ob-dias-wrap input").forEach(function(cb){
+    cb.checked=diasActivos.indexOf(cb.value)!==-1;
+  });
+}
+
+async function guardarHorario(){
+  if(!obRestId)return;
+  var dias=[];
+  document.querySelectorAll("#ob-dias-wrap input:checked").forEach(function(cb){dias.push(cb.value);});
+  try{
+    await fetch("/api/admin/sb/restaurantes?id=eq."+obRestId,{method:"PATCH",headers:authH(),body:JSON.stringify({
+      hora_apertura:document.getElementById("ob-hora-ap").value+":00",
+      hora_cierre:document.getElementById("ob-hora-ci").value+":00",
+      dias_activos:dias.join(",")
+    })});
+    toast("✅ Horario y días guardados");
+  }catch(e){toast("Error","#ef4444");}
+}
+
+// ── LOGO ──
+async function handleLogoUpload(input){
+  var file=input.files[0];if(!file||!obRestId)return;
+  var preview=document.getElementById("logoPreview");
+  var result=document.getElementById("logoResult");
+  var reader=new FileReader();
+  reader.onload=function(e){
+    preview.src=e.target.result;preview.style.display="block";
+    result.innerHTML='<div style="color:var(--m);font-size:11px">⏳ Subiendo logo...</div>';
+    var base64=e.target.result.split(",")[1];
+    var blob=new Blob([Uint8Array.from(atob(base64),function(c){return c.charCodeAt(0);})],{type:file.type});
+    var path=obRestId+"/logo_"+Date.now()+"."+file.name.split(".").pop();
+    fetch("/api/storage-upload/"+path,{method:"POST",headers:{"Content-Type":file.type},body:blob})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var publicUrl="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/"+path;
+      return fetch("/api/admin/sb/restaurantes?id=eq."+obRestId,{method:"PATCH",headers:authH(),body:JSON.stringify({logo_url:publicUrl})});
+    })
+    .then(function(){result.innerHTML='<div style="color:var(--g);font-size:12px;font-weight:600">✅ Logo subido</div>';toast("✅ Logo subido");loadPipeline();})
+    .catch(function(e){result.innerHTML='<div style="color:var(--r);font-size:11px">❌ Error: '+e.message+'</div>';});
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── PRODUCTO MANUAL ──
+async function agregarProducto(){
+  var cat=document.getElementById("ob-prod-cat").value.trim();
+  var nombre=document.getElementById("ob-prod-nombre").value.trim();
+  var precio=Number(document.getElementById("ob-prod-precio").value);
+  if(!nombre||!precio){toast("Nombre y precio obligatorios","#ef4444");return;}
+  var tipo=document.getElementById("ob-prod-tipo").value;
+  try{
+    await fetch("/api/admin/sb/menu_items",{method:"POST",headers:authH(),body:JSON.stringify({
+      restaurante_id:obRestId,
+      categoria:cat||"General",
+      nombre:nombre,
+      descripcion:document.getElementById("ob-prod-desc").value.trim()||null,
+      precio:precio,
+      es_bebida:tipo==="bebida",
+      es_arepa:tipo==="arepa",
+      disponible:true
+    })});
+    ["ob-prod-nombre","ob-prod-desc","ob-prod-precio"].forEach(function(id){document.getElementById(id).value="";});
+    toast("✅ Producto agregado");loadObMenu();loadPipeline();
+  }catch(e){toast("Error","#ef4444");}
+}
 // ── ACTIVIDAD ──
 function loadActSelect(){
   document.getElementById("act-rest").innerHTML='<option value="">Sin restaurante</option>'+RESTS.map(function(r){return'<option value="'+r.id+'" data-name="'+r.nombre+'">'+r.nombre+'</option>';}).join("");
