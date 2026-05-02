@@ -997,6 +997,157 @@ app.get("/manifest-domi.json",    function(req, res) { res.sendFile(path.join(__
 app.get("/vapid-public-key",      function(req, res) { res.json({ key: VAPID_PUBLIC }); });
 
 // ── PUSH SUBSCRIPTIONS ───────────────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN AUTH + DASHBOARD API
+// ═══════════════════════════════════════════════════════════
+var crypto = require("crypto");
+var ADMIN_SECRET = process.env.ADMIN_SECRET || "luzia_admin_2025_secret";
+
+function hashPassword(pw) {
+  return crypto.createHash("sha256").update(pw + ADMIN_SECRET).digest("hex");
+}
+function generateToken(userId, rol) {
+  var payload = JSON.stringify({ id: userId, rol: rol, ts: Date.now() });
+  var sig = crypto.createHmac("sha256", ADMIN_SECRET).update(payload).digest("hex");
+  return Buffer.from(payload).toString("base64") + "." + sig;
+}
+function verifyToken(token) {
+  try {
+    var parts = token.split(".");
+    if (parts.length !== 2) return null;
+    var payload = Buffer.from(parts[0], "base64").toString();
+    var sig = crypto.createHmac("sha256", ADMIN_SECRET).update(payload).digest("hex");
+    if (sig !== parts[1]) return null;
+    var data = JSON.parse(payload);
+    // Token valid for 24h
+    if (Date.now() - data.ts > 24 * 60 * 60 * 1000) return null;
+    return data;
+  } catch (e) { return null; }
+}
+
+// Auth middleware
+function requireAdmin(req, res, next) {
+  var token = (req.headers.authorization || "").replace("Bearer ", "");
+  var user = verifyToken(token);
+  if (!user || (user.rol !== "superadmin" && user.rol !== "vendedor")) {
+    return res.status(401).json({ ok: false, error: "No autorizado" });
+  }
+  req.adminUser = user;
+  next();
+}
+
+app.post("/api/admin/login", async function(req, res) {
+  var { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ ok: false, error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/usuarios_sistema?email=eq." + encodeURIComponent(email) + "&activo=eq.true&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    if (!r.data || !r.data.length) return res.json({ ok: false, error: "Usuario no encontrado" });
+    var user = r.data[0];
+    if (user.password_hash !== hashPassword(password)) return res.json({ ok: false, error: "Contraseña incorrecta" });
+    var token = generateToken(user.id, user.rol);
+    res.json({ ok: true, token: token, user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol } });
+  } catch (e) {
+    console.error("[admin/login]", e.message);
+    res.status(500).json({ ok: false, error: "Error del servidor" });
+  }
+});
+
+// Fallback login for initial setup (before usuarios_sistema table exists)
+app.post("/api/admin/login-legacy", function(req, res) {
+  var { user, password } = req.body;
+  var LEGACY = { "admin": process.env.ADMIN_PASSWORD || "luzia2024" };
+  if (LEGACY[user] && LEGACY[user] === password) {
+    var token = generateToken("legacy_admin", "superadmin");
+    res.json({ ok: true, token: token, user: { id: "legacy", nombre: "Admin", email: user, rol: "superadmin" } });
+  } else {
+    res.json({ ok: false, error: "Credenciales incorrectas" });
+  }
+});
+
+app.get("/api/admin/verify", function(req, res) {
+  var token = (req.headers.authorization || "").replace("Bearer ", "");
+  var user = verifyToken(token);
+  if (user) res.json({ ok: true, user: user });
+  else res.json({ ok: false });
+});
+
+app.get("/api/admin/dashboard", requireAdmin, async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    // Restaurantes
+    var rests = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?select=id,nombre,estado,plan,fecha_vencimiento,suscripcion_estado,ciudad_restaurante,created_at&order=created_at.desc", { headers: h });
+    // Pedidos hoy
+    var hoy = new Date().toISOString().split("T")[0];
+    var pedidos = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?created_at=gte." + hoy + "T00:00:00&select=total,restaurante_id", { headers: h });
+    // Planes
+    var planes = await axios.get(SUPABASE_URL + "/rest/v1/planes?activo=eq.true&order=orden&select=*", { headers: h });
+
+    var data = rests.data || [];
+    var activos = data.filter(function(r) { return r.estado === "activo"; }).length;
+    var suspendidos = data.filter(function(r) { return r.estado === "suspendido"; }).length;
+    var trials = data.filter(function(r) { return r.suscripcion_estado === "trial"; }).length;
+    var pedidosHoy = (pedidos.data || []).length;
+    var ventasHoy = (pedidos.data || []).reduce(function(s, p) { return s + Number(p.total || 0); }, 0);
+
+    // MRR calculation
+    var preciosPlan = {};
+    (planes.data || []).forEach(function(p) { preciosPlan[p.nombre] = p.precio_mensual; });
+    var mrr = data.filter(function(r) { return r.estado === "activo"; }).reduce(function(s, r) {
+      return s + (preciosPlan[r.plan] || 0);
+    }, 0);
+
+    // Vencen en 7 días
+    var en7 = new Date(); en7.setDate(en7.getDate() + 7);
+    var vencen = data.filter(function(r) {
+      if (!r.fecha_vencimiento || r.estado !== "activo") return false;
+      return new Date(r.fecha_vencimiento) <= en7;
+    });
+
+    res.json({
+      ok: true,
+      restaurantes: data,
+      planes: planes.data || [],
+      stats: {
+        total: data.length, activos: activos, suspendidos: suspendidos, trials: trials,
+        pedidosHoy: pedidosHoy, ventasHoy: ventasHoy, mrr: mrr,
+        vencen: vencen.length, vencenNombres: vencen.map(function(r) { return r.nombre; })
+      }
+    });
+  } catch (e) {
+    console.error("[admin/dashboard]", e.message);
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// Admin Supabase proxy (same as restaurante proxy)
+app.all("/api/admin/sb/*", requireAdmin, async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var restPath = req.params[0];
+    if (!restPath || restPath.indexOf("..") !== -1) return res.status(400).json({ error: "Invalid path" });
+    var targetUrl = SUPABASE_URL + "/rest/v1/" + restPath;
+    var qs = require("url").parse(req.url).query;
+    if (qs) targetUrl += (targetUrl.indexOf("?") === -1 ? "?" : "&") + qs;
+    var headers = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
+    if (req.method === "POST" || req.method === "PATCH") headers["Prefer"] = req.headers["prefer"] || "return=minimal";
+    if (req.method === "POST" && req.headers["prefer"]) headers["Prefer"] = req.headers["prefer"];
+    var axiosConfig = { method: req.method.toLowerCase(), url: targetUrl, headers: headers };
+    if (req.method !== "GET" && req.method !== "DELETE" && req.body) axiosConfig.data = req.body;
+    var r = await axios(axiosConfig);
+    res.json(r.data !== undefined && r.data !== null && r.data !== "" ? r.data : { ok: true });
+  } catch (e) {
+    var status = e.response ? e.response.status : 500;
+    if (status === 201 || status === 204) return res.json({ ok: true });
+    res.status(status >= 400 ? status : 500).json({ error: e.message, ok: false });
+  }
+});
+
 app.post("/api/push-subscribe", async function(req, res) {
   var { restaurante_id, rol, subscription, nombre, telefono } = req.body;
   nombre = telefono || nombre || rol;
