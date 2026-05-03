@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>LUZ IA</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Barlow+Condensed:wght@600;700;800;900&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
-<!-- Tailwind compilado (build via npm run build:css) -->
-<link rel="stylesheet" href="/dist/output.css">
+<!-- Tailwind via CDN (no requiere build step en Railway) -->
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -268,6 +268,9 @@ select.finput{cursor:pointer}
 .chat-bubble{max-width:78%;padding:10px 14px;border-radius:20px;font-size:14px;line-height:1.45;word-break:break-word;flex-shrink:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
 .chat-cliente{align-self:flex-start;margin-left:4px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.14);border-bottom-left-radius:5px;color:var(--text);}
 .chat-restaurante{align-self:flex-end;margin-right:4px;background:linear-gradient(135deg,rgba(16,185,129,0.7),rgba(5,150,105,0.8));color:white;border-bottom-right-radius:5px;box-shadow:0 2px 14px rgba(16,185,129,0.25);}
+.chat-sending{animation:chatPulse 1.2s ease infinite;}
+@keyframes chatPulse{0%,100%{opacity:1}50%{opacity:0.65}}
+@keyframes chatNewMsg{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)}}
 .chat-luz-estado{align-self:flex-end;margin-right:4px;background:rgba(99,102,241,0.18);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-bottom-right-radius:5px;}
 .chat-alerta-pregunta{align-self:flex-start;margin-left:4px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:#fcd34d;border-bottom-left-radius:5px;}
 .chat-time{font-size:10px;opacity:0.55;margin-top:4px;text-align:right}.chat-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;opacity:0.6}
@@ -1221,9 +1224,8 @@ function playSound(tipo){
 }
 
 function get(t,f){
-  // Proxy through backend to avoid CORS/network blocks on direct Supabase calls
-  var qs = encodeURIComponent(t + "?" + (f||""));
-  return fetch("/api/proxy-db?q=" + qs).then(function(r){return r.json();});
+  // Route through backend proxy
+  return fetch("/api/supabase/"+t+"?"+(f||"")).then(function(r){return r.json();});
 }
 function patchPedido(id,estado,tel,num){return fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
 function notif(m,color){var e=document.getElementById("notif");e.textContent=m;e.style.background=color||"rgba(124,58,237,0.9)";e.classList.add("show");setTimeout(function(){e.classList.remove("show");},2800);}
@@ -1801,7 +1803,7 @@ function abrirChat(tel,num,comp){
   document.getElementById("msgOverlay").classList.add("open");
   cargarMensajesChat(true);
   if(chatTimer)clearInterval(chatTimer);
-  chatTimer=setInterval(function(){cargarMensajesChat(false);},3000);
+  chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
   setTimeout(function(){document.getElementById("msgTexto").focus();},400);
 }
 function cargarMensajesChat(forzar){
@@ -1815,6 +1817,7 @@ function renderMensajesChat(msgs,forzar){
   if(!msgs.length){document.getElementById("chatArea").innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px 0;">No hay mensajes aun.</div>';return;}
   var ultimoTs=msgs[msgs.length-1].created_at;
   if(!forzar&&ultimoTs===chatLastTs)return;
+  var esNuevo=!forzar&&chatLastTs&&ultimoTs!==chatLastTs;
   chatLastTs=ultimoTs;
   var h="";var lastDay="";
   msgs.forEach(function(m){
@@ -1832,7 +1835,16 @@ function renderMensajesChat(msgs,forzar){
   });
   var box=document.getElementById("chatArea");
   box.innerHTML=h;
-  requestAnimationFrame(function(){requestAnimationFrame(function(){box.scrollTop=box.scrollHeight;});});
+  // Auto-scroll suave al fondo
+  requestAnimationFrame(function(){box.scrollTo({top:box.scrollHeight,behavior:esNuevo?"smooth":"auto"});});
+  // Si hay mensaje nuevo del cliente, sonido visual
+  if(esNuevo){
+    var ultimoMsg=msgs[msgs.length-1];
+    if(ultimoMsg.tipo==="cliente"){
+      var lastBubble=box.lastElementChild;
+      if(lastBubble){lastBubble.style.animation="chatNewMsg 0.4s ease";};
+    }
+  }
 }
 function cerrarChat(){
   document.getElementById("msgOverlay").classList.remove("open");
@@ -1857,10 +1869,17 @@ document.getElementById("chatImgInput").addEventListener("change",function(){
   reader.onload=function(e){
     var base64=e.target.result.split(",")[1],mime=file.type||"image/jpeg";
     if(!msgTel){notif("No hay cliente activo");return;}
+    // Optimistic: mostrar preview de imagen enviada
+    var box=document.getElementById("chatArea");
+    var imgBurbuja=document.createElement("div");
+    imgBurbuja.className="chat-bubble chat-restaurante chat-sending";
+    imgBurbuja.innerHTML='<div class="chat-label">👤 Panel</div><div>📷 Enviando imagen...</div>';
+    box.appendChild(imgBurbuja);
+    box.scrollTop=box.scrollHeight;
     var btn=document.getElementById("btnChatImg");btn.style.opacity="0.5";
     fetch("/enviar-imagen-cliente",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telefono:msgTel,restaurante_id:rest?rest.id:null,imagen:base64,mime:mime})})
     .then(function(r){return r.json();})
-    .then(function(d){if(d.ok){notif("Imagen enviada");setTimeout(function(){cargarMensajesChat(true);},1500);}else{notif("Error: "+(d.error||"").substring(0,40));}})
+    .then(function(d){if(d.ok){imgBurbuja.classList.remove("chat-sending");imgBurbuja.innerHTML='<div class="chat-label">👤 Panel</div><div>📷 Imagen enviada ✓</div>';notif("Imagen enviada");setTimeout(function(){cargarMensajesChat(true);},800);}else{imgBurbuja.style.opacity="0.5";imgBurbuja.innerHTML='<div>📷 Error enviando</div>';notif("Error: "+(d.error||"").substring(0,40));}})
     .catch(function(){notif("Error de conexion");})
     .finally(function(){btn.style.opacity="1";document.getElementById("chatImgInput").value="";});
   };
@@ -1869,11 +1888,39 @@ document.getElementById("chatImgInput").addEventListener("change",function(){
 function enviarMensaje(){
   var texto=document.getElementById("msgTexto").value.trim();if(!texto){return;}
   var btn=document.getElementById("msgEnviar");btn.disabled=true;
+  // Optimistic: mostrar mensaje inmediatamente en el chat antes de que el server confirme
+  var box=document.getElementById("chatArea");
+  var ahora=new Date();
+  var horaStr=ahora.getHours().toString().padStart(2,"0")+":"+ahora.getMinutes().toString().padStart(2,"0");
+  var burbuja=document.createElement("div");
+  burbuja.className="chat-bubble chat-restaurante chat-sending";
+  burbuja.innerHTML='<div class="chat-label">👤 Panel</div><div>'+escHtml(texto)+'</div><div class="chat-time">'+horaStr+' · enviando...</div>';
+  box.appendChild(burbuja);
+  box.scrollTop=box.scrollHeight;
+  document.getElementById("msgTexto").value="";
+  document.getElementById("msgTexto").style.height="46px";
   fetch("/enviar-mensaje-cliente",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telefono:msgTel,mensaje:texto,restaurante_id:rest?rest.id:null})})
     .then(function(r){return r.json();})
-    .then(function(d){if(d.ok){document.getElementById("msgTexto").value="";setTimeout(function(){cargarMensajesChat(true);},1200);}else{notif("Error: "+(d.error||"").substring(0,30));}})
-    .catch(function(){notif("Error de conexion");})
-    .finally(function(){btn.disabled=false;});
+    .then(function(d){
+      if(d.ok){
+        // Actualizar la burbuja para quitar "enviando..."
+        var timeEl=burbuja.querySelector(".chat-time");
+        if(timeEl)timeEl.textContent=horaStr+" ✓";
+        burbuja.classList.remove("chat-sending");
+        // Recargar completo después para sincronizar con server
+        setTimeout(function(){cargarMensajesChat(true);},800);
+      } else {
+        burbuja.querySelector(".chat-time").textContent=horaStr+" ✗ Error";
+        burbuja.style.opacity="0.5";
+        notif("Error: "+(d.error||"").substring(0,30));
+      }
+    })
+    .catch(function(){
+      burbuja.querySelector(".chat-time").textContent=horaStr+" ✗ Sin conexión";
+      burbuja.style.opacity="0.5";
+      notif("Error de conexion");
+    })
+    .finally(function(){btn.disabled=false;document.getElementById("msgTexto").focus();});
 }
 document.getElementById("msgTexto").addEventListener("input",function(){this.style.height="46px";this.style.height=Math.min(this.scrollHeight,120)+"px";});
 document.getElementById("btnCerrarConstructor").addEventListener("click",function(){document.getElementById("constructorPedido").style.display="none";document.getElementById("btnConstructor").classList.remove("active");});
