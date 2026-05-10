@@ -1451,6 +1451,27 @@ app.post("/api/pedido-estado", async function(req, res) {
           { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } }
         );
         console.log("Fidelidad actualizada:", telFid, "->", totalPed, "pedidos, nivel:", nivelFid);
+
+        // Solicitar valoración del pedido por WhatsApp (con 30 segundos de delay)
+        setTimeout(async function() {
+          try {
+            var restInfo = await getRestaurante(null);
+            var pidRating = restInfo ? restInfo.whatsapp_phone_id : process.env.WHATSAPP_PHONE_ID;
+            var nombreRest = restInfo ? restInfo.nombre : "nosotros";
+            var pedNumStr = req.body.numero_pedido ? " #" + req.body.numero_pedido : "";
+            var msgRating = "¡Hola! 😊 Esperamos que hayas disfrutado tu pedido" + pedNumStr + " de " + nombreRest + ".\n\n"
+              + "¿Cómo estuvo tu experiencia? Responde con un número:\n\n"
+              + "⭐ 1 - Muy malo\n"
+              + "⭐⭐ 2 - Malo\n"
+              + "⭐⭐⭐ 3 - Regular\n"
+              + "⭐⭐⭐⭐ 4 - Bueno\n"
+              + "⭐⭐⭐⭐⭐ 5 - Excelente\n\n"
+              + "Tu opinión nos ayuda a mejorar 🙏";
+            await sendWhatsAppMessage("57" + telFid, msgRating, pidRating);
+            console.log("[rating] Solicitud de valoración enviada a:", telFid);
+          } catch(eRating) { console.error("[rating] Error:", eRating.message); }
+        }, 30000); // 30 segundos después de marcar como entregado
+
       } catch(eFid) { console.error("fidelidad update error:", eFid.message); }
     }
 
@@ -1475,6 +1496,8 @@ app.post("/api/menu-toggle", async function(req, res) {
   try {
     await axios.patch(SUPABASE_URL + "/rest/v1/menu_items?id=eq." + req.body.id, { disponible: req.body.disponible },
       { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    if (req.body.restaurante_id) delete menuCache[req.body.restaurante_id];
+    else menuCache = {};
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
@@ -1482,6 +1505,8 @@ app.post("/api/menu-toggle", async function(req, res) {
 app.post("/api/menu-add", async function(req, res) {
   try {
     await axios.post(SUPABASE_URL + "/rest/v1/menu_items", req.body, { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    if (req.body.restaurante_id) delete menuCache[req.body.restaurante_id];
+    else menuCache = {};
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
@@ -1735,42 +1760,66 @@ app.post("/api/enviar-promo", async function(req, res) {
   if (!req.body.restaurante_id || !req.body.mensaje) return res.status(400).json({ ok: false, error: "Faltan datos" });
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-    var hace30 = new Date(Date.now() - 30*24*60*60*1000).toISOString();
-    var resp = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + req.body.restaurante_id + "&created_at=gte." + hace30 + "&select=cliente_tel",
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    var telefonos = [];
+
+    // Fuente 1: clientes_frecuentes (TODA la base, no solo 30 días)
+    try {
+      var cliResp = await axios.get(
+        SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + req.body.restaurante_id + "&select=telefono",
+        { headers: h }
+      );
+      (cliResp.data || []).forEach(function(c) { if (c.telefono) telefonos.push(c.telefono); });
+    } catch(e) { console.error("[promo] Error clientes_frecuentes:", e.message); }
+
+    // Fuente 2: pedidos históricos (complementa si hay clientes sin registro)
+    try {
+      var pedResp = await axios.get(
+        SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + req.body.restaurante_id + "&select=cliente_tel",
+        { headers: h }
+      );
+      (pedResp.data || []).forEach(function(p) { if (p.cliente_tel) telefonos.push(p.cliente_tel); });
+    } catch(e) { console.error("[promo] Error pedidos:", e.message); }
+
+    // Normalizar y deduplicar
     var unicos = {};
-    (resp.data||[]).forEach(function(p) { if (p.cliente_tel) unicos[p.cliente_tel] = true; });
-    var telefonos = Object.keys(unicos).map(function(t) {
-      // Ensure country code prefix for WhatsApp API
+    telefonos.forEach(function(t) {
       var clean = t.replace(/[^0-9]/g, "");
       if (clean.length === 10 && !clean.startsWith("57")) clean = "57" + clean;
-      return clean;
-    }).filter(function(t) { return t.length >= 10; });
-    // Deduplicate after normalization
-    telefonos = [...new Set(telefonos)];
-    if (!telefonos.length) return res.json({ ok: true, enviados: 0, fallidos: 0, total: 0 });
-    // Obtener phone_id del restaurante
+      if (clean.length >= 10) unicos[clean] = true;
+    });
+    var lista = Object.keys(unicos);
+
+    if (!lista.length) return res.json({ ok: true, enviados: 0, fallidos: 0, total: 0, msg: "No hay clientes en la base" });
+
+    // Phone ID del restaurante
     var pid = process.env.WHATSAPP_PHONE_ID;
     try {
-      var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id + "&select=whatsapp_phone_id", { headers: sbH(false) });
+      var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id + "&select=whatsapp_phone_id", { headers: h });
       if (rr.data?.length && rr.data[0].whatsapp_phone_id) pid = rr.data[0].whatsapp_phone_id;
     } catch(e) {}
+
+    console.log("[promo] Enviando a " + lista.length + " clientes del restaurante " + req.body.restaurante_id);
+
     var enviados = 0, fallidos = 0;
-    for (var i = 0; i < telefonos.length; i++) {
+    for (var i = 0; i < lista.length; i++) {
       try {
-          if (req.body.imagen_url) {
-            // Send image first then text
-            await sendWhatsAppImage(telefonos[i], req.body.imagen_url, req.body.mensaje, pid);
-          } else {
-            await sendWhatsAppMessage(telefonos[i], req.body.mensaje, pid);
-          }
-          enviados++;
+        if (req.body.imagen_url) {
+          await sendWhatsAppImage(lista[i], req.body.imagen_url, req.body.mensaje, pid);
+        } else {
+          await sendWhatsAppMessage(lista[i], req.body.mensaje, pid);
         }
-      catch (e) { fallidos++; }
-      if (i < telefonos.length - 1) await new Promise(function(r) { setTimeout(r, 300); });
+        enviados++;
+      } catch(e) { fallidos++; }
+      // 350ms entre mensajes para respetar rate limits de Meta
+      if (i < lista.length - 1) await new Promise(function(r) { setTimeout(r, 350); });
     }
-    res.json({ ok: true, enviados, fallidos, total: telefonos.length });
-  } catch (e) { res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message }); }
+    console.log("[promo] ✅ Enviados: " + enviados + " | Fallidos: " + fallidos + " | Total: " + lista.length);
+    res.json({ ok: true, enviados: enviados, fallidos: fallidos, total: lista.length });
+  } catch (e) {
+    console.error("[promo] Error:", e.message);
+    res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message });
+  }
 });
 
 app.get("/api/comprobante/:mediaId", async function(req, res) {
@@ -1876,6 +1925,9 @@ app.patch("/api/menu-item/:id", async function(req, res) {
     await axios.patch(SUPABASE_URL + "/rest/v1/menu_items?id=eq." + req.params.id,
       req.body,
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    // Invalidar cache del menú para que Luz lea los cambios inmediatamente
+    if (req.body.restaurante_id) delete menuCache[req.body.restaurante_id];
+    else { menuCache = {}; } // si no viene restaurante_id, limpiar todo
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
@@ -2024,7 +2076,14 @@ app.patch("/api/zonas/:id", async function(req, res) {
     var patch = {};
     if (req.body.nombre !== undefined) patch.nombre = req.body.nombre;
     if (req.body.precio_domicilio !== undefined) patch.precio_domicilio = Number(req.body.precio_domicilio);
-    if (req.body.barrios !== undefined) patch.barrios = req.body.barrios;
+    if (req.body.barrios !== undefined) {
+      // Normalizar barrios: puede llegar como string "A, B, C" o array
+      if (Array.isArray(req.body.barrios)) {
+        patch.barrios = req.body.barrios;
+      } else if (typeof req.body.barrios === "string") {
+        patch.barrios = req.body.barrios.split(",").map(function(b) { return b.trim(); }).filter(Boolean);
+      }
+    }
     if (req.body.color !== undefined) patch.color = req.body.color;
     await axios.patch(SUPABASE_URL + "/rest/v1/zonas_domicilio?id=eq." + req.params.id, patch,
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
@@ -2439,6 +2498,52 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     }
 
     if (!userText) return;
+
+    // ── CAPTURA DE VALORACIÓN ─────────────────────────────────────────────────
+    // Si el cliente responde 1-5, podría ser una valoración del pedido
+    var trimmedText = userText.trim();
+    if (/^[1-5]$/.test(trimmedText)) {
+      try {
+        var svcRating = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        var telRating = stripCountryCode(from);
+        // Verificar si tiene un pedido entregado reciente (últimas 2 horas)
+        var dosHorasAtras = new Date(Date.now() - 2*60*60*1000).toISOString();
+        var pedRating = await axios.get(
+          SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + (await getRestaurante(phoneNumberId))?.id +
+          "&cliente_tel=eq." + encodeURIComponent(telRating) +
+          "&estado=eq.entregado&updated_at=gte." + dosHorasAtras +
+          "&order=updated_at.desc&limit=1&select=id,numero_pedido",
+          { headers: { "apikey": svcRating, "Authorization": "Bearer " + svcRating } }
+        ).catch(function() { return { data: [] }; });
+
+        if (pedRating.data && pedRating.data.length > 0) {
+          var pedId = pedRating.data[0].id;
+          var pedNum = pedRating.data[0].numero_pedido;
+          var estrellas = parseInt(trimmedText);
+          // Guardar valoración en el pedido
+          await axios.patch(
+            SUPABASE_URL + "/rest/v1/pedidos?id=eq." + pedId,
+            { valoracion: estrellas, updated_at: new Date().toISOString() },
+            { headers: { "apikey": svcRating, "Authorization": "Bearer " + svcRating, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+          ).catch(function(){});
+          var estrellasStr = "⭐".repeat(estrellas);
+          var respRating = estrellas >= 4
+            ? "¡Gracias " + estrellasStr + "! Nos alegra mucho que hayas disfrutado tu pedido. ¡Te esperamos pronto! 😊🙌"
+            : estrellas === 3
+            ? "Gracias por tu valoración " + estrellasStr + ". Tomamos nota para mejorar. ¡En el próximo pedido lo haremos mejor! 💪"
+            : "Lamentamos que no haya sido la mejor experiencia " + estrellasStr + ". Tu opinión es muy importante para nosotros. ¿Qué podemos mejorar?";
+          var restRating = await getRestaurante(phoneNumberId);
+          if (restRating) {
+            await sendWhatsAppMessage(from, respRating, restRating.whatsapp_phone_id || phoneNumberId);
+            guardarMensajeSupabase(restRating.id, telRating, trimmedText, "cliente", null).catch(function(){});
+            guardarMensajeSupabase(restRating.id, telRating, respRating, "restaurante", null).catch(function(){});
+          }
+          console.log("[rating] ⭐ Pedido #" + pedNum + " valorado con " + estrellas + " estrellas por " + telRating);
+          return; // No pasar a LUZ, ya manejamos la respuesta
+        }
+      } catch(eRatingCapture) { console.error("[rating-capture]", eRatingCapture.message); }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     if (!orderState[from]) {
       var saved = await getOrderState(from);
