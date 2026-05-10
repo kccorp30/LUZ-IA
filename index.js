@@ -1593,6 +1593,70 @@ app.post("/api/ubicacion-domiciliario", async function(req, res) {
   }
 });
 
+// ── ESTADÍSTICAS DEL DOMICILIARIO ─────────────────────────────────────────
+app.get("/api/domi-stats", async function(req, res) {
+  var { domiciliario_id, restaurante_id } = req.query;
+  if (!domiciliario_id || !restaurante_id) return res.json({ entregas: 0, hoy: 0, semana: 0, total_ganado: 0, pedidos_activos: [] });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var semana = new Date(Date.now() - 7*24*60*60*1000);
+    // Pedidos entregados por este domiciliario
+    var [todosR, pedActR] = await Promise.all([
+      axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id +
+        "&domiciliario_id=eq." + domiciliario_id + "&estado=eq.entregado&select=id,total,created_at", { headers: h }),
+      axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id +
+        "&domiciliario_id=eq." + domiciliario_id + "&estado=in.(en_camino,listo)&select=id,numero_pedido,total,cliente_tel,direccion,items,estado,created_at&order=created_at.desc", { headers: h })
+    ]);
+    var todos = todosR.data || [];
+    var hoyCount = todos.filter(function(p) { return new Date(p.created_at) >= hoy; }).length;
+    var semanaCount = todos.filter(function(p) { return new Date(p.created_at) >= semana; }).length;
+    var totalGanado = todos.reduce(function(s, p) { return s + Number(p.total || 0); }, 0);
+    res.json({
+      entregas: todos.length,
+      hoy: hoyCount,
+      semana: semanaCount,
+      total_ganado: totalGanado,
+      pedidos_activos: pedActR.data || []
+    });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── FOTO DE ENTREGA ────────────────────────────────────────────────────────
+app.post("/api/foto-entrega", async function(req, res) {
+  var { pedido_id, restaurante_id, imagen_base64, domiciliario_id } = req.body;
+  if (!pedido_id || !imagen_base64) return res.status(400).json({ ok: false, error: "Faltan datos" });
+  try {
+    var matches = imagen_base64.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+    if (!matches) return res.status(400).json({ error: "Formato inválido" });
+    var mimeType = matches[1];
+    var buffer = Buffer.from(matches[2], "base64");
+    var ext = mimeType.includes("png") ? "png" : "jpg";
+    var fileName = "entrega_" + pedido_id + "_" + Date.now() + "." + ext;
+    var filePath = (restaurante_id || "general") + "/" + fileName;
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    // Subir foto a Supabase Storage bucket 'entregas'
+    await axios.post(
+      SUPABASE_URL + "/storage/v1/object/media/" + filePath,
+      buffer,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": mimeType, "x-upsert": "true" }, maxBodyLength: Infinity }
+    );
+    var fotoUrl = SUPABASE_URL + "/storage/v1/object/public/media/" + filePath;
+    // Guardar URL en el pedido
+    await axios.patch(
+      SUPABASE_URL + "/rest/v1/pedidos?id=eq." + pedido_id,
+      { foto_entrega: fotoUrl, updated_at: new Date().toISOString() },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    console.log("[foto-entrega] ✅ Pedido " + pedido_id + " → " + fotoUrl);
+    res.json({ ok: true, url: fotoUrl });
+  } catch(e) {
+    console.error("[foto-entrega] Error:", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // ── SUBIR COMPROBANTE A SUPABASE STORAGE ──────────────────────────────────
 app.post("/api/subir-comprobante", async function(req, res) {
   try {
