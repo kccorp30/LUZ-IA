@@ -62,7 +62,31 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 @keyframes ldot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
 .content{padding-top:60px!important;padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
 .page{display:none}.page.active{display:block;animation:fadeUp 0.22s ease both}
-@keyframes modificadoPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,0);border-color:rgba(251,191,36,0.3)}50%{box-shadow:0 0 0 8px rgba(251,191,36,0.15);border-color:rgba(251,191,36,0.8)}}
+@keyframes luzAnim{0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.08);opacity:.9}}
+@keyframes luzLearn{0%{transform:scale(1)}30%{transform:scale(1.15) rotate(-5deg)}60%{transform:scale(1.1) rotate(5deg)}100%{transform:scale(1)}}
+@keyframes feedIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.ctipo-btn{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);font-family:inherit;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.ctipo-on{background:rgba(124,58,237,0.2);border-color:rgba(124,58,237,0.4);color:#c4b5fd}
+.cerebro-item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;animation:feedIn .3s ease}
+.cerebro-item.nuevo{border-color:rgba(124,58,237,0.4);background:rgba(124,58,237,0.08);animation:feedIn .4s ease}
+/* MESAS RÁPIDAS */
+.mesa-rapida-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.mr-card{background:rgba(255,255,255,0.04);border:2px solid rgba(255,255,255,0.08);border-radius:16px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.mr-card:hover{transform:translateY(-2px)}
+.mr-card.libre{border-color:rgba(255,255,255,0.1)}
+.mr-card.ocupada{border-color:#3b82f6;background:rgba(59,130,246,0.1)}
+.mr-card.en_preparacion{border-color:#f59e0b;background:rgba(245,158,11,0.1)}
+.mr-card.listo{border-color:#10b981;background:rgba(16,185,129,0.1);animation:mesaPulse 1.5s ease infinite}
+.mr-card.sirviendo{border-color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.06)}
+.mr-card.cuenta{border-color:#ef4444;background:rgba(239,68,68,0.1);animation:mesaPulse 1s ease infinite}
+@keyframes mesaPulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}50%{box-shadow:0 0 0 6px rgba(16,185,129,0.2)}}
+.mr-led{width:18px;height:18px;border-radius:50%;margin:0 auto 8px;transition:all .3s}
+.mr-num{font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);margin-bottom:2px}
+.mr-estado{font-size:10px;font-weight:600;margin-bottom:8px;min-height:14px}
+.mr-btns{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+.mr-btn{padding:3px 7px;border-radius:6px;font-size:9px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);font-family:inherit;transition:all .15s;white-space:nowrap}
+.mr-btn:hover{background:rgba(255,255,255,0.12);color:#fff}
+.mr-btn.primary{background:rgba(124,58,237,0.2);border-color:rgba(124,58,237,0.4);color:#c4b5fd}
 @keyframes modificadoBlink{0%,100%{background:rgba(251,191,36,0.08)}50%{background:rgba(251,191,36,0.22)}}
 .pedido-modificado-card{animation:modificadoPulse 1.5s ease-in-out infinite!important;border-color:rgba(251,191,36,0.6)!important}
 .modif-alert-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);border-radius:10px;margin:6px 0;animation:modificadoBlink 1.5s ease-in-out infinite}
@@ -969,22 +993,51 @@ select.finput{cursor:pointer}
 
     <!-- MESAS -->
     <div class="page" id="page-mesas">
-      <div style="padding:16px 12px 4px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
-        <div><div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Mesas</div><div style="font-size:13px;color:var(--text3);margin-top:2px">QR para pedidos desde la mesa</div></div>
+      <!-- HEADER -->
+      <div style="padding:16px 12px 8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div>
+          <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">⚡ Mesas Rápidas</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">Control en tiempo real · LED sincronizado</div>
+        </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <div style="font-size:12px;color:var(--text3);font-weight:600">Mesas:</div>
-          <input id="mesaCount" type="number" min="1" max="30" value="8" onchange="loadMesas()" style="width:56px;padding:7px 10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;outline:none;text-align:center;">
-          <button onclick="loadMesas()" style="padding:8px 14px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.35);border-radius:10px;color:#c4b5fd;font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Generar</button>
+          <div style="font-size:11px;color:var(--text3)">Mesas:</div>
+          <input id="mesaCount" type="number" min="1" max="30" value="10" onchange="loadMesasRapidas()" style="width:50px;padding:6px 8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:white;font-size:13px;font-weight:700;outline:none;text-align:center">
+          <button onclick="loadMesasRapidas()" style="padding:7px 12px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.3);border-radius:10px;color:#c4b5fd;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">⟳</button>
         </div>
       </div>
-      <div style="padding:8px 12px;font-size:12px;color:var(--text3);line-height:1.5">Imprime o muestra cada QR en la mesa correspondiente.</div>
-      <div class="mesas-grid" id="mesasGrid"></div>
-      <div style="padding:16px 12px 4px">
-        <div style="font-size:16px;font-weight:800;margin-bottom:4px">👨‍🍳 Meseros</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Los meseros registrados pueden tomar pedidos desde el panel de meseros.</div>
+
+      <!-- LEYENDA LED -->
+      <div style="padding:0 12px 10px;display:flex;gap:10px;overflow-x:auto;scrollbar-width:none">
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:10px;height:10px;border-radius:50%;background:#555"></div><span style="font-size:10px;color:var(--text3)">Libre</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:10px;height:10px;border-radius:50%;background:#3b82f6"></div><span style="font-size:10px;color:var(--text3)">Ocupada</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:10px;height:10px;border-radius:50%;background:#f59e0b"></div><span style="font-size:10px;color:var(--text3)">En prep.</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:10px;height:10px;border-radius:50%;background:#10b981"></div><span style="font-size:10px;color:var(--text3)">Listo</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.6)"></div><span style="font-size:10px;color:var(--text3)">Sirviendo</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:10px;height:10px;border-radius:50%;background:#ef4444"></div><span style="font-size:10px;color:var(--text3)">Cuenta</span></div>
+      </div>
+
+      <!-- GRID MESAS RÁPIDAS -->
+      <div style="padding:0 12px">
+        <div class="mesa-rapida-grid" id="mesasRapidasGrid"></div>
+      </div>
+
+      <!-- SEPARADOR -->
+      <div style="margin:8px 12px 12px;height:1px;background:rgba(255,255,255,0.06)"></div>
+
+      <!-- QR SECTION -->
+      <div style="padding:0 12px 4px">
+        <div style="font-size:14px;font-weight:800;margin-bottom:4px">📱 QR por mesa</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Cada QR lleva al cliente directo al menú con su mesa asignada.</div>
+        <div class="mesas-grid" id="mesasGrid"></div>
+      </div>
+
+      <!-- MESEROS -->
+      <div style="padding:8px 12px 4px">
+        <div style="font-size:14px;font-weight:800;margin-bottom:4px">👨‍🍳 Meseros</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Registra los meseros para asignarles pedidos.</div>
         <div id="meserosList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
         <div style="display:flex;gap:8px">
-          <input id="meseroNombreInput" placeholder="Nombre del mesero..." class="finput" style="flex:1;padding:10px 14px;">
+          <input id="meseroNombreInput" placeholder="Nombre del mesero..." class="finput" style="flex:1;padding:10px 14px">
           <button onclick="agregarMesero()" style="padding:10px 18px;background:linear-gradient(135deg,#10b981,#2563eb);border:none;border-radius:12px;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">+ Agregar</button>
         </div>
         <button onclick="window.open('/mesero?rest='+rest.id,'_blank')" style="width:100%;margin-top:10px;padding:13px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:14px;color:#34d399;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">🪑 Abrir panel de meseros</button>
@@ -1029,50 +1082,140 @@ select.finput{cursor:pointer}
 
     <!-- CEREBRO DE LUZ -->
     <div class="page" id="page-cerebro">
-      <div style="padding:16px 12px 4px">
-        <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">🧠 Cerebro de Luz</div>
-        <div style="font-size:13px;color:var(--text3);margin-top:2px">Luz aprende y mejora con cada interacción</div>
-      </div>
-      <div style="padding:8px 12px">
-        <!-- Stats -->
+      <!-- LUZ IDENTITY HEADER — rediseñado con cara animada -->
+      <div style="padding:16px 12px 0;position:relative;overflow:hidden">
+
+        <!-- CARA DE LUZ — SVG animado -->
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+          <div id="luzAvatar" onclick="luzThink()" style="flex-shrink:0;cursor:pointer;position:relative;width:72px;height:72px">
+            <svg id="luzFaceSVG" viewBox="0 0 72 72" width="72" height="72" xmlns="http://www.w3.org/2000/svg">
+              <!-- Aura pulsante -->
+              <circle id="luzAura" cx="36" cy="36" r="34" fill="none" stroke="url(#auraGrad)" stroke-width="2" opacity="0.6">
+                <animate attributeName="r" values="32;35;32" dur="2.5s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0.6;0.2;0.6" dur="2.5s" repeatCount="indefinite"/>
+              </circle>
+              <defs>
+                <radialGradient id="faceGrad" cx="40%" cy="35%">
+                  <stop offset="0%" stop-color="#a855f7"/>
+                  <stop offset="100%" stop-color="#4f46e5"/>
+                </radialGradient>
+                <linearGradient id="auraGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#a855f7"/>
+                  <stop offset="100%" stop-color="#06b6d4"/>
+                </linearGradient>
+              </defs>
+              <!-- Cabeza -->
+              <circle cx="36" cy="36" r="30" fill="url(#faceGrad)"/>
+              <!-- Brillo -->
+              <ellipse cx="28" cy="24" rx="8" ry="5" fill="rgba(255,255,255,0.18)"/>
+              <!-- Ojos -->
+              <g id="luzOjos">
+                <ellipse id="ojo-l" cx="25" cy="34" rx="4.5" ry="5" fill="white"/>
+                <ellipse id="pupila-l" cx="26" cy="34" rx="2.5" ry="2.8" fill="#1a0a2e"/>
+                <ellipse cx="26.8" cy="32.8" rx="1" ry="1" fill="white" opacity="0.7"/>
+                <ellipse id="ojo-r" cx="47" cy="34" rx="4.5" ry="5" fill="white"/>
+                <ellipse id="pupila-r" cx="48" cy="34" rx="2.5" ry="2.8" fill="#1a0a2e"/>
+                <ellipse cx="48.8" cy="32.8" rx="1" ry="1" fill="white" opacity="0.7"/>
+              </g>
+              <!-- Boca normal -->
+              <path id="luzBoca" d="M28 46 Q36 52 44 46" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+              <!-- Antenas/circuitos en la cabeza -->
+              <line x1="36" y1="6" x2="36" y2="14" stroke="#c4b5fd" stroke-width="1.5" stroke-linecap="round"/>
+              <circle cx="36" cy="5" r="2.5" fill="#a855f7"/>
+              <line x1="28" y1="8" x2="24" y2="14" stroke="#c4b5fd" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+              <line x1="44" y1="8" x2="48" y2="14" stroke="#c4b5fd" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
+              <!-- Mejillas -->
+              <ellipse id="mejilla-l" cx="18" cy="41" rx="5" ry="3.5" fill="#f97316" opacity="0"/>
+              <ellipse id="mejilla-r" cx="54" cy="41" rx="5" ry="3.5" fill="#f97316" opacity="0"/>
+            </svg>
+            <!-- Badge estado -->
+            <div id="luzStatusBadge" style="position:absolute;bottom:0;right:0;width:18px;height:18px;border-radius:50%;background:#10b981;border:2px solid #0d0a1a;box-shadow:0 0 8px rgba(16,185,129,0.6)">
+              <div style="width:100%;height:100%;border-radius:50%;animation:luzAnim 2s ease infinite;background:rgba(16,185,129,0.3)"></div>
+            </div>
+          </div>
+
+          <div style="flex:1;min-width:0">
+            <div style="font-size:20px;font-weight:900;letter-spacing:-0.01em">Cerebro de <span style="background:linear-gradient(135deg,#a855f7,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Luz</span></div>
+            <div id="luzStatus" style="font-size:12px;color:#10b981;margin-top:3px;font-weight:600">● Activa y aprendiendo</div>
+            <div id="luzMood" style="font-size:11px;color:#a855f7;margin-top:2px;font-style:italic;min-height:14px;transition:all 0.3s">Aprendiendo de cada conversación...</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:32px;font-weight:900;color:#c4b5fd;font-family:'JetBrains Mono',monospace;line-height:1" id="cerebroTotal">0</div>
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-top:2px">conocimientos</div>
+          </div>
+        </div>
+
+        <!-- BARRA DE NIVEL DE LUZ -->
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(124,58,237,0.2);border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
+          <div style="font-size:18px">🧠</div>
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <div style="font-size:11px;font-weight:700;color:#c4b5fd" id="luzNivelLabel">Nivel: Aprendiz</div>
+              <div style="font-size:10px;color:var(--text3)" id="luzXPLabel">0 XP</div>
+            </div>
+            <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden">
+              <div id="luzXPBar" style="height:100%;background:linear-gradient(90deg,#7c3aed,#06b6d4);border-radius:3px;width:0%;transition:width 1s ease"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATS ROW -->
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
-          <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);border-radius:14px;padding:14px;text-align:center">
-            <div style="font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace;color:#c4b5fd" id="cerebroTotal">0</div>
-            <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-top:3px">Total</div>
+          <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:10px;text-align:center">
+            <div style="font-size:20px;font-weight:900;color:#6ee7b7;font-family:'JetBrains Mono',monospace" id="cerebroActivos">0</div>
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Activos</div>
           </div>
-          <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:14px;padding:14px;text-align:center">
-            <div style="font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace;color:#6ee7b7" id="cerebroActivos">0</div>
-            <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-top:3px">Activos</div>
+          <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:10px;text-align:center">
+            <div style="font-size:20px;font-weight:900;color:#fcd34d;font-family:'JetBrains Mono',monospace" id="cerebroPendientes">0</div>
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Pendientes</div>
           </div>
-          <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:14px;padding:14px;text-align:center">
-            <div style="font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace;color:#fcd34d" id="cerebroPendientes">0</div>
-            <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-top:3px">Pendientes</div>
+          <div style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:12px;padding:10px;text-align:center">
+            <div style="font-size:20px;font-weight:900;color:#67e8f9;font-family:'JetBrains Mono',monospace" id="cerebroHoy">0</div>
+            <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Hoy nuevo</div>
           </div>
         </div>
-        <!-- Agregar nueva regla -->
-        <div class="aform" style="margin-bottom:12px">
-          <div class="aft">➕ Enseñar a Luz</div>
-          <div class="ffield"><label class="flabel">Tipo</label>
-            <select class="finput" id="cerebro-tipo">
-              <option value="regla_negocio">📋 Regla del negocio</option>
-              <option value="correccion">⚠️ Corrección</option>
-              <option value="faq">❓ Pregunta frecuente</option>
-              <option value="producto_info">🍔 Info de producto</option>
-              <option value="preferencia_cliente">👤 Preferencia de cliente</option>
-            </select>
+      </div>
+
+      <div style="padding:0 12px 80px">
+        <!-- QUICK TEACH — input directo estilo chat -->
+        <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);border-radius:16px;padding:14px;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:#a855f7;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">⚡ Enseñar a Luz ahora</div>
+          <!-- Sugerencias rápidas -->
+          <div id="luzSugerencias" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+            <button onclick="usarSugerencia(this)" style="padding:5px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:11px;color:var(--text2);cursor:pointer;font-family:inherit">💡 La sencilla no lleva tocineta</button>
+            <button onclick="usarSugerencia(this)" style="padding:5px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:11px;color:var(--text2);cursor:pointer;font-family:inherit">💡 El domicilio mínimo es $15.000</button>
+            <button onclick="usarSugerencia(this)" style="padding:5px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:11px;color:var(--text2);cursor:pointer;font-family:inherit">💡 Los martes hay 2x1 en alitas</button>
           </div>
-          <div class="ffield"><label class="flabel">¿Qué debe saber Luz?</label><textarea class="finput" id="cerebro-contenido" placeholder="Ej: No ofrecemos domicilio después de las 11pm&#10;Ej: La sencilla NO lleva tocineta, solo carne y queso&#10;Ej: Si preguntan por el WiFi, la clave es LACURVA2024" rows="3" style="resize:none"></textarea></div>
-          <button class="badd" onclick="agregarAprendizaje()">🧠 Enseñar a Luz</button>
+          <div style="display:flex;gap:6px;margin-bottom:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px">
+            <button onclick="setCerebroTipo('regla_negocio',this)" class="ctipo-btn ctipo-on">📋 Regla</button>
+            <button onclick="setCerebroTipo('correccion',this)" class="ctipo-btn">⚠️ Corrección</button>
+            <button onclick="setCerebroTipo('faq',this)" class="ctipo-btn">❓ FAQ</button>
+            <button onclick="setCerebroTipo('producto_info',this)" class="ctipo-btn">🍔 Producto</button>
+            <button onclick="setCerebroTipo('preferencia_cliente',this)" class="ctipo-btn">👤 Cliente</button>
+          </div>
+          <input type="hidden" id="cerebro-tipo" value="regla_negocio">
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <textarea class="finput" id="cerebro-contenido" placeholder="Escríbele algo a Luz... ej: La sencilla NO lleva tocineta, solo carne y queso" rows="2" style="resize:none;flex:1;font-size:13px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();agregarAprendizajeAnimado();}"></textarea>
+            <button onclick="agregarAprendizajeAnimado()" style="padding:10px 14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:12px;color:white;font-size:16px;cursor:pointer;flex-shrink:0;font-family:inherit">→</button>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:5px">Presiona Enter para enseñar · Shift+Enter para nueva línea</div>
+          <!-- Feedback de aprendizaje -->
+          <div id="luzLearnFeedback" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;font-size:12px;color:#6ee7b7;animation:feedIn .3s ease">
+            ✅ <span id="luzLearnMsg">¡Lo aprendí!</span>
+          </div>
         </div>
-        <!-- Filtros -->
-        <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none" id="cerebroFiltros">
-          <button class="filtro-btn active" onclick="filtrarCerebro('todos')">Todos</button>
-          <button class="filtro-btn" onclick="filtrarCerebro('regla_negocio')">📋 Reglas</button>
-          <button class="filtro-btn" onclick="filtrarCerebro('correccion')">⚠️ Correcciones</button>
-          <button class="filtro-btn" onclick="filtrarCerebro('faq')">❓ FAQs</button>
-          <button class="filtro-btn" onclick="filtrarCerebro('producto_info')">🍔 Productos</button>
+
+        <!-- FEED DE APRENDIZAJES -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em">Lo que sabe Luz</div>
+          <div style="display:flex;gap:6px">
+            <button class="filtro-btn active" onclick="filtrarCerebro('todos',this)" style="font-size:10px;padding:4px 10px">Todo</button>
+            <button class="filtro-btn" onclick="filtrarCerebro('regla_negocio',this)" style="font-size:10px;padding:4px 10px">📋</button>
+            <button class="filtro-btn" onclick="filtrarCerebro('correccion',this)" style="font-size:10px;padding:4px 10px">⚠️</button>
+            <button class="filtro-btn" onclick="filtrarCerebro('faq',this)" style="font-size:10px;padding:4px 10px">❓</button>
+            <button class="filtro-btn" onclick="filtrarCerebro('producto_info',this)" style="font-size:10px;padding:4px 10px">🍔</button>
+          </div>
         </div>
-        <!-- Lista -->
         <div id="cerebroLista"><div class="empty"><div class="et">Cargando...</div></div></div>
       </div>
     </div>
@@ -1336,7 +1479,9 @@ function showTab(n){
   if(n==="chat")loadChatUniversal();if(n==="cupones")renderCupones();
   if(n==="mapa"){setTimeout(function(){cargarZonas();initMapa();},80);}
   if(n==="config")cargarDomiciliarios();if(n==="domis")loadDomiPanel();
-  if(n==="clientes"){loadClientes();loadCanjeAdmin();loadCanjesRecibidos();}if(n==="mesas"){loadMesas();cargarMeseros();}
+  if(n==="clientes"){loadClientes();loadCanjeAdmin();loadCanjesRecibidos();}
+  if(n==="mesas"){loadMesasRapidas();cargarMeseros();iniciarPollingMesas();}
+  else{detenerPollingMesas();}
   if(n==="cerebro")loadCerebro();
 }
 
@@ -2423,17 +2568,108 @@ function ejecutarResetFidelidad(){
 }
 
 // MESAS & QR
+// ── MESAS RÁPIDAS ─────────────────────────────────────────────────────────────
+var mesasRapidasEstados = {}; // { mesa_1: "libre", mesa_2: "ocupada", ... }
+var mesasRapidasTimer = null;
+
+var MR_COLORES = {
+  libre:{led:"#333",label:"Libre",cls:"libre"},
+  ocupada:{led:"#3b82f6",label:"Ocupada",cls:"ocupada"},
+  confirmado:{led:"#f59e0b",label:"En prep.",cls:"en_preparacion"},
+  en_preparacion:{led:"#f59e0b",label:"En prep.",cls:"en_preparacion"},
+  listo:{led:"#10b981",label:"¡Listo!",cls:"listo"},
+  sirviendo:{led:"rgba(255,255,255,0.7)",label:"Sirviendo",cls:"sirviendo"},
+  cuenta:{led:"#ef4444",label:"La cuenta",cls:"cuenta"}
+};
+
+function loadMesasRapidas(){
+  if(!rest)return;
+  var n=parseInt(document.getElementById("mesaCount").value)||10;
+  // Cargar estados del backend
+  fetch("/api/mesa-estados?restaurante_id="+rest.id)
+  .then(function(r){return r.json();})
+  .then(function(estados){
+    mesasRapidasEstados=estados||{};
+    renderMesasRapidas(n);
+  })
+  .catch(function(){renderMesasRapidas(n);});
+  // Generar QR también
+  loadMesas();
+}
+
+function renderMesasRapidas(n){
+  var grid=document.getElementById("mesasRapidasGrid");
+  if(!grid)return;
+  var h="";
+  for(var i=1;i<=n;i++){
+    var key="mesa_"+i;
+    var est=mesasRapidasEstados[key]||"libre";
+    var info=MR_COLORES[est]||MR_COLORES.libre;
+    h+='<div class="mr-card '+info.cls+'" id="mr-card-'+i+'">';
+    h+='<div class="mr-led" id="mr-led-'+i+'" style="background:'+info.led+'"></div>';
+    h+='<div class="mr-num">Mesa '+i+'</div>';
+    h+='<div class="mr-estado" id="mr-est-'+i+'">'+info.label+'</div>';
+    h+='<div class="mr-btns">';
+    if(est==="libre"){
+      h+='<button class="mr-btn primary" onclick="cambiarEstadoMesa('+i+',\'ocupada\')">Ocupar</button>';
+    } else if(est==="ocupada"){
+      h+='<button class="mr-btn primary" onclick="cambiarEstadoMesa('+i+',\'libre\')">Liberar</button>';
+    } else if(est==="listo"){
+      h+='<button class="mr-btn primary" onclick="cambiarEstadoMesa('+i+',\'sirviendo\')">Servido ✓</button>';
+    } else if(est==="sirviendo"){
+      h+='<button class="mr-btn primary" onclick="cambiarEstadoMesa('+i+',\'cuenta\')">Pide cuenta</button>';
+      h+='<button class="mr-btn" onclick="cambiarEstadoMesa('+i+',\'libre\')">Liberar</button>';
+    } else if(est==="cuenta"){
+      h+='<button class="mr-btn primary" onclick="cambiarEstadoMesa('+i+',\'libre\')">Cobrado ✓</button>';
+    } else {
+      h+='<button class="mr-btn" onclick="cambiarEstadoMesa('+i+',\'libre\')">Liberar</button>';
+    }
+    h+='</div></div>';
+  }
+  grid.innerHTML=h;
+}
+
+function cambiarEstadoMesa(num,estado){
+  if(!rest)return;
+  // Actualizar local inmediatamente
+  mesasRapidasEstados["mesa_"+num]=estado;
+  renderMesasRapidas(parseInt(document.getElementById("mesaCount").value)||10);
+  // Enviar al backend
+  fetch("/api/mesa-led",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,mesa:num,estado:estado})})
+  .then(function(r){return r.json();})
+  .then(function(d){if(!d.ok)notif("Error sincronizando LED");})
+  .catch(function(){});
+}
+
+// Polling de mesas cada 3 segundos cuando está activa
+function iniciarPollingMesas(){
+  if(mesasRapidasTimer)clearInterval(mesasRapidasTimer);
+  mesasRapidasTimer=setInterval(function(){
+    if(!rest)return;
+    fetch("/api/mesa-estados?restaurante_id="+rest.id)
+    .then(function(r){return r.json();})
+    .then(function(estados){
+      var changed=JSON.stringify(estados)!==JSON.stringify(mesasRapidasEstados);
+      if(changed){mesasRapidasEstados=estados||{};renderMesasRapidas(parseInt(document.getElementById("mesaCount").value)||10);}
+    }).catch(function(){});
+  },3000);
+}
+function detenerPollingMesas(){if(mesasRapidasTimer){clearInterval(mesasRapidasTimer);mesasRapidasTimer=null;}}
+
+// ── QR MESAS — apunta al menú web con parámetro de mesa ──────────────────────
 function loadMesas(){
   var grid=document.getElementById("mesasGrid");if(!grid||!rest)return;
-  var n=parseInt(document.getElementById("mesaCount").value)||8;
+  var n=parseInt(document.getElementById("mesaCount").value)||10;
   if(!window.QRCode){var s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";s.onload=function(){loadMesas();};document.head.appendChild(s);return;}
   grid.innerHTML="";
+  var baseUrl=location.origin+"/menu?rest="+rest.id;
   for(var i=1;i<=n;i++){
-    var url="https://wa.me/"+((rest.whatsapp_phone_number||"").replace(/[^0-9]/g,""))+"?text="+encodeURIComponent("🪑 *PEDIDO DE MESA "+i+"*\nMesa: "+i);
+    // QR apunta al menú web con mesa asignada
+    var url=baseUrl+"&mesa="+i+"&tipo=mesa";
     var card=document.createElement("div");card.className="mesa-qr-card";
     var numDiv=document.createElement("div");numDiv.className="mesa-num";numDiv.textContent="Mesa "+i;
     var canvas=document.createElement("div");canvas.className="mesa-qr-canvas";canvas.id="qr-mesa-"+i;
-    var urlDiv=document.createElement("div");urlDiv.className="mesa-url";urlDiv.textContent=url.substring(0,60)+"...";
+    var urlDiv=document.createElement("div");urlDiv.className="mesa-url";urlDiv.style.fontSize="9px";urlDiv.textContent="Menú · Mesa "+i;
     var dlBtn=document.createElement("button");dlBtn.className="mesa-btn-dl";dlBtn.textContent="⬇ Descargar";
     dlBtn.setAttribute("data-mesa",i);
     card.appendChild(numDiv);card.appendChild(canvas);card.appendChild(urlDiv);card.appendChild(dlBtn);
@@ -2446,6 +2682,131 @@ function loadMesas(){
     dlBtn.addEventListener("click",function(){descargarQR(this.getAttribute("data-mesa"));});
   }
 }
+
+// ── CEREBRO DE LUZ ANIMADO ────────────────────────────────────────────────────
+var FRASES_LUZ=[
+  "Aprendiendo de cada conversación...",
+  "Lista para ayudar a tus clientes 🍔",
+  "Procesando tu menú en tiempo real...",
+  "Cada regla me hace más útil",
+  "Siempre aprendiendo, siempre mejorando",
+  "Conectada con tus clientes 24/7",
+  "Analizando patrones de pedidos...",
+  "Memorias cargadas con éxito ✨"
+];
+
+var LUZ_NIVELES=[
+  {min:0,nombre:"Aprendiz",color:"#6ee7b7"},
+  {min:5,nombre:"Asistente",color:"#67e8f9"},
+  {min:15,nombre:"Inteligente",color:"#a78bfa"},
+  {min:30,nombre:"Experta",color:"#f97316"},
+  {min:50,nombre:"Maestra IA",color:"#fbbf24"}
+];
+
+function luzThink(){
+  // Animar ojos — mirar a los lados
+  var pl=document.getElementById("pupila-l");
+  var pr=document.getElementById("pupila-r");
+  var boca=document.getElementById("luzBoca");
+  var mejL=document.getElementById("mejilla-l");
+  var mejR=document.getElementById("mejilla-r");
+  if(!pl)return;
+  // Secuencia de animación
+  var steps=[
+    function(){if(pl){pl.setAttribute("cx","24");pr.setAttribute("cx","46");}}, // mirar izquierda
+    function(){if(pl){pl.setAttribute("cx","28");pr.setAttribute("cx","50");}}, // mirar derecha
+    function(){if(pl){pl.setAttribute("cx","26");pr.setAttribute("cx","48");}}, // centro
+    // Sonreír más
+    function(){if(boca)boca.setAttribute("d","M26 45 Q36 55 46 45");if(mejL){mejL.setAttribute("opacity","0.6");mejR.setAttribute("opacity","0.6");}},
+    function(){setTimeout(function(){if(boca)boca.setAttribute("d","M28 46 Q36 52 44 46");if(mejL){mejL.setAttribute("opacity","0");mejR.setAttribute("opacity","0");}},800);}
+  ];
+  steps.forEach(function(s,i){setTimeout(s,i*180);});
+  // Frase aleatoria
+  var mood=document.getElementById("luzMood");
+  if(mood){
+    mood.style.opacity="0";
+    setTimeout(function(){
+      mood.textContent=FRASES_LUZ[Math.floor(Math.random()*FRASES_LUZ.length)];
+      mood.style.opacity="1";
+    },200);
+  }
+}
+
+function luzAprender(texto){
+  // Animación de "aprendiendo" — ojos se agrandan, cara brilla
+  var pl=document.getElementById("pupila-l");
+  var pr=document.getElementById("pupila-r");
+  var ojoL=document.getElementById("ojo-l");
+  var ojoR=document.getElementById("ojo-r");
+  var boca=document.getElementById("luzBoca");
+  var aura=document.getElementById("luzAura");
+  if(!pl)return;
+  // Ojos grandes (sorpresa/aprendiendo)
+  if(ojoL){ojoL.setAttribute("ry","6.5");ojoR.setAttribute("ry","6.5");}
+  if(aura){aura.setAttribute("stroke","#fbbf24");}
+  setTimeout(function(){
+    if(ojoL){ojoL.setAttribute("ry","5");ojoR.setAttribute("ry","5");}
+    if(aura){aura.setAttribute("stroke","url(#auraGrad)");}
+    // Sonrisa grande de aprendizaje
+    if(boca){boca.setAttribute("d","M25 44 Q36 56 47 44");}
+    setTimeout(function(){if(boca)boca.setAttribute("d","M28 46 Q36 52 44 46");},1000);
+  },600);
+  // Feedback visible
+  var fb=document.getElementById("luzLearnFeedback");
+  var msg=document.getElementById("luzLearnMsg");
+  if(fb&&msg){
+    msg.textContent=["¡Lo aprendí! 🧠","¡Listo! Ya lo tengo en mente","Anotado. Seré más precisa","¡Perfecto! Aprendo rápido"][Math.floor(Math.random()*4)];
+    fb.style.display="block";
+    setTimeout(function(){fb.style.display="none";},3000);
+  }
+  // Actualizar mood
+  var mood=document.getElementById("luzMood");
+  if(mood){mood.textContent="Acabo de aprender algo nuevo ✨";}
+  setTimeout(function(){luzThink();},3500);
+}
+
+function actualizarNivelLuz(total){
+  var nivel=LUZ_NIVELES[0];
+  for(var i=LUZ_NIVELES.length-1;i>=0;i--){if(total>=LUZ_NIVELES[i].min){nivel=LUZ_NIVELES[i];break;}}
+  var labelEl=document.getElementById("luzNivelLabel");
+  var xpEl=document.getElementById("luzXPLabel");
+  var barEl=document.getElementById("luzXPBar");
+  if(labelEl)labelEl.textContent="Nivel: "+nivel.nombre;
+  if(labelEl)labelEl.style.color=nivel.color;
+  if(xpEl)xpEl.textContent=total+" conocimientos";
+  // Calcular % para la barra
+  var nextIdx=LUZ_NIVELES.indexOf(nivel)+1;
+  var pct=100;
+  if(nextIdx<LUZ_NIVELES.length){
+    var next=LUZ_NIVELES[nextIdx];
+    pct=Math.min(100,Math.round((total-nivel.min)/(next.min-nivel.min)*100));
+  }
+  if(barEl)barEl.style.width=pct+"%";
+}
+
+function usarSugerencia(btn){
+  var txt=btn.textContent.replace("💡 ","");
+  var el=document.getElementById("cerebro-contenido");
+  if(el){el.value=txt;el.focus();}
+}
+
+function setCerebroTipo(tipo,btn){
+  document.getElementById("cerebro-tipo").value=tipo;
+  document.querySelectorAll(".ctipo-btn").forEach(function(b){b.classList.remove("ctipo-on");});
+  if(btn)btn.classList.add("ctipo-on");
+}
+
+function agregarAprendizajeAnimado(){
+  var contenido=document.getElementById("cerebro-contenido").value.trim();
+  if(!contenido){return;}
+  var mood=document.getElementById("luzMood");
+  if(mood){mood.textContent="💭 Procesando nuevo conocimiento...";}
+  agregarAprendizaje(function(){
+    luzAprender(contenido); // Animar cara de Luz
+    setTimeout(function(){loadCerebro();},1000); // Reload para actualizar stats
+  });
+}
+
 function descargarQR(mesa){
   var canvas=document.querySelector("#qr-mesa-"+mesa+" canvas");
   if(!canvas){notif("QR no generado aún");return;}
@@ -3830,51 +4191,77 @@ function renderCerebro(){
   if(cerebroFiltroActual!=="todos")datos=datos.filter(function(a){return a.tipo===cerebroFiltroActual;});
   var activos=cerebroData.filter(function(a){return a.activo;}).length;
   var pendientes=cerebroData.filter(function(a){return a.activo&&a.contenido&&a.contenido.indexOf("PREGUNTA SIN RESPUESTA")===0;}).length;
+  var hoy=new Date();hoy.setHours(0,0,0,0);
+  var hoyCount=cerebroData.filter(function(a){return new Date(a.created_at)>=hoy;}).length;
   document.getElementById("cerebroTotal").textContent=cerebroData.length;
   document.getElementById("cerebroActivos").textContent=activos;
   document.getElementById("cerebroPendientes").textContent=pendientes;
-  if(!datos.length){lista.innerHTML='<div class="empty"><div class="ei">🧠</div><div class="et">Sin aprendizajes aún</div><div style="font-size:11px;color:var(--text3);margin-top:4px">Agrega reglas arriba o Luz aprenderá automáticamente</div></div>';return;}
+  var cerebroHoyEl=document.getElementById("cerebroHoy");
+  if(cerebroHoyEl)cerebroHoyEl.textContent=hoyCount;
+  actualizarNivelLuz(cerebroData.length); // Actualizar nivel de Luz
+  // Mood de Luz
+  var mood=document.getElementById("luzMood");
+  if(mood&&!mood.textContent)mood.textContent=FRASES_LUZ[Math.floor(Math.random()*FRASES_LUZ.length)];
+  if(!datos.length){lista.innerHTML='<div class="empty"><div class="ei">🧠</div><div class="et">Sin aprendizajes aún</div><div style="font-size:11px;color:var(--text3);margin-top:4px">Escríbele algo a Luz arriba para que empiece a aprender</div></div>';return;}
   var iconos={correccion:"⚠️",faq:"❓",regla_negocio:"📋",producto_info:"🍔",preferencia_cliente:"👤"};
+  var colores={correccion:"rgba(245,158,11,0.15)",faq:"rgba(6,182,212,0.08)",regla_negocio:"rgba(124,58,237,0.08)",producto_info:"rgba(249,115,22,0.08)",preferencia_cliente:"rgba(16,185,129,0.08)"};
+  var borderColors={correccion:"rgba(245,158,11,0.25)",faq:"rgba(6,182,212,0.2)",regla_negocio:"rgba(124,58,237,0.2)",producto_info:"rgba(249,115,22,0.2)",preferencia_cliente:"rgba(16,185,129,0.2)"};
   var h="";
-  datos.forEach(function(a){
+  datos.forEach(function(a,idx){
     var ico=iconos[a.tipo]||"📝";
+    var bg=colores[a.tipo]||"rgba(255,255,255,0.04)";
+    var bc=borderColors[a.tipo]||"rgba(255,255,255,0.07)";
     var esPendiente=a.contenido&&a.contenido.indexOf("PREGUNTA SIN RESPUESTA")===0;
-    var borderCol=a.activo?(esPendiente?"rgba(245,158,11,0.3)":"rgba(16,185,129,0.2)"):"rgba(255,255,255,0.06)";
-    h+='<div style="background:var(--glass-bg);border:1px solid '+borderCol+';border-radius:14px;padding:12px 14px;margin-bottom:8px;'+(a.activo?"":"opacity:0.5;")+'">';
-    h+='<div style="display:flex;align-items:flex-start;gap:8px">';
-    h+='<div style="font-size:18px;flex-shrink:0;margin-top:2px">'+ico+'</div>';
+    var esNuevo=new Date(a.created_at)>=hoy;
+    if(esPendiente){bc="rgba(245,158,11,0.4)";}
+    h+='<div class="cerebro-item'+(esNuevo?" nuevo":"")+(a.activo?"":" inactive")+'" style="background:'+(a.activo?bg:"rgba(255,255,255,0.02)")+';border-color:'+bc+';'+(a.activo?"":"opacity:0.45;")+'">';
+    h+='<div style="font-size:20px;flex-shrink:0;margin-top:1px">'+ico+'</div>';
     h+='<div style="flex:1;min-width:0">';
-    h+='<div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.4" id="ct-'+a.id+'">'+escHtml(a.contenido)+'</div>';
-    h+='<div style="font-size:10px;color:var(--text3);margin-top:4px">'+a.fuente+' · '+new Date(a.created_at).toLocaleDateString("es-CO")+'</div>';
-    h+='</div></div>';
-    h+='<div style="display:flex;gap:6px;margin-top:8px">';
     if(esPendiente){
-      h+='<button onclick="resolverPendiente(\''+a.id+'\')" style="flex:2;padding:7px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:8px;color:#6ee7b7;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✅ Resolver</button>';
+      h+='<div style="font-size:9px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">⚡ Pregunta sin responder</div>';
     }
-    h+='<button onclick="editarAprendizaje(\''+a.id+'\')" style="flex:1;padding:7px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);border-radius:8px;color:#c4b5fd;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✏️</button>';
-    h+='<button onclick="toggleAprendizaje(\''+a.id+'\','+(!a.activo)+')" style="flex:1;padding:7px;background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:8px;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.activo?"🙈":"👁")+'</button>';
-    h+='<button onclick="borrarAprendizaje(\''+a.id+'\')" style="padding:7px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#fca5a5;font-size:11px;cursor:pointer;font-family:inherit">🗑</button>';
-    h+='</div></div>';
+    if(esNuevo&&!esPendiente){
+      h+='<div style="font-size:9px;font-weight:700;color:#a855f7;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px">✨ Nuevo hoy</div>';
+    }
+    h+='<div style="font-size:13px;font-weight:500;color:var(--text);line-height:1.45" id="ct-'+a.id+'">'+escHtml(a.contenido)+'</div>';
+    h+='<div style="font-size:10px;color:var(--text3);margin-top:4px;display:flex;align-items:center;gap:8px">';
+    h+='<span>'+a.fuente+'</span><span>·</span><span>'+new Date(a.created_at).toLocaleDateString("es-CO")+'</span>';
+    h+='</div>';
+    h+='<div style="display:flex;gap:5px;margin-top:8px">';
+    if(esPendiente){
+      h+='<button onclick="resolverPendiente(\''+a.id+'\')" style="flex:2;padding:6px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);border-radius:8px;color:#6ee7b7;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">✅ Resolver</button>';
+    }
+    h+='<button onclick="editarAprendizaje(\''+a.id+'\')" style="flex:1;padding:6px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2);border-radius:8px;color:#c4b5fd;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">✏️</button>';
+    h+='<button onclick="toggleAprendizaje(\''+a.id+'\','+(!a.activo)+')" style="flex:1;padding:6px;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:8px;color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.activo?"🙈":"👁")+'</button>';
+    h+='<button onclick="borrarAprendizaje(\''+a.id+'\')" style="padding:6px 10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.15);border-radius:8px;color:#fca5a5;font-size:10px;cursor:pointer;font-family:inherit">🗑</button>';
+    h+='</div></div></div>';
   });
   lista.innerHTML=h;
 }
 
-function filtrarCerebro(tipo){
+function filtrarCerebro(tipo,btn){
   cerebroFiltroActual=tipo;
-  var btns=document.getElementById("cerebroFiltros");
-  if(btns)btns.querySelectorAll(".filtro-btn").forEach(function(b){b.classList.remove("active");});
+  document.querySelectorAll(".filtro-btn").forEach(function(b){b.classList.remove("active");});
+  if(btn)btn.classList.add("active");
   event.target.classList.add("active");
   renderCerebro();
 }
 
-function agregarAprendizaje(){
+function agregarAprendizaje(cb){
   if(!rest)return;
   var tipo=document.getElementById("cerebro-tipo").value;
   var contenido=document.getElementById("cerebro-contenido").value.trim();
   if(!contenido){notif("Escribe qué debe aprender Luz");return;}
   fetch("/api/aprendizajes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,tipo:tipo,contenido:contenido,fuente:"admin"})})
   .then(function(r){return r.json();})
-  .then(function(d){if(d.ok){notif("🧠 Luz aprendió algo nuevo!");document.getElementById("cerebro-contenido").value="";loadCerebro();}else notif("Error");})
+  .then(function(d){
+    if(d.ok){
+      notif("🧠 Luz aprendió algo nuevo!");
+      document.getElementById("cerebro-contenido").value="";
+      loadCerebro();
+      if(typeof cb==="function")cb();
+    } else notif("Error: "+(d.error||"desconocido"));
+  })
   .catch(function(){notif("Error de conexión");});
 }
 
