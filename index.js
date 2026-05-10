@@ -148,16 +148,27 @@ function invalidarCacheRestaurante() {
 // ── SILENCIO ──────────────────────────────────────────────────────────────────
 async function estaEnSilencio(restauranteId, telefono) {
   try {
-    // Buscar con y sin indicativo para cubrir ambos formatos
     var telLocal = stripCountryCode(telefono);
-    var telFull = telefono.replace(/[^0-9]/g,"");
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    // Query with local number (panel saves without country code)
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/silencio_conversacion?restaurante_id=eq." + restauranteId +
-      "&telefono=in.(" + encodeURIComponent(telLocal) + "," + encodeURIComponent(telFull) + ")&activo=eq.true&select=id",
-      { headers: sbH(true) }
+      "&telefono=eq." + encodeURIComponent(telLocal) + "&activo=eq.true&limit=1&select=id",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
     );
-    return r.data && r.data.length > 0;
-  } catch (e) { return false; }
+    if (r.data && r.data.length > 0) return true;
+    // Also try with full number just in case
+    var telFull = telefono.replace(/[^0-9]/g, "");
+    if (telFull !== telLocal) {
+      var r2 = await axios.get(
+        SUPABASE_URL + "/rest/v1/silencio_conversacion?restaurante_id=eq." + restauranteId +
+        "&telefono=eq." + encodeURIComponent(telFull) + "&activo=eq.true&limit=1&select=id",
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+      );
+      if (r2.data && r2.data.length > 0) return true;
+    }
+    return false;
+  } catch (e) { console.error("estaEnSilencio error:", e.message); return false; }
 }
 
 // ── DIRECCIÓN FRECUENTE ───────────────────────────────────────────────────────
@@ -987,6 +998,46 @@ app.get("/mapa",        function(req, res) { res.sendFile(path.join(__dirname, "
 app.get("/admin",       function(req, res) { res.sendFile(path.join(__dirname, "admin.html")); });
 app.get("/vendedor",   function(req, res) { res.sendFile(path.join(__dirname, "vendedor.html")); });
 app.get("/restaurante", function(req, res) { res.sendFile(path.join(__dirname, "restaurante.html")); });
+
+// ═══════════════════════════════════════════════════════════
+// MESA LED — Sistema de control de LEDs por mesa (ESP32)
+// ═══════════════════════════════════════════════════════════
+
+// Cache de estados por restaurante: { restaurante_id: { mesa_1: "libre", mesa_2: "ocupada" } }
+var mesaEstados = {};
+
+// GET /api/mesa-estado — ESP32 consulta cada 2 segundos
+app.get("/api/mesa-estado", function(req, res) {
+  var restauranteId = req.query.restaurante_id;
+  var mesa = req.query.mesa;
+  if (!restauranteId || !mesa) return res.json({ estado: "libre" });
+  var estados = mesaEstados[restauranteId] || {};
+  var estado = estados["mesa_" + mesa] || "libre";
+  res.json({ estado: estado, mesa: mesa, restaurante_id: restauranteId });
+});
+
+// POST /api/mesa-led — Panel actualiza el LED de una mesa
+app.post("/api/mesa-led", async function(req, res) {
+  var { restaurante_id, mesa, estado } = req.body;
+  if (!restaurante_id || !mesa || !estado) {
+    return res.status(400).json({ ok: false, error: "Faltan datos: restaurante_id, mesa, estado" });
+  }
+  var estadosValidos = ["libre", "ocupada", "confirmado", "en_preparacion", "listo", "cuenta", "en_camino"];
+  if (!estadosValidos.includes(estado)) {
+    return res.status(400).json({ ok: false, error: "Estado inválido. Válidos: " + estadosValidos.join(", ") });
+  }
+  if (!mesaEstados[restaurante_id]) mesaEstados[restaurante_id] = {};
+  mesaEstados[restaurante_id]["mesa_" + mesa] = estado;
+  console.log("[mesa-led] Mesa " + mesa + " → " + estado + " (rest: " + restaurante_id.substring(0,8) + "...)");
+  res.json({ ok: true, mesa: mesa, estado: estado });
+});
+
+// GET /api/mesa-estados — Panel obtiene todos los estados de mesas de un restaurante
+app.get("/api/mesa-estados", function(req, res) {
+  var restauranteId = req.query.restaurante_id;
+  if (!restauranteId) return res.json({});
+  res.json(mesaEstados[restauranteId] || {});
+});
 app.get("/cocina",      function(req, res) { res.sendFile(path.join(__dirname, "cocina.html")); });
 app.get("/domi",        function(req, res) { res.sendFile(path.join(__dirname, "domiciliario.html")); });
 app.get("/mesero",      function(req, res) { res.sendFile(path.join(__dirname, "mesero2.html")); });
@@ -1403,6 +1454,18 @@ app.post("/api/pedido-estado", async function(req, res) {
       } catch(eFid) { console.error("fidelidad update error:", eFid.message); }
     }
 
+    // ── SYNC LED MESA AUTOMÁTICO ──────────────────────────────────────────────
+    // Si el pedido es de mesa, sincroniza el LED automáticamente
+    if (restaurante_id && req.body.mesa) {
+      var mesaNum = req.body.mesa;
+      var estadoLed = estado;
+      if (estado === "entregado") estadoLed = "libre";
+      else if (estado === "listo_entrega") estadoLed = "listo";
+      if (!mesaEstados[restaurante_id]) mesaEstados[restaurante_id] = {};
+      mesaEstados[restaurante_id]["mesa_" + mesaNum] = estadoLed;
+      console.log("[led-sync] Mesa " + mesaNum + " → " + estadoLed);
+    }
+
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ ok: false, error: err.response ? JSON.stringify(err.response.data) : err.message }); }
 });
@@ -1468,17 +1531,22 @@ app.post("/enviar-imagen-cliente", async function(req, res) {
 app.post("/enviar-mensaje-cliente", async function(req, res) {
   if (!req.body.telefono || !req.body.mensaje) return res.status(400).json({ error: "Faltan datos" });
   try {
+    var tel = req.body.telefono.replace(/[^0-9]/g, "");
+    var telLocal = tel.length === 12 && tel.startsWith("57") ? tel.slice(2) : tel;
+    var telWA = tel.length === 10 && !tel.startsWith("57") ? "57" + tel : tel;
+    
     var pid = process.env.WHATSAPP_PHONE_ID;
     if (req.body.restaurante_id) {
       try {
-        var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id + "&select=whatsapp_phone_id", { headers: sbH(false) });
+        var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id + "&select=whatsapp_phone_id", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
         if (rr.data?.length && rr.data[0].whatsapp_phone_id) pid = rr.data[0].whatsapp_phone_id;
       } catch(e) {}
     }
-    // Guardar en Supabase siempre, independiente de WhatsApp
-    if (req.body.restaurante_id) guardarMensajeSupabase(req.body.restaurante_id, req.body.telefono, req.body.mensaje, "restaurante", null);
-    // Intentar WhatsApp sin bloquear si falla
-    try { await sendWhatsAppMessage(req.body.telefono, req.body.mensaje, pid); } catch(e) { console.error("WA:", e.message); }
+    // Save with local format (same as how client messages are stored)
+    if (req.body.restaurante_id) guardarMensajeSupabase(req.body.restaurante_id, telLocal, req.body.mensaje, "restaurante", null);
+    // Send WhatsApp with country code
+    try { await sendWhatsAppMessage(telWA, req.body.mensaje, pid); } catch(e) { console.error("WA enviar:", e.message); }
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
@@ -2009,15 +2077,14 @@ app.post("/api/canjear", async function(req, res) {
   if (!restaurante_id || !telefono || !producto_canje_id) return res.status(400).json({ ok: false, error: "Faltan datos" });
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     // 1. Get producto canje
-    var prodR = await axios.get(SUPABASE_URL + "/rest/v1/productos_canje?id=eq." + producto_canje_id + "&select=*",
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    var prodR = await axios.get(SUPABASE_URL + "/rest/v1/productos_canje?id=eq." + producto_canje_id + "&select=*", { headers: h });
     if (!prodR.data || !prodR.data.length) return res.status(404).json({ ok: false, error: "Producto no encontrado" });
     var prod = prodR.data[0];
     // 2. Get cliente
-    var telLocal = telefono.replace(/^57/, "");
-    var cliR = await axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante_id + "&telefono=eq." + encodeURIComponent(telLocal) + "&select=*",
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    var telLocal = stripCountryCode(telefono);
+    var cliR = await axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante_id + "&telefono=eq." + encodeURIComponent(telLocal) + "&select=*", { headers: h });
     if (!cliR.data || !cliR.data.length) return res.status(404).json({ ok: false, error: "Cliente no encontrado" });
     var cli = cliR.data[0];
     // 3. Check puntos
@@ -2028,24 +2095,76 @@ app.post("/api/canjear", async function(req, res) {
     var nuevosPuntos = (cli.puntos || 0) - prod.puntos_requeridos;
     await axios.patch(SUPABASE_URL + "/rest/v1/clientes_frecuentes?id=eq." + cli.id,
       { puntos: nuevosPuntos, updated_at: new Date().toISOString() },
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+      { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } }
     );
     // 6. Reducir stock si aplica
     if (prod.stock !== null) {
       await axios.patch(SUPABASE_URL + "/rest/v1/productos_canje?id=eq." + prod.id,
         { stock: prod.stock - 1 },
-        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+        { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } }
       );
     }
     // 7. Guardar registro del canje
     try {
       await axios.post(SUPABASE_URL + "/rest/v1/canjes",
         { restaurante_id, telefono: telLocal, producto_canje_id: prod.id, producto_nombre: prod.nombre, puntos_usados: prod.puntos_requeridos, estado: "pendiente" },
-        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+        { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } }
       );
     } catch(eCanjeLog) { console.error("[canje] Error log:", eCanjeLog.message); }
-    console.log("[canje] ✅ " + telLocal + " canjeó " + prod.nombre + " por " + prod.puntos_requeridos + " pts. Puntos restantes: " + nuevosPuntos);
-    res.json({ ok: true, puntos_restantes: nuevosPuntos });
+
+    // 8. Agregar producto al pedido activo del cliente en Supabase
+    var pedidoActualizado = false;
+    try {
+      var pedR = await axios.get(
+        SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id +
+        "&cliente_tel=eq." + encodeURIComponent(telLocal) +
+        "&estado=in.(confirmado,en_preparacion,listo)&order=created_at.desc&limit=1&select=*",
+        { headers: h }
+      );
+      if (pedR.data && pedR.data.length > 0) {
+        var ped = pedR.data[0];
+        var itemsActuales = Array.isArray(ped.items) ? [...ped.items] : [];
+        var itemCanje = (prod.emoji || "🎁") + " CANJE: " + prod.nombre + " $0";
+        itemsActuales.push(itemCanje);
+        var notaActual = ped.notas_especiales || "";
+        var notaCanje = "⭐ CANJE: " + prod.nombre + " (canjeado con " + prod.puntos_requeridos + " puntos)";
+        await axios.patch(
+          SUPABASE_URL + "/rest/v1/pedidos?id=eq." + ped.id,
+          {
+            items: itemsActuales,
+            notas_especiales: (notaActual ? notaActual + " | " : "") + notaCanje,
+            updated_at: new Date().toISOString()
+          },
+          { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+        );
+        pedidoActualizado = true;
+        console.log("[canje] ✅ Producto agregado al pedido #" + ped.numero_pedido);
+        // Notificar al panel como alerta
+        guardarMensajeSupabase(restaurante_id, telLocal,
+          "⭐ CANJE: " + cli.nombre + " (" + telLocal + ") canjeó " + prod.puntos_requeridos + " puntos por " + (prod.emoji||"🎁") + " " + prod.nombre + ". Agregado al Pedido #" + ped.numero_pedido,
+          "alerta_pregunta", null
+        ).catch(function(){});
+      } else {
+        // No hay pedido activo — notificar al panel igual para que estén al tanto
+        guardarMensajeSupabase(restaurante_id, telLocal,
+          "⭐ CANJE SIN PEDIDO ACTIVO: " + telLocal + " canjeó " + prod.puntos_requeridos + " puntos por " + (prod.emoji||"🎁") + " " + prod.nombre + ". Pendiente de entregar en su próximo pedido.",
+          "alerta_pregunta", null
+        ).catch(function(){});
+      }
+    } catch(ePed) { console.error("[canje] Error al agregar a pedido:", ePed.message); }
+
+    // 9. Enviar WhatsApp de confirmación al cliente
+    try {
+      var restaurante = await getRestaurante(null);
+      var pid = restaurante ? restaurante.whatsapp_phone_id : process.env.WHATSAPP_PHONE_ID;
+      var msgCanje = (prod.emoji||"🎁") + " *¡Canje exitoso!* Canjeaste *" + prod.nombre + "* por *" + prod.puntos_requeridos + " puntos*. " +
+        "Te quedan *" + nuevosPuntos + " puntos*." +
+        (pedidoActualizado ? " Ya está agregado a tu pedido actual." : " Lo recibirás en tu próximo pedido.");
+      await sendWhatsAppMessage("57" + telLocal, msgCanje, pid);
+    } catch(eWA) { console.error("[canje] WA error:", eWA.message); }
+
+    console.log("[canje] ✅ " + telLocal + " canjeó " + prod.nombre + " por " + prod.puntos_requeridos + " pts. Restantes: " + nuevosPuntos + " | Pedido actualizado: " + pedidoActualizado);
+    res.json({ ok: true, puntos_restantes: nuevosPuntos, pedido_actualizado: pedidoActualizado });
   } catch (e) {
     console.error("[canje] Error:", e.message);
     res.status(500).json({ ok: false, error: e.message });
@@ -2330,17 +2449,41 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     if (restaurante) {
       if (restaurante.estado !== "activo") { console.log("Restaurante inactivo"); return; }
       if (!estaEnHorario(restaurante)) {
-        var col = getHoraColombia();
-        console.log("Fuera de horario - avisando cliente. Hora Colombia:", col.getHours()+":"+String(col.getMinutes()).padStart(2,"0"), "| Apertura:", restaurante.hora_apertura, "| Cierre:", restaurante.hora_cierre, "| Días:", restaurante.dias_activos);
-        var horaAp = (restaurante.hora_apertura||"16:00:00").substring(0,5);
-        var horaCi = (restaurante.hora_cierre||"00:00:00").substring(0,5);
-        var diasAct = (restaurante.dias_activos||"lunes a domingo").replace(/,/g," | ");
-        var msgFuera = getMensaje(restaurante, "msg_fuera_horario",
-          "Hola! En este momento estamos cerrados. Nuestro horario de atencion es de " + horaAp + " a " + horaCi + " (" + diasAct + "). Con mucho gusto te atendemos en ese horario!");
-        await sendWhatsAppMessage(from, msgFuera, phoneNumberId);
-        if (restaurante) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), userText, "cliente", null).catch(function(){});
-        if (restaurante) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), msgFuera, "restaurante", null).catch(function(){});
-        return;
+        // Check if client has an active order — if so, let LUZ respond
+        var tieneOrdenActiva = false;
+        if (orderState[from] && orderState[from].orderNumber && orderState[from].status !== "entregado") {
+          tieneOrdenActiva = true;
+        }
+        if (!tieneOrdenActiva) {
+          // Also check Supabase for active orders
+          try {
+            var telCheck = stripCountryCode(from);
+            var svcCheck = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+            var actCheck = await axios.get(
+              SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id +
+              "&cliente_tel=eq." + encodeURIComponent(telCheck) +
+              "&estado=in.(confirmado,en_preparacion,listo,en_camino)&limit=1&select=id",
+              { headers: { "apikey": svcCheck, "Authorization": "Bearer " + svcCheck } }
+            );
+            if (actCheck.data && actCheck.data.length > 0) tieneOrdenActiva = true;
+          } catch(eOrdChk) {}
+        }
+        if (tieneOrdenActiva) {
+          console.log("Fuera de horario PERO cliente tiene pedido activo — LUZ atiende:", from);
+          // Fall through to normal LUZ processing
+        } else {
+          var col = getHoraColombia();
+          console.log("Fuera de horario - avisando cliente. Hora Colombia:", col.getHours()+":"+String(col.getMinutes()).padStart(2,"0"), "| Apertura:", restaurante.hora_apertura, "| Cierre:", restaurante.hora_cierre, "| Días:", restaurante.dias_activos);
+          var horaAp = (restaurante.hora_apertura||"16:00:00").substring(0,5);
+          var horaCi = (restaurante.hora_cierre||"00:00:00").substring(0,5);
+          var diasAct = (restaurante.dias_activos||"lunes a domingo").replace(/,/g," | ");
+          var msgFuera = getMensaje(restaurante, "msg_fuera_horario",
+            "Hola! En este momento estamos cerrados. Nuestro horario de atencion es de " + horaAp + " a " + horaCi + " (" + diasAct + "). Con mucho gusto te atendemos en ese horario!");
+          await sendWhatsAppMessage(from, msgFuera, phoneNumberId);
+          if (restaurante) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), userText, "cliente", null).catch(function(){});
+          if (restaurante) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), msgFuera, "restaurante", null).catch(function(){});
+          return;
+        }
       }
       var silencio = await estaEnSilencio(restaurante.id, from);
       if (silencio) {
@@ -2452,16 +2595,55 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     var fechaInicioFidelidad = restaurante.fecha_inicio_fidelidad
       ? new Date(restaurante.fecha_inicio_fidelidad).toLocaleDateString("es-CO", {day:"numeric",month:"long",year:"numeric"})
       : "29 de marzo de 2025";
-    // Inject active order info so Luz knows order number for modifications
+    // ── CONTEXTO COMPLETO DEL PEDIDO ACTIVO ───────────────────────────────────
     var pedidoActivoTexto = "";
-    if (orderState[from] && orderState[from].orderNumber && orderState[from].status !== "entregado") {
-      var st = orderState[from];
-      // Only inject if relevant (waiting for payment or confirmed - might want to add items)
-      if (st.status === "esperando_pago" || st.status === "confirmado" || st.status === "en_proceso") {
-        pedidoActivoTexto = "\nPEDIDO ACTIVO #" + st.orderNumber + " ($" + (st.total||0).toLocaleString("es-CO") + ", estado:" + (st.status||"?") + "). Si agrega algo: MODIFICAR_PEDIDO:" + st.orderNumber + "|AGREGAR:[item $precio]";
+
+    // Mapa de estados → qué sabe LUZ y cómo debe responder
+    var ESTADO_CONTEXTO = {
+      "esperando_pago": {
+        label: "esperando pago",
+        instruccion: "El cliente aún NO ha pagado. Si escribe, recuérdale amablemente que envíe el comprobante de pago para que el pedido entre a preparación."
+      },
+      "confirmado": {
+        label: "confirmado/recibido",
+        instruccion: "El pedido fue recibido y confirmado. Ya está en la cola de preparación. Si el cliente pregunta, dile que lo recibimos y pronto empieza la preparación."
+      },
+      "en_preparacion": {
+        label: "en preparación en cocina",
+        instruccion: "El pedido está siendo preparado ahora mismo en cocina. Si el cliente escribe, dile que ya está en preparación y que en breve estará listo. NO digas tiempos exactos a menos que el restaurante los tenga configurados."
+      },
+      "listo": {
+        label: "listo para entrega o recogida",
+        instruccion: "El pedido ya está listo. Si es domicilio, el domiciliario va a recogerlo. Si es para recoger en el local, dile que puede pasar. Si el cliente escribe, dile que su pedido ya está listo."
+      },
+      "en_camino": {
+        label: "en camino con el domiciliario",
+        instruccion: "El domiciliario ya lleva el pedido. El cliente probablemente está respondiendo al mensaje automático que le enviamos. Si escribe 'gracias', 'ok', 'perfecto' o algo similar, respóndele con calidez, dile que disfrute y que estás a la orden. NO repitas información que ya sabe. NO preguntes si quiere algo más a menos que él lo inicie."
+      },
+      "entregado": {
+        label: "entregado",
+        instruccion: "El pedido ya fue entregado. Si el cliente escribe, probablemente es para agradecer o dar retroalimentación. Responde con calidez, agradece su preferencia e invítalo a volver."
       }
+    };
+
+    // Primero revisar orderState en memoria
+    if (orderState[from] && orderState[from].orderNumber) {
+      var st = orderState[from];
+      var ctx = ESTADO_CONTEXTO[st.status] || { label: st.status, instruccion: "Atiende al cliente con normalidad." };
+      var itemsResumen = Array.isArray(st.items) ? st.items.slice(0,3).join(", ") : "";
+      pedidoActivoTexto = "\n\n═══ PEDIDO ACTIVO ═══"
+        + "\nPedido #" + st.orderNumber
+        + " | Total: $" + Number(st.total||0).toLocaleString("es-CO")
+        + " | Estado ACTUAL: " + ctx.label.toUpperCase()
+        + (itemsResumen ? " | Items: " + itemsResumen : "")
+        + (st.direccion ? " | Dirección: " + st.direccion : "")
+        + "\n\nQUÉ DEBE HACER LUZ: " + ctx.instruccion
+        + "\n\nNOTA: Si el cliente dice 'gracias', 'ok', 'perfecto', 'listo', 'ah está bien' u otras respuestas cortas de cortesía, es porque está respondiendo a un mensaje automático de estado que ya le enviamos. Responde con calidez y brevedad, sin repetir la info del pedido."
+        + (st.status !== "entregado" ? "\nSi quiere agregar algo al pedido: MODIFICAR_PEDIDO:" + st.orderNumber + "|AGREGAR:[item $precio]" : "")
+        + "\n═══════════════════════";
     }
-    // FIX 6: If no in-memory orderState, check Supabase for active orders from this client
+
+    // Si no hay orderState, consultar Supabase
     if (!pedidoActivoTexto && restaurante) {
       try {
         var telBuscar = stripCountryCode(from);
@@ -2469,15 +2651,28 @@ async function procesarMensaje(msg, from, phoneNumberId) {
         var pedActResp = await axios.get(
           SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id +
           "&cliente_tel=eq." + encodeURIComponent(telBuscar) +
-          "&estado=in.(confirmado,en_preparacion,listo,en_camino)&order=created_at.desc&limit=1&select=numero_pedido,estado,total,items,direccion",
+          "&estado=in.(confirmado,en_preparacion,listo,en_camino,entregado)&order=created_at.desc&limit=1&select=numero_pedido,estado,total,items,direccion,tipo_pedido,updated_at",
           { headers: { "apikey": svcPA, "Authorization": "Bearer " + svcPA } }
         );
         if (pedActResp.data && pedActResp.data.length > 0) {
           var pa = pedActResp.data[0];
-          var estadoLabel = {confirmado:"recibido",en_preparacion:"en preparación",listo:"listo",en_camino:"en camino"}[pa.estado] || pa.estado;
-          pedidoActivoTexto = "\nPEDIDO ACTIVO DEL CLIENTE en Supabase: #" + pa.numero_pedido + " ($" + Number(pa.total||0).toLocaleString("es-CO") + ", estado: " + estadoLabel + ")."
-            + " El cliente YA tiene un pedido en curso. Si pregunta por su pedido, dale info del estado. Si quiere agregar algo: MODIFICAR_PEDIDO:" + pa.numero_pedido + "|AGREGAR:[item $precio]."
-            + " NO tomes un pedido nuevo a menos que el cliente lo pida explícitamente.";
+          var ctxDB = ESTADO_CONTEXTO[pa.estado] || { label: pa.estado, instruccion: "Atiende al cliente con normalidad." };
+          var itemsDB = Array.isArray(pa.items) ? pa.items.slice(0,3).join(", ") : (pa.items || "");
+          // Check if recent (last 3 hours) to determine if still relevant
+          var minutosDesdeUpdate = pa.updated_at ? Math.floor((Date.now() - new Date(pa.updated_at))/60000) : 999;
+          if (minutosDesdeUpdate < 180) { // Only inject if updated in last 3 hours
+            pedidoActivoTexto = "\n\n═══ PEDIDO ACTIVO (desde DB) ═══"
+              + "\nPedido #" + pa.numero_pedido
+              + " | Total: $" + Number(pa.total||0).toLocaleString("es-CO")
+              + " | Estado ACTUAL: " + ctxDB.label.toUpperCase()
+              + (itemsDB ? " | Items: " + itemsDB : "")
+              + (pa.direccion ? " | Dirección: " + pa.direccion : "")
+              + (pa.tipo_pedido ? " | Tipo: " + pa.tipo_pedido : "")
+              + "\n\nQUÉ DEBE HACER LUZ: " + ctxDB.instruccion
+              + "\n\nNOTA: Si el cliente dice 'gracias', 'ok', 'perfecto', 'listo' u otras respuestas cortas, está respondiendo a un mensaje automático. Responde con calidez y brevedad."
+              + (pa.estado !== "entregado" ? "\nSi quiere agregar algo: MODIFICAR_PEDIDO:" + pa.numero_pedido + "|AGREGAR:[item $precio]" : "")
+              + "\n════════════════════════════════";
+          }
         }
       } catch(ePA) { console.error("pedidoActivo Supabase check:", ePA.message); }
     }
@@ -2591,18 +2786,16 @@ async function procesarMensaje(msg, from, phoneNumberId) {
         if (pedResp.data && pedResp.data.length > 0) {
           var ped = pedResp.data[0];
           var patch = {};
+          var notaAnterior = ped.notas_especiales || "";
           if (mod.accion.startsWith("AGREGAR:")) {
             var nuevoItem = mod.accion.replace("AGREGAR:", "").trim();
             var itemsActuales = Array.isArray(ped.items) ? [...ped.items] : [];
             itemsActuales.push("➕ " + nuevoItem);
-            // Extract price from item string e.g. "Gaseosa $4.000"
             var precioMatch = nuevoItem.match(/\$([0-9.,]+)/);
             var precioExtra = 0;
             if (precioMatch) {
               var precioStr = precioMatch[1];
-              // Colombian format: $4.000 = 4000, $18.900 = 18900
               if (precioStr.indexOf('.') !== -1 && precioStr.indexOf(',') === -1) {
-                // Has dots but no comma = Colombian thousands separator
                 precioExtra = Number(precioStr.replace(/\./g, ''));
               } else {
                 precioExtra = Number(precioStr.replace(/[.,]/g, ''));
@@ -2612,20 +2805,34 @@ async function procesarMensaje(msg, from, phoneNumberId) {
             patch.items = itemsActuales;
             patch.total = nuevoTotal;
             patch.subtotal = nuevoTotal - Number(ped.desechables || 0) - Number(ped.domicilio || 0);
-            patch.notas_especiales = "✏️ MODIFICADO: +" + nuevoItem;
+            patch.notas_especiales = (notaAnterior ? notaAnterior + " | " : "") + "✏️ MODIFICADO: +" + nuevoItem;
           } else if (mod.accion.startsWith("DIRECCION:")) {
-            patch.direccion = mod.accion.replace("DIRECCION:", "").trim();
+            var nuevaDir = mod.accion.replace("DIRECCION:", "").trim();
+            patch.direccion = nuevaDir;
+            patch.notas_especiales = (notaAnterior ? notaAnterior + " | " : "") + "📍 Dirección cambiada: " + nuevaDir;
           } else if (mod.accion.startsWith("NOTA:")) {
             var nota = mod.accion.replace("NOTA:", "").trim();
-            var notaActual = ped.notas_especiales || "";
-            patch.notas_especiales = (notaActual ? notaActual + " | " : "") + "📝 " + nota;
+            patch.notas_especiales = (notaAnterior ? notaAnterior + " | " : "") + "📝 " + nota;
+          } else if (mod.accion.startsWith("ELIMINAR:") || mod.accion.startsWith("QUITAR:")) {
+            var itemQuitar = mod.accion.replace(/^(ELIMINAR|QUITAR):/, "").trim().toLowerCase();
+            var itemsAct2 = Array.isArray(ped.items) ? [...ped.items] : [];
+            var idx = itemsAct2.findIndex(function(it) { return it.toLowerCase().indexOf(itemQuitar) !== -1; });
+            if (idx !== -1) {
+              var removido = itemsAct2.splice(idx, 1)[0];
+              patch.items = itemsAct2;
+              patch.notas_especiales = (notaAnterior ? notaAnterior + " | " : "") + "✏️ Removido: " + removido;
+            }
           }
-          await axios.patch(
-            SUPABASE_URL + "/rest/v1/pedidos?id=eq." + ped.id, patch,
-            { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
-          );
-          console.log("Pedido #" + mod.numero + " modificado en Supabase:", mod.accion);
-          guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "✏️ Pedido #" + mod.numero + " modificado: +" + mod.accion.replace("AGREGAR:",""), "alerta_pregunta", null).catch(function(){});
+          if (Object.keys(patch).length > 0) {
+            patch.updated_at = new Date().toISOString();
+            await axios.patch(
+              SUPABASE_URL + "/rest/v1/pedidos?id=eq." + ped.id, patch,
+              { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+            );
+            console.log("Pedido #" + mod.numero + " modificado en Supabase:", JSON.stringify(patch));
+            // Save as modification alert so panel sees it immediately
+            guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "✏️ PEDIDO #" + mod.numero + " MODIFICADO POR CLIENTE: " + mod.accion, "alerta_pregunta", null).catch(function(){});
+          }
         }
       } catch(e) { console.error("modificar_pedido error:", e.message); }
       } // end if (mod)
@@ -2658,11 +2865,10 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     if (sideEffect === "pago_confirmado" && !orderState[from] && restaurante) {
       try {
         var svcRec = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-        // Look for recent pedido from this client that has no comprobante yet
-        // Buscar pedido reciente del cliente en cualquier estado activo
+        var telBuscar = stripCountryCode(from);
         var recResp = await axios.get(
           SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id +
-          "&cliente_tel=eq." + encodeURIComponent(from) +
+          "&cliente_tel=eq." + encodeURIComponent(telBuscar) +
           "&estado=in.(confirmado,en_preparacion,listo)&order=created_at.desc&limit=1&select=*",
           { headers: { "apikey": svcRec, "Authorization": "Bearer " + svcRec } }
         );
@@ -2786,4 +2992,21 @@ var PORT = process.env.PORT || 3000;
 app.listen(PORT, function() {
   console.log("LUZ IA corriendo en puerto " + PORT);
   console.log("Dia Colombia:", getDiaColombiaStr(), "| Hora:", getHoraColombia().toLocaleTimeString("es-CO"));
+  
+  // Auto-reset silencios diariamente a las 6am Colombia
+  var ultimoResetDia = "";
+  setInterval(function() {
+    var col = getHoraColombia();
+    var dia = col.toISOString().split("T")[0];
+    var hora = col.getHours();
+    if (hora === 6 && dia !== ultimoResetDia) {
+      ultimoResetDia = dia;
+      var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+      axios.patch(SUPABASE_URL + "/rest/v1/silencio_conversacion?activo=eq.true",
+        { activo: false, updated_at: new Date().toISOString() },
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+      ).then(function() { console.log("[silencio] ✅ Reset diario de silencios completado"); })
+      .catch(function(e) { console.error("[silencio] Reset error:", e.message); });
+    }
+  }, 60000); // check every minute
 });
