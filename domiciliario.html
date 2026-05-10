@@ -129,11 +129,15 @@ html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);fon
       <div class="login-logo-name">LUZ <b>IA</b></div>
       <div class="login-sub">App Domiciliario</div>
     </div>
-    <input class="l-input" id="loginRestId" placeholder="ID del restaurante" type="text">
-    <input class="l-input" id="loginDomiId" placeholder="Tu nombre o ID de domiciliario" type="text">
+    <div id="loginRestNombreBox" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:10px 14px;margin-bottom:12px;text-align:center;display:none">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:2px">Restaurante</div>
+      <div style="font-size:14px;font-weight:700;color:#6ee7b7" id="loginRestNombreTxt">Cargando...</div>
+    </div>
+    <input class="l-input" id="loginDomiNombre" placeholder="Tu nombre" type="text">
     <input class="l-input" id="loginPin" placeholder="PIN (opcional)" type="password">
     <button class="l-btn" onclick="iniciarSesion()">Entrar →</button>
     <div class="l-err" id="loginErr"></div>
+    <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:12px">El link te lo comparte el restaurante</div>
   </div>
 </div>
 
@@ -203,24 +207,41 @@ var statsTimer=null,pedidosTimer=null;
 var geoWatcher=null;
 var miLat=null,miLng=null;
 
+// Leer restaurante_id de la URL
+var urlParams=new URLSearchParams(window.location.search);
+var URL_REST_ID=urlParams.get("rest")||urlParams.get("restaurante_id")||null;
+
 // ── INIT ──────────────────────────────────────────────────────────────────
-var savedSession=JSON.parse(localStorage.getItem("domi_session")||"null");
-if(savedSession&&savedSession.restaurante_id){
+// Si hay sesión guardada para este restaurante, entrar directo
+var savedSession=JSON.parse(localStorage.getItem("domi_session_"+(URL_REST_ID||"x"))||"null");
+if(savedSession&&savedSession.restaurante_id&&savedSession.domi_id){
   SESSION=savedSession;
   arrancarApp();
+} else {
+  // Mostrar nombre del restaurante en el login
+  if(URL_REST_ID){
+    var restBox=document.getElementById("loginRestNombreBox");
+    if(restBox)restBox.style.display="block";
+    fetch("/api/supabase/restaurantes?id=eq."+URL_REST_ID+"&select=nombre")
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var nomEl=document.getElementById("loginRestNombreTxt");
+      if(nomEl)nomEl.textContent=(d&&d.length&&d[0].nombre)?d[0].nombre:"Restaurante";
+    }).catch(function(){});
+  }
 }
 
 function iniciarSesion(){
-  var restId=document.getElementById("loginRestId").value.trim();
-  var domiId=document.getElementById("loginDomiId").value.trim();
-  if(!restId||!domiId){document.getElementById("loginErr").textContent="Completa todos los campos";return;}
-  SESSION={restaurante_id:restId,domi_id:domiId,domi_nombre:domiId};
-  localStorage.setItem("domi_session",JSON.stringify(SESSION));
+  var nombre=document.getElementById("loginDomiNombre").value.trim();
+  if(!nombre){document.getElementById("loginErr").textContent="Escribe tu nombre";return;}
+  if(!URL_REST_ID){document.getElementById("loginErr").textContent="Link inválido — pide el link correcto al restaurante";return;}
+  SESSION={restaurante_id:URL_REST_ID,domi_id:nombre,domi_nombre:nombre};
+  localStorage.setItem("domi_session_"+URL_REST_ID,JSON.stringify(SESSION));
   arrancarApp();
 }
 
 function cerrarSesion(){
-  localStorage.removeItem("domi_session");
+  localStorage.removeItem("domi_session_"+(URL_REST_ID||SESSION.restaurante_id||"x"));
   clearInterval(statsTimer);clearInterval(pedidosTimer);
   if(geoWatcher)navigator.geolocation.clearWatch(geoWatcher);
   document.getElementById("app").style.display="none";
