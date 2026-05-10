@@ -618,6 +618,26 @@ select.finput{cursor:pointer}
         <div class="stat-card"><span class="stat-icon">🛒</span><div class="stat-label">Pedidos hoy</div><div class="stat-val purple" id="countHoy">0</div><div class="stat-sub" id="subDomMesa">cargando...</div></div>
         <div class="stat-card"><span class="stat-icon">💰</span><div class="stat-label">Ventas hoy</div><div class="stat-val green" id="ventasHoy">$0</div><div class="stat-sub">toca para ver resumen</div></div>
       </div>
+
+      <!-- LUZ ACTIVITY BAR — dinámica -->
+      <div id="luzActivityBar" style="margin:0 12px 10px;background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(79,70,229,0.06));border:1px solid rgba(124,58,237,0.2);border-radius:16px;padding:10px 14px;display:flex;align-items:center;gap:12px">
+        <div style="flex-shrink:0;position:relative">
+          <img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" style="width:38px;height:38px;border-radius:50%;object-fit:cover;object-position:center top;border:2px solid rgba(124,58,237,0.5)" onerror="this.style.display='none'">
+          <div id="luzActivityDot" style="position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-radius:50%;background:#10b981;border:2px solid #0a0a16;box-shadow:0 0 6px #10b981;animation:ldot 1.5s ease infinite"></div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:800;color:#c4b5fd;letter-spacing:.04em">LUZ · Asistente Activa</div>
+          <div id="luzActivityTxt" style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:1px;font-style:italic;transition:all .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Monitoreando pedidos en tiempo real...</div>
+        </div>
+        <div id="luzWaveBar" style="display:flex;align-items:center;gap:2px;height:18px;opacity:0.5">
+          <div style="width:2px;height:6px;background:#a855f7;border-radius:1px;animation:vbar .8s ease infinite"></div>
+          <div style="width:2px;height:12px;background:#a855f7;border-radius:1px;animation:vbar .8s ease .1s infinite"></div>
+          <div style="width:2px;height:18px;background:#a855f7;border-radius:1px;animation:vbar .8s ease .2s infinite"></div>
+          <div style="width:2px;height:12px;background:#a855f7;border-radius:1px;animation:vbar .8s ease .3s infinite"></div>
+          <div style="width:2px;height:6px;background:#a855f7;border-radius:1px;animation:vbar .8s ease .4s infinite"></div>
+        </div>
+      </div>
+
       <div id="resumenPanel" style="display:none;margin:0 12px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;">
         <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em">📊 Resumen del día</div>
         <div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.05)">
@@ -1477,16 +1497,24 @@ function luzHablar(texto,animacion){
 
 function luzReaccionar(evento,datos){
   var msgs={
-    nuevo_pedido:["Nuevo pedido entrante. Número "+(datos||"")+". Procesando ahora.","¡Llegó un pedido! El "+(datos||"")+" está en cola."],
-    pago_recibido:["Comprobante recibido. Pedido confirmado y en preparación.","Pago verificado. El pedido entra a cocina ahora."],
+    nuevo_pedido:["¡Nuevo pedido! El número "+(datos||"")+". Procesando ahora.","¡Llegó el pedido "+(datos||"")+"! Notificando cocina."],
+    pago_recibido:["Comprobante recibido. Pedido confirmado.","Pago verificado. El pedido entra a preparación."],
     alerta_humano:["Atención. Un cliente solicita hablar con una persona.","Intervención humana requerida. Por favor revisa el chat."],
-    pedido_entregado:["Pedido entregado exitosamente. Excelente servicio.","Entrega confirmada. El cliente fue notificado."],
-    nueva_valoracion:["Nueva valoración recibida. ¡Sigue así!","El cliente dejó su opinión. Gracias por el buen servicio."]
+    pedido_entregado:["Pedido entregado exitosamente. ¡Excelente!","Entrega confirmada. Cliente notificado."],
+    nueva_valoracion:["Nueva valoración recibida. ¡Sigue así!","El cliente dejó su opinión."],
+    canje:["Canje registrado. "+(datos||"")+" fue canjeado por el cliente.","Cliente realizó un canje de puntos. Verificar pedido activo."]
   };
-  var lista=msgs[evento]||["Evento registrado en el sistema."];
+  var actMsgs={
+    nuevo_pedido:"¡Pedido #"+(datos||"")+" entrante! Procesando...",
+    pago_recibido:"Pago verificado. Pedido en preparación.",
+    alerta_humano:"⚠ Cliente solicita atención humana.",
+    canje:"⭐ Canje de puntos procesado correctamente."
+  };
+  var lista=msgs[evento]||["Evento registrado."];
   var txt=lista[Math.floor(Math.random()*lista.length)];
-  var anim={nuevo_pedido:"bounce",pago_recibido:"bounce",alerta_humano:"shake",pedido_entregado:"pulse",nueva_valoracion:"pulse"}[evento]||"pulse";
+  var anim={nuevo_pedido:"bounce",pago_recibido:"bounce",alerta_humano:"shake",pedido_entregado:"pulse",nueva_valoracion:"pulse",canje:"bounce"}[evento]||"pulse";
   luzHablar(txt,anim);
+  if(actMsgs[evento])luzActivityUpdate(actMsgs[evento]);
 }
 
 function playSound(tipo){
@@ -1557,7 +1585,9 @@ function checkNuevosMensajes(){
       if(m.created_at>tsActual){
         if(tsActual){
           if(m.tipo==="cliente"&&m.comprobante_media_id){playSound("pago_recibido");mostrarAlerta("mensaje","Comprobante de pago recibido de "+m.telefono,m.telefono);}
-          if(m.tipo==="alerta_pregunta"){playSound("alerta_pregunta");var pregunta=(m.mensaje||"").replace("ALERTA_PREGUNTA: ","");mostrarAlerta("pregunta","? "+m.telefono+": "+pregunta.substring(0,60),m.telefono);}
+          if(m.tipo==="alerta_pregunta"){playSound("alerta_pregunta");var pregunta=(m.mensaje||"").replace("ALERTA_PREGUNTA: ","");
+            if(pregunta.indexOf("CANJE")!==-1||pregunta.indexOf("canjeó")!==-1){luzReaccionar("canje",pregunta.substring(0,40));}
+            mostrarAlerta("pregunta","? "+m.telefono+": "+pregunta.substring(0,60),m.telefono);}
           else{nuevos++;var txt=(m.mensaje||"").toLowerCase();if(["hablar con","persona real","asesor","humano","encargado"].some(function(p){return txt.indexOf(p)!==-1;})){playSound("alerta_humano");mostrarAlerta("humano",""+m.telefono+" pide hablar con persona",m.telefono);luzReaccionar("alerta_humano");}if(["recoger","para recoger","voy a recoger","lo recojo"].some(function(p){return txt.indexOf(p)!==-1;})){playSound("alerta_recoger");mostrarAlerta("recoger",""+m.telefono+" va a RECOGER",m.telefono);}}
         }
         ultimoMensajeTs[key]=m.created_at;
@@ -1749,7 +1779,7 @@ function loadPedidos(){
       var subtotal=Number(p.subtotal||0),desechables=Number(p.desechables||0),domicilio=Number(p.domicilio||0),total=Number(p.total||0);
       var itemsEnc=encodeURIComponent(JSON.stringify(items));
       var recogerTexto=(p.direccion||"")+" "+(JSON.stringify(p.items||[]))+" "+(p.notas_especiales||"");
-      var esRecoger=recogerTexto.toLowerCase().indexOf("recoger")!==-1;
+      var esRecoger=p.tipo_pedido==="recoger"||recogerTexto.toLowerCase().indexOf("recoger")!==-1||recogerTexto.toLowerCase().indexOf("recoger en tienda")!==-1;
       var esAdicional=!!p.pedido_adicional_de;
       var esMesa=p.direccion&&p.direccion.toUpperCase().indexOf("MESA ")===0;
       var esCuenta=p.metodo_pago==="cuenta"||p.estado==="cuenta";
@@ -2357,6 +2387,30 @@ function actualizarCuponesEnLuz(){
 
 // CONFIG
 var modoDiaActual=false;
+var LUZ_ACTIVITY_MSGS=[
+  "Monitoreando pedidos en tiempo real...",
+  "Atendiendo clientes por WhatsApp ahora.",
+  "Todos los sistemas operativos.",
+  "Procesando el menú actualizado.",
+  "Verificando zonas de domicilio.",
+  "Lista para el próximo pedido.",
+  "Analizando patrones de pedidos.",
+  "Conectada con los clientes 24/7."
+];
+var luzActivityIdx=0;
+function luzActivityUpdate(msg){
+  var el=document.getElementById("luzActivityTxt");
+  if(!el)return;
+  el.style.opacity="0";
+  setTimeout(function(){
+    el.textContent=msg||LUZ_ACTIVITY_MSGS[luzActivityIdx%LUZ_ACTIVITY_MSGS.length];
+    el.style.opacity="1";
+    luzActivityIdx++;
+  },200);
+}
+// Rotar mensajes cada 6s
+setInterval(function(){luzActivityUpdate();},6000);
+
 function copiarLinkDomi(){
   var el=document.getElementById("domiLinkUrl");
   if(!el)return;
