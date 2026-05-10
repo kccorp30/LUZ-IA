@@ -4356,7 +4356,8 @@ async function cargarProductosCanje(tel, puntosCliente) {
 }
 
 async function canjearProducto(productoId, nombreEnc, puntosReq, tel) {
-  if (!confirm("¿Canjear " + decodeURIComponent(nombreEnc) + " por " + puntosReq + " puntos?")) return;
+  var nombre=decodeURIComponent(nombreEnc);
+  if (!confirm("¿Canjear " + nombre + " por " + puntosReq + " puntos?\n\nSe agregará automáticamente a tu pedido activo.")) return;
   try {
     var r = await fetch("/api/canjear", {
       method: "POST",
@@ -4365,7 +4366,14 @@ async function canjearProducto(productoId, nombreEnc, puntosReq, tel) {
     });
     var d = await r.json();
     if (d.ok) {
-      showToast("🎁 ¡" + decodeURIComponent(nombreEnc) + " canjeado! Menciónalo en tu próximo pedido.");
+      var msg = "🎁 ¡" + nombre + " canjeado exitosamente!";
+      if (d.pedido_actualizado) {
+        msg += "\n✅ Agregado a tu pedido activo.";
+      } else {
+        msg += "\nMenciónalo en tu próximo pedido.";
+      }
+      msg += "\n⭐ Te quedan " + d.puntos_restantes + " puntos.";
+      showToast(msg);
       fetchRewards(tel);
     } else {
       showToast("❌ " + (d.error || "No se pudo canjear"));
