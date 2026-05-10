@@ -48,7 +48,8 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 @keyframes shimmer{0%{left:-60%}100%{left:140%}}
 .tb-left{display:flex;align-items:center;gap:11px}
 .tb-orb-wrap{position:relative;flex-shrink:0}
-.tb-orb{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#6d28d9,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:white;font-family:'JetBrains Mono',monospace;animation:orbGlow 3s ease-in-out infinite;position:relative;z-index:1}
+.tb-orb{width:42px;height:42px;border-radius:50%;overflow:hidden;border:2px solid rgba(124,58,237,0.6);animation:orbGlow 3s ease-in-out infinite;position:relative;z-index:1;cursor:pointer}
+.tb-orb img{width:100%;height:100%;object-fit:cover;object-position:center top}
 @keyframes orbGlow{0%,100%{box-shadow:0 0 0 2px rgba(124,58,237,0.3),0 0 20px rgba(124,58,237,0.7)}50%{box-shadow:0 0 0 4px rgba(124,58,237,0.15),0 0 40px rgba(167,139,250,0.9)}}
 .tb-ring{position:absolute;inset:-4px;border-radius:18px;border:1.5px solid rgba(124,58,237,0.5);animation:ringPulse 3s ease-in-out infinite}
 @keyframes ringPulse{0%,100%{transform:scale(1);opacity:0.5}50%{transform:scale(1.2);opacity:0}}
@@ -65,6 +66,29 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 @keyframes luzAnim{0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.08);opacity:.9}}
 @keyframes luzLearn{0%{transform:scale(1)}30%{transform:scale(1.15) rotate(-5deg)}60%{transform:scale(1.1) rotate(5deg)}100%{transform:scale(1)}}
 @keyframes feedIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── LUZ FLOATING BUBBLE ── */
+#luzBubbleFloat{position:fixed;bottom:80px;right:14px;z-index:600;display:flex;flex-direction:column;align-items:flex-end;gap:8px;pointer-events:none;opacity:0;transition:opacity .3s;transform:translateY(10px)}
+#luzBubbleFloat.show{opacity:1;pointer-events:all;transform:translateY(0)}
+.luz-float-avatar{width:52px;height:52px;border-radius:50%;overflow:hidden;border:2px solid rgba(124,58,237,0.6);box-shadow:0 4px 20px rgba(124,58,237,0.4);flex-shrink:0;cursor:pointer}
+.luz-float-avatar img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.luz-float-avatar.shake{animation:avShake .4s ease}
+.luz-float-avatar.bounce{animation:avBounce .5s ease}
+.luz-float-avatar.pulse{animation:avPulse 1.5s ease infinite}
+@keyframes avShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@keyframes avBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes avPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,0.4)}50%{box-shadow:0 0 0 8px rgba(124,58,237,0)}}
+.luz-speech{background:rgba(8,6,20,0.96);border:1px solid rgba(124,58,237,0.3);border-right:3px solid #7c3aed;border-radius:12px 0 12px 12px;padding:9px 14px;font-size:12px;color:#e2d9f3;max-width:220px;line-height:1.5;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 4px 20px rgba(0,0,0,0.5)}
+.luz-speech-name{font-size:9px;color:rgba(168,85,247,0.7);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;font-family:'JetBrains Mono',monospace}
+.luz-voice-bars{display:flex;align-items:center;gap:2px;height:14px;margin-top:5px;opacity:0;transition:opacity .2s}
+.luz-voice-bars.on{opacity:1}
+.luz-vbar{width:2.5px;background:#a855f7;border-radius:2px;animation:vbar 0.8s ease infinite}
+.luz-vbar:nth-child(1){height:5px;animation-delay:0s}
+.luz-vbar:nth-child(2){height:10px;animation-delay:.1s}
+.luz-vbar:nth-child(3){height:14px;animation-delay:.2s}
+.luz-vbar:nth-child(4){height:10px;animation-delay:.3s}
+.luz-vbar:nth-child(5){height:6px;animation-delay:.4s}
+@keyframes vbar{0%,100%{transform:scaleY(.5);opacity:.6}50%{transform:scaleY(1);opacity:1}}
 .ctipo-btn{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);font-family:inherit;transition:all .15s;white-space:nowrap;flex-shrink:0}
 .ctipo-on{background:rgba(124,58,237,0.2);border-color:rgba(124,58,237,0.4);color:#c4b5fd}
 .cerebro-item{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start;animation:feedIn .3s ease}
@@ -578,7 +602,7 @@ select.finput{cursor:pointer}
 <!-- APP -->
 <div id="app">
   <div class="topbar">
-    <div class="tb-left"><div class="tb-orb-wrap"><div class="tb-orb">LZ</div><div class="tb-ring"></div></div><div><div class="tb-brand"><span class="tb-luz">LUZ</span><span class="tb-ia"> IA</span></div><div class="tb-rest" id="restNombre">Panel de Control</div></div></div>
+    <div class="tb-left"><div class="tb-orb-wrap"><div class="tb-orb" onclick="luzHablar('Hola, estoy activa y lista para ayudarte.')"><img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" alt="LUZ" onerror="this.parentNode.innerHTML='LZ'"></div><div class="tb-ring"></div></div><div><div class="tb-brand"><span class="tb-luz">LUZ</span><span class="tb-ia"> IA</span></div><div class="tb-rest" id="restNombre">Panel de Control</div></div></div>
     <div class="tb-right"><div class="live-pill"><div class="live-dot"></div>EN VIVO</div></div>
   </div>
 
@@ -1229,6 +1253,21 @@ select.finput{cursor:pointer}
       </div>
     </div>
 
+  <!-- LUZ FLOATING AVATAR + BUBBLE -->
+  <div id="luzBubbleFloat">
+    <div class="luz-speech" id="luzSpeechBox">
+      <div class="luz-speech-name">LUZ ›</div>
+      <div id="luzSpeechTxt">Hola, estoy activa y lista.</div>
+      <div class="luz-voice-bars" id="luzVoiceBars">
+        <div class="luz-vbar"></div><div class="luz-vbar"></div><div class="luz-vbar"></div>
+        <div class="luz-vbar"></div><div class="luz-vbar"></div>
+      </div>
+    </div>
+    <div class="luz-float-avatar" id="luzFloatAv" onclick="luzHablar('Hola, soy Luz. Estoy monitoreando todos los pedidos en tiempo real.')">
+      <img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" alt="LUZ" onerror="this.parentNode.style.background='linear-gradient(135deg,#7c3aed,#4f46e5)';this.remove()">
+    </div>
+  </div>
+
   <div class="float-nav">
     <div class="float-nav-inner">
       <div class="fnav-tab active" id="tab-pedidos"><div class="fnav-icon">🛒</div><div class="fnav-label">Pedidos</div><div class="nav-badge" id="pedidosBadge"></div></div>
@@ -1395,6 +1434,61 @@ function marcarModifVisto(pedidoId){
   loadPedidos();
 }
 
+// ── LUZ AVATAR + VOZ ─────────────────────────────────────────────────────
+var luzBubbleTimer=null;
+var luzVoicesLoaded=false;
+if(window.speechSynthesis){
+  window.speechSynthesis.onvoiceschanged=function(){luzVoicesLoaded=true;};
+  setTimeout(function(){luzVoicesLoaded=true;},1000);
+}
+
+function luzHablar(texto,animacion){
+  // Mostrar burbuja
+  var bubble=document.getElementById("luzBubbleFloat");
+  var txt=document.getElementById("luzSpeechTxt");
+  var bars=document.getElementById("luzVoiceBars");
+  var av=document.getElementById("luzFloatAv");
+  if(!bubble||!txt)return;
+  txt.textContent=texto;
+  bubble.classList.add("show");
+  // Animación del avatar
+  if(av&&animacion){
+    av.className="luz-float-avatar "+animacion;
+    setTimeout(function(){av.className="luz-float-avatar";},1500);
+  }
+  // Auto-ocultar después de 5 segundos
+  if(luzBubbleTimer)clearTimeout(luzBubbleTimer);
+  luzBubbleTimer=setTimeout(function(){bubble.classList.remove("show");},5500);
+  // Voz
+  if(window.speechSynthesis){
+    window.speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(texto);
+    u.lang="es-CO";u.rate=0.94;u.pitch=1.08;u.volume=0.85;
+    var voices=window.speechSynthesis.getVoices();
+    var voz=voices.find(function(v){return v.lang.startsWith("es")&&(v.name.indexOf("female")!==-1||v.name.indexOf("Female")!==-1||v.name.indexOf("Paulina")!==-1||v.name.indexOf("Monica")!==-1||v.name.indexOf("Laura")!==-1||v.name.indexOf("Sofia")!==-1);})
+      ||voices.find(function(v){return v.lang.startsWith("es");});
+    if(voz)u.voice=voz;
+    if(bars)bars.classList.add("on");
+    u.onend=function(){if(bars)bars.classList.remove("on");};
+    u.onerror=function(){if(bars)bars.classList.remove("on");};
+    window.speechSynthesis.speak(u);
+  }
+}
+
+function luzReaccionar(evento,datos){
+  var msgs={
+    nuevo_pedido:["Nuevo pedido entrante. Número "+(datos||"")+". Procesando ahora.","¡Llegó un pedido! El "+(datos||"")+" está en cola."],
+    pago_recibido:["Comprobante recibido. Pedido confirmado y en preparación.","Pago verificado. El pedido entra a cocina ahora."],
+    alerta_humano:["Atención. Un cliente solicita hablar con una persona.","Intervención humana requerida. Por favor revisa el chat."],
+    pedido_entregado:["Pedido entregado exitosamente. Excelente servicio.","Entrega confirmada. El cliente fue notificado."],
+    nueva_valoracion:["Nueva valoración recibida. ¡Sigue así!","El cliente dejó su opinión. Gracias por el buen servicio."]
+  };
+  var lista=msgs[evento]||["Evento registrado en el sistema."];
+  var txt=lista[Math.floor(Math.random()*lista.length)];
+  var anim={nuevo_pedido:"bounce",pago_recibido:"bounce",alerta_humano:"shake",pedido_entregado:"pulse",nueva_valoracion:"pulse"}[evento]||"pulse";
+  luzHablar(txt,anim);
+}
+
 function playSound(tipo){
   try{
     var ctx=new(window.AudioContext||window.webkitAudioContext)();
@@ -1464,7 +1558,7 @@ function checkNuevosMensajes(){
         if(tsActual){
           if(m.tipo==="cliente"&&m.comprobante_media_id){playSound("pago_recibido");mostrarAlerta("mensaje","Comprobante de pago recibido de "+m.telefono,m.telefono);}
           if(m.tipo==="alerta_pregunta"){playSound("alerta_pregunta");var pregunta=(m.mensaje||"").replace("ALERTA_PREGUNTA: ","");mostrarAlerta("pregunta","? "+m.telefono+": "+pregunta.substring(0,60),m.telefono);}
-          else{nuevos++;var txt=(m.mensaje||"").toLowerCase();if(["hablar con","persona real","asesor","humano","encargado"].some(function(p){return txt.indexOf(p)!==-1;})){playSound("alerta_humano");mostrarAlerta("humano",""+m.telefono+" pide hablar con persona",m.telefono);}if(["recoger","para recoger","voy a recoger","lo recojo"].some(function(p){return txt.indexOf(p)!==-1;})){playSound("alerta_recoger");mostrarAlerta("recoger",""+m.telefono+" va a RECOGER",m.telefono);}}
+          else{nuevos++;var txt=(m.mensaje||"").toLowerCase();if(["hablar con","persona real","asesor","humano","encargado"].some(function(p){return txt.indexOf(p)!==-1;})){playSound("alerta_humano");mostrarAlerta("humano",""+m.telefono+" pide hablar con persona",m.telefono);luzReaccionar("alerta_humano");}if(["recoger","para recoger","voy a recoger","lo recojo"].some(function(p){return txt.indexOf(p)!==-1;})){playSound("alerta_recoger");mostrarAlerta("recoger",""+m.telefono+" va a RECOGER",m.telefono);}}
         }
         ultimoMensajeTs[key]=m.created_at;
       }
@@ -1630,7 +1724,7 @@ function loadPedidos(){
         if(!isFirst){
           var esCuentaNueva=p.metodo_pago==="cuenta"||p.estado==="cuenta";
           if(esCuentaNueva){notif("💳 "+(p.direccion||"Mesa")+" solicita la cuenta","rgba(245,158,11,0.9)");}
-          else{notif("Pedido #"+p.numero_pedido);playSound("nuevo_pedido");}
+          else{notif("Pedido #"+p.numero_pedido);playSound("nuevo_pedido");luzReaccionar("nuevo_pedido",p.numero_pedido);}
           pedidosBadgeCount++;
           var b=document.getElementById("pedidosBadge");b.textContent=pedidosBadgeCount>9?"9+":String(pedidosBadgeCount);b.classList.add("show");
         }
