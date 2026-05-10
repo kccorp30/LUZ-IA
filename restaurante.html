@@ -62,7 +62,13 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 @keyframes ldot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
 .content{padding-top:60px!important;padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
 .page{display:none}.page.active{display:block;animation:fadeUp 0.22s ease both}
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes modificadoPulse{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,0);border-color:rgba(251,191,36,0.3)}50%{box-shadow:0 0 0 8px rgba(251,191,36,0.15);border-color:rgba(251,191,36,0.8)}}
+@keyframes modificadoBlink{0%,100%{background:rgba(251,191,36,0.08)}50%{background:rgba(251,191,36,0.22)}}
+.pedido-modificado-card{animation:modificadoPulse 1.5s ease-in-out infinite!important;border-color:rgba(251,191,36,0.6)!important}
+.modif-alert-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);border-radius:10px;margin:6px 0;animation:modificadoBlink 1.5s ease-in-out infinite}
+.modif-alert-bar .modif-txt{font-size:12px;font-weight:800;color:#fbbf24;display:flex;align-items:center;gap:6px}
+.modif-ok-btn{padding:5px 12px;background:rgba(251,191,36,0.2);border:1px solid rgba(251,191,36,0.5);border-radius:8px;color:#fbbf24;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s}
+.modif-ok-btn:hover{background:rgba(251,191,36,0.4)}
 .glass{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:20px;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow);}
 .stats-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 12px 4px}
 .stat-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:20px;padding:16px;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);position:relative;overflow:hidden;transition:transform 0.2s;}
@@ -913,6 +919,11 @@ select.finput{cursor:pointer}
           <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Los clientes canjean puntos por estos productos desde el menú.</div>
           <div id="canjeAdminLista"><div style="color:var(--text3);font-size:12px;text-align:center;padding:8px">Cargando...</div></div>
           <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06)">
+            <div style="font-size:11px;font-weight:700;color:rgba(245,158,11,0.8);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Agregar desde el menú</div>
+            <div style="position:relative;margin-bottom:10px">
+              <input class="finput" id="canje-buscar" placeholder="🔍 Buscar producto del menú..." oninput="buscarProductoCanje()" autocomplete="off">
+              <div id="canje-buscar-resultados" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:20;background:#1a1a28;border:1px solid rgba(255,255,255,0.1);border-radius:0 0 13px 13px;max-height:200px;overflow-y:auto;box-shadow:0 10px 30px rgba(0,0,0,0.5)"></div>
+            </div>
             <div class="frow" style="margin-bottom:8px">
               <div class="ffield" style="max-width:60px"><label class="flabel">Emoji</label><input class="finput" id="canje-emoji" value="🎁" style="font-size:18px;text-align:center" maxlength="4"></div>
               <div class="ffield"><label class="flabel">Nombre</label><input class="finput" id="canje-nombre" placeholder="Gaseosa gratis"></div>
@@ -924,6 +935,15 @@ select.finput{cursor:pointer}
             <div class="ffield" style="margin-bottom:8px"><label class="flabel">Descripción</label><input class="finput" id="canje-desc" placeholder="Gaseosa 250ml a elegir"></div>
             <button class="badd" onclick="agregarProductoCanje()" style="background:linear-gradient(135deg,#f59e0b,#f97316);box-shadow:0 4px 16px rgba(245,158,11,0.35)">🎁 Agregar producto de canje</button>
           </div>
+        </div>
+        <!-- CANJES RECIBIDOS -->
+        <div class="aform" style="margin-bottom:12px;background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(249,115,22,0.04));border-color:rgba(124,58,237,0.2)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div class="aft" style="margin-bottom:0">⭐ Canjes recibidos</div>
+            <button onclick="loadCanjesRecibidos()" style="padding:5px 12px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2);border-radius:8px;color:#c4b5fd;font-size:11px;cursor:pointer;font-family:inherit">⟳ Actualizar</button>
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Canjes que los clientes han hecho — marca como entregado cuando lo des.</div>
+          <div id="canjesRecibidosLista"><div style="color:var(--text3);font-size:12px;text-align:center;padding:8px">Cargando...</div></div>
         </div>
         <div class="clientes-resumen" id="clientesResumen">
           <div style="font-size:12px;font-weight:700;color:rgba(196,181,253,0.7);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px">Resumen</div>
@@ -1214,11 +1234,19 @@ var silencioPorTel={};
 var msgTel="",msgNum="",chatTimer=null,chatLastTs="";
 var domiPedidoId=null,domiPedidoNumVal="",domiSelId=null,domiSelNombre="";
 var domiciliariosList=[];
+var modificadosVisto=new Set(); // pedido ids cuya modificacion ya fue vista/confirmada
+var modificadosDetectados=new Set(); // pedido ids que tienen modificacion activa
+
+function marcarModifVisto(pedidoId){
+  modificadosVisto.add(pedidoId);
+  modificadosDetectados.delete(pedidoId);
+  loadPedidos();
+}
 
 function playSound(tipo){
   try{
     var ctx=new(window.AudioContext||window.webkitAudioContext)();
-    var notas={nuevo_pedido:[[880,0,0.4,"square"],[1046,0.12,0.4,"square"],[1318,0.24,0.5,"square"]],cambio_estado:[[523,0,0.3,"sine"],[659,0.2,0.3,"sine"]],pedido_cerrado:[[523,0,0.3,"triangle"],[659,0.15,0.3,"triangle"],[784,0.3,0.3,"triangle"],[1046,0.45,0.5,"triangle"]],nuevo_mensaje:[[880,0,0.25,"sine"],[880,0.15,0.25,"sine"]],alerta_humano:[[440,0,0.5,"sawtooth"],[550,0.1,0.5,"sawtooth"],[440,0.2,0.5,"sawtooth"],[660,0.3,0.6,"sawtooth"]],alerta_recoger:[[784,0,0.4,"square"],[784,0.15,0.4,"square"],[1046,0.3,0.6,"square"]],alerta_pregunta:[[660,0,0.3,"sine"],[880,0.15,0.3,"sine"],[660,0.3,0.3,"sine"]],pago_recibido:[[1318,0,0.3,"sine"],[1046,0.1,0.2,"sine"],[1318,0.2,0.3,"sine"],[1568,0.3,0.4,"sine"],[1318,0.45,0.2,"sine"],[1568,0.55,0.6,"sine"]]};
+    var notas={nuevo_pedido:[[880,0,0.4,"square"],[1046,0.12,0.4,"square"],[1318,0.24,0.5,"square"]],cambio_estado:[[523,0,0.3,"sine"],[659,0.2,0.3,"sine"]],pedido_cerrado:[[523,0,0.3,"triangle"],[659,0.15,0.3,"triangle"],[784,0.3,0.3,"triangle"],[1046,0.45,0.5,"triangle"]],nuevo_mensaje:[[880,0,0.25,"sine"],[880,0.15,0.25,"sine"]],alerta_humano:[[440,0,0.5,"sawtooth"],[550,0.1,0.5,"sawtooth"],[440,0.2,0.5,"sawtooth"],[660,0.3,0.6,"sawtooth"]],alerta_recoger:[[784,0,0.4,"square"],[784,0.15,0.4,"square"],[1046,0.3,0.6,"square"]],alerta_pregunta:[[660,0,0.3,"sine"],[880,0.15,0.3,"sine"],[660,0.3,0.3,"sine"]],pago_recibido:[[1318,0,0.3,"sine"],[1046,0.1,0.2,"sine"],[1318,0.2,0.3,"sine"],[1568,0.3,0.4,"sine"],[1318,0.45,0.2,"sine"],[1568,0.55,0.6,"sine"]],modificacion:[[880,0,0.4,"sawtooth"],[660,0.18,0.4,"sawtooth"],[880,0.36,0.4,"sawtooth"],[660,0.54,0.5,"sawtooth"]]};
     (notas[tipo]||notas.nuevo_mensaje).forEach(function(n){var o=ctx.createOscillator(),g=ctx.createGain(),t=ctx.currentTime+n[1];o.type=n[3]||"sine";o.frequency.setValueAtTime(n[0],t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(n[2],t+0.02);g.gain.exponentialRampToValueAtTime(0.001,t+0.5);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.6);});
   }catch(e){}
 }
@@ -1308,7 +1336,7 @@ function showTab(n){
   if(n==="chat")loadChatUniversal();if(n==="cupones")renderCupones();
   if(n==="mapa"){setTimeout(function(){cargarZonas();initMapa();},80);}
   if(n==="config")cargarDomiciliarios();if(n==="domis")loadDomiPanel();
-  if(n==="clientes"){loadClientes();loadCanjeAdmin();}if(n==="mesas"){loadMesas();cargarMeseros();}
+  if(n==="clientes"){loadClientes();loadCanjeAdmin();loadCanjesRecibidos();}if(n==="mesas"){loadMesas();cargarMeseros();}
   if(n==="cerebro")loadCerebro();
 }
 
@@ -1443,7 +1471,27 @@ function loadPedidos(){
   if(!rest)return;
   get("pedidos","restaurante_id=eq."+rest.id+"&estado=neq.entregado&order=created_at.desc&limit=20").then(function(pedidos){
     var isFirst=Object.keys(known).length===0;
-    pedidos.forEach(function(p){if(!known[p.id]){if(!isFirst){var esCuentaNueva=p.metodo_pago==="cuenta"||p.estado==="cuenta";if(esCuentaNueva){notif("💳 "+(p.direccion||"Mesa")+" solicita la cuenta","rgba(245,158,11,0.9)");}else{notif("Pedido #"+p.numero_pedido);playSound("nuevo_pedido");}pedidosBadgeCount++;var b=document.getElementById("pedidosBadge");b.textContent=pedidosBadgeCount>9?"9+":String(pedidosBadgeCount);b.classList.add("show");}known[p.id]=true;}});
+    pedidos.forEach(function(p){
+      if(!known[p.id]){
+        if(!isFirst){
+          var esCuentaNueva=p.metodo_pago==="cuenta"||p.estado==="cuenta";
+          if(esCuentaNueva){notif("💳 "+(p.direccion||"Mesa")+" solicita la cuenta","rgba(245,158,11,0.9)");}
+          else{notif("Pedido #"+p.numero_pedido);playSound("nuevo_pedido");}
+          pedidosBadgeCount++;
+          var b=document.getElementById("pedidosBadge");b.textContent=pedidosBadgeCount>9?"9+":String(pedidosBadgeCount);b.classList.add("show");
+        }
+        known[p.id]=true;
+      } else {
+        // Check if this existing pedido now has a modification we haven't seen
+        var tieneModif=p.notas_especiales&&p.notas_especiales.indexOf("✏️ MODIFICADO")!==-1;
+        if(tieneModif&&!modificadosVisto.has(p.id)&&!modificadosDetectados.has(p.id)){
+          // New modification detected on an existing pedido!
+          modificadosDetectados.add(p.id);
+          notif("✏️ Pedido #"+p.numero_pedido+" fue MODIFICADO","rgba(251,191,36,0.95)");
+          playSound("modificacion");
+        }
+      }
+    });
     var lista=document.getElementById("pedidosLista");
     if(!pedidos.length){lista.innerHTML='<div class="empty"><div class="ei">🛒</div><div class="et">No hay pedidos activos.</div></div>';return;}
     var h="";
@@ -1480,9 +1528,16 @@ function loadPedidos(){
       h+='<div class="pbody">';
       h+='<div>'+items.map(function(i){return'<div class="pitem">• '+i+'</div>';}).join("")+'</div>';
       if(p.notas_especiales){
-        var esModificado=p.notas_especiales.indexOf("✏️ MODIFICADO")!==-1||p.notas_especiales.indexOf("📝")!==-1;
-        if(esModificado)h+='<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);border-radius:10px;margin:6px 0;animation:fadeUp 0.3s ease"><span style="font-size:14px">✏️</span><span style="font-size:12px;font-weight:700;color:#fbbf24">MODIFICADO POR LUZ</span></div>';
-        h+='<div class="notas-especiales"><span class="notas-icon">📝</span><div><strong>Notas especiales:</strong> '+p.notas_especiales+'</div></div>';
+        var esModificado=p.notas_especiales.indexOf("✏️ MODIFICADO")!==-1;
+        var yaVisto=modificadosVisto.has(p.id);
+        if(esModificado&&!yaVisto){
+          modificadosDetectados.add(p.id);
+          h=h.replace('class="'+cardClass+'"','class="'+cardClass+' pedido-modificado-card"');
+          h+='<div class="modif-alert-bar"><div class="modif-txt"><span style="font-size:16px">✏️</span> MODIFICADO POR CLIENTE — Revisa el pedido</div><button class="modif-ok-btn" onclick="marcarModifVisto(\''+p.id+'\')">✅ Revisado</button></div>';
+        } else if(esModificado&&yaVisto){
+          h+='<div style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);border-radius:8px;margin:4px 0"><span style="font-size:12px">✅</span><span style="font-size:11px;color:#6ee7b7;font-weight:600">Modificación revisada</span></div>';
+        }
+        h+='<div class="notas-especiales"><span class="notas-icon">📝</span><div><strong>Notas:</strong> '+p.notas_especiales+'</div></div>';
       }
       h+='<div class="pmeta">';
       h+='<div class="chip'+(esRecoger?" recoger":"")+'">📍 '+(p.direccion||"Sin direccion")+'</div>';
@@ -1741,6 +1796,10 @@ function filtrarChats(modo){
 function loadChatUniversal(){
   if(!rest)return;
   document.getElementById("chatUniversalLista").innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
+  // Load silencios from DB first, then messages
+  fetch("/api/supabase/silencio_conversacion?restaurante_id=eq."+rest.id+"&activo=eq.true&select=telefono").then(function(r){return r.json();}).then(function(sils){
+    (sils||[]).forEach(function(s){if(s.telefono)silencioPorTel[s.telefono]=true;});
+  }).catch(function(){}).finally(function(){
   get("mensajes","restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=300").then(function(msgs){
     get("pedidos","restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=300&select=cliente_tel,estado,numero_pedido,created_at").then(function(pedidos){
       var pedidosPorTel={};
@@ -1763,6 +1822,7 @@ function loadChatUniversal(){
       renderChatUniversal();
     }).catch(function(){renderChatUniversal();});
   }).catch(function(){document.getElementById("chatUniversalLista").innerHTML='<div class="empty"><div class="et">Error</div></div>';});
+  }); // end of silencio finally
 }
 function renderChatUniversal(){
   var lista=document.getElementById("chatUniversalLista"),datos=chatUniversalData;
@@ -3591,6 +3651,42 @@ function actualizarDatalistCategorias(categoriasEnBD){
 /* ═══════════════════════════════════════════════════════════
    🎁 PRODUCTOS DE CANJE — Admin
    ═══════════════════════════════════════════════════════════ */
+function loadCanjesRecibidos(){
+  if(!rest)return;
+  fetch("/api/supabase/canjes?restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=30&select=*")
+  .then(function(r){return r.json();})
+  .then(function(data){
+    var lista=document.getElementById("canjesRecibidosLista");
+    if(!lista)return;
+    if(!data||!data.length){lista.innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:8px">No hay canjes aún.</div>';return;}
+    var h="";
+    data.forEach(function(c){
+      var isPendiente=c.estado==="pendiente";
+      var fecha=c.created_at?new Date(c.created_at).toLocaleString("es-CO",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
+      h+='<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:'+(isPendiente?"rgba(245,158,11,0.07)":"rgba(16,185,129,0.05)")+';border:1px solid '+(isPendiente?"rgba(245,158,11,0.2)":"rgba(16,185,129,0.1)")+';border-radius:12px;margin-bottom:6px">';
+      h+='<div style="font-size:22px;flex-shrink:0">🎁</div>';
+      h+='<div style="flex:1;min-width:0">';
+      h+='<div style="font-size:13px;font-weight:700;color:var(--text)">'+escHtml(c.producto_nombre||"Producto")+'</div>';
+      h+='<div style="font-size:11px;color:var(--text3)">📱 '+c.telefono+' · ⭐ '+c.puntos_usados+' pts · '+fecha+'</div>';
+      h+='</div>';
+      if(isPendiente){
+        h+='<button onclick="marcarCanjeEntregado(\''+c.id+'\')" style="padding:7px 12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);border-radius:8px;color:#6ee7b7;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">✅ Entregado</button>';
+      }else{
+        h+='<span style="padding:5px 10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);border-radius:8px;color:#6ee7b7;font-size:10px;font-weight:700;flex-shrink:0">✅ Entregado</span>';
+      }
+      h+='</div>';
+    });
+    lista.innerHTML=h;
+  })
+  .catch(function(){document.getElementById("canjesRecibidosLista").innerHTML='<div style="color:var(--text3);font-size:12px">Error cargando canjes</div>';});
+}
+
+function marcarCanjeEntregado(id){
+  fetch("/api/supabase/canjes?id=eq."+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({estado:"entregado",updated_at:new Date().toISOString()})})
+  .then(function(){notif("✅ Canje marcado como entregado");loadCanjesRecibidos();})
+  .catch(function(){notif("Error");});
+}
+
 function loadCanjeAdmin(){
   if(!rest)return;
   var lista=document.getElementById("canjeAdminLista");
@@ -3598,24 +3694,87 @@ function loadCanjeAdmin(){
   fetch("/api/productos-canje?restaurante_id="+rest.id)
   .then(function(r){return r.json();})
   .then(function(data){
-    if(!data||!data.length){lista.innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:8px">No hay productos de canje. Agrega el primero abajo.</div>';return;}
+    if(!data||!data.length){lista.innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:8px">No hay productos de canje. Busca un producto del menú abajo o agrega uno nuevo.</div>';return;}
     var h="";
     data.forEach(function(p){
-      h+='<div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 12px;margin-bottom:6px">';
+      h+='<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 12px;margin-bottom:6px">';
+      h+='<div style="display:flex;align-items:center;gap:10px">';
       h+='<div style="font-size:22px;flex-shrink:0">'+(p.emoji||"🎁")+'</div>';
       h+='<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--text)">'+escHtml(p.nombre)+'</div>';
       if(p.descripcion)h+='<div style="font-size:11px;color:var(--text3)">'+escHtml(p.descripcion)+'</div>';
       h+='</div>';
-      h+='<div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:800;color:#fbbf24">⭐ '+p.puntos_requeridos+'</div>';
+      h+='<div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:800;color:#fbbf24" id="canje-pts-show-'+p.id+'">⭐ '+p.puntos_requeridos+'</div>';
       if(p.stock!==null&&p.stock!==undefined)h+='<div style="font-size:10px;color:var(--text3)">Stock: '+p.stock+'</div>';
       h+='</div>';
+      h+='<button onclick="toggleEditCanje(\''+p.id+'\','+p.puntos_requeridos+')" style="padding:6px 10px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2);border-radius:8px;color:#c4b5fd;font-size:12px;cursor:pointer;flex-shrink:0">✏️</button>';
       h+='<button onclick="eliminarProductoCanje(\''+p.id+'\')" style="padding:6px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#fca5a5;font-size:12px;cursor:pointer;flex-shrink:0">🗑</button>';
+      h+='</div>';
+      // Edit row (hidden by default)
+      h+='<div id="canje-edit-'+p.id+'" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06);display:none">';
+      h+='<div style="display:flex;gap:8px;align-items:flex-end">';
+      h+='<div style="flex:1"><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">Puntos</label><input class="finput" type="number" id="canje-edit-pts-'+p.id+'" value="'+p.puntos_requeridos+'" style="font-size:13px;padding:8px 10px"></div>';
+      h+='<div style="flex:1"><label style="font-size:10px;color:var(--text3);display:block;margin-bottom:3px">Stock</label><input class="finput" type="number" id="canje-edit-stk-'+p.id+'" value="'+(p.stock!==null&&p.stock!==undefined?p.stock:"")+'" placeholder="∞" style="font-size:13px;padding:8px 10px"></div>';
+      h+='<button onclick="guardarEditCanje(\''+p.id+'\')" style="padding:8px 14px;background:linear-gradient(135deg,#f59e0b,#f97316);border:none;border-radius:8px;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">💾 Guardar</button>';
+      h+='</div></div>';
       h+='</div>';
     });
     lista.innerHTML=h;
   })
   .catch(function(){lista.innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:8px">Error cargando</div>';});
 }
+
+function toggleEditCanje(id,pts){
+  var el=document.getElementById("canje-edit-"+id);
+  if(el)el.style.display=el.style.display==="none"?"block":"none";
+}
+
+function guardarEditCanje(id){
+  var pts=Number(document.getElementById("canje-edit-pts-"+id).value);
+  var stkVal=document.getElementById("canje-edit-stk-"+id).value.trim();
+  if(!pts){notif("Puntos obligatorios");return;}
+  var body={puntos_requeridos:pts};
+  if(stkVal!=="")body.stock=Number(stkVal);
+  fetch("/api/supabase/productos_canje?id=eq."+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+  .then(function(r){return r.json();})
+  .then(function(){notif("✅ Puntos actualizados");loadCanjeAdmin();})
+  .catch(function(){notif("Error");});
+}
+
+// Búsqueda de productos del menú para canje
+function buscarProductoCanje(){
+  var q=document.getElementById("canje-buscar").value.trim().toLowerCase();
+  var box=document.getElementById("canje-buscar-resultados");
+  if(!q||q.length<2||!MENU_PROD||!MENU_PROD.length){box.style.display="none";return;}
+  var resultados=MENU_PROD.filter(function(p){
+    return(p.nombre||"").toLowerCase().indexOf(q)!==-1||(p.categoria||"").toLowerCase().indexOf(q)!==-1||(p.descripcion||"").toLowerCase().indexOf(q)!==-1;
+  }).slice(0,8);
+  if(!resultados.length){box.style.display="none";return;}
+  box.style.display="block";
+  box.innerHTML=resultados.map(function(p){
+    var emoji=p.es_bebida?"🥤":p.es_arepa?"🫓":"🍔";
+    return'<div onclick="seleccionarMenuParaCanje(\''+escHtml(p.nombre).replace(/'/g,"\\'")+'\',\''+escHtml(p.descripcion||"").replace(/'/g,"\\'")+'\',\''+emoji+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.1s" onmouseover="this.style.background=\'rgba(124,58,237,0.1)\'" onmouseout="this.style.background=\'transparent\'">'
+      +'<div style="font-size:16px">'+emoji+'</div>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">'+escHtml(p.nombre)+'</div><div style="font-size:10px;color:var(--text3)">'+escHtml(p.categoria||"")+'</div></div>'
+      +'<div style="font-size:12px;color:#10b981;font-weight:600;font-family:JetBrains Mono">'+fmt(p.precio)+'</div>'
+      +'</div>';
+  }).join("");
+}
+
+function seleccionarMenuParaCanje(nombre,desc,emoji){
+  document.getElementById("canje-nombre").value=nombre;
+  document.getElementById("canje-desc").value=desc;
+  document.getElementById("canje-emoji").value=emoji;
+  document.getElementById("canje-buscar").value="";
+  document.getElementById("canje-buscar-resultados").style.display="none";
+  document.getElementById("canje-puntos").focus();
+  notif("📝 Completa los puntos requeridos");
+}
+
+// Cerrar dropdown al hacer click fuera
+document.addEventListener("click",function(e){
+  var box=document.getElementById("canje-buscar-resultados");
+  if(box&&!e.target.closest("#canje-buscar")&&!e.target.closest("#canje-buscar-resultados"))box.style.display="none";
+});
 
 function agregarProductoCanje(){
   if(!rest)return;
