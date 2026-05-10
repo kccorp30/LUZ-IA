@@ -891,7 +891,16 @@ select.finput{cursor:pointer}
           <div class="cfg-title">📱 Pantallas del sistema</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
             <a href="/cocina" target="_blank" style="flex:1;padding:12px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.3);border-radius:13px;color:#fb923c;font-size:13px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">🍳 Pantalla Cocina</a>
-            <a href="/domi" target="_blank" style="flex:1;padding:12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:13px;color:#34d399;font-size:13px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">🛵 App Domiciliario</a>
+            <a id="linkDomiApp" href="/domi" target="_blank" style="flex:1;padding:12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:13px;color:#34d399;font-size:13px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">🛵 App Domiciliario</a>
+          </div>
+          <!-- Link para compartir con domiciliarios -->
+          <div style="margin-top:10px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:12px;padding:12px">
+            <div style="font-size:11px;font-weight:700;color:rgba(16,185,129,0.8);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">🔗 Link para domiciliarios</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <div id="domiLinkUrl" style="flex:1;font-size:11px;color:var(--text3);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:7px 10px;font-family:'JetBrains Mono',monospace;word-break:break-all">Cargando...</div>
+              <button onclick="copiarLinkDomi()" style="padding:8px 12px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.25);border-radius:8px;color:#c4b5fd;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">📋 Copiar</button>
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:6px">Comparte este link con tus domiciliarios por WhatsApp. Solo necesitan escribir su nombre para entrar.</div>
           </div>
         </div>
         <button class="cfg-save" id="cfgGuardar">Guardar configuracion</button>
@@ -1478,7 +1487,7 @@ function showTab(n){
   if(n==="promo"){loadPromoCount();renderProgs();}
   if(n==="chat")loadChatUniversal();if(n==="cupones")renderCupones();
   if(n==="mapa"){setTimeout(function(){cargarZonas();initMapa();},80);}
-  if(n==="config")cargarDomiciliarios();if(n==="domis")loadDomiPanel();
+  if(n==="config"){cargarDomiciliarios();actualizarLinkDomi();}if(n==="domis")loadDomiPanel();
   if(n==="clientes"){loadClientes();loadCanjeAdmin();loadCanjesRecibidos();}
   if(n==="mesas"){loadMesasRapidas();cargarMeseros();iniciarPollingMesas();}
   else{detenerPollingMesas();}
@@ -2254,6 +2263,19 @@ function actualizarCuponesEnLuz(){
 
 // CONFIG
 var modoDiaActual=false;
+function copiarLinkDomi(){
+  var el=document.getElementById("domiLinkUrl");
+  if(!el)return;
+  navigator.clipboard.writeText(el.textContent).then(function(){notif("✅ Link copiado");}).catch(function(){});
+}
+function actualizarLinkDomi(){
+  if(!rest)return;
+  var link=location.origin+"/domi?rest="+rest.id;
+  var el=document.getElementById("domiLinkUrl");
+  var linkA=document.getElementById("linkDomiApp");
+  if(el)el.textContent=link;
+  if(linkA)linkA.href=link;
+}
 function cargarConfig(){
   if(!rest)return;
   modoDiaActual=rest.modo_dia||false;actualizarToggleModoDia(modoDiaActual);
