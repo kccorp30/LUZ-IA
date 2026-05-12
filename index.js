@@ -1954,6 +1954,122 @@ app.post("/api/alerta-pregunta", async function(req, res) {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// LUZ MENÚ CHAT — Asistente IA dentro del menú del cliente
+// ═══════════════════════════════════════════════════════════════════════════
+app.post("/api/luz-menu-chat", async function(req, res) {
+  var { restaurante_id, mensaje, telefono, historial, menu_resumen, promos, puntos_cliente } = req.body;
+  if (!restaurante_id || !mensaje) return res.status(400).json({ ok: false, error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+
+    // Cargar aprendizajes del restaurante para Luz
+    var aprendizajesR = await axios.get(
+      SUPABASE_URL + "/rest/v1/luz_aprendizajes?restaurante_id=eq." + restaurante_id + "&activo=eq.true&select=contenido,tipo",
+      { headers: h }
+    ).catch(function() { return { data: [] }; });
+    var aprendizajes = (aprendizajesR.data || []).map(function(a) { return "[" + a.tipo + "] " + a.contenido; }).join("\n");
+
+    // Cargar info del restaurante
+    var restR = await axios.get(
+      SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=nombre,ciudad_restaurante,horario_apertura,horario_cierre",
+      { headers: h }
+    ).catch(function() { return { data: [] }; });
+    var restInfo = restR.data && restR.data[0] ? restR.data[0] : {};
+
+    // System prompt de Luz como asistente de menú
+    var systemPrompt = `Eres LUZ, la asistente de IA del restaurante "${restInfo.nombre || "restaurante"}". 
+Eres joven, amable, profesional y hablas en español colombiano informal pero respetuoso. Usas emojis con moderación.
+
+TU ROL EN EL MENÚ:
+- Ayudas a los clientes a elegir qué pedir según sus gustos
+- Recomiendas productos del menú real con nombre EXACTO
+- Explicas ingredientes y personalizaciones posibles
+- Informas sobre promos del día
+- Explicas cómo usar las notas del pedido para personalizar (ej: "sin cebolla", "extra salsa", "término 3/4")
+- Informas sobre puntos de fidelidad
+
+MENÚ DISPONIBLE HOY:
+${menu_resumen || "No disponible"}
+
+PROMOS ACTIVAS:
+${promos || "Sin promos activas hoy"}
+
+PUNTOS DEL CLIENTE:
+${puntos_cliente ? "El cliente tiene " + puntos_cliente + " puntos acumulados" : "Cliente sin puntos registrados"}
+
+CONOCIMIENTO DEL RESTAURANTE:
+${aprendizajes || "Sin conocimiento adicional cargado"}
+
+REGLAS IMPORTANTES:
+- Solo recomienda productos que están en el menú listado arriba
+- Si el cliente pide personalización, dile que la escriba en el campo "Notas" del pedido
+- Si el cliente menciona alergia o restricción importante, marca con [NOTIFICAR_PANEL: motivo] al final
+- Si el cliente hace una pregunta que no puedes responder, dile que pregunte por WhatsApp
+- Respuestas cortas (máx 3 líneas), directas y amables
+- Cuando recomiendes un producto, escríbelo entre corchetes así: [PRODUCTO: nombre exacto] para que aparezca el botón de agregar
+- Si el cliente dice algo urgente o inusual, agrega [NOTIFICAR_PANEL: descripción] al final de tu respuesta
+
+HORA: ${getHoraColombia().toLocaleTimeString("es-CO")}`;
+
+    // Construir historial de mensajes para Claude
+    var messages = [];
+    if (historial && Array.isArray(historial)) {
+      historial.slice(-8).forEach(function(m) {
+        messages.push({ role: m.rol === "luz" ? "assistant" : "user", content: m.texto });
+      });
+    }
+    messages.push({ role: "user", content: mensaje });
+
+    // Llamar a Claude API
+    var claudeR = await axios.post("https://api.anthropic.com/v1/messages", {
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 400,
+      system: systemPrompt,
+      messages: messages
+    }, {
+      headers: {
+        "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json"
+      }
+    });
+
+    var respuesta = claudeR.data.content[0].text || "";
+
+    // Detectar si hay notificación al panel
+    var notificar = null;
+    var matchNotif = respuesta.match(/\[NOTIFICAR_PANEL:\s*([^\]]+)\]/i);
+    if (matchNotif) {
+      notificar = matchNotif[1].trim();
+      respuesta = respuesta.replace(/\[NOTIFICAR_PANEL:[^\]]+\]/gi, "").trim();
+      // Guardar alerta en Supabase
+      if (telefono) {
+        await guardarMensajeSupabase(restaurante_id, stripCountryCode(telefono),
+          "🤖 LUZ MENÚ: " + notificar + " (cliente: " + (telefono || "anónimo") + ")",
+          "alerta_pregunta", null
+        ).catch(function(){});
+      }
+    }
+
+    // Extraer productos mencionados para mostrar botones
+    var productosBtn = [];
+    var matchProd;
+    var reProd = /\[PRODUCTO:\s*([^\]]+)\]/gi;
+    while ((matchProd = reProd.exec(respuesta)) !== null) {
+      productosBtn.push(matchProd[1].trim());
+    }
+    respuesta = respuesta.replace(/\[PRODUCTO:[^\]]+\]/gi, "").trim();
+
+    console.log("[luz-menu-chat] " + (telefono||"anon") + " → '" + mensaje.substring(0,40) + "' | notif: " + (notificar||"no"));
+    res.json({ ok: true, respuesta, productos: productosBtn, notificado: !!notificar });
+  } catch(e) {
+    console.error("[luz-menu-chat] Error:", e.response ? JSON.stringify(e.response.data) : e.message);
+    res.json({ ok: true, respuesta: "¡Hola! En este momento tengo un problema técnico. Escríbenos por WhatsApp y te ayudamos de inmediato 😊" });
+  }
+});
+
 app.get("/api/menu", async function(req, res) {
   if (!req.query.restaurante_id) return res.json([]);
   try {
@@ -3164,6 +3280,20 @@ app.get("/", function(req, res) {
     pedidos_activos: Object.keys(orderState).length,
     colas: colasPorCliente.size
   });
+});
+
+// ── NOTIFICAR PANEL DESDE MENÚ (usado por LUZ asistente) ──────────────────
+app.post("/api/notificar-panel", async function(req, res) {
+  var { restaurante_id, telefono, mensaje, tipo } = req.body;
+  if (!restaurante_id || !mensaje) return res.status(400).json({ ok: false, error: "Faltan datos" });
+  try {
+    await guardarMensajeSupabase(restaurante_id, telefono || "menu_anonimo", mensaje, tipo || "alerta_pregunta", null);
+    console.log("[notificar-panel] ✅ Alerta guardada:", mensaje.substring(0, 60));
+    res.json({ ok: true });
+  } catch(e) {
+    console.error("[notificar-panel]", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 // Enviar push al cliente por teléfono
