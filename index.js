@@ -1958,74 +1958,122 @@ app.post("/api/alerta-pregunta", async function(req, res) {
 // LUZ MENÚ CHAT — Asistente IA dentro del menú del cliente
 // ═══════════════════════════════════════════════════════════════════════════
 app.post("/api/luz-menu-chat", async function(req, res) {
-  var { restaurante_id, mensaje, telefono, historial, menu_resumen, promos, puntos_cliente } = req.body;
+  var { restaurante_id, mensaje, telefono, historial } = req.body;
   if (!restaurante_id || !mensaje) return res.status(400).json({ ok: false, error: "Faltan datos" });
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
 
-    // Cargar aprendizajes del restaurante para Luz
-    var aprendizajesR = await axios.get(
-      SUPABASE_URL + "/rest/v1/luz_aprendizajes?restaurante_id=eq." + restaurante_id + "&activo=eq.true&select=contenido,tipo",
-      { headers: h }
-    ).catch(function() { return { data: [] }; });
-    var aprendizajes = (aprendizajesR.data || []).map(function(a) { return "[" + a.tipo + "] " + a.contenido; }).join("\n");
+    // ── CARGAR TODO DESDE LA DB EN PARALELO ────────────────────────────────
+    var [menuR, restR, promosR, aprendR, cliR] = await Promise.all([
+      // Menú completo y disponible
+      axios.get(SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restaurante_id +
+        "&disponible=eq.true&order=categoria,orden&select=id,nombre,precio,descripcion,categoria,ingredientes",
+        { headers: h }).catch(function(){ return { data: [] }; }),
+      // Info del restaurante
+      axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id +
+        "&select=nombre,horario_apertura,horario_cierre,domicilio_base,metodo_pago_nequi,metodo_pago_banco,metodo_pago_nombre",
+        { headers: h }).catch(function(){ return { data: [] }; }),
+      // Promos activas hoy
+      axios.get(SUPABASE_URL + "/rest/v1/promos_programadas?restaurante_id=eq." + restaurante_id +
+        "&activa=eq.true&select=titulo,descripcion,dia,descuento",
+        { headers: h }).catch(function(){ return { data: [] }; }),
+      // Aprendizajes del cerebro de Luz
+      axios.get(SUPABASE_URL + "/rest/v1/luz_aprendizajes?restaurante_id=eq." + restaurante_id +
+        "&activo=eq.true&select=contenido,tipo",
+        { headers: h }).catch(function(){ return { data: [] }; }),
+      // Datos del cliente si tiene teléfono
+      telefono ? axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante_id +
+        "&telefono=eq." + encodeURIComponent(stripCountryCode(telefono)) + "&select=nombre_cliente,puntos,nivel_fidelidad,total_pedidos",
+        { headers: h }).catch(function(){ return { data: [] }; }) : Promise.resolve({ data: [] })
+    ]);
 
-    // Cargar info del restaurante
-    var restR = await axios.get(
-      SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=nombre,ciudad_restaurante,horario_apertura,horario_cierre",
-      { headers: h }
-    ).catch(function() { return { data: [] }; });
-    var restInfo = restR.data && restR.data[0] ? restR.data[0] : {};
+    var menuItems = menuR.data || [];
+    var restInfo = (restR.data || [])[0] || {};
+    var promos = promosR.data || [];
+    var aprendizajes = (aprendR.data || []).map(function(a){ return "["+a.tipo+"] "+a.contenido; }).join("\n");
+    var cliente = (cliR.data || [])[0] || null;
+    var diaHoy = getDiaColombiaStr();
 
-    // System prompt de Luz como asistente de menú
-    var systemPrompt = `Eres LUZ, la asistente de IA del restaurante "${restInfo.nombre || "restaurante"}". 
-Eres joven, amable, profesional y hablas en español colombiano informal pero respetuoso. Usas emojis con moderación.
+    // Filtrar promos del día
+    var promosHoy = promos.filter(function(p){
+      return !p.dia || p.dia === "todos" || p.dia === diaHoy;
+    });
 
-TU ROL EN EL MENÚ:
-- Ayudas a los clientes a elegir qué pedir según sus gustos
-- Recomiendas productos del menú real con nombre EXACTO
-- Explicas ingredientes y personalizaciones posibles
-- Informas sobre promos del día
-- Explicas cómo usar las notas del pedido para personalizar (ej: "sin cebolla", "extra salsa", "término 3/4")
-- Informas sobre puntos de fidelidad
+    // Organizar menú por categoría para mejor contexto
+    var menuPorCategoria = {};
+    menuItems.forEach(function(item){
+      var cat = item.categoria || "Otros";
+      if(!menuPorCategoria[cat]) menuPorCategoria[cat] = [];
+      menuPorCategoria[cat].push(item);
+    });
+    var menuTexto = Object.keys(menuPorCategoria).map(function(cat){
+      var items = menuPorCategoria[cat].map(function(p){
+        var desc = p.descripcion ? " — "+p.descripcion.substring(0,80) : "";
+        var ing = p.ingredientes ? " (Ingredientes: "+p.ingredientes.substring(0,60)+")" : "";
+        return "  • "+p.nombre+" $"+Number(p.precio).toLocaleString("es-CO")+desc+ing;
+      }).join("\n");
+      return cat+":\n"+items;
+    }).join("\n\n");
 
-MENÚ DISPONIBLE HOY:
-${menu_resumen || "No disponible"}
+    // System prompt de Luz — agente real
+    var systemPrompt = `Eres LUZ, la asistente de IA de "${restInfo.nombre || "el restaurante"}". Eres joven, carismática, eficiente y hablas como una persona real en español colombiano — tuteo natural, sin sonar a robot ni a formal.
 
-PROMOS ACTIVAS:
-${promos || "Sin promos activas hoy"}
+INFORMACIÓN DEL RESTAURANTE:
+- Nombre: ${restInfo.nombre || ""}
+- Domicilio: $${Number(restInfo.domicilio_base||0).toLocaleString("es-CO")}
+- Pagos: Nequi ${restInfo.metodo_pago_nequi||""}, Bancolombia ${restInfo.metodo_pago_banco||""}, titular: ${restInfo.metodo_pago_nombre||""}
 
-PUNTOS DEL CLIENTE:
-${puntos_cliente ? "El cliente tiene " + puntos_cliente + " puntos acumulados" : "Cliente sin puntos registrados"}
+CLIENTE ACTUAL:
+${cliente ? `- Nombre: ${cliente.nombre_cliente || ""}
+- Puntos: ${cliente.puntos || 0} puntos (nivel ${cliente.nivel_fidelidad || "bronce"})
+- Pedidos totales: ${cliente.total_pedidos || 0}` : "- Cliente nuevo o sin historial"}
 
-CONOCIMIENTO DEL RESTAURANTE:
-${aprendizajes || "Sin conocimiento adicional cargado"}
+PROMOS DE HOY (${diaHoy}):
+${promosHoy.length ? promosHoy.map(function(p){ return "🔥 "+p.titulo+": "+p.descripcion+(p.descuento?" ("+p.descuento+"% off)":""); }).join("\n") : "Sin promos especiales hoy"}
 
-REGLAS IMPORTANTES:
-- Solo recomienda productos que están en el menú listado arriba
-- Si el cliente pide personalización, dile que la escriba en el campo "Notas" del pedido
-- Si el cliente menciona alergia o restricción importante, marca con [NOTIFICAR_PANEL: motivo] al final
-- Si el cliente hace una pregunta que no puedes responder, dile que pregunte por WhatsApp
-- Respuestas cortas (máx 3 líneas), directas y amables
-- Cuando recomiendes un producto, escríbelo entre corchetes así: [PRODUCTO: nombre exacto] para que aparezca el botón de agregar
-- Si el cliente dice algo urgente o inusual, agrega [NOTIFICAR_PANEL: descripción] al final de tu respuesta
+MENÚ COMPLETO DISPONIBLE:
+${menuTexto || "Menú no disponible"}
 
-HORA: ${getHoraColombia().toLocaleTimeString("es-CO")}`;
+CONOCIMIENTO ADICIONAL (aprendido por Luz):
+${aprendizajes || "Sin notas adicionales"}
 
-    // Construir historial de mensajes para Claude
+HORA ACTUAL: ${getHoraColombia().toLocaleTimeString("es-CO")}
+
+═══ CÓMO DEBES COMPORTARTE ═══
+
+1. PERSONALIZACIÓN Y NOTAS:
+Cuando el cliente pida algo especial (sin cebolla, extra queso, bien cocido, salsa aparte, sin tomate) dile SIEMPRE: "Escríbelo en el campo de Notas al confirmar el pedido, por ejemplo: sin cebolla, extra queso. El cocinero lo lee antes de preparar."
+
+2. RECOMENDAR PRODUCTOS:
+Cuando recomiendes un producto usa EXACTAMENTE este formato al final de tu respuesta:
+ACTION:ADD_PRODUCT:{"id":"PRODUCT_ID","nombre":"NOMBRE EXACTO","precio":PRECIO}
+(Usa el ID y nombre EXACTO del menú. Puedes recomendar hasta 3 productos.)
+
+3. NOTIFICAR AL PANEL cuando sea importante:
+ACTION:NOTIFY_PANEL:{"motivo":"descripción corta"}
+Usa esto para: alergias, quejas, pedidos especiales, cliente frustrado. NO para preguntas normales.
+
+4. ESTILO:
+- Respuestas de 2-3 líneas máximo. Directa y cálida.
+- Habla como una persona real, no como un bot
+- Si el cliente ya tiene puntos suficientes dile que puede canjear
+- Si hay promo hoy, menciónala de forma natural en la conversación
+- Termina siempre con una pregunta o acción concreta`;
+
+    // Construir historial
     var messages = [];
     if (historial && Array.isArray(historial)) {
-      historial.slice(-8).forEach(function(m) {
+      historial.slice(-10).forEach(function(m){
         messages.push({ role: m.rol === "luz" ? "assistant" : "user", content: m.texto });
       });
     }
     messages.push({ role: "user", content: mensaje });
 
-    // Llamar a Claude API
+    // Llamar a Claude Sonnet (más inteligente para este rol)
     var claudeR = await axios.post("https://api.anthropic.com/v1/messages", {
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 400,
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 600,
       system: systemPrompt,
       messages: messages
     }, {
@@ -2036,37 +2084,78 @@ HORA: ${getHoraColombia().toLocaleTimeString("es-CO")}`;
       }
     });
 
-    var respuesta = claudeR.data.content[0].text || "";
+    var respuestaRaw = claudeR.data.content[0].text || "";
 
-    // Detectar si hay notificación al panel
-    var notificar = null;
-    var matchNotif = respuesta.match(/\[NOTIFICAR_PANEL:\s*([^\]]+)\]/i);
-    if (matchNotif) {
-      notificar = matchNotif[1].trim();
-      respuesta = respuesta.replace(/\[NOTIFICAR_PANEL:[^\]]+\]/gi, "").trim();
-      // Guardar alerta en Supabase
+    // ── PROCESAR ACCIONES ───────────────────────────────────────────────────
+    var productosAgregar = [];
+    var notificaciones = [];
+    var respuesta = respuestaRaw;
+
+    // Extraer ACTION:ADD_PRODUCT
+    var reAddProd = /ACTION:ADD_PRODUCT:(\{[^}]+\})/gi;
+    var matchProd;
+    while ((matchProd = reAddProd.exec(respuestaRaw)) !== null) {
+      try {
+        var prodData = JSON.parse(matchProd[1]);
+        // Buscar el producto en el menú real para obtener datos completos
+        var prodReal = menuItems.find(function(p){
+          return p.id === prodData.id ||
+            (p.nombre && p.nombre.toLowerCase() === (prodData.nombre||"").toLowerCase());
+        });
+        if (prodReal) {
+          productosAgregar.push({
+            id: prodReal.id,
+            nombre: prodReal.nombre,
+            precio: Number(prodReal.precio),
+            descripcion: prodReal.descripcion || "",
+            categoria: prodReal.categoria || ""
+          });
+        }
+      } catch(ep) {}
+    }
+    respuesta = respuesta.replace(/ACTION:ADD_PRODUCT:\{[^}]+\}/gi, "").trim();
+
+    // Extraer ACTION:NOTIFY_PANEL
+    var reNotif = /ACTION:NOTIFY_PANEL:(\{[^}]+\})/gi;
+    var matchNotif;
+    while ((matchNotif = reNotif.exec(respuestaRaw)) !== null) {
+      try {
+        var notifData = JSON.parse(matchNotif[1]);
+        notificaciones.push(notifData.motivo || "Alerta del menú");
+      } catch(en) {}
+    }
+    respuesta = respuesta.replace(/ACTION:NOTIFY_PANEL:\{[^}]+\}/gi, "").trim();
+
+    // Guardar notificaciones al panel
+    for (var notif of notificaciones) {
       if (telefono) {
         await guardarMensajeSupabase(restaurante_id, stripCountryCode(telefono),
-          "🤖 LUZ MENÚ: " + notificar + " (cliente: " + (telefono || "anónimo") + ")",
+          "🤖 LUZ MENÚ: " + notif + " — cliente: " + (telefono||"anónimo") + " — dijo: \"" + mensaje.substring(0,80) + "\"",
           "alerta_pregunta", null
         ).catch(function(){});
       }
+      console.log("[luz-agente] 📢 Panel notificado:", notif);
     }
 
-    // Extraer productos mencionados para mostrar botones
-    var productosBtn = [];
-    var matchProd;
-    var reProd = /\[PRODUCTO:\s*([^\]]+)\]/gi;
-    while ((matchProd = reProd.exec(respuesta)) !== null) {
-      productosBtn.push(matchProd[1].trim());
-    }
-    respuesta = respuesta.replace(/\[PRODUCTO:[^\]]+\]/gi, "").trim();
+    // Limpiar respuesta final
+    respuesta = respuesta
+      .replace(/\s{2,}/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
 
-    console.log("[luz-menu-chat] " + (telefono||"anon") + " → '" + mensaje.substring(0,40) + "' | notif: " + (notificar||"no"));
-    res.json({ ok: true, respuesta, productos: productosBtn, notificado: !!notificar });
+    console.log("[luz-agente] " + (telefono||"anon") + " → '" + mensaje.substring(0,40) +
+      "' | productos: " + productosAgregar.length + " | notifs: " + notificaciones.length);
+
+    res.json({
+      ok: true,
+      respuesta: respuesta,
+      productos: productosAgregar,      // array completo con id, nombre, precio
+      notificado: notificaciones.length > 0
+    });
+
   } catch(e) {
-    console.error("[luz-menu-chat] Error:", e.response ? JSON.stringify(e.response.data) : e.message);
-    res.json({ ok: true, respuesta: "¡Hola! En este momento tengo un problema técnico. Escríbenos por WhatsApp y te ayudamos de inmediato 😊" });
+    console.error("[luz-agente] Error:", e.response ? JSON.stringify(e.response.data) : e.message);
+    res.json({ ok: true, respuesta: "Uy, tuve un momentico de falla. Escríbenos por WhatsApp y te ayudamos enseguida 😊", productos: [] });
   }
 });
 
