@@ -303,7 +303,7 @@ select.finput{cursor:pointer}
 .alert-text{flex:1;font-size:13px;font-weight:600}
 .alert-text.verde{color:#6ee7b7}.alert-text.purple{color:#c4b5fd}.alert-text.amber{color:#fcd34d}.alert-text.yellow{color:#a5b4fc}
 .alert-close{font-size:18px;padding:0 4px;background:none;border:none;cursor:pointer;color:var(--text3)}
-.msg-overlay{display:none;position:fixed;inset:0;z-index:450;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:flex-end;justify-content:center;}.msg-overlay.open{display:flex}
+.msg-overlay{display:none;position:fixed;inset:0;z-index:450;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);align-items:flex-end;justify-content:center;}.msg-overlay.open{display:flex}
 .msg-box{width:100%;max-width:480px;background:rgba(20,15,40,0.97);backdrop-filter:var(--blur2);-webkit-backdrop-filter:var(--blur2);border:1px solid var(--glass-border2);border-bottom:none;box-shadow:0 -12px 60px rgba(124,58,237,0.2),var(--shadow2);border-radius:28px 28px 0 0;height:calc(100vh - 80px);max-height:720px;display:flex;flex-direction:column;position:relative;overflow:hidden;}
 .msg-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.2);margin:12px auto 0;flex-shrink:0;display:block}
 .msg-header{background:linear-gradient(90deg,rgba(124,58,237,0.2),rgba(79,70,229,0.1));border-bottom:1px solid var(--glass-border);padding:12px 16px;flex-shrink:0;display:flex;align-items:center;gap:12px;}
@@ -315,35 +315,41 @@ select.finput{cursor:pointer}
 .msg-action-btn:hover{background:rgba(255,255,255,0.14);color:var(--text)}.msg-action-btn.active{background:rgba(124,58,237,0.25);border-color:rgba(124,58,237,0.4);color:#c4b5fd}
 .msg-silencio-row{display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(124,58,237,0.07);border-bottom:1px solid rgba(124,58,237,0.15);flex-shrink:0;}
 .msg-silencio-label{font-size:11px;color:#c4b5fd;flex:1;font-weight:600}
-#chatArea{flex:1;overflow-y:auto;min-height:0;padding:10px 12px;display:flex;flex-direction:column;gap:4px;background:rgba(10,7,24,0.6);background-image:radial-gradient(rgba(124,58,237,0.04) 1px,transparent 1px);background-size:24px 24px;scroll-behavior:smooth;}
+#chatArea{flex:1;overflow-y:auto;min-height:0;padding:12px 14px 8px;display:flex;flex-direction:column;gap:2px;background:#0a0714;scroll-behavior:smooth;}
 #chatArea::-webkit-scrollbar{width:3px}#chatArea::-webkit-scrollbar-thumb{background:rgba(124,58,237,0.3);border-radius:3px}
-.chat-day-divider{text-align:center;margin:8px 0;flex-shrink:0}
-.chat-day-label{display:inline-block;background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);color:var(--text3);font-size:10px;padding:3px 12px;border-radius:20px;font-family:'JetBrains Mono',monospace;letter-spacing:0.06em;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
-.chat-bubble{max-width:78%;padding:10px 14px;border-radius:20px;font-size:14px;line-height:1.45;word-break:break-word;flex-shrink:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
-.chat-cliente{align-self:flex-start;margin-left:4px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.14);border-bottom-left-radius:5px;color:var(--text);}
-.chat-restaurante{align-self:flex-end;margin-right:4px;background:linear-gradient(135deg,rgba(16,185,129,0.7),rgba(5,150,105,0.8));color:white;border-bottom-right-radius:5px;box-shadow:0 2px 14px rgba(16,185,129,0.25);}
-.chat-sending{animation:chatPulse 1.2s ease infinite;}
-@keyframes chatPulse{0%,100%{opacity:1}50%{opacity:0.65}}
-@keyframes chatNewMsg{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)}}
-.chat-luz-estado{align-self:flex-end;margin-right:4px;background:rgba(99,102,241,0.18);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-bottom-right-radius:5px;}
-.chat-alerta-pregunta{align-self:flex-start;margin-left:4px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:#fcd34d;border-bottom-left-radius:5px;}
-.chat-time{font-size:10px;opacity:0.55;margin-top:4px;text-align:right}.chat-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;opacity:0.6}
-.chat-img-bubble{align-self:flex-start;margin-left:4px;background:rgba(255,255,255,0.08);border:1px solid var(--glass-border);border-radius:16px;border-bottom-left-radius:5px;padding:5px;max-width:220px;flex-shrink:0;cursor:pointer;}
+.chat-day-divider{display:flex;align-items:center;gap:8px;margin:10px 0 6px;flex-shrink:0}
+.chat-day-divider::before,.chat-day-divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.06)}
+.chat-day-label{font-size:10px;font-weight:700;color:rgba(255,255,255,0.22);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;background:rgba(255,255,255,0.04);padding:3px 10px;border-radius:10px}
+.chat-bubble{max-width:80%;padding:9px 13px 6px;font-size:13.5px;line-height:1.5;word-break:break-word;flex-shrink:0;position:relative;margin-bottom:1px}
+.chat-cliente{align-self:flex-start;background:#1e1a30;border:1px solid rgba(255,255,255,0.08);border-radius:4px 18px 18px 18px;color:#f0eeff;margin-left:2px;box-shadow:0 1px 4px rgba(0,0,0,0.3)}
+.chat-restaurante{align-self:flex-end;background:linear-gradient(135deg,#065f46,#047857);border-radius:18px 4px 18px 18px;color:#fff;margin-right:2px;box-shadow:0 2px 10px rgba(5,150,105,0.25)}
+.chat-sending{opacity:0.65;animation:chatPulse 1.2s ease infinite;}
+@keyframes chatPulse{0%,100%{opacity:0.65}50%{opacity:1}}
+@keyframes chatNewMsg{0%{opacity:0;transform:translateY(10px) scale(0.97)}100%{opacity:1;transform:translateY(0) scale(1)}}
+.chat-new{animation:chatNewMsg 0.3s ease}
+.chat-luz-estado{align-self:flex-start;background:linear-gradient(135deg,#1e1040,#140d30);border:1px solid rgba(124,58,237,0.2);border-radius:4px 18px 18px 18px;color:#c4b5fd;margin-left:2px;box-shadow:0 1px 8px rgba(124,58,237,0.1)}
+.chat-alerta-pregunta{align-self:flex-start;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.22);border-radius:4px 18px 18px 18px;color:#fcd34d;margin-left:2px}
+.chat-time{font-size:10px;color:rgba(255,255,255,0.28);text-align:right;margin-top:4px;display:flex;align-items:center;justify-content:flex-end;gap:4px}
+.chat-restaurante .chat-time{color:rgba(255,255,255,0.5)}.chat-restaurante .chat-time::after{content:'✓✓';font-size:9px;color:#34d399}
+.chat-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.chat-luz-estado .chat-label{color:#a855f7}.chat-alerta-pregunta .chat-label{color:rgba(245,158,11,0.8)}
+.chat-restaurante .chat-label{color:rgba(255,255,255,0.6)}
+.chat-img-bubble{align-self:flex-start;margin-left:2px;background:#1e1a30;border:1px solid rgba(255,255,255,0.08);border-radius:4px 18px 18px 18px;padding:5px;max-width:220px;flex-shrink:0;cursor:pointer;overflow:hidden}
 .chat-img-bubble img{width:100%;border-radius:12px;max-height:180px;object-fit:cover;display:block}
-.chat-img-caption{font-size:11px;color:var(--text3);margin-top:5px;padding:0 4px 4px}
-.chat-comp-bubble{align-self:flex-start;margin-left:4px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:16px;border-bottom-left-radius:5px;padding:7px;max-width:230px;flex-shrink:0;cursor:pointer;}
-.chat-comp-bubble img{width:100%;border-radius:10px;max-height:180px;object-fit:cover;display:block}
-.chat-comp-label{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#34d399;margin-bottom:6px;padding:0 4px;font-family:'JetBrains Mono',monospace}
-.chat-comp-time{font-size:10px;color:var(--text3);margin-top:4px;text-align:right}
-.chat-input-area{background:rgba(13,10,26,0.8);border-top:1px solid var(--glass-border);padding:10px 12px;flex-shrink:0}
+.chat-img-caption{font-size:11px;color:rgba(255,255,255,0.4);margin-top:5px;padding:0 4px 4px}
+.chat-comp-bubble{align-self:flex-start;margin-left:2px;background:#0e2018;border:1px solid rgba(16,185,129,0.25);border-radius:4px 18px 18px 18px;overflow:hidden;max-width:72%;cursor:pointer;box-shadow:0 2px 8px rgba(16,185,129,0.12)}
+.chat-comp-bubble img{width:100%;max-height:200px;object-fit:cover;display:block}
+.chat-comp-label{padding:8px 12px 5px;font-size:11px;font-weight:700;color:#6ee7b7;display:flex;align-items:center;gap:5px}
+.chat-comp-time{padding:3px 12px 8px;font-size:10px;color:rgba(255,255,255,0.28);text-align:right}
+.chat-input-area{background:rgba(10,7,20,0.95);border-top:1px solid rgba(255,255,255,0.07);padding:10px 12px;flex-shrink:0}
 .chat-tools-row{display:flex;gap:6px;margin-bottom:8px}
-.chat-tool-btn{flex:1;padding:8px;background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:11px;color:var(--text3);font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.15s;font-family:'Plus Jakarta Sans',sans-serif;}
-.chat-tool-btn:hover{border-color:rgba(124,58,237,0.4);color:#c4b5fd;background:rgba(124,58,237,0.1)}.chat-tool-btn.active{background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.4);color:#c4b5fd}
+.chat-tool-btn{flex:1;padding:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:rgba(255,255,255,0.4);font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.15s;font-family:'Plus Jakarta Sans',sans-serif;}
+.chat-tool-btn:hover{border-color:rgba(124,58,237,0.35);color:#c4b5fd;background:rgba(124,58,237,0.08)}.chat-tool-btn.active{background:rgba(124,58,237,0.12);border-color:rgba(124,58,237,0.3);color:#c4b5fd}
 .chat-input-row{display:flex;gap:8px;align-items:flex-end}
-.chat-textarea{flex:1;padding:11px 15px;background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);border-radius:24px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;outline:none;resize:none;height:46px;max-height:120px;transition:all 0.15s;overflow-y:auto;}
-.chat-textarea:focus{border-color:rgba(124,58,237,0.6);background:rgba(124,58,237,0.08);box-shadow:0 0 0 3px rgba(124,58,237,0.12)}
-.chat-send-btn{width:46px;height:46px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:50%;color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;box-shadow:0 4px 16px rgba(124,58,237,0.5);}.chat-send-btn:active{transform:scale(0.9)}
-.chat-img-btn{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);color:var(--text2);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;flex-shrink:0}.chat-img-btn:hover{background:rgba(255,255,255,0.14);color:var(--text)}
+.chat-textarea{flex:1;padding:11px 15px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:24px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;outline:none;resize:none;height:46px;max-height:120px;transition:all 0.15s;overflow-y:auto;}
+.chat-textarea:focus{border-color:rgba(124,58,237,0.5);background:rgba(124,58,237,0.06);box-shadow:0 0 0 3px rgba(124,58,237,0.1)}
+.chat-send-btn{width:46px;height:46px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:50%;color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;box-shadow:0 4px 16px rgba(124,58,237,0.4)}.chat-send-btn:active{transform:scale(0.9)}
+.chat-img-btn{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.09);color:rgba(255,255,255,0.5);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;flex-shrink:0}.chat-img-btn:hover{background:rgba(255,255,255,0.12);color:var(--text)}
 .constructor-panel{display:none;position:absolute;bottom:0;left:0;right:0;background:rgba(13,10,26,0.98);backdrop-filter:var(--blur2);-webkit-backdrop-filter:var(--blur2);border-top:2px solid #7c3aed;border-radius:20px 20px 0 0;padding:18px;z-index:10;max-height:78vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(124,58,237,0.2);}
 .constructor-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .constructor-title{font-size:15px;font-weight:800;background:linear-gradient(135deg,#c4b5fd,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
@@ -2073,34 +2079,58 @@ function filtrarChats(modo){
 }
 function loadChatUniversal(){
   if(!rest)return;
-  document.getElementById("chatUniversalLista").innerHTML='<div class="empty"><div class="et">Cargando...</div></div>';
-  // Load silencios from DB first, then messages
-  fetch("/api/supabase/silencio_conversacion?restaurante_id=eq."+rest.id+"&activo=eq.true&select=telefono").then(function(r){return r.json();}).then(function(sils){
-    (sils||[]).forEach(function(s){if(s.telefono)silencioPorTel[s.telefono]=true;});
-  }).catch(function(){}).finally(function(){
-  get("mensajes","restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=300").then(function(msgs){
-    get("pedidos","restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=300&select=cliente_tel,estado,numero_pedido,created_at").then(function(pedidos){
-      var pedidosPorTel={};
-      pedidos.forEach(function(p){if(!pedidosPorTel[p.cliente_tel])pedidosPorTel[p.cliente_tel]=[];pedidosPorTel[p.cliente_tel].push(p);});
-      var convsMap={};
-      msgs.forEach(function(m){
-        var tel=m.telefono;
-        if(!convsMap[tel])convsMap[tel]={tel:tel,ultimo:m.mensaje,fecha:m.created_at,tipo:m.tipo,totalMsgs:0,pidioHumano:false,tienePregunta:false};
-        convsMap[tel].totalMsgs++;
-        if(m.tipo==="cliente"){var txt=(m.mensaje||"").toLowerCase();if(["hablar con","persona real","asesor","humano","encargado"].some(function(p){return txt.indexOf(p)!==-1;}))convsMap[tel].pidioHumano=true;}
-        if(m.tipo==="alerta_pregunta")convsMap[tel].tienePregunta=true;
-      });
-      chatUniversalData=Object.values(convsMap).map(function(c){
-        var peds=pedidosPorTel[c.tel]||[];
-        c.pedidoAbierto=peds.some(function(p){return p.estado!=="entregado";});
-        c.tienePedido=peds.length>0;c.ultimoPedidoNum=peds.length>0?peds[0].numero_pedido:null;
-        c.silenciado=silencioPorTel[c.tel]||false;
-        return c;
-      }).sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
-      renderChatUniversal();
-    }).catch(function(){renderChatUniversal();});
-  }).catch(function(){document.getElementById("chatUniversalLista").innerHTML='<div class="empty"><div class="et">Error</div></div>';});
-  }); // end of silencio finally
+  document.getElementById("chatUniversalLista").innerHTML='<div class="empty"><div class="et">Cargando conversaciones...</div></div>';
+  // Cargar silencios activos
+  fetch("/api/supabase/silencio_conversacion?restaurante_id=eq."+rest.id+"&activo=eq.true&select=telefono")
+    .then(function(r){return r.json();})
+    .then(function(sils){(sils||[]).forEach(function(s){if(s.telefono)silencioPorTel[s.telefono]=true;});})
+    .catch(function(){})
+    .finally(function(){
+      // Cargar mensajes
+      fetch("/api/supabase/mensajes?restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=300")
+        .then(function(r){
+          if(!r.ok)throw new Error("HTTP "+r.status);
+          return r.json();
+        })
+        .then(function(msgs){
+          if(!Array.isArray(msgs))throw new Error("Respuesta inválida");
+          // Cargar pedidos en paralelo
+          return fetch("/api/supabase/pedidos?restaurante_id=eq."+rest.id+"&order=created_at.desc&limit=300&select=cliente_tel,estado,numero_pedido,created_at")
+            .then(function(r){return r.json();})
+            .then(function(pedidos){
+              var pedidosPorTel={};
+              (pedidos||[]).forEach(function(p){
+                if(!pedidosPorTel[p.cliente_tel])pedidosPorTel[p.cliente_tel]=[];
+                pedidosPorTel[p.cliente_tel].push(p);
+              });
+              var convsMap={};
+              msgs.forEach(function(m){
+                var tel=m.telefono;
+                if(!tel)return;
+                if(!convsMap[tel])convsMap[tel]={tel:tel,ultimo:m.mensaje,fecha:m.created_at,tipo:m.tipo,totalMsgs:0,pidioHumano:false,tienePregunta:false,tieneAlerta:false};
+                convsMap[tel].totalMsgs++;
+                // El más reciente es el primero (order desc)
+                if(convsMap[tel].totalMsgs===1){convsMap[tel].ultimo=m.mensaje;convsMap[tel].fecha=m.created_at;convsMap[tel].tipo=m.tipo;}
+                var txt=(m.mensaje||"").toLowerCase();
+                if(m.tipo==="cliente"&&["hablar con","persona real","asesor","humano","encargado"].some(function(p){return txt.indexOf(p)!==-1;}))convsMap[tel].pidioHumano=true;
+                if(m.tipo==="alerta_pregunta")convsMap[tel].tienePregunta=true;
+              });
+              chatUniversalData=Object.values(convsMap).map(function(c){
+                var peds=pedidosPorTel[c.tel]||[];
+                c.pedidoAbierto=peds.some(function(p){return["confirmado","en_preparacion","listo","en_camino"].indexOf(p.estado)!==-1;});
+                c.tienePedido=peds.length>0;
+                c.ultimoPedidoNum=peds.length>0?peds[0].numero_pedido:null;
+                c.silenciado=silencioPorTel[c.tel]||false;
+                return c;
+              }).sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
+              renderChatUniversal();
+            });
+        })
+        .catch(function(err){
+          console.error("[chat] Error cargando mensajes:", err);
+          document.getElementById("chatUniversalLista").innerHTML='<div class="empty"><div class="et">Error cargando. Recarga el panel.</div></div>';
+        });
+    });
 }
 function renderChatUniversal(){
   var lista=document.getElementById("chatUniversalLista"),datos=chatUniversalData;
@@ -2112,12 +2142,24 @@ function renderChatUniversal(){
   var h="";
   datos.forEach(function(c){
     var tagClass=c.tienePregunta?"tag-incompleto":(c.pidioHumano?"tag-humano":(c.pedidoAbierto?"tag-incompleto":"tag-completado"));
-    var tagLabel=c.tienePregunta?"? Pregunta":(c.pidioHumano?"Pide persona":(c.pedidoAbierto?"Sin cerrar":"Cerrado"));
-    if(!c.tienePedido){tagClass="tag-incompleto";tagLabel="Sin pedido";}
-    h+='<div class="chat-item" data-tel="'+c.tel+'" data-num="'+(c.ultimoPedidoNum||"")+'">'+
-      '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px"><div style="font-size:13px;font-weight:700;font-family:monospace;color:var(--text)">📱 '+c.tel+(c.silenciado?' <span style="font-size:10px;color:#a855f7">🔇</span>':"")+'</div><span class="chat-item-tag '+tagClass+'">'+tagLabel+'</span></div>'+
-      '<div class="chat-item-preview">'+(c.tipo==="alerta_pregunta"?"? ":"")+(c.ultimo||"").replace("ALERTA_PREGUNTA: ","").substring(0,55)+'</div>'+
-      '<div style="font-size:10px;color:var(--text3);margin-top:4px">'+ago(c.fecha)+(c.ultimoPedidoNum?" · Pedido #"+c.ultimoPedidoNum:"")+'</div></div></div>';
+    var tagLabel=c.tienePregunta?"⚠️ Alerta":(c.pidioHumano?"🙋 Humano":(c.pedidoAbierto?"🔄 Activo":"✓ Cerrado"));
+    if(!c.tienePedido){tagClass="tag-incompleto";tagLabel="💬 Sin pedido";}
+    var preview=(c.ultimo||"").replace("ALERTA_PREGUNTA: ","").replace("AGENTE LUZ:","").substring(0,52);
+    var esLuz=c.tipo==="estado_luz"||c.tipo==="restaurante";
+    var esAlerta=c.tipo==="alerta_pregunta";
+    var previewIco=esAlerta?"⚠️ ":esLuz?"🤖 ":"";
+    var iniciales=(c.tel||"??").slice(-2);
+    h+='<div class="chat-item" data-tel="'+c.tel+'" data-num="'+(c.ultimoPedidoNum||"")+'" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background .15s" onmouseover="this.style.background=\'rgba(255,255,255,0.04)\'" onmouseout="this.style.background=\'\'">';
+    // Avatar
+    h+='<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#4c1d95,#1e3a8a);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;flex-shrink:0;font-family:monospace">'+iniciales+'</div>';
+    h+='<div style="flex:1;min-width:0">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">';
+    h+='<div style="font-size:13px;font-weight:700;color:var(--text);font-family:monospace">'+c.tel+(c.silenciado?' 🔇':'')+'</div>';
+    h+='<div style="display:flex;align-items:center;gap:6px"><span style="font-size:10px;color:var(--text3)">'+ago(c.fecha)+'</span><span class="chat-item-tag '+tagClass+'">'+tagLabel+'</span></div>';
+    h+='</div>';
+    h+='<div style="font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+previewIco+preview+'</div>';
+    if(c.ultimoPedidoNum)h+='<div style="font-size:10px;color:rgba(124,58,237,0.6);margin-top:1px">Pedido #'+c.ultimoPedidoNum+'</div>';
+    h+='</div></div>';
   });
   lista.innerHTML=h;
   lista.querySelectorAll(".chat-item").forEach(function(el){el.addEventListener("click",function(){abrirChat(this.getAttribute("data-tel"),this.getAttribute("data-num"),"");});});
@@ -2152,37 +2194,71 @@ function cargarMensajesChat(forzar){
     .catch(function(){});
 }
 function renderMensajesChat(msgs,forzar){
-  if(!msgs.length){document.getElementById("chatArea").innerHTML='<div style="color:var(--text3);font-size:12px;text-align:center;padding:20px 0;">No hay mensajes aun.</div>';return;}
+  if(!msgs||!msgs.length){document.getElementById("chatArea").innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:0.4"><div style="font-size:32px">💬</div><div style="font-size:13px;color:var(--text3)">Sin mensajes aún</div></div>';return;}
   var ultimoTs=msgs[msgs.length-1].created_at;
   if(!forzar&&ultimoTs===chatLastTs)return;
   var esNuevo=!forzar&&chatLastTs&&ultimoTs!==chatLastTs;
   chatLastTs=ultimoTs;
   var h="";var lastDay="";
-  msgs.forEach(function(m){
-    var txt=m.mensaje||"";
+  msgs.forEach(function(m,idx){
+    var txt=(m.mensaje||"").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
     var horaStr=fmtHora(m.created_at);
     var dia=m.created_at?m.created_at.split("T")[0]:"";
-    if(dia!==lastDay){var diaLabel=dia===new Date().toISOString().split("T")[0]?"Hoy":new Date(dia+"T12:00:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short"});h+='<div class="chat-day-divider"><span class="chat-day-label">'+diaLabel+'</span></div>';lastDay=dia;}
+    var esUltimo=idx===msgs.length-1;
+    // Divisor de día
+    if(dia!==lastDay){
+      var hoy=new Date().toISOString().split("T")[0];
+      var ayer=new Date(Date.now()-86400000).toISOString().split("T")[0];
+      var diaLabel=dia===hoy?"Hoy":dia===ayer?"Ayer":new Date(dia+"T12:00:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short"});
+      h+='<div class="chat-day-divider"><span class="chat-day-label">'+diaLabel+'</span></div>';
+      lastDay=dia;
+    }
+    var newCls=esNuevo&&esUltimo?" chat-new":"";
+    // Comprobante
     var mediaIdComp=m.comprobante_media_id||(m.media_id&&(txt.indexOf("imagen")!==-1||txt.indexOf("comprobante")!==-1)?m.media_id:null);
-    if(m.tipo==="cliente"&&mediaIdComp){h+='<div class="chat-comp-bubble" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+mediaIdComp+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')"><div class="chat-comp-label"><span>✅</span> Comprobante de pago</div><img src="/api/comprobante/'+mediaIdComp+'" onerror="this.style.display=\'none\'"><div class="chat-comp-time">'+horaStr+'</div></div>';}
-    else if(m.tipo==="cliente"&&!mediaIdComp&&txt.indexOf("[El cliente envio una imagen]")!==-1&&m.media_id){h+='<div class="chat-img-bubble" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+m.media_id+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')"><img src="/api/comprobante/'+m.media_id+'" onerror="this.style.display=\'none\'"><div class="chat-img-caption">Imagen del cliente</div></div>';}
-    else if(m.tipo==="estado_luz"){h+='<div class="chat-bubble chat-luz-estado"><div class="chat-label">🤖 Luz (auto)</div><div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';}
-    else if(m.tipo==="alerta_pregunta"){h+='<div class="chat-bubble chat-alerta-pregunta"><div class="chat-label">? Pregunta sin respuesta</div><div>'+txt.replace("ALERTA_PREGUNTA: ","")+'</div><div class="chat-time">'+horaStr+'</div></div>';}
-    else if(m.tipo==="restaurante"){h+='<div class="chat-bubble chat-restaurante"><div class="chat-label">👤 Panel</div><div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';}
-    else{h+='<div class="chat-bubble chat-cliente"><div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';}
+    if(m.tipo==="cliente"&&mediaIdComp){
+      h+='<div class="chat-comp-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+mediaIdComp+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
+      h+='<div class="chat-comp-label">📎 Comprobante de pago</div>';
+      h+='<img src="/api/comprobante/'+mediaIdComp+'" onerror="this.style.display=\'none\'" loading="lazy">';
+      h+='<div class="chat-comp-time">'+horaStr+'</div></div>';
+    }
+    // Imagen del cliente
+    else if(m.tipo==="cliente"&&txt.indexOf("[El cliente envio una imagen]")!==-1&&m.media_id){
+      h+='<div class="chat-img-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+m.media_id+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
+      h+='<img src="/api/comprobante/'+m.media_id+'" onerror="this.style.display=\'none\'" loading="lazy">';
+      h+='<div class="chat-img-caption">📷 Imagen del cliente</div></div>';
+    }
+    // Luz automático
+    else if(m.tipo==="estado_luz"){
+      h+='<div class="chat-bubble chat-luz-estado'+newCls+'">';
+      h+='<div class="chat-label"><img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" style="width:14px;height:14px;border-radius:50%;object-fit:cover;object-position:center top" onerror="this.style.display=\'none\'"> LUZ · Auto</div>';
+      h+='<div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';
+    }
+    // Alerta pregunta
+    else if(m.tipo==="alerta_pregunta"){
+      var limpioTxt=txt.replace("ALERTA_PREGUNTA: ","").replace("AGENTE LUZ:","<strong>🤖 AGENTE:</strong>");
+      var esCanje=limpioTxt.indexOf("CANJE")!==-1;
+      var esAgente=limpioTxt.indexOf("AGENTE")!==-1;
+      h+='<div class="chat-bubble chat-alerta-pregunta'+newCls+'">';
+      h+='<div class="chat-label">'+(esCanje?"⭐ Canje":esAgente?"🤖 Agente Luz":"⚠️ Alerta")+'</div>';
+      h+='<div>'+limpioTxt+'</div><div class="chat-time">'+horaStr+'</div></div>';
+    }
+    // Panel/restaurante
+    else if(m.tipo==="restaurante"){
+      h+='<div class="chat-bubble chat-restaurante'+newCls+'">';
+      h+='<div class="chat-label">👤 Panel</div>';
+      h+='<div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';
+    }
+    // Cliente
+    else{
+      h+='<div class="chat-bubble chat-cliente'+newCls+'">';
+      h+='<div>'+txt+'</div>';
+      h+='<div class="chat-time">'+horaStr+'</div></div>';
+    }
   });
   var box=document.getElementById("chatArea");
   box.innerHTML=h;
-  // Auto-scroll suave al fondo
   requestAnimationFrame(function(){box.scrollTo({top:box.scrollHeight,behavior:esNuevo?"smooth":"auto"});});
-  // Si hay mensaje nuevo del cliente, sonido visual
-  if(esNuevo){
-    var ultimoMsg=msgs[msgs.length-1];
-    if(ultimoMsg.tipo==="cliente"){
-      var lastBubble=box.lastElementChild;
-      if(lastBubble){lastBubble.style.animation="chatNewMsg 0.4s ease";};
-    }
-  }
 }
 function cerrarChat(){
   document.getElementById("msgOverlay").classList.remove("open");
