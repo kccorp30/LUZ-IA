@@ -2189,76 +2189,89 @@ function abrirChat(tel,num,comp){
 function cargarMensajesChat(forzar){
   if(!msgTel||!rest)return;
   fetch("/api/chat/"+encodeURIComponent(msgTel)+"?restaurante_id="+encodeURIComponent(rest.id))
-    .then(function(r){return r.json();})
-    .then(function(d){if(d.ok)renderMensajesChat(d.mensajes||[],forzar);})
-    .catch(function(){});
+    .then(function(r){
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      return r.json();
+    })
+    .then(function(d){
+      if(d.ok) renderMensajesChat(d.mensajes||[], forzar);
+    })
+    .catch(function(e){ console.error("[chat] Error cargando:", e.message); });
 }
-function renderMensajesChat(msgs,forzar){
-  if(!msgs||!msgs.length){document.getElementById("chatArea").innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:0.4"><div style="font-size:32px">💬</div><div style="font-size:13px;color:var(--text3)">Sin mensajes aún</div></div>';return;}
-  var ultimoTs=msgs[msgs.length-1].created_at;
-  if(!forzar&&ultimoTs===chatLastTs)return;
-  var esNuevo=!forzar&&chatLastTs&&ultimoTs!==chatLastTs;
-  chatLastTs=ultimoTs;
-  var h="";var lastDay="";
-  msgs.forEach(function(m,idx){
-    var txt=(m.mensaje||"").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
-    var horaStr=fmtHora(m.created_at);
-    var dia=m.created_at?m.created_at.split("T")[0]:"";
-    var esUltimo=idx===msgs.length-1;
+function renderMensajesChat(msgs, forzar){
+  if(!msgs||!msgs.length){
+    document.getElementById("chatArea").innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:0.4"><div style="font-size:32px">💬</div><div style="font-size:13px;color:var(--text3)">Sin mensajes aún</div></div>';
+    return;
+  }
+  // Usar count + último timestamp + último mensaje para detectar cambios
+  var ultimoTs = msgs[msgs.length-1].created_at || "";
+  var ultimoTxt = (msgs[msgs.length-1].mensaje||"").substring(0,20);
+  var cacheKey = msgs.length + "|" + ultimoTs + "|" + ultimoTxt;
+  if(!forzar && cacheKey === chatLastTs) return;
+  var esNuevo = !forzar && chatLastTs && cacheKey !== chatLastTs;
+  chatLastTs = cacheKey;
+  var h=""; var lastDay="";
+  msgs.forEach(function(m, idx){
+    var txt = (m.mensaje||"").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+    var horaStr = fmtHora(m.created_at);
+    var dia = m.created_at ? m.created_at.split("T")[0] : "";
+    var esUltimo = idx === msgs.length-1;
     // Divisor de día
-    if(dia!==lastDay){
-      var hoy=new Date().toISOString().split("T")[0];
-      var ayer=new Date(Date.now()-86400000).toISOString().split("T")[0];
-      var diaLabel=dia===hoy?"Hoy":dia===ayer?"Ayer":new Date(dia+"T12:00:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short"});
-      h+='<div class="chat-day-divider"><span class="chat-day-label">'+diaLabel+'</span></div>';
-      lastDay=dia;
+    if(dia !== lastDay){
+      var hoy = new Date().toISOString().split("T")[0];
+      var ayer = new Date(Date.now()-86400000).toISOString().split("T")[0];
+      var diaLabel = dia===hoy?"Hoy" : dia===ayer?"Ayer" : new Date(dia+"T12:00:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"short"});
+      h += '<div class="chat-day-divider"><span class="chat-day-label">'+diaLabel+'</span></div>';
+      lastDay = dia;
     }
-    var newCls=esNuevo&&esUltimo?" chat-new":"";
-    // Comprobante
-    var mediaIdComp=m.comprobante_media_id||(m.media_id&&(txt.indexOf("imagen")!==-1||txt.indexOf("comprobante")!==-1)?m.media_id:null);
+    var newCls = esNuevo&&esUltimo ? " chat-new" : "";
+    // Comprobante de pago
+    var mediaIdComp = m.comprobante_media_id || (m.media_id&&(txt.indexOf("imagen")!==-1||txt.indexOf("comprobante")!==-1)?m.media_id:null);
     if(m.tipo==="cliente"&&mediaIdComp){
-      h+='<div class="chat-comp-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+mediaIdComp+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
-      h+='<div class="chat-comp-label">📎 Comprobante de pago</div>';
-      h+='<img src="/api/comprobante/'+mediaIdComp+'" onerror="this.style.display=\'none\'" loading="lazy">';
-      h+='<div class="chat-comp-time">'+horaStr+'</div></div>';
+      h += '<div class="chat-comp-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+mediaIdComp+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
+      h += '<div class="chat-comp-label">📎 Comprobante de pago</div>';
+      h += '<img src="/api/comprobante/'+mediaIdComp+'" onerror="this.style.display=\'none\'" loading="lazy">';
+      h += '<div class="chat-comp-time">'+horaStr+'</div></div>';
     }
-    // Imagen del cliente
+    // Imagen cliente
     else if(m.tipo==="cliente"&&txt.indexOf("[El cliente envio una imagen]")!==-1&&m.media_id){
-      h+='<div class="chat-img-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+m.media_id+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
-      h+='<img src="/api/comprobante/'+m.media_id+'" onerror="this.style.display=\'none\'" loading="lazy">';
-      h+='<div class="chat-img-caption">📷 Imagen del cliente</div></div>';
+      h += '<div class="chat-img-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+m.media_id+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
+      h += '<img src="/api/comprobante/'+m.media_id+'" onerror="this.style.display=\'none\'" loading="lazy">';
+      h += '<div class="chat-img-caption">📷 Imagen del cliente</div></div>';
     }
     // Luz automático
     else if(m.tipo==="estado_luz"){
-      h+='<div class="chat-bubble chat-luz-estado'+newCls+'">';
-      h+='<div class="chat-label"><img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" style="width:14px;height:14px;border-radius:50%;object-fit:cover;object-position:center top" onerror="this.style.display=\'none\'"> LUZ · Auto</div>';
-      h+='<div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';
+      h += '<div class="chat-bubble chat-luz-estado'+newCls+'">';
+      h += '<div class="chat-label"><img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" style="width:14px;height:14px;border-radius:50%;object-fit:cover;object-position:center top" onerror="this.style.display=\'none\'"> LUZ · Auto</div>';
+      h += '<div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';
     }
-    // Alerta pregunta
+    // Alerta / agente
     else if(m.tipo==="alerta_pregunta"){
-      var limpioTxt=txt.replace("ALERTA_PREGUNTA: ","").replace("AGENTE LUZ:","<strong>🤖 AGENTE:</strong>");
-      var esCanje=limpioTxt.indexOf("CANJE")!==-1;
-      var esAgente=limpioTxt.indexOf("AGENTE")!==-1;
-      h+='<div class="chat-bubble chat-alerta-pregunta'+newCls+'">';
-      h+='<div class="chat-label">'+(esCanje?"⭐ Canje":esAgente?"🤖 Agente Luz":"⚠️ Alerta")+'</div>';
-      h+='<div>'+limpioTxt+'</div><div class="chat-time">'+horaStr+'</div></div>';
+      var limpioTxt = txt.replace("ALERTA_PREGUNTA: ","").replace("AGENTE LUZ:","<strong>🤖 AGENTE:</strong>");
+      var esCanje = limpioTxt.indexOf("CANJE")!==-1;
+      var esAgente = limpioTxt.indexOf("AGENTE")!==-1;
+      h += '<div class="chat-bubble chat-alerta-pregunta'+newCls+'">';
+      h += '<div class="chat-label">'+(esCanje?"⭐ Canje":esAgente?"🤖 Agente Luz":"⚠️ Alerta")+'</div>';
+      h += '<div>'+limpioTxt+'</div><div class="chat-time">'+horaStr+'</div></div>';
     }
-    // Panel/restaurante
+    // Panel
     else if(m.tipo==="restaurante"){
-      h+='<div class="chat-bubble chat-restaurante'+newCls+'">';
-      h+='<div class="chat-label">👤 Panel</div>';
-      h+='<div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';
+      h += '<div class="chat-bubble chat-restaurante'+newCls+'">';
+      h += '<div class="chat-label">👤 Panel</div>';
+      h += '<div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';
     }
     // Cliente
     else{
-      h+='<div class="chat-bubble chat-cliente'+newCls+'">';
-      h+='<div>'+txt+'</div>';
-      h+='<div class="chat-time">'+horaStr+'</div></div>';
+      h += '<div class="chat-bubble chat-cliente'+newCls+'">';
+      h += '<div>'+txt+'</div>';
+      h += '<div class="chat-time">'+horaStr+'</div></div>';
     }
   });
-  var box=document.getElementById("chatArea");
-  box.innerHTML=h;
-  requestAnimationFrame(function(){box.scrollTo({top:box.scrollHeight,behavior:esNuevo?"smooth":"auto"});});
+  var box = document.getElementById("chatArea");
+  box.innerHTML = h;
+  requestAnimationFrame(function(){
+    box.scrollTo({top:box.scrollHeight, behavior: esNuevo?"smooth":"auto"});
+  });
 }
 function cerrarChat(){
   document.getElementById("msgOverlay").classList.remove("open");
@@ -2293,7 +2306,7 @@ document.getElementById("chatImgInput").addEventListener("change",function(){
     var btn=document.getElementById("btnChatImg");btn.style.opacity="0.5";
     fetch("/enviar-imagen-cliente",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telefono:msgTel,restaurante_id:rest?rest.id:null,imagen:base64,mime:mime})})
     .then(function(r){return r.json();})
-    .then(function(d){if(d.ok){imgBurbuja.classList.remove("chat-sending");imgBurbuja.innerHTML='<div class="chat-label">👤 Panel</div><div>📷 Imagen enviada ✓</div>';notif("Imagen enviada");setTimeout(function(){cargarMensajesChat(true);},800);}else{imgBurbuja.style.opacity="0.5";imgBurbuja.innerHTML='<div>📷 Error enviando</div>';notif("Error: "+(d.error||"").substring(0,40));}})
+    .then(function(d){if(d.ok){imgBurbuja.classList.remove("chat-sending");imgBurbuja.innerHTML='<div class="chat-label">👤 Panel</div><div>📷 Imagen enviada ✓</div>';notif("Imagen enviada");chatLastTs="";setTimeout(function(){cargarMensajesChat(true);},600);}else{imgBurbuja.style.opacity="0.5";imgBurbuja.innerHTML='<div>📷 Error enviando</div>';notif("Error: "+(d.error||"").substring(0,40));}})
     .catch(function(){notif("Error de conexion");})
     .finally(function(){btn.style.opacity="1";document.getElementById("chatImgInput").value="";});
   };
@@ -2317,12 +2330,11 @@ function enviarMensaje(){
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.ok){
-        // Actualizar la burbuja para quitar "enviando..."
         var timeEl=burbuja.querySelector(".chat-time");
-        if(timeEl)timeEl.textContent=horaStr+" ✓";
+        if(timeEl)timeEl.textContent=horaStr+" ✓✓";
         burbuja.classList.remove("chat-sending");
-        // Recargar completo después para sincronizar con server
-        setTimeout(function(){cargarMensajesChat(true);},800);
+        chatLastTs=""; // forzar recarga
+        setTimeout(function(){cargarMensajesChat(true);},600);
       } else {
         burbuja.querySelector(".chat-time").textContent=horaStr+" ✗ Error";
         burbuja.style.opacity="0.5";
