@@ -1468,35 +1468,65 @@ if(window.speechSynthesis){
   setTimeout(function(){luzVoicesLoaded=true;},1000);
 }
 
-function luzHablar(texto,animacion){
-  // Mostrar burbuja
-  var bubble=document.getElementById("luzBubbleFloat");
-  var txt=document.getElementById("luzSpeechTxt");
-  var bars=document.getElementById("luzVoiceBars");
-  var av=document.getElementById("luzFloatAv");
-  if(!bubble||!txt)return;
-  txt.textContent=texto;
+function luzHablar(texto, animacion){
+  var bubble = document.getElementById("luzBubbleFloat");
+  var txt = document.getElementById("luzSpeechTxt");
+  var bars = document.getElementById("luzVoiceBars");
+  var av = document.getElementById("luzFloatAv");
+  if(!bubble||!txt) return;
+  txt.textContent = texto;
   bubble.classList.add("show");
-  // Animación del avatar
-  if(av&&animacion){
-    av.className="luz-float-avatar "+animacion;
-    setTimeout(function(){av.className="luz-float-avatar";},1500);
-  }
-  // Auto-ocultar después de 5 segundos
-  if(luzBubbleTimer)clearTimeout(luzBubbleTimer);
-  luzBubbleTimer=setTimeout(function(){bubble.classList.remove("show");},5500);
-  // Voz
+  if(av&&animacion){ av.className="luz-float-avatar "+animacion; setTimeout(function(){av.className="luz-float-avatar";},1500); }
+  if(luzBubbleTimer) clearTimeout(luzBubbleTimer);
+  luzBubbleTimer = setTimeout(function(){bubble.classList.remove("show");}, 5500);
+
   if(window.speechSynthesis){
     window.speechSynthesis.cancel();
-    var u=new SpeechSynthesisUtterance(texto);
-    u.lang="es-CO";u.rate=0.94;u.pitch=1.08;u.volume=0.85;
-    var voices=window.speechSynthesis.getVoices();
-    var voz=voices.find(function(v){return v.lang.startsWith("es")&&(v.name.indexOf("female")!==-1||v.name.indexOf("Female")!==-1||v.name.indexOf("Paulina")!==-1||v.name.indexOf("Monica")!==-1||v.name.indexOf("Laura")!==-1||v.name.indexOf("Sofia")!==-1);})
-      ||voices.find(function(v){return v.lang.startsWith("es");});
-    if(voz)u.voice=voz;
-    if(bars)bars.classList.add("on");
-    u.onend=function(){if(bars)bars.classList.remove("on");};
-    u.onerror=function(){if(bars)bars.classList.remove("on");};
+    // Limpiar texto para voz — quitar markdown, emojis, signos raros
+    var textoVoz = texto
+      .replace(/\*\*([^*]+)\*\*/g, "$1")   // **negrita** → texto
+      .replace(/\*([^*]+)\*/g, "$1")         // *cursiva* → texto
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g,"$1") // links
+      .replace(/\[[^\]]+\]/g, "")            // [corchetes] → nada
+      .replace(/#{1,6}\s/g, "")              // encabezados
+      .replace(/[•\-\*]\s/g, "")            // viñetas
+      .replace(/[\u{1F300}-\u{1FFFF}]/gu,"") // emojis
+      .replace(/[⭐🎁🍔🛵💳📱⚠️✅❌🔥💰👋🌟📝💜]/g,"")
+      .replace(/https?:\/\/\S+/g,"")         // URLs
+      .replace(/\s+/g," ")                   // espacios múltiples
+      .replace(/\n/g,". ")                   // saltos de línea → pausa
+      .trim();
+
+    // Solo hablar si hay texto real y no es muy largo
+    if(!textoVoz || textoVoz.length < 3) return;
+    if(textoVoz.length > 180) textoVoz = textoVoz.substring(0, 180) + "...";
+
+    var u = new SpeechSynthesisUtterance(textoVoz);
+    u.lang = "es-CO";
+    u.rate = 1.05;   // un poco más rápido — menos robótico
+    u.pitch = 1.15;  // tono más femenino y natural
+    u.volume = 0.88;
+
+    // Buscar mejor voz disponible
+    var voices = window.speechSynthesis.getVoices();
+    var voz = voices.find(function(v){
+      return v.lang === "es-CO" || v.lang === "es-419";
+    }) || voices.find(function(v){
+      return v.lang.startsWith("es") && (
+        v.name.indexOf("Paulina")!==-1 ||
+        v.name.indexOf("Mónica")!==-1 ||
+        v.name.indexOf("Monica")!==-1 ||
+        v.name.indexOf("Laura")!==-1 ||
+        v.name.indexOf("Sofia")!==-1 ||
+        v.name.indexOf("Female")!==-1 ||
+        v.name.indexOf("female")!==-1
+      );
+    }) || voices.find(function(v){ return v.lang.startsWith("es"); });
+
+    if(voz) u.voice = voz;
+    if(bars) bars.classList.add("on");
+    u.onend = function(){ if(bars) bars.classList.remove("on"); };
+    u.onerror = function(){ if(bars) bars.classList.remove("on"); };
     window.speechSynthesis.speak(u);
   }
 }
