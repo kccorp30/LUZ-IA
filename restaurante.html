@@ -2296,57 +2296,75 @@ document.getElementById("chatImgInput").addEventListener("change",function(){
   reader.onload=function(e){
     var base64=e.target.result.split(",")[1],mime=file.type||"image/jpeg";
     if(!msgTel){notif("No hay cliente activo");return;}
-    // Optimistic: mostrar preview de imagen enviada
-    var box=document.getElementById("chatArea");
-    var imgBurbuja=document.createElement("div");
-    imgBurbuja.className="chat-bubble chat-restaurante chat-sending";
-    imgBurbuja.innerHTML='<div class="chat-label">👤 Panel</div><div>📷 Enviando imagen...</div>';
-    box.appendChild(imgBurbuja);
-    box.scrollTop=box.scrollHeight;
     var btn=document.getElementById("btnChatImg");btn.style.opacity="0.5";
+    if(chatTimer)clearInterval(chatTimer);
     fetch("/enviar-imagen-cliente",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telefono:msgTel,restaurante_id:rest?rest.id:null,imagen:base64,mime:mime})})
     .then(function(r){return r.json();})
-    .then(function(d){if(d.ok){imgBurbuja.classList.remove("chat-sending");imgBurbuja.innerHTML='<div class="chat-label">👤 Panel</div><div>📷 Imagen enviada ✓</div>';notif("Imagen enviada");chatLastTs="";setTimeout(function(){cargarMensajesChat(true);},600);}else{imgBurbuja.style.opacity="0.5";imgBurbuja.innerHTML='<div>📷 Error enviando</div>';notif("Error: "+(d.error||"").substring(0,40));}})
-    .catch(function(){notif("Error de conexion");})
+    .then(function(d){
+      if(d.ok){
+        notif("Imagen enviada ✓");
+        chatLastTs="";
+        setTimeout(function(){
+          cargarMensajesChat(true);
+          chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+        },800);
+      }else{
+        notif("Error: "+(d.error||"").substring(0,40));
+        chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+      }
+    })
+    .catch(function(){
+      notif("Error de conexion");
+      chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+    })
     .finally(function(){btn.style.opacity="1";document.getElementById("chatImgInput").value="";});
   };
   reader.readAsDataURL(file);
 });
 function enviarMensaje(){
-  var texto=document.getElementById("msgTexto").value.trim();if(!texto){return;}
-  var btn=document.getElementById("msgEnviar");btn.disabled=true;
-  // Optimistic: mostrar mensaje inmediatamente en el chat antes de que el server confirme
-  var box=document.getElementById("chatArea");
-  var ahora=new Date();
-  var horaStr=ahora.getHours().toString().padStart(2,"0")+":"+ahora.getMinutes().toString().padStart(2,"0");
-  var burbuja=document.createElement("div");
-  burbuja.className="chat-bubble chat-restaurante chat-sending";
-  burbuja.innerHTML='<div class="chat-label">👤 Panel</div><div>'+escHtml(texto)+'</div><div class="chat-time">'+horaStr+' · enviando...</div>';
-  box.appendChild(burbuja);
-  box.scrollTop=box.scrollHeight;
+  var texto=document.getElementById("msgTexto").value.trim();
+  if(!texto)return;
+  var btn=document.getElementById("msgEnviar");
+  btn.disabled=true;
   document.getElementById("msgTexto").value="";
   document.getElementById("msgTexto").style.height="46px";
-  fetch("/enviar-mensaje-cliente",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({telefono:msgTel,mensaje:texto,restaurante_id:rest?rest.id:null})})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.ok){
-        var timeEl=burbuja.querySelector(".chat-time");
-        if(timeEl)timeEl.textContent=horaStr+" ✓✓";
-        burbuja.classList.remove("chat-sending");
-        chatLastTs=""; // forzar recarga
-        setTimeout(function(){cargarMensajesChat(true);},600);
-      } else {
-        burbuja.querySelector(".chat-time").textContent=horaStr+" ✗ Error";
-        burbuja.style.opacity="0.5";
-        notif("Error: "+(d.error||"").substring(0,30));
-      }
-    })
-    .catch(function(){
-      burbuja.querySelector(".chat-time").textContent=horaStr+" ✗ Sin conexión";
-      burbuja.style.opacity="0.5";
-      notif("Error de conexion");
-    })
-    .finally(function(){btn.disabled=false;document.getElementById("msgTexto").focus();});
+
+  // Pausar el polling mientras enviamos
+  if(chatTimer)clearInterval(chatTimer);
+
+  // Indicador visual de envío en el input area (no en el chat)
+  btn.innerHTML="⏳";
+
+  fetch("/enviar-mensaje-cliente",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({telefono:msgTel,mensaje:texto,restaurante_id:rest?rest.id:null})
+  })
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.ok){
+      // Esperar 800ms a que Supabase tenga el mensaje, luego recargar
+      chatLastTs="";
+      setTimeout(function(){
+        cargarMensajesChat(true);
+        // Reanudar polling
+        chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+      },800);
+    } else {
+      notif("Error enviando: "+(d.error||"").substring(0,40));
+      // Reanudar polling
+      chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+    }
+  })
+  .catch(function(){
+    notif("Error de conexión");
+    chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+  })
+  .finally(function(){
+    btn.disabled=false;
+    btn.innerHTML="➤";
+    document.getElementById("msgTexto").focus();
+  });
 }
 document.getElementById("msgTexto").addEventListener("input",function(){this.style.height="46px";this.style.height=Math.min(this.scrollHeight,120)+"px";});
 document.getElementById("btnCerrarConstructor").addEventListener("click",function(){document.getElementById("constructorPedido").style.display="none";document.getElementById("btnConstructor").classList.remove("active");});
