@@ -4927,76 +4927,24 @@ function enviarALuz(){
   luzEnviarMensaje(txt);
 }
 
-// ── NÚCLEO: PROCESAR MENSAJE Y LLAMAR CLAUDE ──────────
+// ── NÚCLEO: PROCESAR MENSAJE Y LLAMAR AL AGENTE ───────────────
 async function luzEnviarMensaje(txt){
-  // Mostrar mensaje usuario
+  if(!rest||!txt.trim()) return;
   luzAgregarMsgChat("user", txt, false);
   document.getElementById("lcSugs").innerHTML = "";
-
-  // ── RESPUESTAS RÁPIDAS LOCALES (sin llamar a Claude) ──
-  var txtL = txt.toLowerCase().trim();
-  var respLocal = null;
-
-  if(txtL.indexOf("notas")!==-1||txtL.indexOf("dónde escribo")!==-1||txtL.indexOf("donde escribo")!==-1||txtL.indexOf("personaliz")!==-1||txtL.indexOf("cómo personalizo")!==-1){
-    respLocal = "📝 Las notas van en el campo **'Notas (opcional)'** que aparece en el checkout, justo antes de enviar tu pedido.\n\n"
-      + "Ahí puedes escribir lo que necesites, por ejemplo:\n"
-      + "• *sin cebolla, extra queso*\n"
-      + "• *carne bien cocida, salsa aparte*\n"
-      + "• *sin tomate, sin lechuga*\n"
-      + "• *es para alérgico al gluten* ⚠️\n\n"
-      + "El restaurante lo lee antes de preparar tu pedido. ¿Qué necesitas personalizar?";
-    luzMostrarSugerencias(["Sin cebolla","Extra queso","Término del asado","Tengo una alergia"]);
-  }
-  else if(txtL.indexOf("alergi")!==-1||txtL.indexOf("intoler")!==-1){
-    respLocal = "⚠️ Importante. Escribe tu alergia claramente en las **Notas del pedido** y el restaurante lo tendrá en cuenta.\n\n"
-      + "Ejemplo: *'Soy alérgico al maní'* o *'Intolerante al gluten'*.\n\n"
-      + "También voy a avisarle al restaurante ahora mismo para que estén pendientes. ¿A qué eres alérgico?";
-    // Notificar al panel automáticamente
-    setTimeout(function(){
-      var telN = null; try{telN=localStorage.getItem("luzCli_"+(rest?rest.id:""));}catch(e){}
-      fetch("/api/notificar-panel",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({restaurante_id:rest&&rest.id,telefono:telN||"menu",
-          mensaje:"⚠️ LUZ MENÚ: Cliente menciona ALERGIA — \""+txt+"\" — verificar antes de preparar",tipo:"alerta_pregunta"})
-      }).catch(function(){});
-    }, 500);
-    luzMostrarSugerencias(["Al maní","Al gluten","A los mariscos","Al huevo"]);
-  }
-  else if(txtL.indexOf("eso es todo")!==-1||txtL.indexOf("listo")!==-1||txtL==="ya"||txtL.indexOf("confirmar")!==-1){
-    respLocal = "¡Perfecto! 🛒 Cuando estés listo, toca el botón del carrito arriba para revisar tu pedido y confirmar. Recuerda escribir cualquier nota especial ahí.\n\n¡Que lo disfrutes!";
-    luzMostrarSugerencias(["Ver mi pedido 🛒","Agregar algo más"]);
-  }
-  else if(txtL.indexOf("cuántos puntos")!==-1||txtL.indexOf("mis puntos")!==-1||txtL.indexOf("cuantos puntos")!==-1){
-    if(window.clientePuntos && clientePuntos.puntos !== undefined){
-      respLocal = "⭐ Tienes **" + clientePuntos.puntos + " puntos** · Nivel **" + (clientePuntos.nivel_fidelidad||"Bronce") + "**.\n\n"
-        + (clientePuntos.puntos >= 50 ? "¡Ya puedes canjear! Ve a la sección de recompensas 🎁" : "Cada $1.000 en pedidos te da 1 punto. ¡Sigue pidiendo!");
-      luzMostrarSugerencias(["¿Qué puedo canjear?","Ver el menú","Ver promos"]);
-    }
-  }
-
-  if(respLocal){
-    luzConvHistory.push({role:"user",content:txt});
-    luzConvHistory.push({role:"assistant",content:respLocal});
-    luzAgregarMsgChat("luz", respLocal, true);
-    return;
-  }
-
-  // Agregar al historial para Claude
   luzConvHistory.push({ role: "user", content: txt });
 
-  // Mostrar typing
+  // Typing indicator
   var msgs = document.getElementById("lcMsgs");
   var typing = document.createElement("div");
-  typing.className = "lc-typing";
+  typing.className = "lc-typing"; typing.id = "luzTyping";
   typing.innerHTML = "<span></span><span></span><span></span>";
   msgs.appendChild(typing);
   msgs.scrollTop = msgs.scrollHeight;
-
-  // Actualizar status
   var status = document.getElementById("lcStatus");
   if(status) status.textContent = "● Pensando...";
 
   try {
-    // Construir contexto del menú para el backend
     var telLocal = null;
     try{ telLocal = localStorage.getItem("luzCli_"+(rest?rest.id:"")); }catch(e){}
 
@@ -5007,47 +4955,62 @@ async function luzEnviarMensaje(txt){
         restaurante_id: rest.id,
         mensaje: txt,
         telefono: telLocal,
-        historial: luzConvHistory.slice(-8).map(function(m){
+        historial: luzConvHistory.slice(-10).map(function(m){
           return { rol: m.role === "assistant" ? "luz" : "cliente", texto: m.content };
-        }),
-        // Enviar TODOS los items del menú disponibles — nombre, precio y descripción
-        menu_resumen: window.menuItems ? menuItems.filter(function(p){ return p.disponible !== false; }).map(function(p){
-          var desc = p.descripcion ? " — " + p.descripcion.substring(0,60) : "";
-          return p.nombre + " $" + Number(p.precio).toLocaleString("es-CO") + desc;
-        }).join("\n") : "",
-        promos: window.promosActivas ? promosActivas.map(function(p){ return p.titulo + ": " + (p.descripcion||p.desc||""); }).join("; ") : "",
-        puntos_cliente: window.clientePuntos ? clientePuntos.puntos : null
+        })
       })
     });
 
     var data = await response.json();
-    var respuesta = data.respuesta || "Perdona, no pude procesar eso. ¿Puedes intentarlo de nuevo?";
+    var respuesta = data.respuesta || "No pude procesar eso, intenta de nuevo.";
+
+    var t = document.getElementById("luzTyping");
+    if(t) t.remove();
+    if(status) status.textContent = "● En línea";
 
     luzConvHistory.push({ role: "assistant", content: respuesta });
     luzAgregarMsgChat("luz", respuesta, true);
 
-    // Mostrar chips de productos recomendados por el backend
-    if(data.productos && data.productos.length > 0){
-      luzMostrarChipsProductos(data.productos);
-    } else {
-      // Detectar productos mencionados en el texto
-      luzDetectarProductos(respuesta);
+    // MOSTRAR CHIPS DE PRODUCTOS — cada uno con boton de agregar real
+    var sug = document.getElementById("lcSugs");
+    if(sug) sug.innerHTML = "";
+    if(data.productos && data.productos.length > 0 && sug){
+      var chipsHtml = "";
+      data.productos.forEach(function(prod){
+        if(!prod.nombre) return;
+        var pPrecio = Number(prod.precio||0).toLocaleString("es-CO");
+        chipsHtml += "<button class='lc-sug' style='background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.3);color:#fb923c;font-weight:700;padding:8px 14px;gap:6px;display:flex;align-items:center' "
+          + "onclick='luzAgregarProductoById(""+prod.id+"","+JSON.stringify(prod.nombre)+","+Number(prod.precio)+")'>"
+          + "🛒 "+prod.nombre+" <span style='opacity:0.6;font-size:11px'>$"+pPrecio+"</span></button>";
+      });
+      sug.innerHTML = chipsHtml;
     }
 
-    // Sugerencias de seguimiento
-    var siguientes = luzSiguienteSugerencias(txt, respuesta);
-    if(siguientes.length) luzMostrarSugerencias(siguientes);
+    // Sugerencias contextuales si no hay chips de productos
+    if(!data.productos || !data.productos.length){
+      var sigs = luzSiguienteSugerencias(txt, respuesta);
+      if(sigs.length) luzMostrarSugerencias(sigs);
+    }
 
   } catch(e) {
-    console.error("[LuzChat]", e);
-    var fallback = "Uy, tuve un problema técnico. Para pedidos puedes usar el botón de WhatsApp, ¡te ayudo por allá! 🙏";
-    luzAgregarMsgChat("luz", fallback, true);
+    var t = document.getElementById("luzTyping");
+    if(t) t.remove();
+    if(status) status.textContent = "● En línea";
+    console.error("[LuzAgente]", e);
+    luzAgregarMsgChat("luz", "Tuve un problema de conexión. Intenta de nuevo o escríbenos por WhatsApp.", true);
   }
-
-  if(status) status.textContent = "● En línea";
 }
 
-// ── DETECTAR PRODUCTOS EN RESPUESTA Y OFRECER CHIPS ───
+function luzAgregarProductoById(id, nombre, precio){
+  addItem({ id: id, nombre: nombre, precio: precio, imagen_url: "" });
+  var sug = document.getElementById("lcSugs");
+  if(sug) sug.innerHTML = "";
+  var confirmMsg = "✅ ¡Listo! Agregué " + nombre + " al carrito. ¿Quieres algo más?";
+  luzConvHistory.push({ role: "assistant", content: confirmMsg });
+  luzAgregarMsgChat("luz", confirmMsg, true);
+  luzMostrarSugerencias(["Quiero algo más", "Ver mi pedido 🛒", "Agregar una bebida"]);
+}
+
 function luzMostrarChipsProductos(nombres){
   if(!nombres||!nombres.length||!window.menuItems) return;
   var sug = document.getElementById("lcSugs");
@@ -5154,11 +5117,15 @@ function toggleVoz(){
 
   luzRecognition.onresult = function(e){
     var texto = e.results[0][0].transcript;
+    detenerVoz();
+    // Abrir chat si no está abierto
+    if(!luzChatOpen) toggleLuzChat();
+    // Poner texto en input y enviar
     var input = document.getElementById("lcInput");
     if(input) input.value = texto;
-    detenerVoz();
-    // Auto-enviar
-    setTimeout(function(){ enviarALuz(); }, 300);
+    setTimeout(function(){
+      enviarALuz();
+    }, 400);
   };
 
   luzRecognition.onerror = function(e){
