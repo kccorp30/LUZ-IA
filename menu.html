@@ -2672,6 +2672,17 @@ body::after {
         </div>
       </div>
 
+      <!-- Datos de pago digital -->
+      <div class="fld hide" id="flDatosPago">
+        <div id="datosPagoCard" style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.25);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:12px;font-weight:700;color:#a855f7;text-transform:uppercase;letter-spacing:.08em" id="datosPagoTitulo">Datos para pagar</div>
+          <div id="datosPagoContenido"></div>
+          <div style="background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:10px 12px;font-size:12px;color:rgba(255,255,255,0.7);line-height:1.5">
+            <strong style="color:#fb923c">⚠️ Importante:</strong> Realiza la transferencia exactamente por el valor del pedido y sube el comprobante abajo para confirmar.
+          </div>
+        </div>
+      </div>
+
       <!-- Comprobante -->
       <div class="fld hide" id="flComp">
         <label class="fld-label">📎 Comprobante de pago</label>
@@ -3664,6 +3675,8 @@ function abrirCheckout() {
       checkCliente();
     }
   } catch(e) {}
+  // Luz checkout helper — aparece con sugerencias y puntos
+  if(typeof luzCheckoutHelper === "function") setTimeout(luzCheckoutHelper, 800);
 }
 
 function cerrarCheckout() {
@@ -3807,11 +3820,68 @@ function setPago(p) {
     el.classList.toggle("on", el.getAttribute("data-pago") === p);
   });
   var flComp = document.getElementById("flComp");
+  var flDatos = document.getElementById("flDatosPago");
+  var datosTitulo = document.getElementById("datosPagoTitulo");
+  var datosContenido = document.getElementById("datosPagoContenido");
+
   if (p === "nequi" || p === "bancolombia") {
     flComp.classList.remove("hide");
+    flDatos.classList.remove("hide");
+
+    // Construir tarjeta de datos según el método
+    if (p === "nequi") {
+      datosTitulo.textContent = "📱 Datos para pagar por Nequi";
+      var nequi = rest.metodo_pago_nequi || rest.nequi || null;
+      var nequiNombre = rest.metodo_pago_nombre || rest.nombre_titular || rest.nombre || "";
+      if (nequi) {
+        datosContenido.innerHTML =
+          '<div style="display:flex;flex-direction:column;gap:8px">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px">' +
+          '<span style="font-size:12px;color:rgba(255,255,255,0.5)">Llave Nequi</span>' +
+          '<div style="display:flex;align-items:center;gap:8px">' +
+          '<span style="font-size:16px;font-weight:800;color:#fff;font-family:monospace">@' + nequi.replace('@','') + '</span>' +
+          '<button onclick="copiarDato(\'@' + nequi.replace('@','') + '\')" style="padding:4px 10px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.3);border-radius:6px;color:#c4b5fd;font-size:10px;cursor:pointer;font-family:inherit;font-weight:700">Copiar</button>' +
+          '</div></div>' +
+          (nequiNombre ? '<div style="font-size:11px;color:rgba(255,255,255,0.4);padding:0 4px">A nombre de: <strong style="color:rgba(255,255,255,0.7)">' + nequiNombre + '</strong></div>' : '') +
+          '</div>';
+      } else {
+        datosContenido.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,0.5)">El restaurante no ha configurado Nequi aún. Escríbenos por WhatsApp.</div>';
+      }
+    } else if (p === "bancolombia") {
+      datosTitulo.textContent = "🏦 Datos para pagar por Bancolombia";
+      var banco = rest.metodo_pago_banco || rest.cuenta_bancolombia || null;
+      var bancoNombre = rest.metodo_pago_nombre || rest.nombre_titular || rest.nombre || "";
+      var bancoTipo = rest.tipo_cuenta || "Ahorros";
+      if (banco) {
+        datosContenido.innerHTML =
+          '<div style="display:flex;flex-direction:column;gap:8px">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.06);border-radius:10px">' +
+          '<span style="font-size:12px;color:rgba(255,255,255,0.5)">Número de cuenta</span>' +
+          '<div style="display:flex;align-items:center;gap:8px">' +
+          '<span style="font-size:16px;font-weight:800;color:#fff;font-family:monospace">' + banco + '</span>' +
+          '<button onclick="copiarDato(\'' + banco + '\')" style="padding:4px 10px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.3);border-radius:6px;color:#c4b5fd;font-size:10px;cursor:pointer;font-family:inherit;font-weight:700">Copiar</button>' +
+          '</div></div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;padding:0 4px">' +
+          (bancoNombre ? '<div style="color:rgba(255,255,255,0.4)">Titular: <strong style="color:rgba(255,255,255,0.7)">' + bancoNombre + '</strong></div>' : '') +
+          '<div style="color:rgba(255,255,255,0.4)">Tipo: <strong style="color:rgba(255,255,255,0.7)">' + bancoTipo + '</strong></div>' +
+          '</div>' +
+          '</div>';
+      } else {
+        datosContenido.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,0.5)">El restaurante no ha configurado Bancolombia aún. Escríbenos por WhatsApp.</div>';
+      }
+    }
   } else {
+    flDatos.classList.add("hide");
     flComp.classList.add("hide");
   }
+}
+
+function copiarDato(txt) {
+  navigator.clipboard.writeText(txt).then(function() {
+    showToast("✅ Copiado: " + txt);
+  }).catch(function() {
+    showToast("Copia manual: " + txt);
+  });
 }
 
 function handleComp(e) {
@@ -4187,25 +4257,34 @@ function renderPedidoCard(p, esActivo) {
   var fecha = new Date(p.created_at);
   var fechaStr = fecha.toLocaleDateString("es-CO", { day:"numeric", month:"short" }) + " " + fecha.toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit" });
   var estado = p.estado || "confirmado";
+  // Normalizar estados
+  var estadoNorm = { confirmado:"confirmado", en_preparacion:"preparando", preparando:"preparando", listo:"preparando", en_camino:"en_camino", entregado:"entregado" }[estado] || "confirmado";
   var estadoLabel = { confirmado:"Recibido", preparando:"Preparando", en_camino:"En camino", entregado:"Entregado" };
   var estadoEmoji = { confirmado:"📋", preparando:"👨‍🍳", en_camino:"🛵", entregado:"✅" };
 
-  var itemsStr = "";
+  // Renderizar items — destacar canjes
+  var itemsHtml = "";
   try {
-    var its = Array.isArray(p.items) ? p.items : JSON.parse(p.items);
-    itemsStr = its.map(function(i) { return typeof i === "string" ? i : (i.qty + "x " + i.nombre); }).join("<br>");
-  } catch(e) { itemsStr = String(p.items || ""); }
+    var its = Array.isArray(p.items) ? p.items : JSON.parse(p.items || "[]");
+    itemsHtml = its.map(function(i) {
+      var txt = typeof i === "string" ? i : (i.qty + "x " + i.nombre);
+      if (txt.indexOf("CANJE:") !== -1) {
+        return '<span style="color:#fbbf24;font-weight:700">⭐ ' + txt + '</span>';
+      }
+      return txt;
+    }).join("<br>");
+  } catch(e) { itemsHtml = String(p.items || ""); }
 
   var pagoLabel = { efectivo:"💵 Efectivo", nequi:"📱 Nequi", bancolombia:"🏦 Bancolombia", datafono:"💳 Datáfono" };
 
   var h = '<div class="mp-card' + (esActivo ? " activo" : "") + '">';
   h += '<div class="mp-card-head"><div class="mp-card-num">#' + (p.numero_pedido || "?") + '</div><div class="mp-card-date">' + fechaStr + '</div></div>';
-  h += '<div class="mp-card-status ' + estado + '">' + (estadoEmoji[estado] || "") + " " + (estadoLabel[estado] || estado) + '</div>';
+  h += '<div class="mp-card-status ' + estadoNorm + '">' + (estadoEmoji[estadoNorm] || "") + " " + (estadoLabel[estadoNorm] || estado) + '</div>';
 
-  // Tracking visual solo para pedidos activos
+  // Tracking visual
   if (esActivo) {
     var pasos = ["confirmado", "preparando", "en_camino", "entregado"];
-    var idxActual = pasos.indexOf(estado);
+    var idxActual = pasos.indexOf(estadoNorm);
     h += '<div class="mp-track">';
     pasos.forEach(function(paso, i) {
       var cls = i < idxActual ? "done" : i === idxActual ? "current" : "";
@@ -4219,7 +4298,11 @@ function renderPedidoCard(p, esActivo) {
     h += '</div>';
   }
 
-  h += '<div class="mp-card-items">' + itemsStr + '</div>';
+  h += '<div class="mp-card-items">' + itemsHtml + '</div>';
+  // Mostrar notas especiales si hay canje
+  if (p.notas_especiales && p.notas_especiales.indexOf("CANJE") !== -1) {
+    h += '<div style="font-size:11px;color:#fbbf24;margin-top:4px;padding:4px 8px;background:rgba(251,191,36,0.08);border-radius:6px">⭐ ' + p.notas_especiales.split("|").filter(function(n){return n.indexOf("CANJE")!==-1;}).join(" · ") + '</div>';
+  }
   h += '<div class="mp-card-bottom">';
   h += '<div class="mp-card-total">' + fmt(p.total) + '</div>';
   h += '<div class="mp-card-pago">' + (pagoLabel[p.metodo_pago] || p.metodo_pago || "") + '</div>';
@@ -4556,3 +4639,705 @@ window.addEventListener("load", async function() {
 </script>
 </body>
 </html>
+
+<!-- ═══════════════════════════════════════════════════════
+     LUZ ASISTENTE — Sistema completo integrado al menú
+     1. Bienvenida contextual
+     2. Chat flotante con IA
+     3. Asistente en checkout
+     4. Voz (Speech-to-Text + TTS)
+═══════════════════════════════════════════════════════ -->
+<style>
+/* ── AVATAR FLOTANTE ── */
+#luzBtn{position:fixed;bottom:86px;right:14px;z-index:500;width:52px;height:52px;border-radius:50%;overflow:hidden;border:2px solid rgba(124,58,237,0.7);box-shadow:0 4px 20px rgba(124,58,237,0.5);cursor:pointer;transition:all .2s;background:#120828}
+#luzBtn img{width:100%;height:100%;object-fit:cover;object-position:center top}
+#luzBtn:active{transform:scale(.92)}
+.luz-notif-dot{position:absolute;top:1px;right:1px;width:13px;height:13px;border-radius:50%;background:#f97316;border:2px solid #0a0a16;display:none;font-size:8px;font-weight:800;color:white;align-items:center;justify-content:center}
+.luz-notif-dot.show{display:flex}
+
+/* ── BIENVENIDA ── */
+#luzWelcome{position:fixed;bottom:148px;right:14px;z-index:501;max-width:260px;background:rgba(8,6,20,0.97);border:1px solid rgba(124,58,237,0.3);border-right:3px solid #7c3aed;border-radius:14px 14px 4px 14px;padding:12px 16px;opacity:0;transform:translateY(12px) scale(.95);transition:all .35s;pointer-events:none;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+#luzWelcome.show{opacity:1;transform:translateY(0) scale(1);pointer-events:all}
+.lw-name{font-size:9px;font-weight:800;color:rgba(168,85,247,0.7);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;font-family:'Courier New',monospace}
+.lw-msg{font-size:13px;color:#e2d9f3;line-height:1.55;font-style:italic}
+.lw-close{position:absolute;top:7px;right:9px;font-size:14px;color:rgba(255,255,255,0.3);cursor:pointer;line-height:1}
+.lw-wave{display:flex;align-items:center;gap:2px;height:12px;margin-top:7px;opacity:0;transition:opacity .2s}
+.lw-wave.on{opacity:1}
+.lw-bar{width:2px;background:#a855f7;border-radius:1px;animation:lwbar .7s ease infinite}
+.lw-bar:nth-child(1){height:4px;animation-delay:0s}
+.lw-bar:nth-child(2){height:8px;animation-delay:.1s}
+.lw-bar:nth-child(3){height:12px;animation-delay:.2s}
+.lw-bar:nth-child(4){height:8px;animation-delay:.3s}
+.lw-bar:nth-child(5){height:4px;animation-delay:.4s}
+@keyframes lwbar{0%,100%{transform:scaleY(.5)}50%{transform:scaleY(1)}}
+
+/* ── CHAT PANEL ── */
+#luzChat{position:fixed;bottom:0;left:0;right:0;z-index:600;background:#0a0814;border-top:1px solid rgba(124,58,237,0.25);border-radius:24px 24px 0 0;max-height:75vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);box-shadow:0 -10px 40px rgba(0,0,0,.7)}
+#luzChat.open{transform:translateY(0)}
+.lc-header{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0}
+.lc-av{width:38px;height:38px;border-radius:50%;overflow:hidden;border:2px solid rgba(124,58,237,0.5);flex-shrink:0}
+.lc-av img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.lc-title{flex:1}
+.lc-name{font-size:14px;font-weight:800;color:#fff}
+.lc-status{font-size:11px;color:#10b981;font-weight:600}
+.lc-close{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.07);border:none;color:rgba(255,255,255,0.5);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.lc-msgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+.lc-msgs::-webkit-scrollbar{display:none}
+.lc-msg{max-width:85%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.5;animation:msgIn .25s ease both}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.lc-msg.luz{background:rgba(124,58,237,0.18);border:1px solid rgba(124,58,237,0.2);border-bottom-left-radius:4px;align-self:flex-start;color:#e2d9f3}
+.lc-msg.user{background:rgba(249,115,22,0.18);border:1px solid rgba(249,115,22,0.2);border-bottom-right-radius:4px;align-self:flex-end;color:#fff}
+.lc-msg.luz b{color:#c4b5fd}
+.lc-typing{display:flex;gap:4px;align-items:center;padding:10px 14px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.15);border-radius:14px 14px 14px 4px;width:fit-content}
+.lc-typing span{width:7px;height:7px;border-radius:50%;background:#a855f7;animation:typ .9s ease infinite}
+.lc-typing span:nth-child(2){animation-delay:.15s}
+.lc-typing span:nth-child(3){animation-delay:.3s}
+@keyframes typ{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+.lc-suggestions{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 8px}
+.lc-sug{padding:6px 12px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.22);border-radius:20px;font-size:11px;font-weight:600;color:#c4b5fd;cursor:pointer;transition:all .15s;white-space:nowrap}
+.lc-sug:active{background:rgba(124,58,237,0.3)}
+.lc-input-row{display:flex;gap:8px;padding:10px 12px 18px;align-items:flex-end;flex-shrink:0;border-top:1px solid rgba(255,255,255,0.05)}
+.lc-input{flex:1;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:22px;padding:10px 16px;color:#fff;font-size:13px;font-family:inherit;outline:none;resize:none;max-height:90px;line-height:1.4}
+.lc-input::placeholder{color:rgba(255,255,255,0.3)}
+.lc-input:focus{border-color:rgba(124,58,237,0.5)}
+.lc-send{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.lc-send:active{transform:scale(.9)}
+.lc-mic{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.6);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.lc-mic.listening{background:rgba(239,68,68,0.2);border-color:rgba(239,68,68,0.4);color:#f87171;animation:micPulse 1s ease infinite}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.3)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+
+/* ── CHIP AGREGAR DEL CHAT ── */
+.lc-prod-chip{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;margin-top:6px}
+.lc-prod-chip-name{font-size:12px;font-weight:700;color:#fff}
+.lc-prod-chip-price{font-size:11px;color:#10b981;font-weight:700}
+.lc-prod-add{padding:5px 12px;background:rgba(249,115,22,0.2);border:1px solid rgba(249,115,22,0.35);border-radius:8px;color:#fb923c;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit}
+
+/* ── CHECKOUT HELPER ── */
+#luzCheckoutHelper{background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);border-radius:14px;padding:11px 14px;margin:10px 0;display:flex;align-items:flex-start;gap:10px;display:none}
+#luzCheckoutHelper.show{display:flex}
+.lch-av{width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1px solid rgba(124,58,237,0.4)}
+.lch-av img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.lch-msg{font-size:12px;color:#e2d9f3;line-height:1.55;font-style:italic}
+.lch-name{font-size:9px;color:rgba(168,85,247,0.7);font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;font-family:'Courier New',monospace}
+</style>
+
+<!-- BOTÓN FLOTANTE LUZ -->
+<div id="luzBtn" onclick="toggleLuzChat()" title="Habla con Luz">
+  <img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg"
+       alt="LUZ" onerror="this.parentNode.innerHTML='💜'">
+  <div class="luz-notif-dot" id="luzNotifDot">!</div>
+</div>
+
+<!-- BURBUJA BIENVENIDA -->
+<div id="luzWelcome">
+  <div class="lw-name">LUZ ›</div>
+  <div class="lw-msg" id="lwMsg">Cargando...</div>
+  <div class="lw-wave" id="lwWave">
+    <div class="lw-bar"></div><div class="lw-bar"></div><div class="lw-bar"></div>
+    <div class="lw-bar"></div><div class="lw-bar"></div>
+  </div>
+  <span class="lw-close" onclick="cerrarBienvenida()">✕</span>
+</div>
+
+<!-- PANEL DE CHAT -->
+<div id="luzChat">
+  <div class="lc-header">
+    <div class="lc-av">
+      <img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg"
+           alt="LUZ" onerror="this.style.display='none'">
+    </div>
+    <div class="lc-title">
+      <div class="lc-name">Luz <span style="font-size:10px;color:rgba(168,85,247,0.7);font-weight:500">· Asistente IA</span></div>
+      <div class="lc-status" id="lcStatus">● En línea</div>
+    </div>
+    <button class="lc-close" onclick="cerrarLuzChat()">✕</button>
+  </div>
+  <div class="lc-msgs" id="lcMsgs"></div>
+  <div class="lc-suggestions" id="lcSugs"></div>
+  <div class="lc-input-row">
+    <button class="lc-mic" id="lcMic" onclick="toggleVoz()" title="Hablar">🎙️</button>
+    <textarea class="lc-input" id="lcInput" placeholder="Escríbele a Luz..." rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarALuz();}"
+      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,90)+'px'"></textarea>
+    <button class="lc-send" onclick="enviarALuz()">➤</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// LUZ ASISTENTE — Sistema completo
+// ═══════════════════════════════════════════════════════
+var LUZ_AVATAR = "https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg";
+var luzChatOpen = false;
+var luzRecognition = null;
+var luzListening = false;
+var luzConvHistory = []; // historial para Claude
+var luzWelcomeDone = false;
+var luzVoicesLoaded = false;
+
+if(window.speechSynthesis){
+  speechSynthesis.onvoiceschanged = function(){luzVoicesLoaded=true;};
+  setTimeout(function(){luzVoicesLoaded=true;},1000);
+}
+
+// ── BIENVENIDA CONTEXTUAL (Opción 2) ──────────────────
+function luzBienvenida(){
+  if(luzWelcomeDone) return;
+  luzWelcomeDone = true;
+  var nombre = null;
+  try{ nombre = localStorage.getItem("luzNombre_"+(rest?rest.id:""))||null; }catch(e){}
+
+  var hora = new Date().getHours();
+  var saludo = hora < 12 ? "¡Buenos días" : hora < 19 ? "¡Buenas tardes" : "¡Buenas noches";
+  var primerNombre = nombre ? nombre.split(" ")[0] : null;
+  var msg = saludo + (primerNombre ? ", " + primerNombre : "") + "! 👋 Soy Luz, tu asistente. ";
+
+  // Mencionar promos activas reales
+  if(window.promosActivas && promosActivas.length > 0){
+    msg += "Hoy tenemos *" + promosActivas[0].titulo + "* 🔥. ";
+  }
+
+  // Mencionar puntos si los tiene
+  if(window.clientePuntos && clientePuntos.puntos > 0){
+    msg += "Tienes " + clientePuntos.puntos + " puntos acumulados ⭐. ";
+  }
+
+  msg += "¿Te ayudo a elegir o tienes alguna pregunta?";
+
+  setTimeout(function(){
+    var el = document.getElementById("lwMsg");
+    var bv = document.getElementById("luzWelcome");
+    if(el && bv){
+      el.textContent = msg;
+      bv.classList.add("show");
+      luzHablar(msg, true);
+      setTimeout(function(){ bv.classList.remove("show"); }, 7000);
+      var dot = document.getElementById("luzNotifDot");
+      if(dot) dot.classList.add("show");
+    }
+  }, 1800);
+
+  luzConvHistory = [];
+  luzAgregarMsgChat("luz", msg, false);
+}
+
+function cerrarBienvenida(){
+  var bv = document.getElementById("luzWelcome");
+  if(bv) bv.classList.remove("show");
+}
+
+// ── TOGGLE CHAT ────────────────────────────────────────
+function toggleLuzChat(){
+  cerrarBienvenida();
+  var dot = document.getElementById("luzNotifDot");
+  if(dot) dot.classList.remove("show");
+  luzChatOpen = !luzChatOpen;
+  var panel = document.getElementById("luzChat");
+  if(luzChatOpen){
+    panel.classList.add("open");
+    document.body.style.overflow = "hidden";
+    if(luzConvHistory.length === 0) luzMensajeInicial();
+    setTimeout(function(){
+      var input = document.getElementById("lcInput");
+      if(input) input.focus();
+    }, 400);
+  } else {
+    cerrarLuzChat();
+  }
+}
+
+function cerrarLuzChat(){
+  luzChatOpen = false;
+  document.getElementById("luzChat").classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+// ── MENSAJE INICIAL DEL CHAT ───────────────────────────
+function luzMensajeInicial(){
+  var msgs = document.getElementById("lcMsgs");
+  if(!msgs) return;
+  msgs.innerHTML = "";
+
+  // Mensaje de bienvenida al chat
+  var telGuardado = null;
+  try{ telGuardado = localStorage.getItem("luzCli_"+(rest?rest.id:"")); }catch(e){}
+  var nombreChat = null;
+  try{ nombreChat = localStorage.getItem("luzNombre_"+(rest?rest.id:"")); }catch(e){}
+
+  var welcomeMsg = "¡Hola" + (nombreChat ? ", " + nombreChat.split(" ")[0] : "") + "! 💜 Soy Luz. Puedo:\n\n"
+    + "🍔 **Recomendarte** platos según tu antojo\n"
+    + "📝 **Ayudarte con notas** especiales (sin cebolla, extra queso...)\n"
+    + "🎤 **Escuchar** lo que quieres por voz\n"
+    + "⭐ **Decirte** tus puntos y promos\n\n"
+    + "¿Qué se te antoja hoy?";
+
+  luzAgregarMsgChat("luz", welcomeMsg, true);
+
+  // Sugerencias iniciales
+  var sugs = ["¿Qué recomiendan?","Quiero algo con pollo","¿Cuáles son las promos?","¿Cuántos puntos tengo?","Necesito ayuda con mi pedido"];
+  luzMostrarSugerencias(sugs);
+}
+
+// ── AGREGAR MENSAJE AL CHAT ────────────────────────────
+function luzAgregarMsgChat(quien, texto, hablar){
+  var msgs = document.getElementById("lcMsgs");
+  if(!msgs) return;
+
+  // Limpiar typing indicator
+  var typing = msgs.querySelector(".lc-typing");
+  if(typing) typing.remove();
+
+  var div = document.createElement("div");
+  div.className = "lc-msg " + quien;
+
+  // Renderizar markdown básico
+  var html = texto
+    .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
+    .replace(/\n/g, "<br>");
+
+  div.innerHTML = html;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  if(hablar && quien === "luz") luzHablar(texto.replace(/\*\*(.*?)\*\*/g,"$1").replace(/[🍔📝🎤⭐💜👋🔥]/g,""), false);
+}
+
+// ── SUGERENCIAS ────────────────────────────────────────
+function luzMostrarSugerencias(sugs){
+  var el = document.getElementById("lcSugs");
+  if(!el) return;
+  el.innerHTML = sugs.map(function(s){
+    return '<button class="lc-sug" onclick="luzClickSugerencia(this)">' + s + '</button>';
+  }).join("");
+}
+
+function luzClickSugerencia(btn){
+  var txt = btn.textContent;
+  document.getElementById("lcSugs").innerHTML = "";
+  luzEnviarMensaje(txt);
+}
+
+// ── ENVIAR MENSAJE DESDE INPUT ─────────────────────────
+function enviarALuz(){
+  var input = document.getElementById("lcInput");
+  var txt = (input.value || "").trim();
+  if(!txt) return;
+  input.value = "";
+  input.style.height = "auto";
+  luzEnviarMensaje(txt);
+}
+
+// ── NÚCLEO: PROCESAR MENSAJE Y LLAMAR CLAUDE ──────────
+async function luzEnviarMensaje(txt){
+  // Mostrar mensaje usuario
+  luzAgregarMsgChat("user", txt, false);
+  document.getElementById("lcSugs").innerHTML = "";
+
+  // ── RESPUESTAS RÁPIDAS LOCALES (sin llamar a Claude) ──
+  var txtL = txt.toLowerCase().trim();
+  var respLocal = null;
+
+  if(txtL.indexOf("notas")!==-1||txtL.indexOf("dónde escribo")!==-1||txtL.indexOf("donde escribo")!==-1||txtL.indexOf("personaliz")!==-1||txtL.indexOf("cómo personalizo")!==-1){
+    respLocal = "📝 Las notas van en el campo **'Notas (opcional)'** que aparece en el checkout, justo antes de enviar tu pedido.\n\n"
+      + "Ahí puedes escribir lo que necesites, por ejemplo:\n"
+      + "• *sin cebolla, extra queso*\n"
+      + "• *carne bien cocida, salsa aparte*\n"
+      + "• *sin tomate, sin lechuga*\n"
+      + "• *es para alérgico al gluten* ⚠️\n\n"
+      + "El restaurante lo lee antes de preparar tu pedido. ¿Qué necesitas personalizar?";
+    luzMostrarSugerencias(["Sin cebolla","Extra queso","Término del asado","Tengo una alergia"]);
+  }
+  else if(txtL.indexOf("alergi")!==-1||txtL.indexOf("intoler")!==-1){
+    respLocal = "⚠️ Importante. Escribe tu alergia claramente en las **Notas del pedido** y el restaurante lo tendrá en cuenta.\n\n"
+      + "Ejemplo: *'Soy alérgico al maní'* o *'Intolerante al gluten'*.\n\n"
+      + "También voy a avisarle al restaurante ahora mismo para que estén pendientes. ¿A qué eres alérgico?";
+    // Notificar al panel automáticamente
+    setTimeout(function(){
+      var telN = null; try{telN=localStorage.getItem("luzCli_"+(rest?rest.id:""));}catch(e){}
+      fetch("/api/notificar-panel",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({restaurante_id:rest&&rest.id,telefono:telN||"menu",
+          mensaje:"⚠️ LUZ MENÚ: Cliente menciona ALERGIA — \""+txt+"\" — verificar antes de preparar",tipo:"alerta_pregunta"})
+      }).catch(function(){});
+    }, 500);
+    luzMostrarSugerencias(["Al maní","Al gluten","A los mariscos","Al huevo"]);
+  }
+  else if(txtL.indexOf("eso es todo")!==-1||txtL.indexOf("listo")!==-1||txtL==="ya"||txtL.indexOf("confirmar")!==-1){
+    respLocal = "¡Perfecto! 🛒 Cuando estés listo, toca el botón del carrito arriba para revisar tu pedido y confirmar. Recuerda escribir cualquier nota especial ahí.\n\n¡Que lo disfrutes!";
+    luzMostrarSugerencias(["Ver mi pedido 🛒","Agregar algo más"]);
+  }
+  else if(txtL.indexOf("cuántos puntos")!==-1||txtL.indexOf("mis puntos")!==-1||txtL.indexOf("cuantos puntos")!==-1){
+    if(window.clientePuntos && clientePuntos.puntos !== undefined){
+      respLocal = "⭐ Tienes **" + clientePuntos.puntos + " puntos** · Nivel **" + (clientePuntos.nivel_fidelidad||"Bronce") + "**.\n\n"
+        + (clientePuntos.puntos >= 50 ? "¡Ya puedes canjear! Ve a la sección de recompensas 🎁" : "Cada $1.000 en pedidos te da 1 punto. ¡Sigue pidiendo!");
+      luzMostrarSugerencias(["¿Qué puedo canjear?","Ver el menú","Ver promos"]);
+    }
+  }
+
+  if(respLocal){
+    luzConvHistory.push({role:"user",content:txt});
+    luzConvHistory.push({role:"assistant",content:respLocal});
+    luzAgregarMsgChat("luz", respLocal, true);
+    return;
+  }
+
+  // Agregar al historial para Claude
+  luzConvHistory.push({ role: "user", content: txt });
+
+  // Mostrar typing
+  var msgs = document.getElementById("lcMsgs");
+  var typing = document.createElement("div");
+  typing.className = "lc-typing";
+  typing.innerHTML = "<span></span><span></span><span></span>";
+  msgs.appendChild(typing);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Actualizar status
+  var status = document.getElementById("lcStatus");
+  if(status) status.textContent = "● Pensando...";
+
+  try {
+    // Construir contexto del menú para Claude
+    var menuCtx = "";
+    if(window.menuItems && menuItems.length > 0){
+      var sample = menuItems.slice(0,30).map(function(p){
+        return p.nombre + " $" + Number(p.precio).toLocaleString("es-CO") + (p.descripcion?" ("+p.descripcion.substring(0,40)+")":"");
+      }).join(", ");
+      menuCtx = "\n\nMENÚ DISPONIBLE HOY (muestra): " + sample;
+    }
+
+    // Promos activas
+    var promosCtx = "";
+    if(window.promosActivas && promosActivas.length > 0){
+      promosCtx = "\n\nPROMOS ACTIVAS HOY: " + promosActivas.map(function(p){return p.titulo+": "+p.desc;}).join("; ");
+    }
+
+    // Puntos del cliente
+    var puntosCtx = "";
+    var telLocal = null;
+    try{ telLocal = localStorage.getItem("luzCli_"+(rest?rest.id:"")); }catch(e){}
+    if(window.clientePuntos) puntosCtx = "\n\nCLIENTE: " + (clientePuntos.nombre||"") + " | Puntos: " + (clientePuntos.puntos||0) + " | Nivel: " + (clientePuntos.nivel_fidelidad||"bronce");
+
+    var systemPrompt = "Eres Luz, la asistente IA del restaurante " + (rest?rest.nombre:"") + ". Eres joven, amigable, conoces el menú a la perfección y hablas en español colombiano natural (tuteo, cercano pero profesional).\n\n"
+
+      + "TU MISIÓN PRINCIPAL:\n"
+      + "1. Ayudar al cliente a elegir lo que quiere\n"
+      + "2. Guiarlo a PERSONALIZAR su pedido con notas especiales\n"
+      + "3. Ser proactiva — si el cliente dice 'quiero sin cebolla', explícale que debe escribirlo en las notas\n\n"
+
+      + "INSTRUCCIONES SOBRE NOTAS Y PERSONALIZACIÓN:\n"
+      + "- Cuando el cliente pida algo especial (sin cebolla, extra queso, término del asado, sin sal, salsa aparte, etc.) SIEMPRE dile: 'Anótalo en el campo de Notas al confirmar el pedido. Por ejemplo escribe: sin cebolla, extra queso'\n"
+      + "- Si el cliente pregunta cómo personalizar, explica: 'Cuando vayas al carrito y confirmes el pedido, hay un campo de Notas donde puedes escribir cualquier personalización: sin cebolla, bien cocido, salsa aparte, sin tomate, etc. El restaurante lo lee antes de preparar'\n"
+      + "- Si el cliente tiene una alergia o restricción importante, resáltalo como URGENTE en la notificación al panel\n"
+      + "- Sugiere personalizaciones populares según el plato: hamburguesas (sin cebolla, sin tomate, extra queso, doble carne), pollos (bien cocido, crujiente, salsa aparte), etc.\n\n"
+
+      + "CUÁNDO NOTIFICAR AL PANEL (muy importante — usa criterio):\n"
+      + "- ALERGIA o restricción médica: [NOTIFICAR_PANEL: ⚠️ ALERGIA - cliente menciona alergia a <ingrediente>]\n"
+      + "- QUEJA o mala experiencia previa: [NOTIFICAR_PANEL: 😤 QUEJA - cliente dice <resumen>]\n"
+      + "- PEDIDO ESPECIAL muy complejo: [NOTIFICAR_PANEL: 📝 PEDIDO ESPECIAL - <detalle>]\n"
+      + "- SOLICITUD que Luz no puede resolver: [NOTIFICAR_PANEL: 🙋 NECESITA HUMANO - <motivo>]\n"
+      + "- CLIENTE FRUSTRADO o confundido: [NOTIFICAR_PANEL: ⚡ CLIENTE FRUSTRADO - <contexto>]\n"
+      + "- NO notifiques cosas normales como recomendaciones o preguntas simples del menú\n\n"
+
+      + "ESTILO DE RESPUESTA:\n"
+      + "- Máximo 3-4 líneas por respuesta. Directa y útil\n"
+      + "- Usa emojis con moderación (1-2 por mensaje)\n"
+      + "- Si recomiendas un plato, menciona nombre exacto y precio\n"
+      + "- Siempre ofrece siguiente paso: '¿Lo agrego al carrito?', '¿Quieres algo más?'\n"
+      + "- Si el cliente dice 'eso es todo' o 'listo', dile que puede ver su pedido y confirmar\n"
+      + menuCtx + promosCtx + puntosCtx;
+
+    var response = await fetch("/api/luz-menu-chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        restaurante_id: rest.id,
+        mensaje: txt,
+        telefono: telLocal,
+        historial: luzConvHistory.slice(-8).map(function(m){ return { rol: m.role === "assistant" ? "luz" : "cliente", texto: m.content }; }),
+        menu_resumen: window.menuItems ? window.menuItems.slice(0,40).map(function(p){
+          return p.nombre + " $" + Number(p.precio).toLocaleString("es-CO") + (p.descripcion?" ("+p.descripcion.substring(0,50)+")":"");
+        }).join(" | ") : "",
+        promos: window.promosActivas ? promosActivas.map(function(p){return p.titulo+": "+p.desc;}).join("; ") : "",
+        puntos_cliente: window.clientePuntos ? clientePuntos.puntos : null
+      })
+    });
+
+    var data = await response.json();
+    var respuesta = data.respuesta || "Perdona, no pude procesar eso. ¿Puedes intentarlo de nuevo?";
+
+    // Productos sugeridos como chips
+    if(data.productos && data.productos.length > 0){
+      window._luzProductosSugeridos = data.productos;
+    }
+
+    // Notificación al panel ya manejada en el backend
+
+    // Detectar productos mencionados y ofrecer chips de agregar
+    luzConvHistory.push({ role: "assistant", content: respuesta });
+    luzAgregarMsgChat("luz", respuesta, true);
+
+    // Detectar productos en la respuesta y mostrar chips
+    luzDetectarProductos(respuesta);
+
+    // Sugerencias de seguimiento
+    var siguientes = luzSiguienteSugerencias(txt, respuesta);
+    if(siguientes.length) luzMostrarSugerencias(siguientes);
+
+  } catch(e) {
+    console.error("[LuzChat]", e);
+    var fallback = "Uy, tuve un problema técnico. Para pedidos puedes usar el botón de WhatsApp, ¡te ayudo por allá! 🙏";
+    luzAgregarMsgChat("luz", fallback, true);
+  }
+
+  if(status) status.textContent = "● En línea";
+}
+
+// ── DETECTAR PRODUCTOS EN RESPUESTA Y OFRECER CHIPS ───
+function luzDetectarProductos(texto){
+  if(!window.menuItems || !menuItems.length) return;
+  var encontrados = menuItems.filter(function(p){
+    return texto.toLowerCase().indexOf(p.nombre.toLowerCase()) !== -1 && p.disponible !== false;
+  }).slice(0,3);
+
+  if(!encontrados.length) return;
+  var msgs = document.getElementById("lcMsgs");
+  if(!msgs) return;
+
+  encontrados.forEach(function(p){
+    var chip = document.createElement("div");
+    chip.className = "lc-prod-chip";
+    chip.innerHTML =
+      '<div><div class="lc-prod-chip-name">' + p.nombre + '</div><div class="lc-prod-chip-price">$' + Number(p.precio).toLocaleString("es-CO") + '</div></div>'
+      + '<button class="lc-prod-add" onclick="luzAgregarProducto(\'' + p.id + '\',\'' + encodeURIComponent(p.nombre) + '\')">+ Agregar</button>';
+    msgs.appendChild(chip);
+  });
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function luzAgregarProducto(id, nombreEnc){
+  var nombre = decodeURIComponent(nombreEnc);
+  var prod = window.menuItems && menuItems.find(function(p){return p.id===id||p.id===parseInt(id);});
+  if(!prod) return;
+  // Usar la función existente del menú
+  if(window.addToCart){
+    addToCart(prod);
+  } else if(window.agregarAlCarrito){
+    agregarAlCarrito(prod);
+  } else {
+    // fallback: agregar directo al carrito
+    if(!carrito[id]) carrito[id]={id:id,nombre:prod.nombre,precio:prod.precio,qty:0};
+    carrito[id].qty++;
+    if(window.updateCartBadge) updateCartBadge();
+    showToast("✓ " + prod.nombre + " agregado");
+  }
+  luzAgregarMsgChat("luz", "✅ ¡Listo! " + prod.nombre + " agregado a tu pedido. ¿Algo más?", true);
+  document.getElementById("lcSugs").innerHTML = "";
+  luzMostrarSugerencias(["¿Algo más?","Ver mi pedido","Eso es todo"]);
+}
+
+// ── SUGERENCIAS DINÁMICAS ──────────────────────────────
+function luzSiguienteSugerencias(pregunta, respuesta){
+  var p = pregunta.toLowerCase();
+  var r = respuesta.toLowerCase();
+  if(p.indexOf("punto")!==-1||r.indexOf("punto")!==-1) return ["¿Cómo canjeo?","Ver promos","Elegir un plato"];
+  if(p.indexOf("promo")!==-1||r.indexOf("promo")!==-1) return ["Quiero aprovechar la promo","¿Qué más tienen?","Ver el menú completo"];
+  if(p.indexOf("recomien")!==-1||r.indexOf("especial")!==-1) return ["¿Cuánto cuesta?","Agregar al pedido","Ver otras opciones"];
+  if(p.indexOf("nota")!==-1||p.indexOf("sin ")!==-1||p.indexOf("extra")!==-1||p.indexOf("personaliz")!==-1) return ["¿Dónde escribo las notas?","Tengo una alergia","Eso es todo"];
+  if(p.indexOf("alergi")!==-1||p.indexOf("intoler")!==-1) return ["¿Lo pueden hacer sin eso?","Hablar con el restaurante","Ver opciones seguras"];
+  if(p.indexOf("listo")!==-1||p.indexOf("eso es todo")!==-1||p.indexOf("ya")!==-1) return ["Ver mi pedido 🛒","Agregar algo más","Confirmar pedido"];
+  return ["¿Qué más recomiendas?","¿Hay combos?","Cómo personalizar mi pedido"];
+}
+
+// ── VOZ — Speech Recognition (Opción 4) ───────────────
+function toggleVoz(){
+  if(luzListening){
+    detenerVoz();
+    return;
+  }
+  if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)){
+    showToast("Tu navegador no soporta reconocimiento de voz. Prueba en Chrome.");
+    return;
+  }
+  var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  luzRecognition = new SpeechRec();
+  luzRecognition.lang = "es-CO";
+  luzRecognition.continuous = false;
+  luzRecognition.interimResults = false;
+
+  luzRecognition.onstart = function(){
+    luzListening = true;
+    var mic = document.getElementById("lcMic");
+    if(mic) mic.classList.add("listening");
+    var status = document.getElementById("lcStatus");
+    if(status) status.textContent = "🎙️ Escuchando...";
+    showToast("🎙️ Habla ahora...");
+  };
+
+  luzRecognition.onresult = function(e){
+    var texto = e.results[0][0].transcript;
+    var input = document.getElementById("lcInput");
+    if(input) input.value = texto;
+    detenerVoz();
+    // Auto-enviar
+    setTimeout(function(){ enviarALuz(); }, 300);
+  };
+
+  luzRecognition.onerror = function(e){
+    detenerVoz();
+    if(e.error !== "no-speech") showToast("Error de voz: " + e.error);
+  };
+
+  luzRecognition.onend = function(){ detenerVoz(); };
+  luzRecognition.start();
+}
+
+function detenerVoz(){
+  luzListening = false;
+  if(luzRecognition){ try{luzRecognition.stop();}catch(e){} luzRecognition=null; }
+  var mic = document.getElementById("lcMic");
+  if(mic) mic.classList.remove("listening");
+  var status = document.getElementById("lcStatus");
+  if(status) status.textContent = "● En línea";
+}
+
+// ── TTS — Luz habla ────────────────────────────────────
+function luzHablar(texto, breve){
+  if(!window.speechSynthesis) return;
+  var limpio = texto.replace(/\*\*(.*?)\*\*/g,"$1").replace(/[🍔📝🎤⭐💜👋🔥✅❌📱🏦💳💵🛵]/g,"").replace(/\n/g," ").trim();
+  if(breve && limpio.length > 120) limpio = limpio.substring(0,120) + "...";
+  speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(limpio);
+  u.lang = "es-CO"; u.rate = 0.96; u.pitch = 1.08; u.volume = 0.8;
+  var voices = speechSynthesis.getVoices();
+  var voz = voices.find(function(v){ return v.lang.startsWith("es") && /paulina|monica|laura|sofia|female/i.test(v.name); })
+    || voices.find(function(v){ return v.lang.startsWith("es"); });
+  if(voz) u.voice = voz;
+  var wave = document.getElementById("lwWave");
+  if(wave) wave.classList.add("on");
+  u.onend = function(){ if(wave) wave.classList.remove("on"); };
+  speechSynthesis.speak(u);
+}
+
+// ── ASISTENTE EN CHECKOUT (Opción 3) ──────────────────
+function luzCheckoutHelper(){
+  var items = Object.values(carrito||{});
+  if(!items.length) return;
+
+  // Calcular subtotal
+  var subtotal = items.reduce(function(s,i){ return s + (i.precio||0)*(i.qty||1); }, 0);
+  var puntosAGanar = Math.floor(subtotal/1000);
+
+  var msgs = [];
+
+  // Puntos que va a ganar
+  if(puntosAGanar > 0) msgs.push("Con este pedido ganas <b>" + puntosAGanar + " puntos</b> ⭐");
+
+  // Si tiene puntos para canjear
+  if(window.clientePuntos && clientePuntos.puntos >= 50) msgs.push("Tienes <b>" + clientePuntos.puntos + " puntos</b> — ¡puedes canjear algo!");
+
+  // Sugerir complemento
+  if(subtotal < 30000 && items.length < 3) msgs.push("¿Le agregas una bebida o papas? 🍟");
+
+  if(!msgs.length) return;
+
+  var helper = document.getElementById("luzCheckoutHelper");
+  var msgEl = helper && helper.querySelector(".lch-msg");
+  if(helper && msgEl){
+    msgEl.innerHTML = msgs.join(" · ");
+    helper.classList.add("show");
+    // Voz suave
+    luzHablar(msgs[0].replace(/<[^>]+>/g,""), true);
+  }
+}
+
+// Inyectar el helper en el checkout cuando se abre
+var _openCartOrig = window.openCart;
+window.openCart = async function(){
+  if(_openCartOrig) await _openCartOrig();
+  setTimeout(luzCheckoutHelper, 400);
+};
+
+// Inyectar el div del helper en el carrito
+document.addEventListener("DOMContentLoaded", function(){
+  var cartBody = document.getElementById("cartBody");
+  if(cartBody){
+    var helper = document.createElement("div");
+    helper.id = "luzCheckoutHelper";
+    helper.className = "";
+    helper.innerHTML =
+      '<div class="lch-av"><img src="'+LUZ_AVATAR+'" alt="LUZ" onerror="this.style.display=\'none\'"></div>'
+      + '<div><div class="lch-name">LUZ ›</div><div class="lch-msg"></div></div>';
+    cartBody.parentNode.insertBefore(helper, cartBody);
+  }
+});
+
+// ── INICIALIZAR CUANDO EL MENÚ ESTÉ LISTO ─────────────
+// Hookeamos en el momento en que se cargan los datos del restaurante
+var luzInitDone = false;
+function luzInit(){
+  if(luzInitDone || !rest) return;
+  luzInitDone = true;
+
+  // Guardar nombre cliente si disponible
+  if(window.clientePuntos && clientePuntos.nombre_cliente){
+    try{ localStorage.setItem("luzNombre_"+rest.id, clientePuntos.nombre_cliente); }catch(e){}
+  }
+
+  // Mostrar bienvenida
+  luzBienvenida();
+}
+
+// ── CHECKOUT HELPER — Luz aparece al abrir el carrito ─────────
+function luzCheckoutHelper(){
+  if(!rest || !window.carrito || carrito.length === 0) return;
+
+  var totalCarrito = carrito.reduce(function(s, i){ return s + (Number(i.precio||0) * (i.qty||1)); }, 0);
+  var puntosAGanar = Math.floor(totalCarrito / 1000);
+  var puntosCanj = window.clientePuntos ? clientePuntos.puntos : 0;
+  var msgs = [];
+
+  // Puntos a ganar
+  if(puntosAGanar > 0) msgs.push("Con este pedido ganas " + puntosAGanar + " puntos ⭐");
+
+  // Si puede canjear
+  if(puntosCanj >= 50) msgs.push("Tienes " + puntosCanj + " puntos — puedes canjear un producto gratis 🎁");
+
+  // Sugerencia de personalización
+  msgs.push("¿Todo como lo quieres? Usa las Notas para pedir sin cebolla, extra queso, bien cocido, etc.");
+
+  // Sugerencia de agregar algo
+  var itemsEnCarrito = carrito.map(function(i){ return (i.nombre||"").toLowerCase(); }).join(" ");
+  if(itemsEnCarrito.indexOf("hamburgues") !== -1 && itemsEnCarrito.indexOf("gaseosa") === -1 && itemsEnCarrito.indexOf("bebida") === -1){
+    msgs.push("¿Le agregas una gaseosa? 🥤");
+  }
+
+  var msgFinal = msgs.slice(0,2).join(" · ");
+  if(!msgFinal) return;
+
+  // Mostrar burbuja de checkout
+  setTimeout(function(){
+    var el = document.getElementById("lwMsg");
+    var bv = document.getElementById("luzWelcome");
+    if(el && bv && !luzChatOpen){
+      el.textContent = msgFinal;
+      bv.classList.add("show");
+      luzHablar(msgFinal, true);
+      setTimeout(function(){ bv.classList.remove("show"); }, 6000);
+    }
+  }, 600);
+}
+
+// Monitorear cuando rest y menú estén cargados
+var luzInitInterval = setInterval(function(){
+  if(window.rest && rest && window.menuItems && menuItems.length > 0){
+    clearInterval(luzInitInterval);
+    luzInit();
+  }
+}, 500);
+
+// Fallback por si acaso
+setTimeout(function(){
+  clearInterval(luzInitInterval);
+  if(!luzInitDone && window.rest && rest) luzInit();
+}, 6000);
+</script>
