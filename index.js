@@ -1965,11 +1965,7 @@ app.post("/api/luz-menu-chat", async function(req, res) {
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
 
     // ── CARGAR TODO DESDE LA DB EN PARALELO ────────────────────────────────
-    var [menuR, restR, promosR, aprendR, cliR] = await Promise.all([
-      // Menú completo y disponible
-      axios.get(SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restaurante_id +
-        "&disponible=eq.true&order=categoria,orden&select=id,nombre,precio,descripcion,categoria,ingredientes",
-        { headers: h }).catch(function(){ return { data: [] }; }),
+    var [restR, promosR, aprendR, cliR] = await Promise.all([
       // Info del restaurante
       axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id +
         "&select=nombre,horario_apertura,horario_cierre,domicilio_base,metodo_pago_nequi,metodo_pago_banco,metodo_pago_nombre",
@@ -1988,12 +1984,25 @@ app.post("/api/luz-menu-chat", async function(req, res) {
         { headers: h }).catch(function(){ return { data: [] }; }) : Promise.resolve({ data: [] })
     ]);
 
-    var menuItems = menuR.data || [];
+    // Cargar menú con la misma función que usa WhatsApp (incluye cache)
+    var menuItemsRaw = [];
+    try {
+      var menuRaw = await axios.get(SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restaurante_id +
+        "&disponible=not.eq.false&order=categoria,orden&select=id,nombre,precio,descripcion,categoria,ingredientes",
+        { headers: h });
+      menuItemsRaw = menuRaw.data || [];
+    } catch(eMenu) {
+      console.error("[luz-agente] menu load error:", eMenu.message);
+      // Fallback: usar getMenuDinamico que tiene su propio cache
+    }
+
+    var menuItems = menuItemsRaw;
     var restInfo = (restR.data || [])[0] || {};
     var promos = promosR.data || [];
     var aprendizajes = (aprendR.data || []).map(function(a){ return "["+a.tipo+"] "+a.contenido; }).join("\n");
     var cliente = (cliR.data || [])[0] || null;
     var diaHoy = getDiaColombiaStr();
+    console.log("[luz-agente] menú items: "+menuItems.length+" | restaurante: "+(restInfo.nombre||"?")+" | cliente: "+(cliente?"sí":"no"));
 
     // Filtrar promos del día
     var promosHoy = promos.filter(function(p){
