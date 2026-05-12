@@ -4979,8 +4979,11 @@ async function luzEnviarMensaje(txt){
       data.productos.forEach(function(prod){
         if(!prod.nombre) return;
         var pPrecio = Number(prod.precio||0).toLocaleString("es-CO");
+        var prodId = String(prod.id||"").replace(/'/g,"");
+        var prodNom = String(prod.nombre||"").replace(/'/g,"\\'");
+        var prodPrecio = Number(prod.precio||0);
         chipsHtml += "<button class='lc-sug' style='background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.3);color:#fb923c;font-weight:700;padding:8px 14px;gap:6px;display:flex;align-items:center' "
-          + "onclick='luzAgregarProductoById(""+prod.id+"","+JSON.stringify(prod.nombre)+","+Number(prod.precio)+")'>"
+          + "onclick=\"luzAgregarProductoById('"+prodId+"','"+prodNom+"',"+prodPrecio+")\">"
           + "🛒 "+prod.nombre+" <span style='opacity:0.6;font-size:11px'>$"+pPrecio+"</span></button>";
       });
       sug.innerHTML = chipsHtml;
@@ -5019,20 +5022,15 @@ function luzMostrarChipsProductos(nombres){
   nombres.forEach(function(nombre){
     var prod = menuItems.find(function(p){
       return p.nombre && p.nombre.toLowerCase().indexOf(nombre.toLowerCase())!==-1;
-    }) || menuItems.find(function(p){
-      return nombre && nombre.toLowerCase().indexOf((p.nombre||"").toLowerCase().substring(0,8))!==-1;
     });
     if(prod){
-      var pNom = prod.nombre.replace(/'/g,"\\'");
-      chips += '<button class="lc-sug" style="background:rgba(249,115,22,0.12);border-color:rgba(249,115,22,0.28);color:#fb923c;font-weight:700" '
-        + 'onclick="addItem({id:\''+prod.id+'\',nombre:'+JSON.stringify(prod.nombre)+',precio:'+Number(prod.precio)+',imagen_url:\'\'});'
-        + 'luzAgregarMsgChat(\'luz\',\'✅ '+pNom+' agregado al carrito!\',true);">'
-        + '🛒 Agregar '+prod.nombre+' — $'+Number(prod.precio).toLocaleString("es-CO")+'</button>';
+      var pNom = String(prod.nombre).replace(/'/g,"\\'");
+      chips += "<button class='lc-sug' style='background:rgba(249,115,22,0.12);border-color:rgba(249,115,22,0.28);color:#fb923c;font-weight:700' "
+        + "onclick=\"luzAgregarProductoById('"+String(prod.id).replace(/'/g,"")+"','"+pNom+"',"+Number(prod.precio)+")\">"
+        + "🛒 "+prod.nombre+" — $"+Number(prod.precio).toLocaleString("es-CO")+"</button>";
     }
   });
-  if(chips){
-    sug.innerHTML += chips;
-  }
+  if(chips) sug.innerHTML += chips;
 }
 
 function luzDetectarProductos(texto){
@@ -5048,9 +5046,10 @@ function luzDetectarProductos(texto){
   encontrados.forEach(function(p){
     var chip = document.createElement("div");
     chip.className = "lc-prod-chip";
+    var pNom = String(p.nombre).replace(/'/g,"\\'");
     chip.innerHTML =
-      '<div><div class="lc-prod-chip-name">' + p.nombre + '</div><div class="lc-prod-chip-price">$' + Number(p.precio).toLocaleString("es-CO") + '</div></div>'
-      + '<button class="lc-prod-add" onclick="luzAgregarProducto(\'' + p.id + '\',\'' + encodeURIComponent(p.nombre) + '\')">+ Agregar</button>';
+      '<div><div class="lc-prod-chip-name">'+p.nombre+'</div><div class="lc-prod-chip-price">$'+Number(p.precio).toLocaleString("es-CO")+'</div></div>'
+      + '<button class="lc-prod-add" onclick="luzAgregarProductoById(\''+String(p.id).replace(/'/g,"")+'\',\''+pNom+'\','+Number(p.precio)+')">+ Agregar</button>';
     msgs.appendChild(chip);
   });
   msgs.scrollTop = msgs.scrollHeight;
