@@ -1984,46 +1984,31 @@ app.post("/api/luz-menu-chat", async function(req, res) {
         { headers: h }).catch(function(){ return { data: [] }; }) : Promise.resolve({ data: [] })
     ]);
 
-    // Cargar menú con la misma función que usa WhatsApp (incluye cache)
-    var menuItemsRaw = [];
+    // Cargar menú usando la función que ya funciona para WhatsApp
+    var menuTextoWhatsApp = await getMenuDinamico(restaurante_id);
+    var menuItemsEstructurado = [];
     try {
-      var menuRaw = await axios.get(SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restaurante_id +
-        "&disponible=not.eq.false&order=categoria,orden&select=id,nombre,precio,descripcion,categoria,ingredientes",
-        { headers: h });
-      menuItemsRaw = menuRaw.data || [];
-    } catch(eMenu) {
-      console.error("[luz-agente] menu load error:", eMenu.message);
-      // Fallback: usar getMenuDinamico que tiene su propio cache
-    }
+      var menuRaw = await axios.get(
+        SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restaurante_id +
+        "&order=categoria,orden&select=id,nombre,precio,descripcion,categoria",
+        { headers: sbH(false) }
+      );
+      menuItemsEstructurado = (menuRaw.data || []).filter(function(p){ return p.disponible !== false; });
+    } catch(eM){ console.error("[luz-agente] menu estructurado:", eM.message); }
 
-    var menuItems = menuItemsRaw;
     var restInfo = (restR.data || [])[0] || {};
     var promos = promosR.data || [];
     var aprendizajes = (aprendR.data || []).map(function(a){ return "["+a.tipo+"] "+a.contenido; }).join("\n");
     var cliente = (cliR.data || [])[0] || null;
     var diaHoy = getDiaColombiaStr();
-    console.log("[luz-agente] menú items: "+menuItems.length+" | restaurante: "+(restInfo.nombre||"?")+" | cliente: "+(cliente?"sí":"no"));
+    // Para acciones estructuradas (chips de agregar)
+    var menuItems = menuItemsEstructurado;
+    console.log("[luz-agente] menú whatsapp: "+(menuTextoWhatsApp.length)+"chars | items: "+menuItems.length+" | rest: "+(restInfo.nombre||"?"));
 
     // Filtrar promos del día
     var promosHoy = promos.filter(function(p){
       return !p.dia || p.dia === "todos" || p.dia === diaHoy;
     });
-
-    // Organizar menú por categoría para mejor contexto
-    var menuPorCategoria = {};
-    menuItems.forEach(function(item){
-      var cat = item.categoria || "Otros";
-      if(!menuPorCategoria[cat]) menuPorCategoria[cat] = [];
-      menuPorCategoria[cat].push(item);
-    });
-    var menuTexto = Object.keys(menuPorCategoria).map(function(cat){
-      var items = menuPorCategoria[cat].map(function(p){
-        var desc = p.descripcion ? " — "+p.descripcion.substring(0,80) : "";
-        var ing = p.ingredientes ? " (Ingredientes: "+p.ingredientes.substring(0,60)+")" : "";
-        return "  • "+p.nombre+" $"+Number(p.precio).toLocaleString("es-CO")+desc+ing;
-      }).join("\n");
-      return cat+":\n"+items;
-    }).join("\n\n");
 
     // System prompt de Luz — agente real
     var systemPrompt = `Eres LUZ, la asistente de IA de "${restInfo.nombre || "el restaurante"}". Eres joven, carismática, eficiente y hablas como una persona real en español colombiano — tuteo natural, sin sonar a robot ni a formal.
@@ -2042,7 +2027,7 @@ PROMOS DE HOY (${diaHoy}):
 ${promosHoy.length ? promosHoy.map(function(p){ return "🔥 "+p.titulo+": "+p.descripcion+(p.descuento?" ("+p.descuento+"% off)":""); }).join("\n") : "Sin promos especiales hoy"}
 
 MENÚ COMPLETO DISPONIBLE:
-${menuTexto || "Menú no disponible"}
+${menuTextoWhatsApp}
 
 CONOCIMIENTO ADICIONAL (aprendido por Luz):
 ${aprendizajes || "Sin notas adicionales"}
