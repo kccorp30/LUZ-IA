@@ -338,7 +338,7 @@ select.finput{cursor:pointer}
 .chat-img-bubble img{width:100%;border-radius:12px;max-height:180px;object-fit:cover;display:block}
 .chat-img-caption{font-size:11px;color:rgba(255,255,255,0.4);margin-top:5px;padding:0 4px 4px}
 .chat-comp-bubble{align-self:flex-start;margin-left:2px;background:#0e2018;border:1px solid rgba(16,185,129,0.25);border-radius:4px 18px 18px 18px;overflow:hidden;max-width:72%;cursor:pointer;box-shadow:0 2px 8px rgba(16,185,129,0.12)}
-.chat-comp-bubble img{width:100%;max-height:200px;object-fit:cover;display:block}
+.chat-comp-bubble img{width:100%;min-height:120px;max-height:280px;object-fit:cover;display:block;background:rgba(16,185,129,0.08)}
 .chat-comp-label{padding:8px 12px 5px;font-size:11px;font-weight:700;color:#6ee7b7;display:flex;align-items:center;gap:5px}
 .chat-comp-time{padding:3px 12px 8px;font-size:10px;color:rgba(255,255,255,0.28);text-align:right}
 .chat-input-area{background:rgba(10,7,20,0.95);border-top:1px solid rgba(255,255,255,0.07);padding:10px 12px;flex-shrink:0}
@@ -2255,16 +2255,24 @@ function renderMensajesChat(msgs, forzar){
       lastDay = dia;
     }
     var newCls = esNuevo&&esUltimo ? " chat-new" : "";
-    // Comprobante de pago
-    var mediaIdComp = m.comprobante_media_id || (m.media_id&&(txt.indexOf("imagen")!==-1||txt.indexOf("comprobante")!==-1)?m.media_id:null);
+    // Comprobante de pago — detectar por campo directo primero
+    var mediaIdComp = m.comprobante_media_id || null;
+    // Si no hay campo directo, buscar en media_id con contexto
+    if(!mediaIdComp && m.media_id){
+      var txtLow = txt.toLowerCase();
+      var esComp = txtLow.indexOf("comprobante")!==-1 || txtLow.indexOf("pago")!==-1 ||
+        txtLow.indexOf("transferen")!==-1 || m.tipo==="comprobante" ||
+        (m.mensaje||"").indexOf("[El cliente envio")!==-1;
+      if(esComp || !txt.replace(/\s/g,"")) mediaIdComp = m.media_id;
+    }
     if(m.tipo==="cliente"&&mediaIdComp){
       h += '<div class="chat-comp-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+mediaIdComp+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
-      h += '<div class="chat-comp-label">📎 Comprobante de pago</div>';
-      h += '<img src="/api/comprobante/'+mediaIdComp+'" onerror="this.style.display=\'none\'" loading="lazy">';
+      h += '<div class="chat-comp-label">📎 Comprobante de pago — <span style="font-weight:400;opacity:0.7">Toca para ampliar</span></div>';
+      h += '<img src="/api/comprobante/'+mediaIdComp+'" onerror="this.style.background=\'rgba(16,185,129,0.1)\';this.style.minHeight=\'120px\'" loading="lazy" style="min-height:80px">';
       h += '<div class="chat-comp-time">'+horaStr+'</div></div>';
     }
-    // Imagen cliente
-    else if(m.tipo==="cliente"&&txt.indexOf("[El cliente envio una imagen]")!==-1&&m.media_id){
+    // Imagen suelta del cliente
+    else if(m.tipo==="cliente"&&m.media_id&&!mediaIdComp){
       h += '<div class="chat-img-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+m.media_id+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
       h += '<img src="/api/comprobante/'+m.media_id+'" onerror="this.style.display=\'none\'" loading="lazy">';
       h += '<div class="chat-img-caption">📷 Imagen del cliente</div></div>';
