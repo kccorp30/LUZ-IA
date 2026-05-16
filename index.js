@@ -2008,18 +2008,19 @@ app.post("/api/luz-panel-agent", async function(req, res) {
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
 
     // Cargar contexto completo en paralelo — incluyendo canjes y mensajes
-    var [pedidosR, clientesR, menuR, domisR, zonasR, promosR, valorR, canjesR, mensajesSinR] = await Promise.all([
+    var [pedidosR, clientesR, menuR, domisR, zonasR, promosR, valorR, canjesR, mensajesSinR, restInfoR] = await Promise.all([
       axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+"&order=created_at.desc&limit=50&select=numero_pedido,estado,total,cliente_tel,items,metodo_pago,created_at,valoracion,domiciliario_id",{headers:h}).catch(function(){return{data:[]};}),
-      axios.get(SUPABASE_URL+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+restaurante_id+"&order=total_pedidos.desc&limit=20&select=nombre_cliente,telefono,total_pedidos,puntos,nivel_fidelidad,updated_at",{headers:h}).catch(function(){return{data:[]};}),
+      // Todos los clientes — sin límite de fecha ni cantidad
+      axios.get(SUPABASE_URL+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+restaurante_id+"&order=total_pedidos.desc&limit=1000&select=nombre_cliente,telefono,total_pedidos,puntos,nivel_fidelidad",{headers:h}).catch(function(){return{data:[]};}),
       axios.get(SUPABASE_URL+"/rest/v1/menu_items?restaurante_id=eq."+restaurante_id+"&select=id,nombre,precio,categoria,disponible&order=categoria",{headers:h}).catch(function(){return{data:[]};}),
       axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restaurante_id+"&select=id,nombre,telefono,activo",{headers:h}).catch(function(){return{data:[]};}),
       axios.get(SUPABASE_URL+"/rest/v1/zonas_domicilio?restaurante_id=eq."+restaurante_id+"&select=id,nombre,precio_domicilio",{headers:h}).catch(function(){return{data:[]};}),
       axios.get(SUPABASE_URL+"/rest/v1/promos_programadas?restaurante_id=eq."+restaurante_id+"&select=id,titulo,descripcion,dia,activa",{headers:h}).catch(function(){return{data:[]};}),
       axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+"&valoracion=not.is.null&order=updated_at.desc&limit=10&select=numero_pedido,valoracion,cliente_tel,updated_at",{headers:h}).catch(function(){return{data:[]};}),
-      // CANJES — últimas 24 horas
       axios.get(SUPABASE_URL+"/rest/v1/canjes?restaurante_id=eq."+restaurante_id+"&created_at=gte."+new Date(Date.now()-24*60*60*1000).toISOString()+"&order=created_at.desc&select=*",{headers:h}).catch(function(){return{data:[]};}),
-      // Mensajes sin responder — alertas_pregunta últimas 2 horas
-      axios.get(SUPABASE_URL+"/rest/v1/mensajes?restaurante_id=eq."+restaurante_id+"&tipo=eq.alerta_pregunta&created_at=gte."+new Date(Date.now()-2*60*60*1000).toISOString()+"&order=created_at.desc&limit=10&select=telefono,mensaje,created_at",{headers:h}).catch(function(){return{data:[]};})
+      axios.get(SUPABASE_URL+"/rest/v1/mensajes?restaurante_id=eq."+restaurante_id+"&tipo=eq.alerta_pregunta&created_at=gte."+new Date(Date.now()-2*60*60*1000).toISOString()+"&order=created_at.desc&limit=10&select=telefono,mensaje,created_at",{headers:h}).catch(function(){return{data:[]};}),
+      // Info del restaurante — incluyendo cupones_activos
+      axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+restaurante_id+"&select=nombre,cupones_activos,whatsapp_phone_id",{headers:h}).catch(function(){return{data:[]};})
     ]);
 
     var pedidos = pedidosR.data||[];
@@ -2031,6 +2032,16 @@ app.post("/api/luz-panel-agent", async function(req, res) {
     var valoraciones = valorR.data||[];
     var canjes = canjesR.data||[];
     var mensajesSin = mensajesSinR.data||[];
+    var restInfoData = (restInfoR.data||[])[0]||{};
+    // Cupones activos del restaurante
+    var cuponesActivos = [];
+    try{ cuponesActivos = JSON.parse(restInfoData.cupones_activos||"[]"); }catch(e){}
+    var cuponesActivosStr = cuponesActivos.filter(function(c){return c.activo;}).map(function(c){
+      return "✅ "+c.codigo+" — "+(c.tipo==="porcentaje"?c.valor+"%":"$"+Number(c.valor).toLocaleString("es-CO"))+" descuento | Usos: "+c.usos_actual+"/"+c.usos_max;
+    }).join("\n")||"Sin cupones activos";
+    var cuponesInactivosStr = cuponesActivos.filter(function(c){return !c.activo;}).map(function(c){
+      return "❌ "+c.codigo+" (inactivo)";
+    }).join(", ")||"";
 
     // Calcular estadísticas reales
     var hoy = new Date(); hoy.setHours(0,0,0,0);
@@ -2068,8 +2079,12 @@ ${canjes.length>0 ? canjes.map(function(c){return "- "+c.telefono+" canjeó "+c.
 ${mensajesSin.length>0 ? mensajesSin.map(function(m){return "- "+m.telefono+": \""+m.mensaje.substring(0,60)+"\" ("+new Date(m.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})+")";}).join("\n") : "Sin alertas pendientes"}
 
 👥 CLIENTES:
-- Registrados: ${clientes.length}
+- Total registrados: ${clientes.length}
 - Top 5: ${clientes.slice(0,5).map(function(c){return (c.nombre_cliente||c.telefono)+"("+c.total_pedidos+"ped, "+c.puntos+"pts)";}).join(" | ")}
+
+🎟️ CUPONES ACTIVOS:
+${cuponesActivosStr}
+${cuponesInactivosStr ? "Inactivos: "+cuponesInactivosStr : ""}
 
 🍔 MENÚ: ${menu.length} productos | ${menu.filter(function(p){return p.disponible===false;}).length} desactivados
 📣 PROMOS: ${promos.filter(function(p){return p.activa;}).length} activas — ${promos.map(function(p){return p.titulo+(p.activa?" ✅":" ❌");}).join(", ")||"Ninguna"}
@@ -2170,16 +2185,25 @@ CÓMO DEBES COMPORTARTE:
         return "✅ Cupón "+nuevoCupon.codigo+" creado ("+d.descuento+"% descuento) — ya aparece en la pestaña Cupones";
       }},
       {re:/ACTION:ENVIAR_PROMO_MASIVA:(\{[^}]+\})/,fn:async function(d){
-        var cliR2=await axios.get(SUPABASE_URL+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+restaurante_id+"&select=telefono",{headers:h});
-        var restInfo=await getRestaurante(null);
-        var phoneId=restInfo?restInfo.whatsapp_phone_id:process.env.WHATSAPP_PHONE_ID;
-        var tels=(cliR2.data||[]).map(function(c){return "57"+stripCountryCode(c.telefono);});
-        var enviados=0;
-        for(var i=0;i<tels.length&&i<100;i++){
-          try{await sendWhatsAppMessage(tels[i],d.mensaje,phoneId);enviados++;}catch(e){}
-          if(i<tels.length-1)await new Promise(function(r){setTimeout(r,350);});
+        // Cargar TODOS los clientes — sin límite
+        var allClis=[];var offset=0;var pageSize=1000;
+        while(true){
+          var cliR2=await axios.get(SUPABASE_URL+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+restaurante_id+"&select=telefono&offset="+offset+"&limit="+pageSize,{headers:h});
+          var page=cliR2.data||[];
+          allClis=allClis.concat(page);
+          if(page.length<pageSize)break;
+          offset+=pageSize;
         }
-        return "✅ Promo enviada a "+enviados+" clientes";
+        // Usar phone_id del restaurante directamente
+        var restR3=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+restaurante_id+"&select=whatsapp_phone_id",{headers:h});
+        var phoneId=(restR3.data&&restR3.data[0])?restR3.data[0].whatsapp_phone_id:process.env.WHATSAPP_PHONE_ID;
+        var tels=allClis.map(function(c){return "57"+stripCountryCode(c.telefono);}).filter(function(t){return t.length>=12;});
+        var enviados=0;var fallidos=0;
+        for(var i=0;i<tels.length;i++){
+          try{await sendWhatsAppMessage(tels[i],d.mensaje,phoneId);enviados++;}catch(e){fallidos++;}
+          if(i<tels.length-1)await new Promise(function(r){setTimeout(r,400);});
+        }
+        return "✅ Promo enviada a "+enviados+" clientes"+(fallidos>0?" ("+fallidos+" fallidos)":"")+" de "+tels.length+" en total";
       }},
       {re:/ACTION:MODIFICAR_PEDIDO:(\{[^}]+\})/,fn:async function(d){
         var patch={updated_at:new Date().toISOString()};
@@ -3313,14 +3337,20 @@ HORA COLOMBIA: ${getHoraColombia().toLocaleTimeString("es-CO")}`;
     if (mMasiva) {
       try {
         var pm = JSON.parse(mMasiva[1]);
-        var cliR2 = await axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restId + "&select=telefono", { headers: h });
-        var tels = (cliR2.data || []).map(function(c){ return "57"+stripCountryCode(c.telefono); });
-        var enviados = 0;
-        for (var i = 0; i < tels.length && i < 100; i++) {
-          try { await sendWhatsAppMessage(tels[i], pm.mensaje, phoneNumberId); enviados++; } catch(e){}
-          if (i < tels.length-1) await new Promise(function(r){ setTimeout(r, 350); });
+        // Todos los clientes — paginado sin límite
+        var allClis2=[]; var off2=0;
+        while(true){
+          var cliR2=await axios.get(SUPABASE_URL+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+restId+"&select=telefono&offset="+off2+"&limit=1000",{headers:h});
+          var pg=cliR2.data||[];allClis2=allClis2.concat(pg);
+          if(pg.length<1000)break;off2+=1000;
         }
-        accionesEjecutadas.push("✅ Promo enviada a "+enviados+" clientes");
+        var tels = allClis2.map(function(c){ return "57"+stripCountryCode(c.telefono); }).filter(function(t){return t.length>=12;});
+        var enviados = 0;
+        for (var i = 0; i < tels.length; i++) {
+          try { await sendWhatsAppMessage(tels[i], pm.mensaje, phoneNumberId); enviados++; } catch(e){}
+          if (i < tels.length-1) await new Promise(function(r){ setTimeout(r, 400); });
+        }
+        accionesEjecutadas.push("✅ Promo enviada a "+enviados+" de "+tels.length+" clientes");
       } catch(e){ accionesEjecutadas.push("❌ Error enviando promo: "+e.message); }
       respuesta = respuesta.replace(/ACTION:ENVIAR_PROMO_MASIVA:\{[^}]+\}/g, "").trim();
     }
