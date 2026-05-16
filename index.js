@@ -3837,7 +3837,7 @@ app.post("/api/luz-voz", async function(req, res) {
   var texto = (req.body.texto || "").trim();
   if (!texto) return res.status(400).json({ ok: false, error: "Falta texto" });
 
-  var apiKey  = process.env.ELEVENLABS_API_KEY || "";
+  var apiKey  = process.env.ELEVENLABS_API_KEY || "sk_7334068384a49aea870bf8e50c3e08a1822357af555233fa";
   var voiceId = process.env.ELEVENLABS_VOICE_ID || "qBvury71WUJfVeT1STkG";
 
   if (!apiKey) return res.status(503).json({ ok: false, error: "ElevenLabs no configurado" });
