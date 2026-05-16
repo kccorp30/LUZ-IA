@@ -143,8 +143,8 @@ html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);fon
       <div class="login-nombre">LUZ <span>IA</span></div>
       <div class="login-sub">Panel Domiciliario</div>
     </div>
-    <input class="l-input" id="loginTel" type="tel" placeholder="Tu número de celular" inputmode="numeric">
-    <input class="l-input" id="loginRestId" type="text" placeholder="ID del restaurante" style="font-size:12px">
+    <input class="l-input" id="loginNombre" type="text" placeholder="Tu nombre (como está registrado)" autocomplete="name" autocapitalize="words">
+    <input class="l-input" id="loginRestId" type="text" placeholder="ID del restaurante" style="font-size:12px;display:none">
     <button class="l-btn" onclick="iniciarSesion()">Entrar</button>
     <div class="l-err" id="loginErr"></div>
   </div>
@@ -226,40 +226,40 @@ var historial = [], ganancias = 0, tiemposTotales = [], fotoBase64 = null;
 var luzAudioPlaying = false, luzAudioCache = {};
 var urlParams = new URLSearchParams(window.location.search);
 
-// Pre-fill from URL
+// Pre-fill from URL — REST_ID hardcodeado para La Curva
 if(urlParams.get("rest")) document.getElementById("loginRestId").value = urlParams.get("rest");
-if(urlParams.get("tel")) document.getElementById("loginTel").value = urlParams.get("tel");
+else document.getElementById("loginRestId").value = "2cc8adc0-068b-4cc5-b880-5239346539ef";
 
 // ── LOGIN ────────────────────────────────────────────────────────
 async function iniciarSesion(){
-  var tel = document.getElementById("loginTel").value.trim().replace(/[^0-9]/g,"");
+  var nombre = document.getElementById("loginNombre").value.trim();
   var rid = document.getElementById("loginRestId").value.trim();
   var err = document.getElementById("loginErr");
-  if(!tel||tel.length<10){err.textContent="Ingresa tu número";return;}
+  if(!nombre||nombre.length<2){err.textContent="Ingresa tu nombre";return;}
   if(!rid){err.textContent="Ingresa el ID del restaurante";return;}
   err.textContent="Verificando...";
   try {
-    var r = await fetch("/api/domi-login?restaurante_id="+encodeURIComponent(rid)+"&telefono="+encodeURIComponent(tel10));
+    var r = await fetch("/api/domi-login?restaurante_id="+encodeURIComponent(rid)+"&nombre="+encodeURIComponent(nombre));
     var data = await r.json();
     if(!data||!data.length){
-      err.textContent="Número no registrado ("+tel10+"). Habla con el restaurante.";
+      err.textContent="'"+nombre+"' no encontrado. Verifica tu nombre o habla con el restaurante.";
       return;
     }
     domi = data[0]; restId = rid;
-    try{localStorage.setItem("domi_tel",tel);localStorage.setItem("domi_rest",rid);}catch(e){}
+    try{localStorage.setItem("domi_nombre",nombre);localStorage.setItem("domi_rest",rid);}catch(e){}
     document.getElementById("loginScreen").style.display="none";
     document.getElementById("app").style.display="block";
-    document.getElementById("domiNombre").textContent=domi.nombre||tel;
+    document.getElementById("domiNombre").textContent=domi.nombre||nombre;
     iniciarApp();
   } catch(e){err.textContent="Error de conexión: "+e.message;}
 }
 
-// Auto-login
+// Auto-login por nombre guardado
 try {
-  var savedTel = localStorage.getItem("domi_tel");
+  var savedNombre = localStorage.getItem("domi_nombre");
   var savedRest = localStorage.getItem("domi_rest");
-  if(savedTel&&savedRest){
-    document.getElementById("loginTel").value=savedTel;
+  if(savedNombre&&savedRest){
+    document.getElementById("loginNombre").value=savedNombre;
     document.getElementById("loginRestId").value=savedRest;
   }
 }catch(e){}
