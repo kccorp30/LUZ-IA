@@ -1987,6 +1987,191 @@ app.post("/api/alerta-pregunta", async function(req, res) {
 // ═══════════════════════════════════════════════════════════════════════════
 // LUZ MENÚ CHAT — Asistente IA dentro del menú del cliente
 // ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// LUZ PANEL AGENT — Asistente IA dentro del panel web del restaurante
+// ═══════════════════════════════════════════════════════════════════════════
+app.post("/api/luz-panel-agent", async function(req, res) {
+  var { restaurante_id, mensaje, historial } = req.body;
+  if(!restaurante_id||!mensaje) return res.status(400).json({ok:false,error:"Faltan datos"});
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+
+    // Cargar contexto completo en paralelo
+    var [pedidosR, clientesR, menuR, domisR, zonasR, promosR, valorR] = await Promise.all([
+      axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+"&order=created_at.desc&limit=50&select=numero_pedido,estado,total,cliente_tel,items,metodo_pago,created_at,valoracion,domiciliario_id",{headers:h}).catch(function(){return{data:[]};}),
+      axios.get(SUPABASE_URL+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+restaurante_id+"&order=total_pedidos.desc&limit=20&select=nombre_cliente,telefono,total_pedidos,puntos,nivel_fidelidad,updated_at",{headers:h}).catch(function(){return{data:[]};}),
+      axios.get(SUPABASE_URL+"/rest/v1/menu_items?restaurante_id=eq."+restaurante_id+"&select=id,nombre,precio,categoria,disponible&order=categoria",{headers:h}).catch(function(){return{data:[]};}),
+      axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restaurante_id+"&select=id,nombre,telefono,activo",{headers:h}).catch(function(){return{data:[]};}),
+      axios.get(SUPABASE_URL+"/rest/v1/zonas_domicilio?restaurante_id=eq."+restaurante_id+"&select=id,nombre,precio_domicilio",{headers:h}).catch(function(){return{data:[]};}),
+      axios.get(SUPABASE_URL+"/rest/v1/promos_programadas?restaurante_id=eq."+restaurante_id+"&select=id,titulo,descripcion,dia,activa",{headers:h}).catch(function(){return{data:[]};}),
+      axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+"&valoracion=not.is.null&order=updated_at.desc&limit=10&select=numero_pedido,valoracion,cliente_tel,updated_at",{headers:h}).catch(function(){return{data:[]};})
+    ]);
+
+    var pedidos = pedidosR.data||[];
+    var clientes = clientesR.data||[];
+    var menu = menuR.data||[];
+    var domis = domisR.data||[];
+    var zonas = zonasR.data||[];
+    var promos = promosR.data||[];
+    var valoraciones = valorR.data||[];
+
+    // Calcular estadísticas reales
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var pedidosHoy = pedidos.filter(function(p){return new Date(p.created_at)>=hoy;});
+    var ventasHoy = pedidosHoy.filter(function(p){return p.estado!=="cancelado";}).reduce(function(s,p){return s+Number(p.total||0);},0);
+    var porMetodo = {};
+    pedidosHoy.forEach(function(p){porMetodo[p.metodo_pago]=(porMetodo[p.metodo_pago]||0)+Number(p.total||0);});
+    var valorProm = valoraciones.length ? (valoraciones.reduce(function(s,v){return s+Number(v.valoracion||0);},0)/valoraciones.length).toFixed(1) : "N/A";
+    // Top productos
+    var prodCount = {};
+    pedidosHoy.forEach(function(p){
+      try{var its=Array.isArray(p.items)?p.items:JSON.parse(p.items||"[]");
+        its.forEach(function(i){var n=typeof i==="string"?i.replace(/^\d+[xX]\s*/,""):i.nombre;if(n)prodCount[n]=(prodCount[n]||0)+1;});}catch(e){}
+    });
+    var topProds = Object.entries(prodCount).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+
+    var systemPrompt = `Eres LUZ, la asistente ejecutiva IA del restaurante. El ADMIN del restaurante te está hablando desde el panel web.
+
+DATOS EN TIEMPO REAL:
+📊 Pedidos hoy: ${pedidosHoy.length} | Ventas hoy: $${ventasHoy.toLocaleString("es-CO")}
+💳 Efectivo: $${(porMetodo.efectivo||0).toLocaleString("es-CO")} | Nequi: $${(porMetodo.nequi||0).toLocaleString("es-CO")} | Digital: $${(porMetodo.bancolombia||0).toLocaleString("es-CO")}
+⭐ Valoración promedio hoy: ${valorProm}/5
+🍔 Top productos hoy: ${topProds.map(function(p){return p[0]+"(×"+p[1]+")";}).join(", ")||"Sin datos"}
+
+📦 Pedidos activos: ${pedidos.filter(function(p){return["confirmado","en_preparacion","listo","en_camino"].indexOf(p.estado)!==-1;}).length}
+👥 Clientes registrados: ${clientes.length}
+🧾 Clientes top: ${clientes.slice(0,5).map(function(c){return (c.nombre_cliente||c.telefono)+"("+c.total_pedidos+"ped)";}).join(", ")}
+
+🍔 MENÚ: ${menu.length} productos | ${menu.filter(function(p){return p.disponible===false;}).length} inactivos
+Categorías: ${[...new Set(menu.map(function(p){return p.categoria;}))].join(", ")}
+
+🛵 Domiciliarios: ${domis.map(function(d){return d.nombre+(d.activo?" ✅":" ❌");}).join(", ")||"Ninguno"}
+🗺️ Zonas: ${zonas.map(function(z){return z.nombre+"($"+Number(z.precio_domicilio).toLocaleString("es-CO")+")";}).join(", ")||"Sin zonas"}
+📣 Promos: ${promos.filter(function(p){return p.activa;}).length} activas / ${promos.length} total
+
+📋 ÚLTIMOS 5 PEDIDOS: ${pedidos.slice(0,5).map(function(p){return "#"+p.numero_pedido+" "+p.estado+" $"+Number(p.total||0).toLocaleString("es-CO");}).join(" | ")}
+
+IDs PARA ACCIONES (usa estos para ejecutar):
+Menu IDs: ${menu.slice(0,10).map(function(p){return p.nombre+"="+p.id;}).join(" | ")}
+Zona IDs: ${zonas.map(function(z){return z.nombre+"="+z.id;}).join(" | ")}
+Promo IDs: ${promos.map(function(p){return p.titulo+"="+p.id;}).join(" | ")}
+
+ACCIONES QUE PUEDES EJECUTAR:
+ACTION:CREAR_ZONA:{"nombre":"...","precio":0,"barrios":"b1,b2"}
+ACTION:CREAR_PROMO:{"titulo":"...","descripcion":"...","dia":"lunes|todos","activa":true}
+ACTION:CREAR_DOMI:{"nombre":"...","telefono":"..."}
+ACTION:ACTUALIZAR_PRECIO:{"producto_id":"...","precio":0}
+ACTION:TOGGLE_PRODUCTO:{"producto_id":"...","disponible":true}
+ACTION:ENVIAR_PROMO_MASIVA:{"mensaje":"..."}
+ACTION:CREAR_CUPON:{"codigo":"...","descuento":10,"tipo":"porcentaje"}
+ACTION:ENVIAR_MENSAJE_CLIENTE:{"telefono":"...","mensaje":"..."}
+ACTION:ACTIVAR_PROMO:{"promo_id":"...","activa":true}
+
+REGLAS:
+- Responde como asistente ejecutiva profesional y directa
+- Usa datos reales del contexto, nunca inventes cifras
+- Cuando ejecutes acciones, confirma claramente qué hiciste
+- Formatea respuestas con **negritas** para destacar datos importantes
+- Si el admin pide algo que no puedes hacer, explica por qué
+- Respuestas concisas pero completas — máximo 200 palabras
+- Hora Colombia: ${getHoraColombia().toLocaleTimeString("es-CO")}`;
+
+    var messages = (historial||[]).slice(-14).map(function(m){return{role:m.role,content:m.content};});
+    messages.push({role:"user",content:mensaje});
+
+    var claudeR = await axios.post("https://api.anthropic.com/v1/messages",{
+      model:"claude-sonnet-4-20250514",max_tokens:800,
+      system:systemPrompt,messages:messages
+    },{headers:{"x-api-key":process.env.ANTHROPIC_API_KEY||"","anthropic-version":"2023-06-01","Content-Type":"application/json"}});
+
+    var respuestaRaw = claudeR.data.content[0].text||"";
+    var respuesta = respuestaRaw;
+    var accionesEjecutadas = [];
+
+    // Ejecutar acciones — mismo patrón que el agente WhatsApp
+    var acciones = [
+      {re:/ACTION:CREAR_ZONA:(\{[^}]+\})/,fn:async function(d){
+        await axios.post(SUPABASE_URL+"/rest/v1/zonas_domicilio",
+          {restaurante_id,nombre:d.nombre,precio_domicilio:Number(d.precio),barrios:d.barrios?d.barrios.split(",").map(function(b){return b.trim();}):[]},
+          {headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});
+        return "✅ Zona '"+d.nombre+"' creada ($"+Number(d.precio).toLocaleString("es-CO")+")";
+      }},
+      {re:/ACTION:CREAR_PROMO:(\{[^}]+\})/,fn:async function(d){
+        await axios.post(SUPABASE_URL+"/rest/v1/promos_programadas",
+          {restaurante_id,titulo:d.titulo,descripcion:d.descripcion,dia:d.dia||"todos",activa:true},
+          {headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});
+        return "✅ Promo '"+d.titulo+"' creada para "+d.dia;
+      }},
+      {re:/ACTION:CREAR_DOMI:(\{[^}]+\})/,fn:async function(d){
+        await axios.post(SUPABASE_URL+"/rest/v1/domiciliarios",
+          {restaurante_id,nombre:d.nombre,telefono:d.telefono,activo:true},
+          {headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});
+        return "✅ Domiciliario "+d.nombre+" registrado";
+      }},
+      {re:/ACTION:ACTUALIZAR_PRECIO:(\{[^}]+\})/,fn:async function(d){
+        await axios.patch(SUPABASE_URL+"/rest/v1/menu_items?id=eq."+d.producto_id,
+          {precio:Number(d.precio)},{headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});
+        menuCache={};
+        return "✅ Precio actualizado a $"+Number(d.precio).toLocaleString("es-CO");
+      }},
+      {re:/ACTION:TOGGLE_PRODUCTO:(\{[^}]+\})/,fn:async function(d){
+        await axios.patch(SUPABASE_URL+"/rest/v1/menu_items?id=eq."+d.producto_id,
+          {disponible:d.disponible},{headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});
+        menuCache={};
+        return "✅ Producto "+(d.disponible?"activado":"desactivado");
+      }},
+      {re:/ACTION:ACTIVAR_PROMO:(\{[^}]+\})/,fn:async function(d){
+        await axios.patch(SUPABASE_URL+"/rest/v1/promos_programadas?id=eq."+d.promo_id,
+          {activa:d.activa},{headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});
+        return "✅ Promo "+(d.activa?"activada":"desactivada");
+      }},
+      {re:/ACTION:CREAR_CUPON:(\{[^}]+\})/,fn:async function(d){
+        await axios.post(SUPABASE_URL+"/rest/v1/cupones",
+          {restaurante_id,codigo:d.codigo,descuento:Number(d.descuento),tipo:d.tipo||"porcentaje",activo:true},
+          {headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});
+        return "✅ Cupón "+d.codigo+" creado ("+d.descuento+"% descuento)";
+      }},
+      {re:/ACTION:ENVIAR_PROMO_MASIVA:(\{[^}]+\})/,fn:async function(d){
+        var cliR2=await axios.get(SUPABASE_URL+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+restaurante_id+"&select=telefono",{headers:h});
+        var restInfo=await getRestaurante(null);
+        var phoneId=restInfo?restInfo.whatsapp_phone_id:process.env.WHATSAPP_PHONE_ID;
+        var tels=(cliR2.data||[]).map(function(c){return "57"+stripCountryCode(c.telefono);});
+        var enviados=0;
+        for(var i=0;i<tels.length&&i<100;i++){
+          try{await sendWhatsAppMessage(tels[i],d.mensaje,phoneId);enviados++;}catch(e){}
+          if(i<tels.length-1)await new Promise(function(r){setTimeout(r,350);});
+        }
+        return "✅ Promo enviada a "+enviados+" clientes";
+      }},
+      {re:/ACTION:ENVIAR_MENSAJE_CLIENTE:(\{[^}]+\})/,fn:async function(d){
+        var restInfo=await getRestaurante(null);
+        var phoneId=restInfo?restInfo.whatsapp_phone_id:process.env.WHATSAPP_PHONE_ID;
+        await sendWhatsAppMessage("57"+stripCountryCode(d.telefono),d.mensaje,phoneId);
+        return "✅ Mensaje enviado al "+d.telefono;
+      }}
+    ];
+
+    for(var accion of acciones){
+      var match=respuestaRaw.match(accion.re);
+      if(match){
+        try{
+          var datos=JSON.parse(match[1]);
+          var resultado=await accion.fn(datos);
+          accionesEjecutadas.push(resultado);
+        }catch(eA){accionesEjecutadas.push("❌ Error: "+eA.message);}
+        respuesta=respuesta.replace(accion.re,"").trim();
+      }
+    }
+
+    console.log("[luz-panel] '"+mensaje.substring(0,40)+"' | acciones: "+accionesEjecutadas.length);
+    res.json({ok:true,respuesta:respuesta.trim(),acciones_ejecutadas:accionesEjecutadas});
+  }catch(e){
+    console.error("[luz-panel]",e.response?JSON.stringify(e.response.data):e.message);
+    res.json({ok:true,respuesta:"Tuve un problema técnico. Intenta de nuevo en un momento.",acciones_ejecutadas:[]});
+  }
+});
+
 app.post("/api/luz-menu-chat", async function(req, res) {
   var { restaurante_id, mensaje, telefono, historial, pedido_activo } = req.body;
   if (!restaurante_id || !mensaje) return res.status(400).json({ ok: false, error: "Faltan datos" });
