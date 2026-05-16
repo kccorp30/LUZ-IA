@@ -1886,16 +1886,46 @@ app.post("/api/enviar-promo", async function(req, res) {
   }
 });
 
+// Cache en memoria para comprobantes — evita re-descargar de Meta cuando expira el URL
+var comprobanteCache = {};
+
 app.get("/api/comprobante/:mediaId", async function(req, res) {
+  var mediaId = req.params.mediaId;
   try {
-    var imgData = await descargarImagenMeta(req.params.mediaId);
-    if (!imgData) return res.status(404).json({ error: "No se pudo obtener imagen" });
+    // Servir desde cache si existe
+    if (comprobanteCache[mediaId]) {
+      var cached = comprobanteCache[mediaId];
+      res.setHeader("Content-Type", cached.mime);
+      res.setHeader("Cache-Control", "public, max-age=604800"); // 7 días
+      return res.send(cached.buffer);
+    }
+    // Descargar de Meta
+    var imgData = await descargarImagenMeta(mediaId);
+    if (!imgData) return res.status(404).send("Imagen no encontrada");
     var matches = imgData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches) return res.status(500).json({ error: "Formato invalido" });
-    res.setHeader("Content-Type", matches[1]);
-    res.setHeader("Cache-Control", "public, max-age=86400");
-    res.send(Buffer.from(matches[2], "base64"));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    if (!matches) return res.status(500).send("Formato inválido");
+    var mime = matches[1];
+    var buffer = Buffer.from(matches[2], "base64");
+    // Guardar en cache
+    comprobanteCache[mediaId] = { mime: mime, buffer: buffer, ts: Date.now() };
+    // Limpiar cache > 200 entradas
+    var keys = Object.keys(comprobanteCache);
+    if (keys.length > 200) {
+      keys.sort(function(a,b){ return comprobanteCache[a].ts - comprobanteCache[b].ts; });
+      keys.slice(0,50).forEach(function(k){ delete comprobanteCache[k]; });
+    }
+    res.setHeader("Content-Type", mime);
+    res.setHeader("Cache-Control", "public, max-age=604800");
+    res.send(buffer);
+  } catch(e) {
+    // Si Meta expiró y tenemos cache, servir cache aunque sea vieja
+    if (comprobanteCache[mediaId]) {
+      var cached = comprobanteCache[mediaId];
+      res.setHeader("Content-Type", cached.mime);
+      return res.send(cached.buffer);
+    }
+    res.status(500).send("Error: " + e.message);
+  }
 });
 
 app.get("/api/chat/:telefono", async function(req, res) {
@@ -1958,7 +1988,7 @@ app.post("/api/alerta-pregunta", async function(req, res) {
 // LUZ MENÚ CHAT — Asistente IA dentro del menú del cliente
 // ═══════════════════════════════════════════════════════════════════════════
 app.post("/api/luz-menu-chat", async function(req, res) {
-  var { restaurante_id, mensaje, telefono, historial } = req.body;
+  var { restaurante_id, mensaje, telefono, historial, pedido_activo } = req.body;
   if (!restaurante_id || !mensaje) return res.status(400).json({ ok: false, error: "Faltan datos" });
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
@@ -2022,6 +2052,10 @@ CLIENTE ACTUAL:
 ${cliente ? `- Nombre: ${cliente.nombre_cliente || ""}
 - Puntos: ${cliente.puntos || 0} puntos (nivel ${cliente.nivel_fidelidad || "bronce"})
 - Pedidos totales: ${cliente.total_pedidos || 0}` : "- Cliente nuevo o sin historial"}
+
+${pedido_activo ? `⚠️ IMPORTANTE — ${pedido_activo}
+El cliente YA tiene un pedido activo. NO le pidas datos de nuevo (dirección, teléfono, nombre). 
+Si quiere agregar algo, dile que puede usar el campo de notas o que se lo comunique al restaurante.` : ""}
 
 PROMOS DE HOY (${diaHoy}):
 ${promosHoy.length ? promosHoy.map(function(p){ return "🔥 "+p.titulo+": "+p.descripcion+(p.descuento?" ("+p.descuento+"% off)":""); }).join("\n") : "Sin promos especiales hoy"}
@@ -2738,6 +2772,240 @@ app.post("/webhook", function(req, res) {
   } catch (e) { console.error("Error webhook:", e.message); }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// LUZ AGENTE DUEÑO — Responde WhatsApp del dueño con acceso total al sistema
+// ═══════════════════════════════════════════════════════════════════════════
+var historialDueno = {}; // { restaurante_id: [{role, content}] }
+
+async function procesarMensajeDueno(texto, from, phoneNumberId, restaurante) {
+  var restId = restaurante.id;
+  var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+  var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+
+  // Indicador de "procesando"
+  await sendWhatsAppMessage(from, "⏳ Procesando...", phoneNumberId);
+
+  try {
+    // Cargar contexto del restaurante en paralelo
+    var [pedidosR, clientesR, menuR, domisR, zonasR, promosR] = await Promise.all([
+      axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restId +
+        "&order=created_at.desc&limit=20&select=numero_pedido,estado,total,cliente_tel,items,metodo_pago,created_at,domiciliario_id",
+        { headers: h }).catch(function(){ return { data: [] }; }),
+      axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restId +
+        "&order=total_pedidos.desc&limit=10&select=nombre_cliente,telefono,total_pedidos,puntos,nivel_fidelidad",
+        { headers: h }).catch(function(){ return { data: [] }; }),
+      axios.get(SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restId +
+        "&order=categoria&select=id,nombre,precio,categoria,disponible",
+        { headers: h }).catch(function(){ return { data: [] }; }),
+      axios.get(SUPABASE_URL + "/rest/v1/domiciliarios?restaurante_id=eq." + restId +
+        "&select=id,nombre,telefono,activo",
+        { headers: h }).catch(function(){ return { data: [] }; }),
+      axios.get(SUPABASE_URL + "/rest/v1/zonas_domicilio?restaurante_id=eq." + restId +
+        "&select=id,nombre,precio_domicilio,barrios",
+        { headers: h }).catch(function(){ return { data: [] }; }),
+      axios.get(SUPABASE_URL + "/rest/v1/promos_programadas?restaurante_id=eq." + restId +
+        "&select=id,titulo,descripcion,dia,activa",
+        { headers: h }).catch(function(){ return { data: [] }; })
+    ]);
+
+    var pedidos = pedidosR.data || [];
+    var clientes = clientesR.data || [];
+    var menu = menuR.data || [];
+    var domis = domisR.data || [];
+    var zonas = zonasR.data || [];
+    var promos = promosR.data || [];
+
+    // Calcular ventas del día
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var pedidosHoy = pedidos.filter(function(p){ return new Date(p.created_at) >= hoy; });
+    var ventasHoy = pedidosHoy.filter(function(p){ return p.estado==="entregado"||p.estado==="confirmado"||p.estado==="en_preparacion"; })
+      .reduce(function(s,p){ return s+Number(p.total||0); }, 0);
+
+    // Historial de conversación con el dueño
+    if (!historialDueno[restId]) historialDueno[restId] = [];
+    historialDueno[restId].push({ role: "user", content: texto });
+    if (historialDueno[restId].length > 20) historialDueno[restId] = historialDueno[restId].slice(-20);
+
+    var systemPrompt = `Eres LUZ, la asistente ejecutiva de IA del restaurante "${restaurante.nombre}". 
+Estás hablando con EL DUEÑO por WhatsApp. Tienes acceso TOTAL al sistema.
+
+CONTEXTO ACTUAL DEL NEGOCIO:
+📊 Pedidos hoy: ${pedidosHoy.length} | Ventas hoy: $${ventasHoy.toLocaleString("es-CO")}
+📦 Pedidos activos: ${pedidos.filter(function(p){ return ["confirmado","en_preparacion","listo","en_camino"].indexOf(p.estado)!==-1; }).length}
+👥 Clientes top: ${clientes.slice(0,3).map(function(c){ return c.nombre_cliente+"("+c.total_pedidos+" pedidos)"; }).join(", ")}
+🍔 Menú: ${menu.length} productos (${menu.filter(function(p){ return p.disponible===false; }).length} inactivos)
+🛵 Domiciliarios: ${domis.length} registrados
+🗺️ Zonas: ${zonas.map(function(z){ return z.nombre+"($"+Number(z.precio_domicilio).toLocaleString("es-CO")+")"; }).join(", ")}
+📣 Promos activas: ${promos.filter(function(p){ return p.activa; }).length}
+
+ÚLTIMOS PEDIDOS:
+${pedidos.slice(0,5).map(function(p){ return "#"+p.numero_pedido+" "+p.estado+" $"+Number(p.total||0).toLocaleString("es-CO")+" - "+p.cliente_tel; }).join("\n")}
+
+PUEDES EJECUTAR ESTAS ACCIONES (úsalas cuando el dueño lo pida):
+ACTION:CREAR_ZONA:{"nombre":"...","precio":0,"barrios":"barrio1,barrio2"}
+ACTION:CREAR_PROMO:{"titulo":"...","descripcion":"...","dia":"lunes|martes|...|todos","activa":true}
+ACTION:CREAR_DOMI:{"nombre":"...","telefono":"..."}
+ACTION:ACTUALIZAR_PRECIO:{"producto_id":"...","precio":0}
+ACTION:TOGGLE_PRODUCTO:{"producto_id":"...","disponible":true}
+ACTION:ENVIAR_PROMO_MASIVA:{"mensaje":"..."}
+ACTION:VER_REPORTE:{"tipo":"ventas_hoy|ventas_semana|mejores_clientes|productos_top"}
+ACTION:ENVIAR_MENSAJE_CLIENTE:{"telefono":"...","mensaje":"..."}
+ACTION:CREAR_CUPON:{"codigo":"...","descuento":0,"tipo":"porcentaje|fijo"}
+
+REGLAS:
+- Habla como una asistente profesional y eficiente, colombiana
+- Cuando el dueño pida algo ejecutable, hazlo con ACTION: y confirma
+- Si necesitas un dato para ejecutar, pregunta SOLO lo que falta
+- Respuestas cortas y directas — el dueño está ocupado
+- Si hay problemas urgentes en el sistema, avísale aunque no pregunte
+- Puedes combinar múltiples acciones si el dueño pide varias cosas
+- NUNCA inventes datos — usa solo la info real del contexto
+
+HORA COLOMBIA: ${getHoraColombia().toLocaleTimeString("es-CO")}`;
+
+    var claudeR = await axios.post("https://api.anthropic.com/v1/messages", {
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: historialDueno[restId].slice(-16)
+    }, {
+      headers: {
+        "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json"
+      }
+    });
+
+    var respuestaRaw = claudeR.data.content[0].text || "";
+    var respuesta = respuestaRaw;
+    var accionesEjecutadas = [];
+
+    // ── EJECUTAR ACCIONES ──────────────────────────────────────────────────
+    // CREAR ZONA
+    var mZona = respuestaRaw.match(/ACTION:CREAR_ZONA:(\{[^}]+\})/);
+    if (mZona) {
+      try {
+        var zona = JSON.parse(mZona[1]);
+        await axios.post(SUPABASE_URL + "/rest/v1/zonas_domicilio",
+          { restaurante_id: restId, nombre: zona.nombre, precio_domicilio: Number(zona.precio),
+            barrios: zona.barrios ? zona.barrios.split(",").map(function(b){ return b.trim(); }) : [] },
+          { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+        accionesEjecutadas.push("✅ Zona '"+zona.nombre+"' creada con precio $"+Number(zona.precio).toLocaleString("es-CO"));
+      } catch(e){ accionesEjecutadas.push("❌ Error creando zona: "+e.message); }
+      respuesta = respuesta.replace(/ACTION:CREAR_ZONA:\{[^}]+\}/g, "").trim();
+    }
+
+    // CREAR PROMO
+    var mPromo = respuestaRaw.match(/ACTION:CREAR_PROMO:(\{[^}]+\})/);
+    if (mPromo) {
+      try {
+        var promo = JSON.parse(mPromo[1]);
+        await axios.post(SUPABASE_URL + "/rest/v1/promos_programadas",
+          { restaurante_id: restId, titulo: promo.titulo, descripcion: promo.descripcion,
+            dia: promo.dia || "todos", activa: true },
+          { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+        accionesEjecutadas.push("✅ Promo '"+promo.titulo+"' creada para "+promo.dia);
+      } catch(e){ accionesEjecutadas.push("❌ Error creando promo: "+e.message); }
+      respuesta = respuesta.replace(/ACTION:CREAR_PROMO:\{[^}]+\}/g, "").trim();
+    }
+
+    // CREAR DOMICILIARIO
+    var mDomi = respuestaRaw.match(/ACTION:CREAR_DOMI:(\{[^}]+\})/);
+    if (mDomi) {
+      try {
+        var domi = JSON.parse(mDomi[1]);
+        await axios.post(SUPABASE_URL + "/rest/v1/domiciliarios",
+          { restaurante_id: restId, nombre: domi.nombre, telefono: domi.telefono, activo: true },
+          { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+        accionesEjecutadas.push("✅ Domiciliario "+domi.nombre+" registrado");
+      } catch(e){ accionesEjecutadas.push("❌ Error: "+e.message); }
+      respuesta = respuesta.replace(/ACTION:CREAR_DOMI:\{[^}]+\}/g, "").trim();
+    }
+
+    // ACTUALIZAR PRECIO
+    var mPrecio = respuestaRaw.match(/ACTION:ACTUALIZAR_PRECIO:(\{[^}]+\})/);
+    if (mPrecio) {
+      try {
+        var upd = JSON.parse(mPrecio[1]);
+        await axios.patch(SUPABASE_URL + "/rest/v1/menu_items?id=eq." + upd.producto_id,
+          { precio: Number(upd.precio) },
+          { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+        menuCache = {};
+        accionesEjecutadas.push("✅ Precio actualizado a $"+Number(upd.precio).toLocaleString("es-CO"));
+      } catch(e){ accionesEjecutadas.push("❌ Error actualizando precio: "+e.message); }
+      respuesta = respuesta.replace(/ACTION:ACTUALIZAR_PRECIO:\{[^}]+\}/g, "").trim();
+    }
+
+    // TOGGLE PRODUCTO
+    var mToggle = respuestaRaw.match(/ACTION:TOGGLE_PRODUCTO:(\{[^}]+\})/);
+    if (mToggle) {
+      try {
+        var tog = JSON.parse(mToggle[1]);
+        await axios.patch(SUPABASE_URL + "/rest/v1/menu_items?id=eq." + tog.producto_id,
+          { disponible: tog.disponible },
+          { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+        menuCache = {};
+        accionesEjecutadas.push("✅ Producto "+(tog.disponible?"activado":"desactivado"));
+      } catch(e){ accionesEjecutadas.push("❌ Error: "+e.message); }
+      respuesta = respuesta.replace(/ACTION:TOGGLE_PRODUCTO:\{[^}]+\}/g, "").trim();
+    }
+
+    // ENVIAR PROMO MASIVA
+    var mMasiva = respuestaRaw.match(/ACTION:ENVIAR_PROMO_MASIVA:(\{[^}]+\})/);
+    if (mMasiva) {
+      try {
+        var pm = JSON.parse(mMasiva[1]);
+        var cliR2 = await axios.get(SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restId + "&select=telefono", { headers: h });
+        var tels = (cliR2.data || []).map(function(c){ return "57"+stripCountryCode(c.telefono); });
+        var enviados = 0;
+        for (var i = 0; i < tels.length && i < 100; i++) {
+          try { await sendWhatsAppMessage(tels[i], pm.mensaje, phoneNumberId); enviados++; } catch(e){}
+          if (i < tels.length-1) await new Promise(function(r){ setTimeout(r, 350); });
+        }
+        accionesEjecutadas.push("✅ Promo enviada a "+enviados+" clientes");
+      } catch(e){ accionesEjecutadas.push("❌ Error enviando promo: "+e.message); }
+      respuesta = respuesta.replace(/ACTION:ENVIAR_PROMO_MASIVA:\{[^}]+\}/g, "").trim();
+    }
+
+    // ENVIAR MENSAJE A CLIENTE
+    var mMsg = respuestaRaw.match(/ACTION:ENVIAR_MENSAJE_CLIENTE:(\{[^}]+\})/);
+    if (mMsg) {
+      try {
+        var mc = JSON.parse(mMsg[1]);
+        await sendWhatsAppMessage("57"+stripCountryCode(mc.telefono), mc.mensaje, phoneNumberId);
+        accionesEjecutadas.push("✅ Mensaje enviado al cliente "+mc.telefono);
+      } catch(e){ accionesEjecutadas.push("❌ Error: "+e.message); }
+      respuesta = respuesta.replace(/ACTION:ENVIAR_MENSAJE_CLIENTE:\{[^}]+\}/g, "").trim();
+    }
+
+    // Limpiar respuesta y agregar resultados de acciones
+    respuesta = respuesta.trim();
+    if (accionesEjecutadas.length > 0) {
+      respuesta += "\n\n" + accionesEjecutadas.join("\n");
+    }
+
+    // Guardar respuesta en historial
+    historialDueno[restId].push({ role: "assistant", content: respuesta });
+
+    // Enviar respuesta al dueño (dividir si es muy largo)
+    if (respuesta.length > 1500) {
+      var partes = respuesta.match(/.{1,1500}(\s|$)/g) || [respuesta];
+      for (var parte of partes) {
+        await sendWhatsAppMessage(from, parte.trim(), phoneNumberId);
+        await new Promise(function(r){ setTimeout(r, 300); });
+      }
+    } else {
+      await sendWhatsAppMessage(from, respuesta, phoneNumberId);
+    }
+
+    console.log("[DUEÑO] ✅ Respondido | acciones: " + accionesEjecutadas.length);
+
+  } catch(e) {
+    console.error("[DUEÑO] Error:", e.message);
+    await sendWhatsAppMessage(from, "❌ Tuve un error procesando eso. Intenta de nuevo en un momento.", phoneNumberId);
+  }
+}
+
 async function procesarMensaje(msg, from, phoneNumberId) {
   try {
     var msgType = msg.type;
@@ -2769,6 +3037,18 @@ async function procesarMensaje(msg, from, phoneNumberId) {
 
     if (!userText) return;
 
+    // ── DETECTAR SI ES EL DUEÑO ESCRIBIENDO ──────────────────────────────────
+    var restaurante = await getRestaurante(phoneNumberId);
+    if (restaurante && restaurante.telefono_dueno) {
+      var telDueno = stripCountryCode(restaurante.telefono_dueno);
+      var telFrom  = stripCountryCode(from);
+      if (telFrom === telDueno) {
+        console.log("[DUEÑO] Mensaje del dueño: " + userText.substring(0, 60));
+        await procesarMensajeDueno(userText, from, phoneNumberId, restaurante);
+        return;
+      }
+    }
+
     // ── CAPTURA DE VALORACIÓN ─────────────────────────────────────────────────
     // Si el cliente responde 1-5, podría ser una valoración del pedido
     var trimmedText = userText.trim();
@@ -2776,40 +3056,39 @@ async function procesarMensaje(msg, from, phoneNumberId) {
       try {
         var svcRating = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
         var telRating = stripCountryCode(from);
-        // Verificar si tiene un pedido entregado reciente (últimas 2 horas)
-        var dosHorasAtras = new Date(Date.now() - 2*60*60*1000).toISOString();
-        var pedRating = await axios.get(
-          SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + (await getRestaurante(phoneNumberId))?.id +
-          "&cliente_tel=eq." + encodeURIComponent(telRating) +
-          "&estado=eq.entregado&updated_at=gte." + dosHorasAtras +
-          "&order=updated_at.desc&limit=1&select=id,numero_pedido",
-          { headers: { "apikey": svcRating, "Authorization": "Bearer " + svcRating } }
-        ).catch(function() { return { data: [] }; });
+        var restauranteRating = await getRestaurante(phoneNumberId);
+        if (restauranteRating) {
+          // Buscar pedido entregado reciente — últimas 24 horas (más tiempo para valorar)
+          var hace24h = new Date(Date.now() - 24*60*60*1000).toISOString();
+          var pedRating = await axios.get(
+            SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteRating.id +
+            "&or=(cliente_tel.eq." + encodeURIComponent(telRating) + ",cliente_tel.eq." + encodeURIComponent("57"+telRating) + ")" +
+            "&estado=eq.entregado&valoracion=is.null&created_at=gte." + hace24h +
+            "&order=created_at.desc&limit=1&select=id,numero_pedido",
+            { headers: { "apikey": svcRating, "Authorization": "Bearer " + svcRating } }
+          ).catch(function() { return { data: [] }; });
 
-        if (pedRating.data && pedRating.data.length > 0) {
-          var pedId = pedRating.data[0].id;
-          var pedNum = pedRating.data[0].numero_pedido;
-          var estrellas = parseInt(trimmedText);
-          // Guardar valoración en el pedido
-          await axios.patch(
-            SUPABASE_URL + "/rest/v1/pedidos?id=eq." + pedId,
-            { valoracion: estrellas, updated_at: new Date().toISOString() },
-            { headers: { "apikey": svcRating, "Authorization": "Bearer " + svcRating, "Content-Type": "application/json", "Prefer": "return=minimal" } }
-          ).catch(function(){});
-          var estrellasStr = "⭐".repeat(estrellas);
-          var respRating = estrellas >= 4
-            ? "¡Gracias " + estrellasStr + "! Nos alegra mucho que hayas disfrutado tu pedido. ¡Te esperamos pronto! 😊🙌"
-            : estrellas === 3
-            ? "Gracias por tu valoración " + estrellasStr + ". Tomamos nota para mejorar. ¡En el próximo pedido lo haremos mejor! 💪"
-            : "Lamentamos que no haya sido la mejor experiencia " + estrellasStr + ". Tu opinión es muy importante para nosotros. ¿Qué podemos mejorar?";
-          var restRating = await getRestaurante(phoneNumberId);
-          if (restRating) {
-            await sendWhatsAppMessage(from, respRating, restRating.whatsapp_phone_id || phoneNumberId);
-            guardarMensajeSupabase(restRating.id, telRating, trimmedText, "cliente", null).catch(function(){});
-            guardarMensajeSupabase(restRating.id, telRating, respRating, "restaurante", null).catch(function(){});
+          if (pedRating.data && pedRating.data.length > 0) {
+            var pedId = pedRating.data[0].id;
+            var pedNum = pedRating.data[0].numero_pedido;
+            var estrellas = parseInt(trimmedText);
+            await axios.patch(
+              SUPABASE_URL + "/rest/v1/pedidos?id=eq." + pedId,
+              { valoracion: estrellas, updated_at: new Date().toISOString() },
+              { headers: { "apikey": svcRating, "Authorization": "Bearer " + svcRating, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+            ).catch(function(){});
+            var estrellasStr = "⭐".repeat(estrellas);
+            var respRating = estrellas >= 4
+              ? "¡Gracias " + estrellasStr + "! Nos alegra mucho que hayas disfrutado. ¡Te esperamos pronto! 😊"
+              : estrellas === 3
+              ? "Gracias " + estrellasStr + ". Tomamos nota para mejorar. ¡La próxima será mejor! 💪"
+              : "Lamentamos que no fue lo esperado " + estrellasStr + ". ¿Qué podemos mejorar?";
+            await sendWhatsAppMessage(from, respRating, restauranteRating.whatsapp_phone_id || phoneNumberId);
+            guardarMensajeSupabase(restauranteRating.id, telRating, trimmedText, "cliente", null).catch(function(){});
+            guardarMensajeSupabase(restauranteRating.id, telRating, respRating, "restaurante", null).catch(function(){});
+            console.log("[rating] ⭐ Pedido #" + pedNum + " = " + estrellas + "★ por " + telRating);
+            return;
           }
-          console.log("[rating] ⭐ Pedido #" + pedNum + " valorado con " + estrellas + " estrellas por " + telRating);
-          return; // No pasar a LUZ, ya manejamos la respuesta
         }
       } catch(eRatingCapture) { console.error("[rating-capture]", eRatingCapture.message); }
     }
@@ -3366,6 +3645,70 @@ app.get("/", function(req, res) {
 });
 
 // ── NOTIFICAR PANEL DESDE MENÚ (usado por LUZ asistente) ──────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// ELEVENLABS TTS — Voz humana de Luz
+// ═══════════════════════════════════════════════════════════════════════════
+app.post("/api/luz-voz", async function(req, res) {
+  var texto = (req.body.texto || "").trim();
+  if (!texto) return res.status(400).json({ ok: false, error: "Falta texto" });
+
+  var apiKey  = process.env.ELEVENLABS_API_KEY || "";
+  var voiceId = process.env.ELEVENLABS_VOICE_ID || "qBvury71WUJfVeT1STkG";
+
+  if (!apiKey) return res.status(503).json({ ok: false, error: "ElevenLabs no configurado" });
+
+  // Limpiar texto — quitar markdown, emojis, símbolos
+  var limpio = texto
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/\[[^\]]*\]/g, "")
+    .replace(/[\u{1F300}-\u{1FFFF}]/gu, "")
+    .replace(/[⭐🎁🍔🛵💳📱⚠️✅❌🔥💰👋🌟📝💜🤖•]/g, "")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/\n/g, ". ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Solo primera oración — más natural
+  var primera = limpio.split(/[.!?]\s/)[0];
+  if (primera.length > 150) primera = primera.substring(0, 150);
+  if (!primera || primera.length < 2) return res.status(400).json({ ok: false, error: "Texto vacío" });
+
+  try {
+    var elR = await axios.post(
+      "https://api.elevenlabs.io/v1/text-to-speech/" + voiceId + "/stream",
+      {
+        text: primera,
+        model_id: "eleven_multilingual_v2",
+        voice_settings: {
+          stability: 0.55,
+          similarity_boost: 0.80,
+          style: 0.25,
+          use_speaker_boost: true
+        }
+      },
+      {
+        headers: {
+          "xi-api-key": apiKey,
+          "Content-Type": "application/json",
+          "Accept": "audio/mpeg"
+        },
+        responseType: "arraybuffer",
+        timeout: 8000
+      }
+    );
+
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Cache-Control", "no-store");
+    res.send(Buffer.from(elR.data));
+    console.log("[ElevenLabs] ✅ TTS: '" + primera.substring(0, 40) + "'");
+  } catch(e) {
+    var status = e.response ? e.response.status : 500;
+    console.error("[ElevenLabs] Error:", status, e.message);
+    res.status(503).json({ ok: false, error: "ElevenLabs error: " + status });
+  }
+});
+
 app.post("/api/notificar-panel", async function(req, res) {
   var { restaurante_id, telefono, mensaje, tipo } = req.body;
   if (!restaurante_id || !mensaje) return res.status(400).json({ ok: false, error: "Faltan datos" });
@@ -3419,97 +3762,149 @@ async function luzAgentTick() {
     var desde = agentState.ultimoChequeo;
     agentState.ultimoChequeo = new Date().toISOString();
 
-    // 1. DETECTAR CANJES NUEVOS no procesados
-    try {
-      var canjesR = await axios.get(
-        SUPABASE_URL + "/rest/v1/canjes?estado=eq.pendiente&created_at=gte." + desde + "&select=*",
-        { headers: h }
-      );
-      var canjesNuevos = (canjesR.data || []).filter(function(c) { return !agentState.canjesVistosHoy.has(c.id); });
-      for (var canje of canjesNuevos) {
-        agentState.canjesVistosHoy.add(canje.id);
-        // Verificar si el canje ya fue notificado al panel
-        var msgClave = "canje_" + canje.id;
-        if (!agentState.alertasEnviadas.has(msgClave)) {
+    // Cargar todos los restaurantes activos
+    var restsR = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=id,nombre,whatsapp_phone_id,telefono_dueno", { headers: h })
+      .catch(function(){ return { data: [] }; });
+    var rests = restsR.data || [];
+
+    for (var rest of rests) {
+      var restId = rest.id;
+      var phoneId = rest.whatsapp_phone_id;
+      var telDueno = rest.telefono_dueno ? "57" + rest.telefono_dueno : null;
+
+      // Helper para alertar al dueño
+      var alertarDueno = async function(msg) {
+        if (!telDueno || !phoneId) return;
+        var clave = "alerta_" + msg.substring(0,30).replace(/\s/g,"_");
+        if (agentState.alertasEnviadas.has(clave)) return;
+        agentState.alertasEnviadas.add(clave);
+        await sendWhatsAppMessage(telDueno, "🤖 *LUZ ALERTA*\n" + msg, phoneId).catch(function(){});
+        console.log("[AGENTE→DUEÑO] " + msg.substring(0, 60));
+      };
+
+      // 1. CANJES NUEVOS sin procesar
+      try {
+        var canjesR = await axios.get(
+          SUPABASE_URL + "/rest/v1/canjes?estado=eq.pendiente&restaurante_id=eq." + restId + "&created_at=gte." + desde + "&select=*",
+          { headers: h }
+        );
+        for (var canje of (canjesR.data || [])) {
+          if (agentState.canjesVistosHoy.has(canje.id)) continue;
+          agentState.canjesVistosHoy.add(canje.id);
+          var msgClave = "canje_" + canje.id;
+          if (agentState.alertasEnviadas.has(msgClave)) continue;
           agentState.alertasEnviadas.add(msgClave);
-          // Buscar pedido activo del cliente
+          // Buscar pedido activo
           var pedR = await axios.get(
-            SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + canje.restaurante_id +
+            SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restId +
             "&cliente_tel=eq." + encodeURIComponent(canje.telefono) +
             "&estado=in.(confirmado,en_preparacion,listo)&order=created_at.desc&limit=1&select=id,numero_pedido,items,notas_especiales",
             { headers: h }
-          ).catch(function() { return { data: [] }; });
-
+          ).catch(function(){ return { data: [] }; });
           if (pedR.data && pedR.data.length > 0) {
             var ped = pedR.data[0];
-            // Verificar que no está ya agregado
             var itemsStr = JSON.stringify(ped.items || []);
             if (itemsStr.indexOf("CANJE: " + canje.producto_nombre) === -1) {
               var items = Array.isArray(ped.items) ? [...ped.items] : [];
               items.push("🎁 CANJE: " + canje.producto_nombre + " ($0)");
-              var nota = (ped.notas_especiales || "") + (ped.notas_especiales ? " | " : "") + "⭐ CANJE: " + canje.producto_nombre;
               await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + ped.id,
-                { items: items, notas_especiales: nota, updated_at: new Date().toISOString() },
+                { items: items, notas_especiales: (ped.notas_especiales||"") + " | ⭐ CANJE: " + canje.producto_nombre, updated_at: new Date().toISOString() },
                 { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } }
               ).catch(function(){});
-              console.log("[AGENTE] ✅ Canje #" + canje.id + " agregado retroactivamente al pedido #" + ped.numero_pedido);
-              await guardarMensajeSupabase(canje.restaurante_id, canje.telefono,
-                "⭐ AGENTE LUZ: Canje de " + canje.producto_nombre + " detectado y agregado al Pedido #" + ped.numero_pedido,
-                "alerta_pregunta", null
-              ).catch(function(){});
+              await guardarMensajeSupabase(restId, canje.telefono, "⭐ CANJE: " + canje.producto_nombre + " agregado al pedido #" + ped.numero_pedido, "alerta_pregunta", null).catch(function(){});
+              await alertarDueno("⭐ Canje de " + canje.producto_nombre + " aplicado al pedido #" + ped.numero_pedido + " del cliente " + canje.telefono);
             }
+          } else {
+            await alertarDueno("⭐ Canje pendiente: " + canje.telefono + " canjeó " + canje.producto_nombre + " pero no tiene pedido activo. Pendiente de entregar.");
           }
         }
-      }
-    } catch(eCanjes) { console.error("[AGENTE] canjes:", eCanjes.message); }
+      } catch(eCanjes) { console.error("[AGENTE] canjes:", eCanjes.message); }
 
-    // 2. DETECTAR PEDIDOS PAGADOS sin confirmar (con comprobante pero aún esperando_pago)
-    try {
-      var pedsPagR = await axios.get(
-        SUPABASE_URL + "/rest/v1/pedidos?estado=eq.esperando_pago&comprobante_url=not.is.null&created_at=gte." + new Date(Date.now()-30*60*1000).toISOString() + "&select=id,numero_pedido,restaurante_id,cliente_tel",
-        { headers: h }
-      );
-      for (var p of (pedsPagR.data || [])) {
-        var clave = "pago_pendiente_" + p.id;
-        if (!agentState.alertasEnviadas.has(clave)) {
-          agentState.alertasEnviadas.add(clave);
-          await guardarMensajeSupabase(p.restaurante_id, p.cliente_tel,
-            "⚠️ AGENTE: Pedido #" + p.numero_pedido + " tiene comprobante pero sigue en 'esperando_pago'. Verificar y confirmar.",
-            "alerta_pregunta", null
-          ).catch(function(){});
-          console.log("[AGENTE] ⚠️ Pedido #" + p.numero_pedido + " tiene comprobante sin confirmar");
+      // 2. PEDIDOS CON COMPROBANTE SIN CONFIRMAR > 20 min
+      try {
+        var hace20 = new Date(Date.now() - 20*60*1000).toISOString();
+        var pedsPagR = await axios.get(
+          SUPABASE_URL + "/rest/v1/pedidos?estado=eq.esperando_pago&restaurante_id=eq." + restId +
+          "&updated_at=lte." + hace20 + "&select=id,numero_pedido,cliente_tel",
+          { headers: h }
+        );
+        for (var p of (pedsPagR.data || [])) {
+          var cl = "pago_pendiente_" + p.id;
+          if (agentState.alertasEnviadas.has(cl)) continue;
+          agentState.alertasEnviadas.add(cl);
+          await guardarMensajeSupabase(restId, p.cliente_tel, "⚠️ Pedido #" + p.numero_pedido + " lleva +20min esperando confirmación de pago.", "alerta_pregunta", null).catch(function(){});
+          await alertarDueno("⚠️ Pedido #" + p.numero_pedido + " del cliente " + p.cliente_tel + " lleva más de 20 minutos sin confirmar pago. Revisar.");
         }
-      }
-    } catch(ePag) { console.error("[AGENTE] pagos:", ePag.message); }
+      } catch(ePag) {}
 
-    // 3. DETECTAR VALORACIONES BAJAS (1-2 estrellas) y alertar
-    try {
-      var valsR = await axios.get(
-        SUPABASE_URL + "/rest/v1/pedidos?valoracion=lte.2&valoracion=not.is.null&updated_at=gte." + desde + "&select=id,numero_pedido,restaurante_id,cliente_tel,valoracion",
-        { headers: h }
-      );
-      for (var v of (valsR.data || [])) {
-        var clave = "val_baja_" + v.id;
-        if (!agentState.alertasEnviadas.has(clave)) {
-          agentState.alertasEnviadas.add(clave);
-          await guardarMensajeSupabase(v.restaurante_id, v.cliente_tel,
-            "⚠️ AGENTE: Pedido #" + v.numero_pedido + " recibió " + v.valoracion + "⭐. Considera contactar al cliente para mejorar su experiencia.",
-            "alerta_pregunta", null
-          ).catch(function(){});
-          console.log("[AGENTE] ⚠️ Valoración baja: Pedido #" + v.numero_pedido + " = " + v.valoracion + "⭐");
+      // 3. VALORACIONES BAJAS — alertar y sugerir acción
+      try {
+        var valsR = await axios.get(
+          SUPABASE_URL + "/rest/v1/pedidos?valoracion=lte.2&restaurante_id=eq." + restId +
+          "&valoracion=not.is.null&updated_at=gte." + desde + "&select=id,numero_pedido,cliente_tel,valoracion",
+          { headers: h }
+        );
+        for (var v of (valsR.data || [])) {
+          var clv = "val_baja_" + v.id;
+          if (agentState.alertasEnviadas.has(clv)) continue;
+          agentState.alertasEnviadas.add(clv);
+          await guardarMensajeSupabase(restId, v.cliente_tel, "⚠️ Pedido #" + v.numero_pedido + " valorado con " + v.valoracion + "⭐. Considera contactar al cliente.", "alerta_pregunta", null).catch(function(){});
+          await alertarDueno("😟 Valoración baja: pedido #" + v.numero_pedido + " recibió " + v.valoracion + "⭐ de " + v.cliente_tel + ". ¿Le escribimos para mejorar su experiencia?");
         }
-      }
-    } catch(eVal) { console.error("[AGENTE] valoraciones:", eVal.message); }
+      } catch(eVal) {}
 
-    // 4. Reset diario del estado del agente
-    var hora = getHoraColombia().getHours();
-    if (hora === 4) { // 4am Colombia limpia el estado del agente
+      // 4. PREGUNTAS SIN RESPONDER > 15 min — notificar dueño
+      try {
+        var hace15 = new Date(Date.now() - 15*60*1000).toISOString();
+        var pregR = await axios.get(
+          SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + restId +
+          "&tipo=eq.alerta_pregunta&created_at=lte." + hace15 + "&created_at=gte." + new Date(Date.now()-2*60*60*1000).toISOString() + "&select=telefono,mensaje",
+          { headers: h }
+        );
+        for (var preg of (pregR.data || []).slice(0,3)) {
+          var clp = "preg_" + preg.telefono + "_" + preg.mensaje.substring(0,20);
+          if (agentState.alertasEnviadas.has(clp)) continue;
+          agentState.alertasEnviadas.add(clp);
+          await alertarDueno("❓ Pregunta sin responder (>15min) de " + preg.telefono + ":\n\"" + (preg.mensaje||"").substring(0,100) + "\"\n\nEntra al panel para responder.");
+        }
+      } catch(ePreg) {}
+
+      // 5. REPORTE DIARIO — a las 10pm Colombia
+      var horaCol = getHoraColombia().getHours();
+      var diaCol = getHoraColombia().toISOString().split("T")[0];
+      var claveReporte = "reporte_" + diaCol;
+      if (horaCol === 22 && !agentState.alertasEnviadas.has(claveReporte)) {
+        agentState.alertasEnviadas.add(claveReporte);
+        try {
+          var hoyStart = new Date(); hoyStart.setHours(0,0,0,0);
+          var pedHoyR = await axios.get(
+            SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restId +
+            "&created_at=gte." + hoyStart.toISOString() + "&select=estado,total,metodo_pago",
+            { headers: h }
+          );
+          var pedHoy = pedHoyR.data || [];
+          var totalVentas = pedHoy.filter(function(p){ return p.estado!=="cancelado"; }).reduce(function(s,p){ return s+Number(p.total||0); }, 0);
+          var entregados = pedHoy.filter(function(p){ return p.estado==="entregado"; }).length;
+          var reporteMsg = "📊 *Reporte del día — " + rest.nombre + "*\n\n"
+            + "💰 Ventas: $" + totalVentas.toLocaleString("es-CO") + "\n"
+            + "📦 Pedidos: " + pedHoy.length + " | ✅ Entregados: " + entregados + "\n"
+            + "💳 Nequi/Digital: " + pedHoy.filter(function(p){ return p.metodo_pago!=="efectivo"; }).length + "\n"
+            + "💵 Efectivo: " + pedHoy.filter(function(p){ return p.metodo_pago==="efectivo"; }).length + "\n\n"
+            + "¡Buen trabajo hoy! 🌟";
+          await alertarDueno(reporteMsg);
+        } catch(eRep) {}
+      }
+    }
+
+    // Reset a las 4am
+    var hora4 = getHoraColombia().getHours();
+    if (hora4 === 4) {
       agentState.pedidosVistosHoy = new Set();
       agentState.canjesVistosHoy = new Set();
       agentState.alertasEnviadas = new Set();
     }
 
-  } catch(eAgent) { console.error("[AGENTE] tick error:", eAgent.message); }
+  } catch(eAgent) { console.error("[AGENTE] tick:", eAgent.message); }
 }
 
 var PORT = process.env.PORT || 3000;
