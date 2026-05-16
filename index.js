@@ -1380,12 +1380,22 @@ app.post("/api/pedido-estado", async function(req, res) {
   var { id, estado, telefono_cliente, numero_pedido, restaurante_id } = req.body;
   if (!id || !estado) return res.status(400).json({ error: "Faltan datos" });
   var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-  // listo_entrega = cocina cerró su vista, pero el panel de restaurante lo sigue viendo
   var estadoReal = estado === "listo_entrega" ? "listo_entrega" : estado;
   try {
-    await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id, { estado: estadoReal },
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
-    if (estado === "listo_entrega") { return res.json({ ok: true }); } // no WhatsApp, no panel sound
+    try {
+      await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id, { estado: estadoReal },
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    } catch(ePatch) {
+      // Si listo_entrega no está en el CHECK constraint, usar entregado
+      if (estadoReal === "listo_entrega") {
+        await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id, { estado: "entregado" },
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
+        console.log("[pedido-estado] listo_entrega fallback → entregado para pedido " + id);
+      } else {
+        throw ePatch;
+      }
+    }
+    if (estado === "listo_entrega") { return res.json({ ok: true }); }
     if (telefono_cliente) {
       var restaurante = null;
       if (restaurante_id) {
@@ -2409,6 +2419,60 @@ Usa esto para: alergias, quejas, pedidos especiales, cliente frustrado. NO para 
 // ═══════════════════════════════════════════════════════════════════════════
 // COCINA — Endpoints dedicados
 // ═══════════════════════════════════════════════════════════════════════════
+app.get("/api/domi-login", async function(req, res) {
+  var {restaurante_id, telefono} = req.query;
+  if(!restaurante_id||!telefono) return res.status(400).json({error:"Faltan datos"});
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+    var tel10 = telefono.replace(/^57/,"");
+    var tel12 = "57"+tel10;
+    var r = await axios.get(
+      SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restaurante_id+
+      "&or=(telefono.eq."+encodeURIComponent(tel10)+",telefono.eq."+encodeURIComponent(tel12)+",telefono.eq."+encodeURIComponent(telefono)+")"+
+      "&select=*",
+      {headers:h}
+    );
+    res.json(r.data||[]);
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
+
+app.get("/api/domi-pedido-activo", async function(req, res) {
+  var {restaurante_id, domiciliario_id, telefono} = req.query;
+  if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+    // Buscar por domiciliario_id
+    var r = await axios.get(
+      SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
+      "&domiciliario_id=eq."+encodeURIComponent(domiciliario_id)+
+      "&estado=in.(listo,en_camino)&order=created_at.desc&limit=1&select=*",
+      {headers:h}
+    );
+    if(r.data&&r.data.length>0) return res.json(r.data[0]);
+    res.json(null);
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
+
+app.get("/api/domi-historial", async function(req, res) {
+  var {restaurante_id, domiciliario_id} = req.query;
+  if(!restaurante_id||!domiciliario_id) return res.status(400).json({error:"Faltan datos"});
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+    var hace8h = new Date(Date.now()-8*60*60*1000).toISOString();
+    var r = await axios.get(
+      SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
+      "&domiciliario_id=eq."+encodeURIComponent(domiciliario_id)+
+      "&estado=eq.entregado&created_at=gte."+hace8h+
+      "&order=created_at.desc&limit=15&select=numero_pedido,total,direccion,created_at",
+      {headers:h}
+    );
+    res.json(r.data||[]);
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
+
 app.get("/api/cocina-pedidos", async function(req, res) {
   var restaurante_id = req.query.restaurante_id;
   if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
@@ -2444,7 +2508,8 @@ app.get("/api/cocina-stats", async function(req, res) {
     var ventas = data.reduce(function(s,p){return s+Number(p.total||0);},0);
     var domis = data.filter(function(p){return (p.direccion||"").toUpperCase().indexOf("MESA")===-1&&p.tipo_pedido!=="recoger";}).length;
     var mesas = data.filter(function(p){return (p.direccion||"").toUpperCase().indexOf("MESA")!==-1;}).length;
-    res.json({ok:true,total:data.length,ventas:ventas,domis:domis,mesas:mesas});
+    var recoger = data.filter(function(p){return p.tipo_pedido==="recoger";}).length;
+    res.json({ok:true,total:data.length,ventas:ventas,domis:domis,mesas:mesas,recoger:recoger});
   } catch(e) {
     res.status(500).json({error:e.message});
   }
