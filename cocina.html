@@ -5,653 +5,685 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>🍳 Cocina — LUZ IA</title>
+<title>🍳 Cocina — La Curva</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
-  --bg:#050508;--bg2:#0a0a10;--card:#111118;
-  --border:rgba(255,255,255,0.08);
-  --text:#f0eeff;--text2:rgba(240,238,255,0.65);--text3:rgba(240,238,255,0.35);
-  --g:#10b981;--o:#f97316;--r:#ef4444;--y:#fbbf24;--p:#a855f7;--b:#3b82f6;
+  --bg:#060610;--bg2:#0d0d1a;--card:#12121f;--card2:#1a1a2e;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --p:#7c3aed;--p2:#a855f7;--g:#10b981;--o:#f97316;--r:#ef4444;--y:#fbbf24;--b:#3b82f6;
+  --text:#f0eeff;--text2:rgba(240,238,255,0.62);--text3:rgba(240,238,255,0.32);
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif
 }
-html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font)}
 
-/* ── TOPBAR ── */
-.topbar{height:56px;background:rgba(5,5,8,0.98);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;position:relative;z-index:50}
-.tb-brand{font-size:18px;font-weight:900;letter-spacing:-.01em}
-.tb-brand span{color:var(--o)}
-.tb-stats{display:flex;gap:16px;align-items:center}
-.tb-stat{text-align:center}
-.tb-stat-val{font-size:20px;font-weight:900;font-family:'Courier New',monospace;line-height:1}
-.tb-stat-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
-.tb-mic{width:40px;height:40px;border-radius:50%;background:rgba(239,68,68,0.1);border:2px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;transition:all .2s;flex-shrink:0}
-.tb-mic.listening{background:rgba(239,68,68,0.25);border-color:#ef4444;animation:micPulse 1s ease infinite}
-.tb-mic.processing{background:rgba(245,158,11,0.2);border-color:#f59e0b}
-@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+/* ─── TOPBAR ─────────────────────────────────────────────────── */
+.tb{height:58px;background:rgba(6,6,16,0.98);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:16px;flex-shrink:0;backdrop-filter:blur(20px);position:relative;z-index:50}
+.tb-brand{display:flex;align-items:center;gap:10px}
+.tb-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#f97316,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.tb-name{font-size:17px;font-weight:900;letter-spacing:-.02em}
+.tb-name b{color:var(--o)}
+.tb-divider{width:1px;height:28px;background:var(--border);flex-shrink:0}
+.tb-stats{display:flex;gap:0}
+.tb-stat{display:flex;flex-direction:column;align-items:center;padding:0 16px;border-right:1px solid var(--border)}
+.tb-stat:last-child{border-right:none}
+.tb-sv{font-size:20px;font-weight:900;font-family:'Courier New',monospace;line-height:1.1}
+.tb-sl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.09em;margin-top:1px}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tb-time{font-size:13px;font-weight:700;color:var(--text3);font-family:'Courier New',monospace}
+.tb-mic{width:38px;height:38px;border-radius:50%;background:rgba(124,58,237,0.12);border:1.5px solid rgba(124,58,237,0.25);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:all .2s;flex-shrink:0}
+.tb-mic.on{background:rgba(239,68,68,0.2);border-color:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,0.4);animation:micring 1.2s ease infinite}
+@keyframes micring{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+.tb-hist-btn{padding:7px 14px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text3);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s}
+.tb-hist-btn:hover{background:rgba(255,255,255,0.09);color:var(--text)}
 
-/* ── LAYOUT ── */
-.main{height:calc(100vh - 56px);display:flex;flex-direction:column;overflow:hidden}
-.luz-bar{flex-shrink:0;background:linear-gradient(135deg,rgba(168,85,247,0.08),rgba(79,70,229,0.04));border-bottom:1px solid rgba(168,85,247,0.15);padding:8px 16px;display:flex;align-items:center;gap:10px}
-.luz-bar-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
-.luz-bar-txt{font-size:12px;color:#c4b5fd;font-style:italic;flex:1;transition:all .3s}
-.luz-voice-wave{display:flex;gap:2px;align-items:center;height:16px;opacity:0;transition:opacity .2s;flex-shrink:0}
-.luz-voice-wave.on{opacity:1}
-.luz-vb{width:2px;border-radius:1px;background:#a855f7;animation:vbw .8s ease infinite}
-.luz-vb:nth-child(1){height:4px;animation-delay:0s}
-.luz-vb:nth-child(2){height:10px;animation-delay:.1s}
-.luz-vb:nth-child(3){height:16px;animation-delay:.2s}
-.luz-vb:nth-child(4){height:10px;animation-delay:.3s}
-.luz-vb:nth-child(5){height:4px;animation-delay:.4s}
-@keyframes vbw{0%,100%{transform:scaleY(.5);opacity:.6}50%{transform:scaleY(1);opacity:1}}
+/* ─── LUZ BAR ────────────────────────────────────────────────── */
+.luzbar{flex-shrink:0;background:linear-gradient(90deg,rgba(124,58,237,0.07),rgba(79,70,229,0.04),transparent);border-bottom:1px solid rgba(124,58,237,0.12);padding:8px 18px;display:flex;align-items:center;gap:12px}
+.luzbar-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;box-shadow:0 0 12px rgba(124,58,237,0.3)}
+.luzbar-txt{font-size:12px;color:#c4b5fd;font-style:italic;flex:1;transition:all .25s}
+.luzbar-wave{display:flex;gap:2px;align-items:center;height:16px;opacity:0;transition:opacity .2s}
+.luzbar-wave.on{opacity:1}
+.lwv{width:2.5px;border-radius:2px;background:#a855f7;animation:lwva .8s ease infinite}
+.lwv:nth-child(1){height:4px}.lwv:nth-child(2){height:10px;animation-delay:.1s}.lwv:nth-child(3){height:16px;animation-delay:.2s}.lwv:nth-child(4){height:10px;animation-delay:.3s}.lwv:nth-child(5){height:4px;animation-delay:.4s}
+@keyframes lwva{0%,100%{transform:scaleY(.45);opacity:.5}50%{transform:scaleY(1);opacity:1}}
 
-/* ── GRID PEDIDOS ── */
-.pedidos-grid{flex:1;overflow-y:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-content:start}
-.pedidos-grid::-webkit-scrollbar{width:4px}
-.pedidos-grid::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+/* ─── MAIN LAYOUT ────────────────────────────────────────────── */
+.main{height:calc(100vh - 58px - 42px);display:flex;overflow:hidden}
+.col-pedidos{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+.col-side{width:300px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
 
-/* ── TARJETA PEDIDO ── */
-.ped-card{background:var(--card);border:2px solid var(--border);border-radius:16px;overflow:hidden;transition:all .2s;position:relative}
-.ped-card.urgente{border-color:rgba(239,68,68,0.5);box-shadow:0 0 20px rgba(239,68,68,0.15)}
-.ped-card.nuevo{border-color:rgba(249,115,22,0.5);box-shadow:0 0 20px rgba(249,115,22,0.15);animation:cardNew .5s ease}
-@keyframes cardNew{0%{transform:scale(0.96);opacity:0}100%{transform:scale(1);opacity:1}}
+/* ─── COLUMN HEADER ──────────────────────────────────────────── */
+.col-head{flex-shrink:0;padding:12px 16px;background:rgba(255,255,255,0.02);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.col-head-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text3)}
+.col-head-count{font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;background:rgba(249,115,22,0.12);color:#fb923c;border:1px solid rgba(249,115,22,0.2)}
 
-/* Header card */
-.ped-head{padding:12px 14px 10px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border)}
-.ped-num{font-size:22px;font-weight:900;font-family:'Courier New',monospace;color:var(--o)}
-.ped-tipo{display:flex;align-items:center;gap:6px}
-.ped-tipo-badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-.badge-domi{background:rgba(59,130,246,0.15);color:#93c5fd;border:1px solid rgba(59,130,246,0.25)}
-.badge-mesa{background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.25)}
-.badge-recoger{background:rgba(245,158,11,0.15);color:#fcd34d;border:1px solid rgba(245,158,11,0.25)}
-.ped-timer{font-size:13px;font-weight:800;font-family:'Courier New',monospace;padding:4px 10px;border-radius:8px;min-width:52px;text-align:center}
-.timer-ok{background:rgba(16,185,129,0.15);color:#6ee7b7}
-.timer-warn{background:rgba(245,158,11,0.15);color:#fcd34d}
-.timer-urgent{background:rgba(239,68,68,0.2);color:#fca5a5;animation:timerBlink .8s ease infinite}
-@keyframes timerBlink{0%,100%{opacity:1}50%{opacity:.5}}
+/* ─── PEDIDOS SCROLL ─────────────────────────────────────────── */
+.pedidos-scroll{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.pedidos-scroll::-webkit-scrollbar{width:4px}
+.pedidos-scroll::-webkit-scrollbar-track{background:transparent}
+.pedidos-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px}
 
-/* Items */
-.ped-items{padding:12px 14px}
-.ped-item{margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:10px;border-left:3px solid var(--o)}
-.ped-item:last-child{margin-bottom:0}
-.ped-item-name{font-size:15px;font-weight:800;color:var(--text);margin-bottom:3px;display:flex;align-items:center;gap:6px}
-.ped-item-cat{font-size:10px;background:rgba(249,115,22,0.12);color:#fb923c;padding:2px 7px;border-radius:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-.ped-item-desc{font-size:12px;color:var(--text2);line-height:1.5;margin-top:3px}
-.ped-item-qty{font-size:18px;font-weight:900;color:var(--o);font-family:'Courier New',monospace;margin-right:4px}
+/* ─── EMPTY STATE ────────────────────────────────────────────── */
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:32px}
+.empty-ico{font-size:56px;opacity:.3}
+.empty-title{font-size:17px;font-weight:700;color:var(--text2);opacity:.5}
+.empty-sub{font-size:13px;color:var(--text3);opacity:.4;text-align:center;line-height:1.5}
+
+/* ─── PEDIDO CARD ────────────────────────────────────────────── */
+.ped{background:var(--card);border:1.5px solid var(--border2);border-radius:14px;overflow:hidden;transition:border-color .3s;position:relative}
+.ped.urgente{border-color:rgba(239,68,68,0.45);box-shadow:0 2px 20px rgba(239,68,68,0.1)}
+.ped.preparando{border-color:rgba(249,115,22,0.4)}
+.ped.listo{border-color:rgba(16,185,129,0.45)}
+.ped.nuevo{animation:pedNuevo .5s ease}
+@keyframes pedNuevo{0%{transform:scale(.97);opacity:0}100%{transform:scale(1);opacity:1}}
+
+/* Card head */
+.ped-h{padding:10px 14px;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.025);border-bottom:1px solid var(--border)}
+.ped-num{font-size:20px;font-weight:900;font-family:'Courier New',monospace;color:var(--o);line-height:1}
+.ped-badges{display:flex;gap:5px;flex:1;flex-wrap:wrap}
+.badge{padding:3px 9px;border-radius:12px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.badge-domi{background:rgba(59,130,246,0.12);color:#93c5fd;border:1px solid rgba(59,130,246,0.2)}
+.badge-mesa{background:rgba(16,185,129,0.12);color:#6ee7b7;border:1px solid rgba(16,185,129,0.2)}
+.badge-reco{background:rgba(245,158,11,0.12);color:#fcd34d;border:1px solid rgba(245,158,11,0.2)}
+.badge-prep{background:rgba(249,115,22,0.12);color:#fb923c;border:1px solid rgba(249,115,22,0.2)}
+.badge-list{background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3)}
+.ped-timer{font-size:12px;font-weight:900;font-family:'Courier New',monospace;padding:4px 10px;border-radius:8px;flex-shrink:0;min-width:48px;text-align:center}
+.t-ok{background:rgba(16,185,129,0.1);color:#6ee7b7}
+.t-warn{background:rgba(245,158,11,0.12);color:#fcd34d}
+.t-hot{background:rgba(239,68,68,0.15);color:#fca5a5;animation:tblink .75s ease infinite}
+@keyframes tblink{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* Card body */
+.ped-b{padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+
+/* Ítem */
+.ped-item{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;background:rgba(255,255,255,0.03);border-radius:10px;border-left:3px solid var(--o)}
+.ped-item.canje{border-left-color:var(--p2)}
+.ped-item-ico{font-size:18px;flex-shrink:0;line-height:1.2}
+.ped-item-info{flex:1;min-width:0}
+.ped-item-name{font-size:14px;font-weight:800;line-height:1.3;display:flex;align-items:center;gap:6px}
+.ped-item-qty{font-size:16px;font-weight:900;color:var(--o);font-family:'Courier New',monospace}
+.ped-item-desc{font-size:11px;color:var(--text3);margin-top:2px;line-height:1.4}
 
 /* Notas */
-.ped-notas{margin:0 14px 12px;padding:10px 12px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.2);border-radius:10px}
-.ped-notas-titulo{font-size:10px;font-weight:800;color:#fca5a5;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;display:flex;align-items:center;gap:4px}
-.ped-notas-txt{font-size:13px;font-weight:700;color:#fca5a5;line-height:1.5}
+.ped-notas{padding:8px 11px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.18);border-radius:9px}
+.ped-notas-lbl{font-size:9px;font-weight:800;color:#fca5a5;text-transform:uppercase;letter-spacing:.09em;margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.ped-notas-val{font-size:13px;font-weight:700;color:#fca5a5;line-height:1.45}
 
-/* Info extra */
-.ped-info{padding:0 14px 12px;display:flex;gap:8px;flex-wrap:wrap}
-.ped-info-tag{font-size:11px;padding:3px 9px;border-radius:8px;background:rgba(255,255,255,0.05);color:var(--text3);font-weight:600}
+/* Info tags */
+.ped-tags{display:flex;gap:6px;flex-wrap:wrap}
+.ped-tag{font-size:10px;padding:3px 8px;border-radius:7px;background:rgba(255,255,255,0.04);color:var(--text3);border:1px solid var(--border)}
 
-/* Botones acción */
-.ped-actions{padding:10px 14px;display:flex;gap:8px;border-top:1px solid var(--border)}
-.btn-prep{flex:1;padding:13px;background:rgba(249,115,22,0.15);border:2px solid rgba(249,115,22,0.3);border-radius:12px;color:#fb923c;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;text-align:center}
-.btn-prep:active{transform:scale(.95);background:rgba(249,115,22,0.3)}
-.btn-listo{flex:1;padding:13px;background:rgba(16,185,129,0.15);border:2px solid rgba(16,185,129,0.3);border-radius:12px;color:#6ee7b7;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s;text-align:center}
-.btn-listo:active{transform:scale(.95);background:rgba(16,185,129,0.3)}
-.btn-listo.on{background:rgba(16,185,129,0.25);border-color:#10b981;box-shadow:0 0 20px rgba(16,185,129,0.2)}
-.btn-cerrar{width:46px;padding:13px;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);border-radius:12px;color:var(--text3);font-size:16px;cursor:pointer;transition:all .15s;text-align:center}
-.btn-cerrar:active{transform:scale(.9);background:rgba(255,255,255,0.1)}
+/* Actions */
+.ped-actions{padding:10px 14px;display:flex;gap:7px;border-top:1px solid var(--border)}
+.btn-accion{flex:1;padding:11px;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;border:none;font-family:var(--font);transition:all .14s;text-align:center}
+.btn-accion:active{transform:scale(.94)}
+.btn-prep{background:rgba(249,115,22,0.12);border:1.5px solid rgba(249,115,22,0.28);color:#fb923c}
+.btn-listo{background:rgba(16,185,129,0.12);border:1.5px solid rgba(16,185,129,0.28);color:#6ee7b7}
+.btn-listo.glow{background:rgba(16,185,129,0.2);border-color:#10b981;box-shadow:0 0 16px rgba(16,185,129,0.2)}
+.btn-close{width:42px;padding:11px;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);border-radius:10px;color:var(--text3);font-size:15px;cursor:pointer;transition:all .14s;text-align:center;flex-shrink:0}
+.btn-close:active{transform:scale(.9);background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#fca5a5}
 
-/* Estado en preparación */
-.ped-card.preparando .ped-head{background:rgba(249,115,22,0.07)}
-.ped-card.preparando{border-color:rgba(249,115,22,0.4)}
-.ped-card.listo .ped-head{background:rgba(16,185,129,0.07)}
-.ped-card.listo{border-color:rgba(16,185,129,0.5)}
+/* ─── SIDE PANEL ─────────────────────────────────────────────── */
+/* Stats */
+.stats-grid{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px;flex-shrink:0}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center}
+.stat-val{font-size:22px;font-weight:900;font-family:'Courier New',monospace;line-height:1.1}
+.stat-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
 
-/* Empty */
-.empty-cocina{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;opacity:.4}
-.empty-cocina-ico{font-size:64px}
-.empty-cocina-txt{font-size:18px;font-weight:700;color:var(--text2)}
-.empty-cocina-sub{font-size:13px;color:var(--text3)}
+/* Quick commands */
+.cmds{padding:0 12px 10px;flex-shrink:0}
+.cmds-title{font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px;padding-left:2px}
+.cmd-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.cmd-btn{padding:8px 6px;background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.15);border-radius:9px;color:#c4b5fd;font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font);text-align:center;transition:all .15s;line-height:1.3}
+.cmd-btn:active{background:rgba(124,58,237,0.18);transform:scale(.95)}
 
-/* Voice feedback overlay */
-.voice-overlay{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(10,8,20,0.95);border:1px solid rgba(168,85,247,0.4);border-radius:20px;padding:12px 24px;font-size:14px;color:#c4b5fd;font-weight:600;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;max-width:320px;text-align:center}
-.voice-overlay.show{opacity:1}
+/* Historial side */
+.hist-side{flex:1;overflow-y:auto;border-top:1px solid var(--border)}
+.hist-side::-webkit-scrollbar{width:3px}
+.hist-side::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.07)}
+.hist-head{padding:10px 14px 6px;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;justify-content:space-between}
+.hist-item{padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.03);display:flex;align-items:center;gap:10px}
+.hist-num{font-size:13px;font-weight:900;font-family:'Courier New',monospace;color:var(--p2);width:36px}
+.hist-info{flex:1;min-width:0}
+.hist-items{font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-time{font-size:10px;color:var(--text3);margin-top:1px}
+.hist-dur{font-size:11px;font-weight:800;color:var(--g);font-family:'Courier New',monospace;flex-shrink:0}
 
-/* EMOJI CATEGORÍAS */
-.cat-hamburguesa::before{content:"🍔 "}
-.cat-alitas::before{content:"🍗 "}
-.cat-papas::before{content:"🍟 "}
-.cat-bebida::before{content:"🥤 "}
-.cat-postre::before{content:"🍰 "}
-.cat-arepa::before{content:"🫓 "}
-.cat-bandeja::before{content:"🍱 "}
-.cat-salsa::before{content:"🫙 "}
-.cat-otro::before{content:"🍽️ "}
+/* ─── VOICE FEEDBACK ─────────────────────────────────────────── */
+.vfeed{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(8,6,20,0.96);border:1px solid rgba(124,58,237,0.35);border-radius:24px;padding:11px 22px;font-size:13px;color:#c4b5fd;font-weight:600;z-index:200;opacity:0;transition:opacity .25s;pointer-events:none;max-width:340px;text-align:center;backdrop-filter:blur(20px)}
+.vfeed.on{opacity:1}
 
-/* Toast */
-.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#10b981;color:white;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:700;z-index:300;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
-.toast.show{opacity:1}
-
-/* Luz chat en cocina */
-.luz-ask{position:fixed;bottom:20px;right:16px;z-index:200}
-.luz-ask-btn{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(124,58,237,0.5)}
+/* ─── TOAST ──────────────────────────────────────────────────── */
+.toast{position:fixed;top:68px;right:16px;background:rgba(10,10,20,0.96);border:1px solid rgba(255,255,255,0.1);color:var(--text);padding:10px 16px;border-radius:12px;font-size:13px;font-weight:700;z-index:300;opacity:0;transition:all .3s;pointer-events:none;max-width:260px;backdrop-filter:blur(20px)}
+.toast.on{opacity:1}
 </style>
 </head>
 <body>
 
 <!-- TOPBAR -->
-<div class="topbar">
-  <div class="tb-brand">🍳 <span>COCINA</span></div>
+<div class="tb">
+  <div class="tb-brand">
+    <div class="tb-logo">🍳</div>
+    <div class="tb-name">La <b>Curva</b> · Cocina</div>
+  </div>
+  <div class="tb-divider"></div>
   <div class="tb-stats">
     <div class="tb-stat">
-      <div class="tb-stat-val" id="statPendientes" style="color:var(--o)">0</div>
-      <div class="tb-stat-lbl">En cola</div>
+      <div class="tb-sv" id="tsCola" style="color:var(--o)">0</div>
+      <div class="tb-sl">En cola</div>
     </div>
     <div class="tb-stat">
-      <div class="tb-stat-val" id="statPreparando" style="color:var(--y)">0</div>
-      <div class="tb-stat-lbl">Preparando</div>
+      <div class="tb-sv" id="tsPrep" style="color:var(--y)">0</div>
+      <div class="tb-sl">Preparando</div>
     </div>
     <div class="tb-stat">
-      <div class="tb-stat-val" id="statListos" style="color:var(--g)">0</div>
-      <div class="tb-stat-lbl">Listos hoy</div>
+      <div class="tb-sv" id="tsListos" style="color:var(--g)">0</div>
+      <div class="tb-sl">Listos hoy</div>
+    </div>
+    <div class="tb-stat">
+      <div class="tb-sv" id="tsTime" style="color:var(--p2)">—</div>
+      <div class="tb-sl">Prom. min</div>
     </div>
   </div>
-  <button class="tb-mic" id="btnMic" onclick="toggleVoz()" title="Comandos de voz">🎤</button>
+  <div class="tb-right">
+    <div class="tb-time" id="tbTime">--:--</div>
+    <button class="tb-hist-btn" onclick="toggleHist()">📊 Historial</button>
+    <button class="tb-mic" id="btnMic" onclick="toggleVoz()" title="Comandos de voz">🎤</button>
+  </div>
 </div>
 
+<!-- LUZ BAR -->
+<div class="luzbar">
+  <div class="luzbar-av">🤖</div>
+  <div class="luzbar-txt" id="luzTxt">Monitoreando pedidos en tiempo real · Todo operativo</div>
+  <div class="luzbar-wave" id="luzWave">
+    <div class="lwv"></div><div class="lwv"></div><div class="lwv"></div><div class="lwv"></div><div class="lwv"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
 <div class="main">
-  <!-- LUZ BAR -->
-  <div class="luz-bar">
-    <div class="luz-bar-av">🤖</div>
-    <div class="luz-bar-txt" id="luzBarTxt">Monitoreando pedidos en tiempo real...</div>
-    <div class="luz-voice-wave" id="luzWave">
-      <div class="luz-vb"></div><div class="luz-vb"></div><div class="luz-vb"></div>
-      <div class="luz-vb"></div><div class="luz-vb"></div>
+
+  <!-- COLUMNA PEDIDOS -->
+  <div class="col-pedidos">
+    <div class="col-head">
+      <div class="col-head-title">Pedidos activos</div>
+      <div class="col-head-count" id="pedCount">0 pedidos</div>
+    </div>
+    <div class="pedidos-scroll" id="pedScroll">
+      <div class="empty-state">
+        <div class="empty-ico">✅</div>
+        <div class="empty-title">Sin pedidos en cola</div>
+        <div class="empty-sub">Los pedidos aparecen aquí<br>en tiempo real</div>
+      </div>
     </div>
   </div>
 
-  <!-- GRID PEDIDOS -->
-  <div class="pedidos-grid" id="pedidosGrid">
-    <div class="empty-cocina">
-      <div class="empty-cocina-ico">🍳</div>
-      <div class="empty-cocina-txt">Cargando pedidos...</div>
+  <!-- COLUMNA LATERAL -->
+  <div class="col-side">
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val" id="sVentas" style="color:var(--g)">$0</div><div class="stat-lbl">Ventas hoy</div></div>
+      <div class="stat-card"><div class="stat-val" id="sTotal" style="color:var(--o)">0</div><div class="stat-lbl">Pedidos hoy</div></div>
+      <div class="stat-card"><div class="stat-val" id="sDomis" style="color:var(--b)">0</div><div class="stat-lbl">Domicilios</div></div>
+      <div class="stat-card"><div class="stat-val" id="sMesas" style="color:var(--p2)">0</div><div class="stat-lbl">En mesa</div></div>
     </div>
+
+    <!-- Comandos de voz rápidos -->
+    <div class="cmds">
+      <div class="cmds-title">🎤 Comandos rápidos</div>
+      <div class="cmd-grid">
+        <button class="cmd-btn" onclick="activarVoz()">🎤 Activar voz</button>
+        <button class="cmd-btn" onclick="luzHablar('Hay '+Object.values(pedidosMap).filter(function(p){return p.estado===\'confirmado\';}).length+' pedidos esperando')">📊 Estado</button>
+        <button class="cmd-btn" onclick="marcarTodoPreparando()">👨‍🍳 Todo preparando</button>
+        <button class="cmd-btn" onclick="luzHablar('El pedido más urgente es el número '+getMasUrgente())">⚡ Urgente</button>
+      </div>
+    </div>
+
+    <!-- Historial -->
+    <div class="hist-side" id="histSide">
+      <div class="hist-head">
+        <span>Historial de hoy</span>
+        <span id="histCount" style="color:var(--p2)">0</span>
+      </div>
+      <div id="histList">
+        <div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">Los pedidos cerrados aparecen aquí</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
-<!-- VOICE OVERLAY -->
-<div class="voice-overlay" id="voiceOverlay"></div>
-
-<!-- TOAST -->
+<!-- VOICE FEEDBACK -->
+<div class="vfeed" id="vfeed"></div>
 <div class="toast" id="toast"></div>
 
 <script>
-// ── CONFIG ──────────────────────────────────────────────────────
-var SU = "https://vbxuwzcfzfjwhllkppkg.supabase.co";
-var SK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZieHV3emNmemZqd2hsbGtwcGtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTcxNzk2MDMsImV4cCI6MjAzMjc1NTYwM30.oOTC8F7-1MNaJfhgxJKI5TajJt4S1fC9VGMJmROqRrk";
-var urlParams = new URLSearchParams(window.location.search);
-var REST_ID = urlParams.get("rest") || null;
-var pedidosActuales = {};
-var menuItems = {};
-var pollTimer = null;
+// ── CONFIG ────────────────────────────────────────────────────────────
+var REST_ID = "2cc8adc0-068b-4cc5-b880-5239346539ef";
+// Usa /api/supabase/* proxy del backend — no necesita keys directas
+
+var pedidosMap = {};
+var menuMap = {};
+var historial = [];
 var listosHoy = 0;
+var tiempos = [];
 var vozActiva = false;
 var recognition = null;
-var luzAudioPlaying = false;
+var luzBusy = false;
+var luzCache = {};
 
-// ── CATEGORÍAS CON EMOJIS ────────────────────────────────────────
-var CATS = {
-  "hamburguesa":"🍔","hamburgues":"🍔","burger":"🍔",
-  "alita":"🍗","pollo":"🍗","chicken":"🍗",
-  "papa":"🍟","papas":"🍟","frita":"🍟","patacon":"🍟",
-  "bebida":"🥤","gaseosa":"🥤","jugo":"🥤","agua":"🥤","limonada":"🥤","cerveza":"🍺",
-  "postre":"🍰","torta":"🍰","helado":"🍦",
-  "arepa":"🫓",
-  "bandeja":"🍱","corriente":"🍱",
-  "salsa":"🫙","dip":"🫙",
-  "ensalada":"🥗","cesar":"🥗",
-  "hot dog":"🌭","perro":"🌭",
-  "pizza":"🍕",
-  "taco":"🌮",
-  "wrap":"🌯",
-  "sopa":"🍜","caldo":"🍜",
-  "arroz":"🍚",
-  "lomo":"🥩","churrasco":"🥩","angus":"🥩","carne":"🥩","filete":"🥩","costilla":"🥩","picana":"🥩"
+// ── CATEGORÍA → EMOJI ──────────────────────────────────────────────────
+var EMOJIS = {
+  hamburguesa:"🍔",hamburgues:"🍔",burger:"🍔",angus:"🥩",especial:"🍔",
+  alita:"🍗",pollo:"🍗",crispy:"🍗",
+  papa:"🍟",papas:"🍟",frita:"🍟",patacon:"🍟",
+  bebida:"🥤",gaseosa:"🥤",jugo:"🥤",agua:"🥤",limonada:"🥤",cerveza:"🍺",
+  postre:"🍰",torta:"🍰",helado:"🍦",
+  arepa:"🫓",bandeja:"🍱",ensalada:"🥗",
+  sopa:"🍜",caldo:"🍜",arroz:"🍚",
+  hotdog:"🌭",perro:"🌭",pizza:"🍕",
+  lomo:"🥩",churrasco:"🥩",costilla:"🥩",
+  salsa:"🫙",adicion:"➕",canje:"🎁"
 };
+function getEmoji(n){ n=(n||"").toLowerCase(); for(var k in EMOJIS)if(n.indexOf(k)!=-1)return EMOJIS[k]; return "🍽️"; }
 
-function getEmoji(nombre, categoria) {
-  var n = (nombre||"").toLowerCase();
-  var c = (categoria||"").toLowerCase();
-  for(var k in CATS){
-    if(n.indexOf(k)!==-1||c.indexOf(k)!==-1) return CATS[k];
-  }
-  return "🍽️";
-}
+// ── RELOJ ──────────────────────────────────────────────────────────────
+function tickReloj(){document.getElementById("tbTime").textContent=new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}
+setInterval(tickReloj,1000); tickReloj();
 
-// ── INIT ────────────────────────────────────────────────────────
-if(!REST_ID){
-  document.getElementById("pedidosGrid").innerHTML = '<div class="empty-cocina"><div class="empty-cocina-ico">⚠️</div><div class="empty-cocina-txt">Falta ?rest=ID en la URL</div><div class="empty-cocina-sub">Ejemplo: /cocina?rest=2cc8adc0-...</div></div>';
-} else {
-  cargarMenu();
-  cargarPedidos();
-  pollTimer = setInterval(cargarPedidos, 4000);
-  iniciarVozContinua();
-}
-
-// ── CARGAR MENÚ (para obtener ingredientes) ──────────────────────
+// ── CARGAR MENÚ ────────────────────────────────────────────────────────
 async function cargarMenu(){
-  try {
-    var r = await fetch("/api/menu?restaurante_id=" + REST_ID);
-    var items = await r.json();
-    items.forEach(function(p){ menuItems[p.nombre.toLowerCase()] = p; });
-  } catch(e){}
+  try{
+    var r=await fetch("/api/menu?restaurante_id="+REST_ID);
+    var items=await r.json();
+    (items||[]).forEach(function(p){menuMap[p.nombre.toLowerCase().trim()]=p;});
+    console.log("[cocina] Menú cargado:",Object.keys(menuMap).length,"items");
+  }catch(e){console.error("[cocina] Error menú:",e.message);}
 }
 
-// ── CARGAR PEDIDOS ───────────────────────────────────────────────
+// ── CARGAR PEDIDOS ─────────────────────────────────────────────────────
 async function cargarPedidos(){
-  try {
-    var r = await fetch(SU + "/rest/v1/pedidos?restaurante_id=eq." + REST_ID +
-      "&estado=in.(confirmado,en_preparacion,listo)&order=created_at.asc&select=*", {
-      headers: { "apikey": SK, "Authorization": "Bearer " + SK }
-    });
-    var pedidos = await r.json();
-    if(!Array.isArray(pedidos)) return;
+  try{
+    var r=await fetch("/api/cocina-pedidos?restaurante_id="+REST_ID);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    var peds=await r.json();
+    if(!Array.isArray(peds)){console.error("[cocina] Respuesta inválida:",typeof peds);return;}
 
-    // Detectar nuevos para anunciarlos
-    var idsActuales = Object.keys(pedidosActuales);
-    pedidos.forEach(function(p){
-      if(!pedidosActuales[p.id]){
-        pedidosActuales[p.id] = p;
-        if(idsActuales.length > 0) anunciarPedido(p);
-      } else {
-        pedidosActuales[p.id] = p;
-      }
-    });
-    // Limpiar los que ya no están
-    Object.keys(pedidosActuales).forEach(function(id){
-      if(!pedidos.find(function(p){ return p.id===id; })){
-        delete pedidosActuales[id];
-      }
-    });
+    var idsNuevos={};
+    peds.forEach(function(p){idsNuevos[p.id]=true;});
+    var idsAnteriores=Object.keys(pedidosMap);
 
-    renderPedidos(pedidos);
-    actualizarStats(pedidos);
-  } catch(e){ console.error("[cocina] Error:", e.message); }
+    // Detectar nuevos
+    peds.forEach(function(p){
+      if(!pedidosMap[p.id]&&idsAnteriores.length>0){
+        anunciarPedido(p);
+      }
+      pedidosMap[p.id]=p;
+    });
+    // Limpiar cerrados
+    idsAnteriores.forEach(function(id){if(!idsNuevos[id])delete pedidosMap[id];});
+
+    renderPedidos(peds);
+    updateStats(peds);
+  }catch(e){console.error("[cocina] Error pedidos:",e.message);}
 }
 
-// ── RENDER PEDIDOS ───────────────────────────────────────────────
-function renderPedidos(pedidos){
-  var grid = document.getElementById("pedidosGrid");
-  if(!pedidos.length){
-    grid.innerHTML = '<div class="empty-cocina"><div class="empty-cocina-ico">✅</div><div class="empty-cocina-txt">Sin pedidos en cola</div><div class="empty-cocina-sub">Todo al día — buen trabajo equipo</div></div>';
+// ── RENDER PEDIDOS ─────────────────────────────────────────────────────
+function renderPedidos(peds){
+  var scroll=document.getElementById("pedScroll");
+  document.getElementById("pedCount").textContent=peds.length+" pedido"+(peds.length!==1?"s":"");
+
+  if(!peds.length){
+    scroll.innerHTML='<div class="empty-state"><div class="empty-ico">✅</div><div class="empty-title">Sin pedidos en cola</div><div class="empty-sub">Todo al día — buen trabajo equipo</div></div>';
     return;
   }
 
-  // Ordenar: urgentes primero, luego por tiempo
-  pedidos.sort(function(a,b){
-    var minA = Math.floor((Date.now()-new Date(a.created_at))/60000);
-    var minB = Math.floor((Date.now()-new Date(b.created_at))/60000);
-    if(a.estado==="confirmado" && b.estado!=="confirmado") return -1;
-    if(b.estado==="confirmado" && a.estado!=="confirmado") return 1;
-    return minB - minA;
+  // Ordenar: confirmados primero (más urgentes), luego por tiempo
+  var sorted=[...peds].sort(function(a,b){
+    if(a.estado==="confirmado"&&b.estado!=="confirmado")return -1;
+    if(b.estado==="confirmado"&&a.estado!=="confirmado")return 1;
+    return new Date(a.created_at)-new Date(b.created_at);
   });
 
-  var h = "";
-  pedidos.forEach(function(p){
-    h += renderCard(p);
-  });
-  grid.innerHTML = h;
+  scroll.innerHTML=sorted.map(function(p){return renderCard(p);}).join("");
 }
 
 function renderCard(p){
-  var mins = Math.floor((Date.now() - new Date(p.created_at)) / 60000);
-  var timerClass = mins < 8 ? "timer-ok" : mins < 15 ? "timer-warn" : "timer-urgent";
-  var cardClass = mins >= 15 ? " urgente" : p.estado==="en_preparacion" ? " preparando" : p.estado==="listo" ? " listo" : "";
+  var mins=Math.floor((Date.now()-new Date(p.created_at))/60000);
+  var tClass=mins<8?"t-ok":mins<15?"t-warn":"t-hot";
+  var cClass=(mins>=15?" urgente":p.estado==="en_preparacion"?" preparando":p.estado==="listo"?" listo":"")+(p.estado!==pedidosMap[p.id]?.estadoAnterior?" nuevo":"");
 
-  // Tipo de pedido
-  var dir = (p.direccion||"").toUpperCase();
-  var tipo = p.tipo_pedido==="recoger" ? "recoger" : dir.indexOf("MESA")!==-1 ? "mesa" : "domi";
-  var tipoBadge = tipo==="mesa"
-    ? '<span class="ped-tipo-badge badge-mesa">🪑 Mesa</span>'
-    : tipo==="recoger"
-    ? '<span class="ped-tipo-badge badge-recoger">🏃 Recoger</span>'
-    : '<span class="ped-tipo-badge badge-domi">🛵 Domicilio</span>';
+  // Tipo
+  var dir=(p.direccion||"").toUpperCase();
+  var tipo=p.tipo_pedido==="recoger"?"reco":dir.indexOf("MESA")!==-1?"mesa":"domi";
+  var tipoBadge='<span class="badge badge-'+tipo+'">'+(tipo==="mesa"?"🪑 "+p.direccion:tipo==="reco"?"🏃 Recoger":"🛵 Domicilio")+'</span>';
+  var estBadge=p.estado==="en_preparacion"?'<span class="badge badge-prep">👨‍🍳 Preparando</span>':p.estado==="listo"?'<span class="badge badge-list">✅ Listo</span>':"";
 
-  // Items con descripción completa
-  var items = [];
-  try { items = Array.isArray(p.items) ? p.items : JSON.parse(p.items||"[]"); } catch(e){}
-  var itemsHtml = "";
-  items.forEach(function(item){
-    var nombre = typeof item === "string" ? item : (item.nombre||"");
-    var qty = typeof item === "object" && item.qty ? item.qty : 1;
-    // Parsear cantidad si viene en el string: "2x Hamburguesa"
-    var qtyMatch = nombre.match(/^(\d+)[xX]\s*/);
-    if(qtyMatch){ qty=parseInt(qtyMatch[1]); nombre=nombre.replace(/^\d+[xX]\s*/,""); }
-    var esCanje = nombre.indexOf("CANJE:")!==-1;
-    var emoji = getEmoji(nombre, "");
-    // Buscar descripción en el menú
-    var menuItem = menuItems[nombre.toLowerCase()];
-    var desc = menuItem && menuItem.descripcion ? menuItem.descripcion : "";
-    var ingredientes = menuItem && menuItem.ingredientes ? menuItem.ingredientes : "";
-    var infoExtra = desc || ingredientes;
-    var borderColor = esCanje ? "var(--p)" : "var(--o)";
-    itemsHtml += '<div class="ped-item" style="border-left-color:'+borderColor+'">';
-    itemsHtml += '<div class="ped-item-name">';
-    if(qty>1) itemsHtml += '<span class="ped-item-qty">'+qty+'×</span>';
-    itemsHtml += emoji + ' ' + esc(nombre);
-    itemsHtml += '</div>';
-    if(infoExtra){
-      itemsHtml += '<div class="ped-item-desc">'+esc(infoExtra.substring(0,120))+'</div>';
-    }
-    itemsHtml += '</div>';
-  });
+  // Items
+  var items=[];try{items=Array.isArray(p.items)?p.items:JSON.parse(p.items||"[]");}catch(e){}
+  var itemsHtml=items.map(function(item){
+    var nombre=typeof item==="string"?item:(item.nombre||"");
+    var qty=typeof item==="object"&&item.qty?item.qty:1;
+    var m=nombre.match(/^(\d+)[xX]\s*/);
+    if(m){qty=parseInt(m[1]);nombre=nombre.replace(/^\d+[xX]\s*/,"");}
+    var esCanje=nombre.toUpperCase().indexOf("CANJE")!==-1;
+    var emoji=getEmoji(nombre);
+    var menuItem=menuMap[nombre.toLowerCase().trim()];
+    var desc=menuItem&&(menuItem.descripcion||menuItem.ingredientes)
+      ?(menuItem.descripcion||menuItem.ingredientes).substring(0,90):"";
+    return '<div class="ped-item'+(esCanje?" canje":"")+'">'
+      +'<div class="ped-item-ico">'+emoji+'</div>'
+      +'<div class="ped-item-info">'
+      +'<div class="ped-item-name">'+(qty>1?'<span class="ped-item-qty">'+qty+'×</span>':'')+escH(nombre)+'</div>'
+      +(desc?'<div class="ped-item-desc">'+escH(desc)+'</div>':'')
+      +'</div></div>';
+  }).join("");
 
-  // Notas especiales — mostrar completas y destacadas
-  var notas = (p.notas_especiales||"").trim();
-  var notasHtml = "";
-  if(notas){
-    notasHtml = '<div class="ped-notas"><div class="ped-notas-titulo">⚠️ NOTAS ESPECIALES</div><div class="ped-notas-txt">'+esc(notas)+'</div></div>';
-  }
+  // Notas
+  var notas=(p.notas_especiales||"").trim();
+  var notasHtml=notas?'<div class="ped-notas"><div class="ped-notas-lbl">⚠️ Notas</div><div class="ped-notas-val">'+escH(notas)+'</div></div>':"";
 
-  // Info extra
-  var infoTags = "";
-  if(tipo==="mesa") infoTags += '<span class="ped-info-tag">'+esc(p.direccion||"")+'</span>';
-  if(tipo==="domi" && p.direccion) infoTags += '<span class="ped-info-tag">📍 '+esc(p.direccion.substring(0,30))+'</span>';
-  if(p.metodo_pago) infoTags += '<span class="ped-info-tag">'+pagoLabel(p.metodo_pago)+'</span>';
-  if(p.cliente_tel) infoTags += '<span class="ped-info-tag">📱 '+esc(p.cliente_tel)+'</span>';
+  // Tags
+  var tags="";
+  if(tipo==="domi"&&p.direccion)tags+='<span class="ped-tag">📍 '+escH(p.direccion.substring(0,28))+'</span>';
+  if(p.cliente_tel)tags+='<span class="ped-tag">📱 '+escH(p.cliente_tel)+'</span>';
+  if(p.metodo_pago){var pl={efectivo:"💵",nequi:"📱 Nequi",bancolombia:"🏦",datafono:"💳"};tags+='<span class="ped-tag">'+(pl[p.metodo_pago]||p.metodo_pago)+'</span>';}
 
-  // Botones según estado
-  var botonesHtml = "";
+  // Botones
+  var btns="";
   if(p.estado==="confirmado"){
-    botonesHtml = '<button class="btn-prep" onclick="cambiarEstado(\''+p.id+'\',\'en_preparacion\',\''+esc(p.cliente_tel)+'\',\''+p.numero_pedido+'\',\''+REST_ID+'\')">👨‍🍳 PREPARANDO</button>';
-    botonesHtml += '<button class="btn-listo" onclick="cambiarEstado(\''+p.id+'\',\'listo\',\''+esc(p.cliente_tel)+'\',\''+p.numero_pedido+'\',\''+REST_ID+'\')">✅ LISTO</button>';
+    btns='<button class="btn-accion btn-prep" onclick="accion(\''+p.id+'\',\'en_preparacion\',\''+escH(p.cliente_tel)+'\','+p.numero_pedido+')">👨‍🍳 PREPARANDO</button>'
+      +'<button class="btn-accion btn-listo" onclick="accion(\''+p.id+'\',\'listo\',\''+escH(p.cliente_tel)+'\','+p.numero_pedido+')">✅ LISTO</button>';
   } else if(p.estado==="en_preparacion"){
-    botonesHtml = '<button class="btn-listo on" onclick="cambiarEstado(\''+p.id+'\',\'listo\',\''+esc(p.cliente_tel)+'\',\''+p.numero_pedido+'\',\''+REST_ID+'\')">✅ LISTO — TOCAR PARA SERVIR</button>';
-  } else if(p.estado==="listo"){
-    botonesHtml = '<button class="btn-listo on" style="cursor:default" disabled>✅ LISTO — Esperando mesero/domiciliario</button>';
+    btns='<button class="btn-accion btn-listo glow" onclick="accion(\''+p.id+'\',\'listo\',\''+escH(p.cliente_tel)+'\','+p.numero_pedido+')">✅ MARCAR LISTO</button>';
+  } else {
+    btns='<button class="btn-accion btn-listo glow" disabled style="opacity:.5;cursor:default">✅ Listo — esperando entrega</button>';
   }
-  botonesHtml += '<button class="btn-cerrar" onclick="cerrarOrden(\''+p.id+'\',\''+p.numero_pedido+'\')" title="Cerrar orden">✕</button>';
+  btns+='<button class="btn-close" onclick="cerrar(\''+p.id+'\','+p.numero_pedido+')" title="Cerrar">✕</button>';
 
-  return '<div class="ped-card'+cardClass+'" id="card-'+p.id+'">'
-    + '<div class="ped-head">'
-    + '<div class="ped-num">#'+p.numero_pedido+'</div>'
-    + '<div class="ped-tipo">'+tipoBadge+'</div>'
-    + '<div class="ped-timer '+timerClass+'">'+mins+'min</div>'
-    + '</div>'
-    + '<div class="ped-items">'+itemsHtml+'</div>'
-    + notasHtml
-    + (infoTags ? '<div class="ped-info">'+infoTags+'</div>' : '')
-    + '<div class="ped-actions">'+botonesHtml+'</div>'
-    + '</div>';
+  return '<div class="ped'+cClass+'" id="c'+p.id+'">'
+    +'<div class="ped-h">'
+    +'<div class="ped-num">#'+p.numero_pedido+'</div>'
+    +'<div class="ped-badges">'+tipoBadge+estBadge+'</div>'
+    +'<div class="ped-timer '+tClass+'">'+mins+'m</div>'
+    +'</div>'
+    +'<div class="ped-b">'
+    +itemsHtml
+    +notasHtml
+    +(tags?'<div class="ped-tags">'+tags+'</div>':'')
+    +'</div>'
+    +'<div class="ped-actions">'+btns+'</div>'
+    +'</div>';
 }
 
-// ── CAMBIAR ESTADO ───────────────────────────────────────────────
-async function cambiarEstado(id, estado, tel, num, restId){
-  var card = document.getElementById("card-"+id);
-  if(card){
-    // Feedback visual inmediato
-    card.style.opacity = "0.6";
-    card.style.pointerEvents = "none";
-  }
-  try {
-    var r = await fetch("/api/pedido-estado", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ id:id, estado:estado, telefono_cliente:tel, numero_pedido:num, restaurante_id:restId })
+// ── ACCIÓN ─────────────────────────────────────────────────────────────
+async function accion(id, estado, tel, num){
+  var card=document.getElementById("c"+id);
+  if(card){card.style.opacity=".5";card.style.pointerEvents="none";}
+  try{
+    var r=await fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel,numero_pedido:num,restaurante_id:REST_ID})
     });
-    var d = await r.json();
-    if(d.ok||d.ok===undefined){
+    var d=await r.json();
+    if(d.ok!==false){
       if(estado==="listo"){
-        luzDecir("¡Listo el pedido número "+num+"! Notificando al cliente.");
+        var p=pedidosMap[id];
+        var mins=p?Math.floor((Date.now()-new Date(p.created_at))/60000):0;
+        tiempos.push(mins);
         listosHoy++;
-        document.getElementById("statListos").textContent=listosHoy;
-        toast("✅ Pedido #"+num+" listo — cliente notificado");
-      } else if(estado==="en_preparacion"){
-        toast("👨‍🍳 Pedido #"+num+" en preparación");
+        agregarHistorial(p,mins);
+        luzHablar("¡Listo el pedido "+num+"! Cliente notificado.");
+        toast("✅ #"+num+" listo — cliente notificado","var(--g)");
+      } else {
+        toast("👨‍🍳 #"+num+" en preparación","var(--o)");
       }
-      // Recargar inmediato
-      setTimeout(cargarPedidos, 400);
+      setTimeout(cargarPedidos,350);
     }
-  } catch(e){ if(card){card.style.opacity="1";card.style.pointerEvents="all";} }
+  }catch(e){if(card){card.style.opacity="1";card.style.pointerEvents="all";}}
 }
 
-// ── CERRAR ORDEN (listo_entrega) ─────────────────────────────────
-async function cerrarOrden(id, num){
-  var card = document.getElementById("card-"+id);
-  if(card){ card.style.transform="scale(0.95)";card.style.opacity="0.4";card.style.transition="all .3s"; }
-  try {
-    await fetch("/api/pedido-estado", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({id:id, estado:"listo_entrega", restaurante_id:REST_ID})
+// ── CERRAR ORDEN ───────────────────────────────────────────────────────
+async function cerrar(id, num){
+  var card=document.getElementById("c"+id);
+  if(card){card.style.transition="all .3s";card.style.transform="scale(.95)";card.style.opacity=".3";}
+  try{
+    await fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:id,estado:"listo_entrega",restaurante_id:REST_ID})
     });
-    toast("🗂️ Orden #"+num+" cerrada");
-    setTimeout(cargarPedidos, 400);
-  } catch(e){ if(card){card.style.transform="";card.style.opacity="1";} }
+    toast("🗂️ Orden #"+num+" cerrada","var(--text3)");
+    setTimeout(cargarPedidos,350);
+  }catch(e){if(card){card.style.transform="";card.style.opacity="1";}}
 }
 
-// ── STATS ────────────────────────────────────────────────────────
-function actualizarStats(pedidos){
-  var pend = pedidos.filter(function(p){return p.estado==="confirmado";}).length;
-  var prep = pedidos.filter(function(p){return p.estado==="en_preparacion";}).length;
-  document.getElementById("statPendientes").textContent = pend;
-  document.getElementById("statPreparando").textContent = prep;
-  // Anuncio si hay acumulación
-  if(pend >= 5){
-    luzBarUpdate("⚠️ " + pend + " pedidos esperando — priorizar más antiguos");
-  } else if(pend === 0 && prep === 0){
-    luzBarUpdate("✅ Todo al día — sin pedidos pendientes");
-  } else {
-    luzBarUpdate(pend+" en cola · "+prep+" preparando · "+listosHoy+" listos hoy");
+// ── STATS ──────────────────────────────────────────────────────────────
+function updateStats(peds){
+  var cola=peds.filter(function(p){return p.estado==="confirmado";}).length;
+  var prep=peds.filter(function(p){return p.estado==="en_preparacion";}).length;
+  document.getElementById("tsCola").textContent=cola;
+  document.getElementById("tsPrep").textContent=prep;
+  document.getElementById("tsListos").textContent=listosHoy;
+  var prom=tiempos.length?Math.round(tiempos.reduce(function(a,b){return a+b;},0)/tiempos.length)+"m":"—";
+  document.getElementById("tsTime").textContent=prom;
+  if(cola>=5)luzBarSet("⚠️ "+cola+" pedidos en cola — equipo priorizar!");
+  else if(cola===0&&prep===0)luzBarSet("✅ Sin pedidos pendientes · Todo al día");
+  else luzBarSet(cola+" en cola · "+prep+" preparando · "+listosHoy+" listos hoy");
+}
+
+async function cargarStatsHoy(){
+  try{
+    var r=await fetch("/api/cocina-stats?restaurante_id="+REST_ID);
+    if(!r.ok) return;
+    var data=await r.json();
+    if(!data.ok) return;
+    var ventas=data.ventas||0;
+    document.getElementById("sVentas").textContent=ventas>=1000000?"$"+(ventas/1000000).toFixed(1)+"M":"$"+ventas.toLocaleString("es-CO");
+    document.getElementById("sTotal").textContent=data.total||0;
+    document.getElementById("sDomis").textContent=data.domis||0;
+    document.getElementById("sMesas").textContent=data.mesas||0;
+  }catch(e){}
+}
+
+// ── HISTORIAL ──────────────────────────────────────────────────────────
+function agregarHistorial(p,mins){
+  if(!p)return;
+  var items=[];try{items=Array.isArray(p.items)?p.items:JSON.parse(p.items||"[]");}catch(e){}
+  var resumen=items.slice(0,2).map(function(i){return typeof i==="string"?i.replace(/^\d+[xX]\s*/,""):(i.nombre||"");}).filter(Boolean).join(", ");
+  historial.unshift({num:p.numero_pedido,resumen:resumen,mins:mins,ts:new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})});
+  if(historial.length>50)historial.pop();
+  renderHistorial();
+}
+
+function renderHistorial(){
+  var el=document.getElementById("histList");
+  document.getElementById("histCount").textContent=historial.length;
+  if(!historial.length){el.innerHTML='<div style="padding:16px;text-align:center;font-size:11px;color:var(--text3)">Sin pedidos cerrados aún</div>';return;}
+  el.innerHTML=historial.slice(0,20).map(function(h){
+    return '<div class="hist-item"><div class="hist-num">#'+h.num+'</div><div class="hist-info"><div class="hist-items">'+escH(h.resumen||"—")+'</div><div class="hist-time">'+h.ts+'</div></div><div class="hist-dur">'+h.mins+'m</div></div>';
+  }).join("");
+}
+
+// ── ANUNCIAR PEDIDO NUEVO ──────────────────────────────────────────────
+function anunciarPedido(p){
+  var items=[];try{items=Array.isArray(p.items)?p.items:JSON.parse(p.items||"[]");}catch(e){}
+  var resumen=items.slice(0,3).map(function(i){return typeof i==="string"?i.replace(/^\d+[xX]\s*/,""):(i.nombre||"");}).filter(Boolean).join(", ");
+  var tipo=p.tipo_pedido==="recoger"?"para recoger":(p.direccion||"").toUpperCase().indexOf("MESA")!==-1?"para mesa":"a domicilio";
+  luzHablar("Pedido "+p.numero_pedido+". "+resumen+". "+tipo+".");
+  toast("🔔 Nuevo pedido #"+p.numero_pedido,"var(--o)");
+}
+
+// ── LUZ HABLAR (ElevenLabs + fallback) ────────────────────────────────
+async function luzHablar(texto){
+  luzBarSet(texto);
+  if(luzBusy)return;
+  luzBusy=true;
+  try{
+    var cacheKey=texto.substring(0,60);
+    var audioUrl=luzCache[cacheKey];
+    if(!audioUrl){
+      var resp=await fetch("/api/luz-voz",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({texto:texto}),signal:AbortSignal.timeout(8000)});
+      if(!resp.ok)throw new Error("HTTP "+resp.status);
+      var blob=await resp.blob();
+      audioUrl=URL.createObjectURL(blob);
+      luzCache[cacheKey]=audioUrl;
+      var ks=Object.keys(luzCache);if(ks.length>25)delete luzCache[ks[0]];
+    }
+    var audio=new Audio(audioUrl);
+    var wave=document.getElementById("luzWave");
+    if(wave)wave.classList.add("on");
+    audio.onended=function(){luzBusy=false;if(wave)wave.classList.remove("on");};
+    audio.onerror=function(){luzBusy=false;if(wave)wave.classList.remove("on");luzWebSpeech(texto);};
+    audio.play().catch(function(){luzBusy=false;luzWebSpeech(texto);});
+  }catch(e){
+    luzBusy=false;
+    luzWebSpeech(texto);
   }
 }
-
-// ── LUZ ─────────────────────────────────────────────────────────
-var luzAudioCache = {};
-
-function luzDecir(texto){
-  luzBarUpdate(texto);
-  // ElevenLabs
-  luzDecirElevenLabs(texto).catch(function(){
-    luzDecirWebSpeech(texto);
-  });
-}
-
-async function luzDecirElevenLabs(texto){
-  if(luzAudioPlaying) return;
-  var cacheKey = texto.substring(0,60);
-  var audioUrl;
-  if(luzAudioCache[cacheKey]){
-    audioUrl = luzAudioCache[cacheKey];
-  } else {
-    var resp = await fetch("/api/luz-voz", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({texto:texto}),
-      signal: AbortSignal.timeout(8000)
-    });
-    if(!resp.ok) throw new Error("HTTP "+resp.status);
-    var blob = await resp.blob();
-    audioUrl = URL.createObjectURL(blob);
-    luzAudioCache[cacheKey] = audioUrl;
-    var keys=Object.keys(luzAudioCache);
-    if(keys.length>30) delete luzAudioCache[keys[0]];
-  }
-  return new Promise(function(resolve,reject){
-    var audio = new Audio(audioUrl);
-    luzAudioPlaying = true;
-    var wave = document.getElementById("luzWave");
-    if(wave) wave.classList.add("on");
-    audio.onended=function(){luzAudioPlaying=false;if(wave)wave.classList.remove("on");resolve();};
-    audio.onerror=function(){luzAudioPlaying=false;if(wave)wave.classList.remove("on");reject(new Error("audio error"));};
-    audio.play().catch(function(e){luzAudioPlaying=false;reject(e);});
-  });
-}
-
-function luzDecirWebSpeech(texto){
-  if(!window.speechSynthesis) return;
-  var limpio = texto.replace(/[⭐🎁🍔🛵💳📱⚠️✅❌🔥💰👋🌟📝💜🤖•#]/g,"").replace(/\s+/g," ").trim();
-  if(!limpio) return;
+function luzWebSpeech(texto){
+  if(!window.speechSynthesis)return;
+  var limpio=texto.replace(/[^\w\s.,!?áéíóúñÁÉÍÓÚÑ]/g,"").replace(/\s+/g," ").trim().substring(0,150);
+  if(!limpio)return;
   window.speechSynthesis.cancel();
-  var u = new SpeechSynthesisUtterance(limpio);
-  u.lang="es-CO"; u.rate=1.1; u.pitch=1.1; u.volume=1;
-  var voices = window.speechSynthesis.getVoices();
-  var voz = voices.find(function(v){return v.lang==="es-CO"||v.lang==="es-419";})
-    ||voices.find(function(v){return v.lang.startsWith("es");});
-  if(voz) u.voice=voz;
-  var wave = document.getElementById("luzWave");
+  var u=new SpeechSynthesisUtterance(limpio);
+  u.lang="es-CO";u.rate=1.1;u.pitch=1.1;u.volume=1;
+  var vz=window.speechSynthesis.getVoices().find(function(v){return v.lang.startsWith("es");});
+  if(vz)u.voice=vz;
+  var wave=document.getElementById("luzWave");
   if(wave){wave.classList.add("on");u.onend=function(){wave.classList.remove("on");};}
   window.speechSynthesis.speak(u);
 }
-
-function luzBarUpdate(txt){
-  var el = document.getElementById("luzBarTxt");
-  if(el){ el.style.opacity="0"; setTimeout(function(){el.textContent=txt;el.style.opacity="1";},200); }
+function luzBarSet(txt){
+  var el=document.getElementById("luzTxt");
+  if(!el)return;
+  el.style.opacity="0";
+  setTimeout(function(){el.textContent=txt;el.style.opacity="1";},200);
 }
 
-function anunciarPedido(p){
-  var items = [];
-  try{ items=Array.isArray(p.items)?p.items:JSON.parse(p.items||"[]"); }catch(e){}
-  var resumen = items.slice(0,3).map(function(i){
-    return typeof i==="string"?i.replace(/^\d+[xX]\s*/,""):(i.nombre||"");
-  }).filter(Boolean).join(", ");
-  var tipo = p.tipo_pedido==="recoger"?"para recoger":(p.direccion||"").toUpperCase().indexOf("MESA")!==-1?"para mesa":"a domicilio";
-  luzDecir("Pedido número "+p.numero_pedido+" — "+resumen+" — "+tipo);
-  toast("🔔 Nuevo pedido #"+p.numero_pedido);
+// ── VOZ CONTINUA ───────────────────────────────────────────────────────
+function activarVoz(){
+  if(!vozActiva)toggleVoz();
 }
-
-// ── VOZ CONTINUA — COMANDOS ──────────────────────────────────────
-function iniciarVozContinua(){
-  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)) return;
-  var SpeechRec = window.SpeechRecognition||window.webkitSpeechRecognition;
-  recognition = new SpeechRec();
-  recognition.lang = "es-CO";
-  recognition.continuous = true;
-  recognition.interimResults = false;
-  recognition.onresult = function(e){
-    var txt = e.results[e.results.length-1][0].transcript.toLowerCase().trim();
-    procesarComandoVoz(txt);
-  };
-  recognition.onerror = function(e){
-    if(e.error==="not-allowed") vozActiva=false;
-  };
-  recognition.onend = function(){
-    if(vozActiva) setTimeout(function(){try{recognition.start();}catch(e){}},1000);
-  };
-}
-
 function toggleVoz(){
-  var btn = document.getElementById("btnMic");
+  var btn=document.getElementById("btnMic");
+  if(!("webkitSpeechRecognition" in window)&&!("SpeechRecognition" in window)){
+    toast("Voz no disponible en este navegador","var(--r)");return;
+  }
   if(vozActiva){
     vozActiva=false;
     try{recognition.stop();}catch(e){}
-    btn.classList.remove("listening");
-    btn.textContent="🎤";
-    luzBarUpdate("Micrófono desactivado");
-    toast("🎤 Micrófono desactivado");
+    btn.classList.remove("on");btn.textContent="🎤";
+    toast("🎤 Micrófono desactivado","var(--text3)");
+    return;
+  }
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognition=new SR();
+  recognition.lang="es-CO";recognition.continuous=true;recognition.interimResults=false;
+  recognition.onresult=function(e){
+    var txt=e.results[e.results.length-1][0].transcript.toLowerCase().trim();
+    vfeed('"'+txt+'"');
+    procesarComando(txt);
+  };
+  recognition.onerror=function(e){if(e.error==="not-allowed"){vozActiva=false;btn.classList.remove("on");btn.textContent="🎤";}};
+  recognition.onend=function(){if(vozActiva)setTimeout(function(){try{recognition.start();}catch(e){}},800);};
+  recognition.start();
+  vozActiva=true;btn.classList.add("on");btn.textContent="🔴";
+  luzHablar("Micrófono activo. Di: listo el pedido, preparando el pedido, o cuántos pedidos hay.");
+  toast("🎤 Escuchando comandos de voz","var(--p2)");
+}
+
+function procesarComando(txt){
+  var peds=Object.values(pedidosMap);
+  var num=extraerNumero(txt);
+  if((txt.includes("listo")||txt.includes("lista"))&&num){
+    var p=peds.find(function(x){return x.numero_pedido===num;});
+    if(p){accion(p.id,"listo",p.cliente_tel,p.numero_pedido);luzHablar("Pedido "+num+" marcado como listo.");}
+    else luzHablar("No encontré el pedido "+num+".");
+  } else if((txt.includes("preparando")||txt.includes("preparo")||txt.includes("empiezo"))&&num){
+    var p=peds.find(function(x){return x.numero_pedido===num;});
+    if(p){accion(p.id,"en_preparacion",p.cliente_tel,p.numero_pedido);luzHablar("Pedido "+num+" en preparación.");}
+    else luzHablar("No encontré el pedido "+num+".");
+  } else if((txt.includes("cerrar")||txt.includes("cerrado"))&&num){
+    var p=peds.find(function(x){return x.numero_pedido===num;});
+    if(p){cerrar(p.id,p.numero_pedido);luzHablar("Orden "+num+" cerrada.");}
+  } else if(txt.includes("cuantos")||txt.includes("cuántos")||txt.includes("pedidos hay")){
+    var cola=peds.filter(function(x){return x.estado==="confirmado";}).length;
+    var prep=peds.filter(function(x){return x.estado==="en_preparacion";}).length;
+    luzHablar("Hay "+cola+" en cola y "+prep+" en preparación.");
+  } else if(txt.includes("urgente")||txt.includes("más viejo")||txt.includes("primero")){
+    luzHablar("El más urgente es el "+getMasUrgente());
+  } else if(txt.includes("todos listos")||txt.includes("listo todo")){
+    var prep=peds.filter(function(x){return x.estado==="en_preparacion";});
+    prep.forEach(function(p){accion(p.id,"listo",p.cliente_tel,p.numero_pedido);});
+    luzHablar("Marcando "+prep.length+" pedidos como listos.");
   } else {
-    vozActiva=true;
-    btn.classList.add("listening");
-    btn.textContent="🔴";
-    try{recognition.start();}catch(e){}
-    luzDecir("Micrófono activado. Di comandos como: listo el pedido ciento treinta y cuatro.");
-    toast("🎤 Escuchando comandos...");
+    luzHablar("No entendí. Puedes decir: listo el pedido ciento treinta y cuatro, o cuántos pedidos hay.");
   }
 }
-
-function procesarComandoVoz(txt){
-  var btn = document.getElementById("btnMic");
-  if(btn) btn.classList.add("processing");
-  voiceOverlayShow('"' + txt + '"');
-
-  // Extraer número de pedido
-  var numMatch = txt.match(/(\d+|cien\w*|doscient\w*)/);
-  var numPedido = null;
-  if(numMatch){
-    var n = parseInt(numMatch[1]);
-    if(!isNaN(n)) numPedido = n;
-  }
-
-  var pedidosList = Object.values(pedidosActuales);
-
-  // COMANDO: LISTO el pedido X
-  if((txt.indexOf("listo")!==-1||txt.indexOf("lista")!==-1) && numPedido){
-    var p = pedidosList.find(function(x){return x.numero_pedido===numPedido;});
-    if(p){
-      cambiarEstado(p.id,"listo",p.cliente_tel,p.numero_pedido,REST_ID);
-      luzDecir("Pedido "+numPedido+" marcado como listo. Cliente notificado.");
-    } else {
-      luzDecir("No encontré el pedido "+numPedido+" en la cola.");
-    }
-  }
-  // COMANDO: PREPARANDO el pedido X
-  else if((txt.indexOf("preparando")!==-1||txt.indexOf("preparo")!==-1||txt.indexOf("empiezo")!==-1) && numPedido){
-    var p = pedidosList.find(function(x){return x.numero_pedido===numPedido;});
-    if(p){
-      cambiarEstado(p.id,"en_preparacion",p.cliente_tel,p.numero_pedido,REST_ID);
-      luzDecir("Pedido "+numPedido+" en preparación.");
-    } else {
-      luzDecir("No encontré el pedido "+numPedido+".");
-    }
-  }
-  // COMANDO: CERRAR el pedido X
-  else if((txt.indexOf("cerrar")!==-1||txt.indexOf("cerrado")!==-1||txt.indexOf("cierra")!==-1) && numPedido){
-    var p = pedidosList.find(function(x){return x.numero_pedido===numPedido;});
-    if(p){ cerrarOrden(p.id,p.numero_pedido); luzDecir("Orden "+numPedido+" cerrada."); }
-  }
-  // COMANDO: ¿Cuántos pedidos hay?
-  else if(txt.indexOf("cuantos")!==-1||txt.indexOf("cuántos")!==-1||txt.indexOf("hay pedido")!==-1){
-    var pend = pedidosList.filter(function(x){return x.estado==="confirmado";}).length;
-    var prep = pedidosList.filter(function(x){return x.estado==="en_preparacion";}).length;
-    luzDecir("Hay "+pend+" pedidos esperando y "+prep+" en preparación.");
-  }
-  // COMANDO: ¿Cuál es el más urgente?
-  else if(txt.indexOf("urgente")!==-1||txt.indexOf("primero")!==-1||txt.indexOf("más viejo")!==-1){
-    var sorted = pedidosList.filter(function(x){return x.estado==="confirmado";})
-      .sort(function(a,b){return new Date(a.created_at)-new Date(b.created_at);});
-    if(sorted.length){
-      var min = Math.floor((Date.now()-new Date(sorted[0].created_at))/60000);
-      luzDecir("El más urgente es el pedido "+sorted[0].numero_pedido+", lleva "+min+" minutos esperando.");
-    } else { luzDecir("No hay pedidos pendientes."); }
-  }
-  // COMANDO: Listo todo / todos listos
-  else if((txt.indexOf("todos listos")!==-1||txt.indexOf("listo todo")!==-1)){
-    var prep = pedidosList.filter(function(x){return x.estado==="en_preparacion";});
-    if(prep.length){
-      prep.forEach(function(p){ cambiarEstado(p.id,"listo",p.cliente_tel,p.numero_pedido,REST_ID); });
-      luzDecir("Marcando todos como listos. "+prep.length+" pedidos notificados.");
-    } else { luzDecir("No hay pedidos en preparación."); }
-  }
-  else {
-    luzDecir("Comando no reconocido. Puedes decir: listo el pedido, preparando el pedido, o cuántos pedidos hay.");
-  }
-
-  setTimeout(function(){
-    if(btn) btn.classList.remove("processing");
-  }, 2000);
+function getMasUrgente(){
+  var peds=Object.values(pedidosMap).filter(function(p){return p.estado==="confirmado";});
+  if(!peds.length)return "ninguno";
+  peds.sort(function(a,b){return new Date(a.created_at)-new Date(b.created_at);});
+  return "número "+peds[0].numero_pedido;
+}
+function marcarTodoPreparando(){
+  Object.values(pedidosMap).filter(function(p){return p.estado==="confirmado";}).forEach(function(p){
+    accion(p.id,"en_preparacion",p.cliente_tel,p.numero_pedido);
+  });
+  luzHablar("Todos los pedidos marcados como en preparación.");
+}
+function extraerNumero(txt){
+  var m=txt.match(/\b(\d+)\b/);
+  if(m)return parseInt(m[1]);
+  var palabras={"uno":1,"dos":2,"tres":3,"cuatro":4,"cinco":5,"seis":6,"siete":7,"ocho":8,"nueve":9,"diez":10,"once":11,"doce":12,"trece":13,"catorce":14,"quince":15,"cien":100,"ciento":100,"doscientos":200,"trescientos":300};
+  for(var k in palabras)if(txt.includes(k))return palabras[k];
+  return null;
 }
 
-// ── HELPERS ──────────────────────────────────────────────────────
-function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
-function pagoLabel(m){ return {efectivo:"💵 Efectivo",nequi:"📱 Nequi",bancolombia:"🏦 Bancolombia",datafono:"💳 Datáfono"}[m]||m; }
-
-function toast(msg){
-  var t = document.getElementById("toast");
-  if(!t) return;
-  t.textContent = msg; t.classList.add("show");
-  setTimeout(function(){t.classList.remove("show");},3000);
+// ── TOGGLE HISTORIAL ───────────────────────────────────────────────────
+function toggleHist(){
+  var el=document.getElementById("histSide");
+  el.style.display=el.style.display==="none"?"flex":"none";
+  el.style.flexDirection="column";
 }
 
-var voiceTimer = null;
-function voiceOverlayShow(txt){
-  var ov = document.getElementById("voiceOverlay");
-  if(!ov) return;
-  ov.textContent = txt; ov.classList.add("show");
-  if(voiceTimer) clearTimeout(voiceTimer);
-  voiceTimer = setTimeout(function(){ov.classList.remove("show");},3000);
+// ── HELPERS ────────────────────────────────────────────────────────────
+function escH(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function toast(msg,col){
+  var t=document.getElementById("toast");
+  if(!t)return;
+  t.textContent=msg;
+  t.style.borderColor=col||"rgba(255,255,255,0.1)";
+  t.classList.add("on");
+  setTimeout(function(){t.classList.remove("on");},3000);
+}
+var vfeedTimer=null;
+function vfeed(txt){
+  var el=document.getElementById("vfeed");
+  if(!el)return;
+  el.textContent=txt;el.classList.add("on");
+  if(vfeedTimer)clearTimeout(vfeedTimer);
+  vfeedTimer=setTimeout(function(){el.classList.remove("on");},3500);
 }
 
-// Actualizar timers cada 30s
+// ── TIMER ACTUALIZAR CARDS (cada 30s para actualizar minutos) ──────────
 setInterval(function(){
-  var pedidos = Object.values(pedidosActuales);
-  if(pedidos.length) renderPedidos(pedidos);
-}, 30000);
+  if(Object.keys(pedidosMap).length)renderPedidos(Object.values(pedidosMap));
+},30000);
+
+// ── INIT ───────────────────────────────────────────────────────────────
+cargarMenu();
+cargarPedidos();
+cargarStatsHoy();
+setInterval(cargarPedidos,4000);
+setInterval(cargarStatsHoy,30000);
+
+// Mensaje de bienvenida
+setTimeout(function(){
+  luzHablar("Cocina activa. Monitoreo en tiempo real iniciado.");
+},2000);
 </script>
 </body>
 </html>
