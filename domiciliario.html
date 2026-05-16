@@ -237,18 +237,27 @@ async function iniciarSesion(){
   if(!rid){err.textContent="Ingresa el ID del restaurante";return;}
   err.textContent="Verificando...";
   try {
-    var r = await fetch(SU+"/rest/v1/domiciliarios?restaurante_id=eq."+rid+"&telefono=eq."+encodeURIComponent(tel)+"&select=*",{
+    // Buscar con múltiples formatos de teléfono
+    var tel10 = tel.replace(/^57/,""); // sin código de país
+    var tel12 = "57"+tel10;             // con código de país
+    var url = SU+"/rest/v1/domiciliarios?restaurante_id=eq."+rid+
+      "&or=(telefono.eq."+encodeURIComponent(tel10)+",telefono.eq."+encodeURIComponent(tel12)+",telefono.eq."+encodeURIComponent(tel)+")"
+      +"&select=*";
+    var r = await fetch(url,{
       headers:{"apikey":SK,"Authorization":"Bearer "+SK}
     });
     var data = await r.json();
-    if(!data||!data.length){err.textContent="Número no registrado. Habla con el restaurante.";return;}
+    if(!data||!data.length){
+      err.textContent="Número no registrado ("+tel10+"). Habla con el restaurante.";
+      return;
+    }
     domi = data[0]; restId = rid;
     try{localStorage.setItem("domi_tel",tel);localStorage.setItem("domi_rest",rid);}catch(e){}
     document.getElementById("loginScreen").style.display="none";
     document.getElementById("app").style.display="block";
     document.getElementById("domiNombre").textContent=domi.nombre||tel;
     iniciarApp();
-  } catch(e){err.textContent="Error de conexión";}
+  } catch(e){err.textContent="Error de conexión: "+e.message;}
 }
 
 // Auto-login
@@ -296,9 +305,12 @@ function iniciarGPS(){
 var pedidoAnteriorId = null;
 async function cargarPedidoActivo(){
   try {
+    var tel10 = domi.telefono ? domi.telefono.replace(/^57/,"") : "";
+    var tel12 = "57"+tel10;
+    // Buscar por domiciliario_id O por teléfono del domi en notas
     var r = await fetch(SU+"/rest/v1/pedidos?restaurante_id=eq."+restId+
-      "&domiciliario_id=eq."+domi.id+
-      "&estado=in.(listo,en_camino)&order=created_at.desc&limit=1&select=*",{
+      "&or=(domiciliario_id.eq."+domi.id+",domiciliario_id.eq."+encodeURIComponent(tel10)+",domiciliario_id.eq."+encodeURIComponent(tel12)+")"
+      +"&estado=in.(listo,en_camino)&order=created_at.desc&limit=1&select=*",{
       headers:{"apikey":SK,"Authorization":"Bearer "+SK}
     });
     var data = await r.json();
