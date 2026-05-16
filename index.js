@@ -2007,15 +2007,19 @@ app.post("/api/luz-panel-agent", async function(req, res) {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
 
-    // Cargar contexto completo en paralelo
-    var [pedidosR, clientesR, menuR, domisR, zonasR, promosR, valorR] = await Promise.all([
+    // Cargar contexto completo en paralelo — incluyendo canjes y mensajes
+    var [pedidosR, clientesR, menuR, domisR, zonasR, promosR, valorR, canjesR, mensajesSinR] = await Promise.all([
       axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+"&order=created_at.desc&limit=50&select=numero_pedido,estado,total,cliente_tel,items,metodo_pago,created_at,valoracion,domiciliario_id",{headers:h}).catch(function(){return{data:[]};}),
       axios.get(SUPABASE_URL+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+restaurante_id+"&order=total_pedidos.desc&limit=20&select=nombre_cliente,telefono,total_pedidos,puntos,nivel_fidelidad,updated_at",{headers:h}).catch(function(){return{data:[]};}),
       axios.get(SUPABASE_URL+"/rest/v1/menu_items?restaurante_id=eq."+restaurante_id+"&select=id,nombre,precio,categoria,disponible&order=categoria",{headers:h}).catch(function(){return{data:[]};}),
       axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restaurante_id+"&select=id,nombre,telefono,activo",{headers:h}).catch(function(){return{data:[]};}),
       axios.get(SUPABASE_URL+"/rest/v1/zonas_domicilio?restaurante_id=eq."+restaurante_id+"&select=id,nombre,precio_domicilio",{headers:h}).catch(function(){return{data:[]};}),
       axios.get(SUPABASE_URL+"/rest/v1/promos_programadas?restaurante_id=eq."+restaurante_id+"&select=id,titulo,descripcion,dia,activa",{headers:h}).catch(function(){return{data:[]};}),
-      axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+"&valoracion=not.is.null&order=updated_at.desc&limit=10&select=numero_pedido,valoracion,cliente_tel,updated_at",{headers:h}).catch(function(){return{data:[]};})
+      axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+"&valoracion=not.is.null&order=updated_at.desc&limit=10&select=numero_pedido,valoracion,cliente_tel,updated_at",{headers:h}).catch(function(){return{data:[]};}),
+      // CANJES — últimas 24 horas
+      axios.get(SUPABASE_URL+"/rest/v1/canjes?restaurante_id=eq."+restaurante_id+"&created_at=gte."+new Date(Date.now()-24*60*60*1000).toISOString()+"&order=created_at.desc&select=*",{headers:h}).catch(function(){return{data:[]};}),
+      // Mensajes sin responder — alertas_pregunta últimas 2 horas
+      axios.get(SUPABASE_URL+"/rest/v1/mensajes?restaurante_id=eq."+restaurante_id+"&tipo=eq.alerta_pregunta&created_at=gte."+new Date(Date.now()-2*60*60*1000).toISOString()+"&order=created_at.desc&limit=10&select=telefono,mensaje,created_at",{headers:h}).catch(function(){return{data:[]};})
     ]);
 
     var pedidos = pedidosR.data||[];
@@ -2025,6 +2029,8 @@ app.post("/api/luz-panel-agent", async function(req, res) {
     var zonas = zonasR.data||[];
     var promos = promosR.data||[];
     var valoraciones = valorR.data||[];
+    var canjes = canjesR.data||[];
+    var mensajesSin = mensajesSinR.data||[];
 
     // Calcular estadísticas reales
     var hoy = new Date(); hoy.setHours(0,0,0,0);
@@ -2041,54 +2047,65 @@ app.post("/api/luz-panel-agent", async function(req, res) {
     });
     var topProds = Object.entries(prodCount).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
 
-    var systemPrompt = `Eres LUZ, la asistente ejecutiva IA del restaurante. El ADMIN del restaurante te está hablando desde el panel web.
+    var systemPrompt = `Eres LUZ, la asistente ejecutiva IA del restaurante "${pedidos[0]?.restaurante_id ? "La Curva Street Food" : ""}". Eres inteligente, proactiva, directa y hablas como una persona real — no como un bot.
 
-DATOS EN TIEMPO REAL:
-📊 Pedidos hoy: ${pedidosHoy.length} | Ventas hoy: $${ventasHoy.toLocaleString("es-CO")}
-💳 Efectivo: $${(porMetodo.efectivo||0).toLocaleString("es-CO")} | Nequi: $${(porMetodo.nequi||0).toLocaleString("es-CO")} | Digital: $${(porMetodo.bancolombia||0).toLocaleString("es-CO")}
-⭐ Valoración promedio hoy: ${valorProm}/5
-🍔 Top productos hoy: ${topProds.map(function(p){return p[0]+"(×"+p[1]+")";}).join(", ")||"Sin datos"}
+DATOS EN TIEMPO REAL (${getHoraColombia().toLocaleString("es-CO")}):
 
-📦 Pedidos activos: ${pedidos.filter(function(p){return["confirmado","en_preparacion","listo","en_camino"].indexOf(p.estado)!==-1;}).length}
-👥 Clientes registrados: ${clientes.length}
-🧾 Clientes top: ${clientes.slice(0,5).map(function(c){return (c.nombre_cliente||c.telefono)+"("+c.total_pedidos+"ped)";}).join(", ")}
+📊 VENTAS:
+- Hoy: $${ventasHoy.toLocaleString("es-CO")} | Pedidos: ${pedidosHoy.length}
+- Efectivo: $${(porMetodo.efectivo||0).toLocaleString("es-CO")} | Nequi: $${(porMetodo.nequi||0).toLocaleString("es-CO")} | Bancolombia: $${(porMetodo.bancolombia||0).toLocaleString("es-CO")}
+- Top productos hoy: ${topProds.map(function(p){return p[0]+"(×"+p[1]+")";}).join(", ")||"Sin pedidos aún"}
+- Valoración promedio: ${valorProm}/5
 
-🍔 MENÚ: ${menu.length} productos | ${menu.filter(function(p){return p.disponible===false;}).length} inactivos
-Categorías: ${[...new Set(menu.map(function(p){return p.categoria;}))].join(", ")}
+📦 ESTADO ACTUAL:
+- Pedidos activos ahora: ${pedidos.filter(function(p){return["confirmado","en_preparacion","listo","en_camino"].indexOf(p.estado)!==-1;}).length}
+- Últimos pedidos: ${pedidos.slice(0,5).map(function(p){return "#"+p.numero_pedido+" "+p.estado+" $"+Number(p.total||0).toLocaleString("es-CO");}).join(" | ")}
 
-🛵 Domiciliarios: ${domis.map(function(d){return d.nombre+(d.activo?" ✅":" ❌");}).join(", ")||"Ninguno"}
-🗺️ Zonas: ${zonas.map(function(z){return z.nombre+"($"+Number(z.precio_domicilio).toLocaleString("es-CO")+")";}).join(", ")||"Sin zonas"}
-📣 Promos: ${promos.filter(function(p){return p.activa;}).length} activas / ${promos.length} total
+⭐ CANJES (últimas 24h):
+${canjes.length>0 ? canjes.map(function(c){return "- "+c.telefono+" canjeó "+c.producto_nombre+" ("+c.puntos_usados+" pts) · Estado: "+c.estado+" · "+(c.created_at?new Date(c.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"}):"");}).join("\n") : "Sin canjes en las últimas 24 horas"}
 
-📋 ÚLTIMOS 5 PEDIDOS: ${pedidos.slice(0,5).map(function(p){return "#"+p.numero_pedido+" "+p.estado+" $"+Number(p.total||0).toLocaleString("es-CO");}).join(" | ")}
+⚠️ ALERTAS SIN RESOLVER:
+${mensajesSin.length>0 ? mensajesSin.map(function(m){return "- "+m.telefono+": \""+m.mensaje.substring(0,60)+"\" ("+new Date(m.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})+")";}).join("\n") : "Sin alertas pendientes"}
 
-IDs PARA ACCIONES (usa estos para ejecutar):
-Menu IDs: ${menu.slice(0,10).map(function(p){return p.nombre+"="+p.id;}).join(" | ")}
-Zona IDs: ${zonas.map(function(z){return z.nombre+"="+z.id;}).join(" | ")}
-Promo IDs: ${promos.map(function(p){return p.titulo+"="+p.id;}).join(" | ")}
+👥 CLIENTES:
+- Registrados: ${clientes.length}
+- Top 5: ${clientes.slice(0,5).map(function(c){return (c.nombre_cliente||c.telefono)+"("+c.total_pedidos+"ped, "+c.puntos+"pts)";}).join(" | ")}
 
-ACCIONES QUE PUEDES EJECUTAR:
+🍔 MENÚ: ${menu.length} productos | ${menu.filter(function(p){return p.disponible===false;}).length} desactivados
+📣 PROMOS: ${promos.filter(function(p){return p.activa;}).length} activas — ${promos.map(function(p){return p.titulo+(p.activa?" ✅":" ❌");}).join(", ")||"Ninguna"}
+🛵 DOMIS: ${domis.map(function(d){return d.nombre+(d.activo?" ✅":" ❌");}).join(", ")||"Ninguno registrado"}
+🗺️ ZONAS: ${zonas.map(function(z){return z.nombre+"($"+Number(z.precio_domicilio).toLocaleString("es-CO")+")";}).join(", ")||"Sin zonas"}
+
+IDs PARA ACCIONES:
+Menú: ${menu.slice(0,8).map(function(p){return p.nombre+"="+p.id;}).join(" | ")}
+Promos: ${promos.map(function(p){return p.titulo+"="+p.id;}).join(" | ")}
+Zonas: ${zonas.map(function(z){return z.nombre+"="+z.id;}).join(" | ")}
+
+ACCIONES DISPONIBLES:
 ACTION:CREAR_ZONA:{"nombre":"...","precio":0,"barrios":"b1,b2"}
 ACTION:CREAR_PROMO:{"titulo":"...","descripcion":"...","dia":"lunes|todos","activa":true}
 ACTION:ACTIVAR_PROMO:{"promo_id":"...","activa":true}
 ACTION:CREAR_DOMI:{"nombre":"...","telefono":"..."}
 ACTION:ACTUALIZAR_PRECIO:{"producto_id":"...","precio":0}
 ACTION:TOGGLE_PRODUCTO:{"producto_id":"...","disponible":true}
-ACTION:CREAR_CUPON:{"codigo":"NOMBRE20","descuento":20,"tipo":"porcentaje","usos":100,"descripcion":"..."}
-ACTION:ENVIAR_PROMO_MASIVA:{"mensaje":"texto del mensaje"}
+ACTION:CREAR_CUPON:{"codigo":"NOMBRE20","descuento":20,"tipo":"porcentaje","usos":100}
+ACTION:ENVIAR_PROMO_MASIVA:{"mensaje":"texto"}
 ACTION:ENVIAR_MENSAJE_CLIENTE:{"telefono":"...","mensaje":"..."}
-ACTION:MODIFICAR_PEDIDO:{"pedido_id":"uuid","numero":134,"estado":"en_preparacion|listo|entregado","notas":"..."}
+ACTION:MODIFICAR_PEDIDO:{"pedido_id":"uuid","numero":134,"estado":"listo"}
 ACTION:SILENCIAR_CLIENTE:{"telefono":"..."}
 
-REGLAS CRÍTICAS:
-- Los cupones se guardan en el sistema del restaurante — usa ACTION:CREAR_CUPON para crearlos
-- Para modificar pedidos usa ACTION:MODIFICAR_PEDIDO con el id del pedido de la lista de arriba
-- Responde como asistente ejecutiva profesional y directa
-- Usa datos reales del contexto, NUNCA inventes cifras
-- Cuando ejecutes acciones, confirma claramente qué hiciste y que se refleja en el panel
-- Formatea respuestas con **negritas** para destacar datos importantes
-- Si el admin pide algo que no puedes hacer, explica por qué y sugiere alternativa
-- Hora Colombia: ${getHoraColombia().toLocaleTimeString("es-CO")}`;
+CÓMO DEBES COMPORTARTE:
+1. SIEMPRE di lo que ves en los datos reales — si hay canjes, dilo. Si hay alertas, dilo. No inventes.
+2. Sé PROACTIVA — si ves algo que mejorar, dilo sin que te pregunten. Por ejemplo:
+   - Si hay pocas promos activas → sugiere crear una para aumentar ventas
+   - Si hay clientes con muchos puntos sin canjear → sugiere contactarlos
+   - Si las valoraciones bajaron → sugiere qué hacer
+   - Si un producto no se ha pedido hoy → sugiere activar una promo para él
+3. HABLA como persona real, colombiana, directa. Usa frases como "mira", "te cuento", "la verdad es que"
+4. RESPUESTAS COMPLETAS — no te cortes. Da el análisis completo, las recomendaciones y las acciones.
+5. Si ejecutas una acción, confirma exactamente qué hiciste.
+6. Formatea con **negritas** para los datos importantes.`;
+
 
     var messages = (historial||[]).slice(-14).map(function(m){return{role:m.role,content:m.content};});
     messages.push({role:"user",content:mensaje});
