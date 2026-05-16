@@ -1353,7 +1353,7 @@ select.finput{cursor:pointer}
 
   <div class="float-nav">
     <div class="float-nav-inner">
-      <div class="fnav-tab" id="tab-luz-ia" onclick="irTab('luz-ia')"><div class="fnav-icon" style="font-size:20px">🤖</div><div class="fnav-label">Luz IA</div></div>
+      <div class="fnav-tab" id="tab-luz-ia" onclick="showTab('luz-ia')"><div class="fnav-icon" style="font-size:20px">🤖</div><div class="fnav-label">Luz IA</div></div>
       <div class="fnav-tab active" id="tab-pedidos"><div class="fnav-icon">🛒</div><div class="fnav-label">Pedidos</div><div class="nav-badge" id="pedidosBadge"></div></div>
       <div class="fnav-tab" id="tab-historial"><div class="fnav-icon">📊</div><div class="fnav-label">Historial</div></div>
       <div class="fnav-tab" id="tab-menu"><div class="fnav-icon">📋</div><div class="fnav-label">Menú</div></div>
@@ -2654,7 +2654,7 @@ async function luzPanelEnviar(textoForzado){
   // Burbuja usuario
   var userDiv = document.createElement("div");
   userDiv.style.cssText="align-self:flex-end;max-width:85%";
-  userDiv.innerHTML='<div style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(5,150,105,0.1));border:1px solid rgba(16,185,129,0.2);border-radius:16px 4px 16px 16px;padding:10px 14px;font-size:13px;line-height:1.5;color:var(--text)">'+esc(txt)+'</div>';
+  userDiv.innerHTML='<div style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(5,150,105,0.1));border:1px solid rgba(16,185,129,0.2);border-radius:16px 4px 16px 16px;padding:10px 14px;font-size:13px;line-height:1.5;color:var(--text)">'+escHtml(txt)+'</div>';
   chat.appendChild(userDiv);
 
   // Typing
@@ -2699,7 +2699,7 @@ async function luzPanelEnviar(textoForzado){
     if(data.acciones_ejecutadas && data.acciones_ejecutadas.length){
       luzDiv.innerHTML+='<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">'
         +data.acciones_ejecutadas.map(function(a){
-          return '<div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:6px 10px;font-size:11px;color:#6ee7b7">'+esc(a)+'</div>';
+          return '<div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:6px 10px;font-size:11px;color:#6ee7b7">'+escHtml(a)+'</div>';
         }).join("")+'</div>';
     }
     chat.appendChild(luzDiv);
