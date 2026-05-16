@@ -2,579 +2,552 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Domiciliario — LUZ IA</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>LUZ IA — Domiciliario</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
-  --p1:#7c3aed;--p2:#4f46e5;
-  --g1:#10b981;--a1:#f97316;--amber:#f59e0b;--r1:#ef4444;
-  --glass-bg:rgba(255,255,255,0.07);--glass-bg2:rgba(255,255,255,0.12);
-  --glass-border:rgba(255,255,255,0.14);--glass-border2:rgba(255,255,255,0.22);
-  --text:#f1f0ff;--text2:rgba(241,240,255,0.6);--text3:rgba(241,240,255,0.35);
-  --blur:blur(24px);--blur2:blur(40px);--shadow:0 8px 32px rgba(0,0,0,0.4);
+  --bg:#050508;--bg2:#0a0a10;--card:#111118;--border:rgba(255,255,255,0.08);
+  --p:#7c3aed;--p2:#a855f7;--g:#10b981;--o:#f97316;--r:#ef4444;--y:#fbbf24;--b:#3b82f6;
+  --text:#f0eeff;--text2:rgba(240,238,255,0.6);--text3:rgba(240,238,255,0.32)
 }
-body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
-.blobs{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
-.blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.4;animation:blobFloat 8s ease-in-out infinite;}
-.blob-1{width:400px;height:400px;background:radial-gradient(circle,#10b981,transparent 70%);top:-100px;left:-100px;}
-.blob-2{width:350px;height:350px;background:radial-gradient(circle,#2563eb,transparent 70%);bottom:-80px;right:-80px;animation-delay:-3s;opacity:0.3}
-@keyframes blobFloat{0%,100%{transform:translate(0,0)}33%{transform:translate(20px,-30px)}66%{transform:translate(-15px,20px)}}
+html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow-x:hidden}
 
-#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:1;}
-.login-box{width:100%;max-width:320px;background:rgba(255,255,255,0.07);border:1px solid var(--glass-border2);border-radius:32px;padding:36px 24px 32px;backdrop-filter:var(--blur2);-webkit-backdrop-filter:var(--blur2);box-shadow:0 16px 48px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.12);}
-.login-orb{width:68px;height:68px;border-radius:22px;margin:0 auto 14px;background:linear-gradient(135deg,#10b981,#2563eb);display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 8px 24px rgba(16,185,129,0.5);}
-.login-title{text-align:center;font-size:22px;font-weight:800;margin-bottom:4px;}
-.login-sub{text-align:center;font-size:12px;color:var(--text3);margin-bottom:24px;}
-.login-field{margin-bottom:14px;}
-.login-label{font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;display:block;}
-.login-input{width:100%;padding:12px 16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:14px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;outline:none;transition:all 0.15s;}
-.login-input:focus{border-color:rgba(16,185,129,0.6);background:rgba(16,185,129,0.07);box-shadow:0 0 0 3px rgba(16,185,129,0.12);}
-.login-input::placeholder{color:var(--text3);}
-.login-btn{width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#2563eb);border:none;border-radius:14px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.15s;box-shadow:0 4px 20px rgba(16,185,129,0.4);margin-top:4px;}
-.login-btn:active{transform:scale(0.97);opacity:0.9;}
-.login-err{color:#fca5a5;font-size:12px;text-align:center;margin-top:10px;min-height:18px;}
+/* ── LOGIN ── */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 30% 60%,rgba(124,58,237,0.18),transparent 60%)}
+.login-card{width:100%;max-width:340px}
+.login-luz{text-align:center;margin-bottom:32px}
+.login-av{width:80px;height:80px;border-radius:50%;overflow:hidden;margin:0 auto 12px;border:3px solid rgba(124,58,237,0.5);box-shadow:0 0 30px rgba(124,58,237,0.3)}
+.login-av img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.login-nombre{font-size:22px;font-weight:900;letter-spacing:-.01em}
+.login-nombre span{background:linear-gradient(135deg,#a855f7,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-sub{font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:.1em}
+.l-input{width:100%;padding:14px 16px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:14px;color:var(--text);font-size:16px;font-family:inherit;outline:none;margin-bottom:12px;transition:all .2s}
+.l-input:focus{border-color:rgba(124,58,237,0.5);background:rgba(124,58,237,0.06)}
+.l-input::placeholder{color:var(--text3)}
+.l-btn{width:100%;padding:15px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:14px;color:white;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.02em}
+.l-err{font-size:12px;color:#f87171;text-align:center;margin-top:10px;min-height:16px}
 
-#app{display:none;position:relative;z-index:1;}
-.topbar{position:fixed;top:0;left:0;right:0;z-index:100;height:60px;background:rgba(13,10,26,0.88);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
-.tb-left{display:flex;align-items:center;gap:10px;}
-.tb-avatar{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#10b981,#2563eb);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:white;font-family:'JetBrains Mono',monospace;box-shadow:0 4px 12px rgba(16,185,129,0.4);}
-.tb-name{font-size:15px;font-weight:700;}
-.tb-role{font-size:10px;color:var(--text3);}
-.live-pill{display:flex;align-items:center;gap:5px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:20px;padding:5px 12px;font-size:10px;font-weight:700;color:#34d399;letter-spacing:0.08em;}
-.live-dot{width:6px;height:6px;border-radius:50%;background:#34d399;animation:ldot 1.5s ease-in-out infinite;}
-@keyframes ldot{0%,100%{opacity:1}50%{opacity:0.3}}
+/* ── APP ── */
+#app{display:none;padding-bottom:20px}
 
-.tab-bar{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:400;width:calc(100% - 20px);max-width:480px;}
-.tab-bar-inner{background:rgba(15,10,35,0.94);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(16,185,129,0.3);border-radius:28px;display:flex;padding:5px 4px calc(5px + env(safe-area-inset-bottom));box-shadow:0 8px 32px rgba(0,0,0,0.6);}
-.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:7px 2px 4px;transition:all 0.2s;border-radius:20px;margin:2px;}
-.tab-btn.active{background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.35);}
-.tab-icon{font-size:19px;line-height:1;}
-.tab-label{font-size:9px;color:rgba(255,255,255,0.3);font-weight:600;}
-.tab-btn.active .tab-label{color:#34d399;font-weight:700;}
+/* ── TOPBAR ── */
+.topbar{background:rgba(5,5,8,0.97);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+.tb-left{display:flex;align-items:center;gap:10px}
+.tb-av{width:36px;height:36px;border-radius:50%;overflow:hidden;border:2px solid rgba(124,58,237,0.4);flex-shrink:0}
+.tb-av img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.tb-info{display:flex;flex-direction:column}
+.tb-name{font-size:14px;font-weight:800;line-height:1.2}
+.tb-status{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--g);box-shadow:0 0 5px var(--g);animation:sp 2s ease infinite}
+@keyframes sp{0%,100%{opacity:1}50%{opacity:.3}}
+.tb-earnings{font-size:16px;font-weight:900;color:var(--g);font-family:'Courier New',monospace}
 
-.content{padding-top:68px;padding-bottom:calc(96px + env(safe-area-inset-bottom));}
-.page{display:none}.page.active{display:block;animation:fadeUp 0.2s ease both}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* ── LUZ BAR ── */
+.luz-bar{background:linear-gradient(135deg,rgba(168,85,247,0.07),rgba(79,70,229,0.03));border-bottom:1px solid rgba(168,85,247,0.12);padding:10px 14px;display:flex;align-items:center;gap:10px}
+.luz-bar-av{width:28px;height:28px;border-radius:50%;overflow:hidden;border:1.5px solid rgba(124,58,237,0.4);flex-shrink:0}
+.luz-bar-av img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.luz-bar-txt{font-size:12px;color:#c4b5fd;font-style:italic;flex:1;transition:all .25s}
+.luz-wave{display:flex;gap:2px;align-items:center;height:14px;opacity:0;transition:opacity .2s}
+.luz-wave.on{opacity:1}
+.lwb{width:2px;border-radius:1px;background:#a855f7;animation:lw .8s ease infinite}
+.lwb:nth-child(1){height:4px}.lwb:nth-child(2){height:9px;animation-delay:.1s}.lwb:nth-child(3){height:14px;animation-delay:.2s}.lwb:nth-child(4){height:9px;animation-delay:.3s}.lwb:nth-child(5){height:4px;animation-delay:.4s}
+@keyframes lw{0%,100%{transform:scaleY(.5);opacity:.5}50%{transform:scaleY(1);opacity:1}}
 
-.stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 14px 4px;}
-.stat-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:18px;padding:14px 10px;text-align:center;}
-.stat-icon{font-size:22px;margin-bottom:6px;}
-.stat-val{font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
-.stat-label{font-size:9px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;}
+/* ── STATS ── */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,0.04)}
+.stat-cell{background:var(--bg);padding:14px 8px;text-align:center}
+.stat-v{font-size:24px;font-weight:900;font-family:'Courier New',monospace;line-height:1}
+.stat-l{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
 
-.stats-extra{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 14px 8px;}
-.stat-extra-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;}
-.stat-extra-icon{font-size:22px;flex-shrink:0;}
-.stat-extra-val{font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--text);}
-.stat-extra-label{font-size:10px;color:var(--text3);font-weight:500;}
+/* ── PEDIDO ACTIVO ── */
+.ped-section{padding:12px}
+.ped-card{background:var(--card);border:1.5px solid rgba(16,185,129,0.25);border-radius:20px;overflow:hidden;margin-bottom:12px}
+.ped-head{padding:14px 16px;background:rgba(16,185,129,0.06);border-bottom:1px solid rgba(16,185,129,0.12);display:flex;align-items:center;justify-content:space-between}
+.ped-num{font-size:22px;font-weight:900;color:#6ee7b7;font-family:'Courier New',monospace}
+.ped-est{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.est-listo{background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3)}
+.est-camino{background:rgba(124,58,237,0.15);color:#c4b5fd;border:1px solid rgba(124,58,237,0.3)}
+.ped-body{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.ped-row{display:flex;align-items:flex-start;gap:10px}
+.ped-ico{font-size:18px;flex-shrink:0;line-height:1.3}
+.ped-data{flex:1;min-width:0}
+.ped-data-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px}
+.ped-data-val{font-size:14px;font-weight:700;color:var(--text);line-height:1.4}
+.ped-items-list{font-size:13px;color:var(--text2);line-height:1.6}
+.ped-notas{padding:10px 12px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.18);border-radius:10px}
+.ped-notas-lbl{font-size:10px;font-weight:800;color:#fca5a5;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.ped-notas-txt{font-size:13px;color:#fca5a5;font-weight:700;line-height:1.4}
+.ped-total-row{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)}
+.ped-total{font-size:20px;font-weight:900;color:#6ee7b7;font-family:'Courier New',monospace}
+.ped-pago{font-size:12px;color:var(--text3)}
 
-.pedidos-pad{padding:4px 14px;}
-.dcard{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:22px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow);}
-.dcard.estado-listo{border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.05);}
-.dcard.estado-en_camino{border-color:rgba(16,185,129,0.4);background:rgba(16,185,129,0.05);}
-.dcard-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;}
-.h-listo{background:rgba(245,158,11,0.1);border-bottom:1px solid rgba(245,158,11,0.2);}
-.h-en_camino{background:rgba(16,185,129,0.1);border-bottom:1px solid rgba(16,185,129,0.2);}
-.dcard-num{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;}
-.n-listo{color:#fcd34d;}.n-en_camino{color:#34d399;}
-.dcard-etag{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;}
-.etag-listo{background:rgba(245,158,11,0.15);color:#fcd34d;border:1px solid rgba(245,158,11,0.3);}
-.etag-en_camino{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);}
-.dcard-body{padding:14px 16px;}
-.dcard-section{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
-.dcard-items{margin-bottom:10px;}
-.dcard-item{font-size:13px;padding:2px 0;color:var(--text);}
-.dcard-notas{background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-left:3px solid #818cf8;border-radius:10px;padding:7px 10px;font-size:12px;color:#c4b5fd;margin-bottom:10px;display:flex;align-items:flex-start;gap:6px;}
-.dcard-dir{display:flex;align-items:flex-start;gap:10px;background:rgba(0,0,0,0.2);border-radius:14px;padding:10px 13px;margin-bottom:10px;}
-.dcard-dir-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
-.dcard-dir-text{font-size:14px;font-weight:600;color:var(--text);}
-.dcard-dir-sub{font-size:11px;color:var(--text3);margin-top:3px;}
-.dcard-total{font-size:14px;color:var(--text2);font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
-.dcard-total span{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.dcard-pago{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);border-radius:8px;padding:3px 10px;font-size:11px;color:var(--text2);font-weight:600;}
-.dcard-timer{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;margin-bottom:10px;}
-.timer-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#fcd34d;}
-.timer-val.urgente{color:#fca5a5;animation:urgPulse 1s ease-in-out infinite;}
-@keyframes urgPulse{0%,100%{opacity:1}50%{opacity:0.5}}
-.dcard-btns{display:flex;flex-direction:column;gap:8px;}
-.dcard-btn-maps{width:100%;padding:11px;background:rgba(37,99,235,0.15);border:1px solid rgba(37,99,235,0.3);border-radius:13px;color:#93c5fd;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.12s;text-decoration:none;}
-.dcard-btn-maps:active{transform:scale(0.97);}
-.dcard-btn-wa{padding:11px 14px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.3);border-radius:13px;color:#25d366;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;transition:all 0.12s;}
-.dcard-btn-wa:active{transform:scale(0.97);}
-.dcard-btn-call{padding:11px 14px;background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.3);border-radius:13px;color:#60a5fa;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;transition:all 0.12s;}
-.dcard-btn-call:active{transform:scale(0.97);}
-.dcard-btns-row{display:flex;gap:8px;}
-.dcard-btn{flex:1;padding:13px;border:none;border-radius:14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all 0.12s;display:flex;align-items:center;justify-content:center;gap:7px;}
-.dcard-btn:active{transform:scale(0.96);}
-.btn-camino{background:linear-gradient(135deg,#f97316,#f59e0b);color:white;box-shadow:0 4px 16px rgba(249,115,22,0.4);}
-.btn-entregado{background:linear-gradient(135deg,#10b981,#2563eb);color:white;box-shadow:0 4px 16px rgba(16,185,129,0.4);}
+/* ── MAPA ── */
+.mapa-wrap{margin:0 12px 12px;border-radius:16px;overflow:hidden;border:1px solid var(--border)}
+#domiMapa{height:200px}
 
-.hist-pad{padding:4px 14px;}
-.hcard{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:18px;padding:14px 16px;margin-bottom:9px;box-shadow:var(--shadow);}
-.hcard-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
-.hnum{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:#34d399;}
-.htime{font-size:11px;color:var(--text3);margin-top:3px;}
-.htot{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.hstatus{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;}
-.hstatus.entregado{background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.3);}
-.hstatus.pendiente{background:rgba(245,158,11,0.12);color:#fcd34d;border:1px solid rgba(245,158,11,0.3);}
-.hdir{font-size:12px;color:var(--text3);margin-top:6px;display:flex;align-items:center;gap:5px;}
-.htiempo{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;margin-top:5px;}
-.htiempo-val{font-family:'JetBrains Mono',monospace;font-size:12px;color:#a78bfa;}
+/* ── ACCIONES ── */
+.acciones{display:flex;flex-direction:column;gap:8px;padding:0 12px 12px}
+.btn-navegar{padding:14px;background:linear-gradient(135deg,#2563eb,#4f46e5);border:none;border-radius:14px;color:white;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-llamar{padding:13px;background:rgba(16,185,129,0.12);border:1.5px solid rgba(16,185,129,0.25);border-radius:14px;color:#6ee7b7;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;width:100%}
+.btn-entregar{padding:18px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:16px;color:white;font-size:17px;font-weight:900;cursor:pointer;font-family:inherit;width:100%;letter-spacing:.02em;box-shadow:0 6px 20px rgba(16,185,129,0.3)}
+.btn-entregar:active{transform:scale(.97)}
+.btn-foto{padding:13px;background:rgba(245,158,11,0.1);border:1.5px solid rgba(245,158,11,0.22);border-radius:14px;color:#fcd34d;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;width:100%}
 
-/* INFORME */
-.informe-pad{padding:4px 14px;}
-.informe-hero{border-radius:24px;padding:22px;background:linear-gradient(135deg,rgba(16,185,129,0.25),rgba(37,99,235,0.15));border:1px solid rgba(16,185,129,0.3);margin-bottom:12px;position:relative;overflow:hidden;}
-.informe-hero::before{content:'🛵';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:60px;opacity:0.12;}
-.informe-title{font-size:22px;font-weight:900;letter-spacing:-0.02em;margin-bottom:4px;}
-.informe-sub{font-size:13px;color:var(--text2);}
-.informe-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
-.istat{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px;padding:14px;text-align:center;}
-.istat-val{font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;background:linear-gradient(135deg,#6ee7b7,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
-.istat-label{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-top:5px;}
-.istat.wide{grid-column:span 2;}
+/* ── SIN PEDIDO ── */
+.sin-ped{padding:40px 16px;text-align:center}
+.sin-ped-av{width:72px;height:72px;border-radius:50%;overflow:hidden;margin:0 auto 16px;border:2px solid rgba(124,58,237,0.3)}
+.sin-ped-av img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.sin-ped-txt{font-size:17px;font-weight:700;color:var(--text2);margin-bottom:6px}
+.sin-ped-sub{font-size:13px;color:var(--text3);line-height:1.5}
 
-/* CUADRE DEL DIA */
-.cuadre-section{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:20px;padding:18px;margin-bottom:12px;}
-.cuadre-title{font-size:14px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-.cuadre-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;}
-.cuadre-row:last-child{border:none;}
-.cuadre-label{color:var(--text3);}
-.cuadre-val{font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text);}
-.cuadre-val.green{color:#34d399;}
-.cuadre-val.amber{color:#fbbf24;}
-.cuadre-total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;font-size:15px;font-weight:800;}
-.cuadre-total-val{font-family:'JetBrains Mono',monospace;font-size:20px;color:#34d399;}
+/* ── HISTORIAL ── */
+.section-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;padding:12px 14px 6px}
+.hist-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04)}
+.hist-num{font-size:14px;font-weight:900;font-family:'Courier New',monospace;color:var(--p2);width:40px}
+.hist-info{flex:1;min-width:0}
+.hist-dir{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.hist-total{font-size:14px;font-weight:900;color:var(--g);font-family:'Courier New',monospace}
 
-.informe-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;}
-.informe-row:last-child{border:none;}
-.informe-label{color:var(--text3);font-weight:500;}
-.informe-val{font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--text);}
+/* ── FOTO MODAL ── */
+#fotoModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:200;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:14px}
+#fotoModal.show{display:flex}
+#fotoPreview{width:100%;max-width:380px;border-radius:14px;border:2px solid var(--g);display:none;max-height:45vh;object-fit:cover}
+.foto-btns{display:flex;gap:10px;width:100%;max-width:380px}
+.foto-btn{flex:1;padding:13px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.foto-take{background:linear-gradient(135deg,#f97316,#fbbf24);color:white}
+.foto-send{background:linear-gradient(135deg,#10b981,#059669);color:white;display:none}
+.foto-cancel{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:var(--text2)}
+#fotoInput{display:none}
+.foto-msg{font-size:13px;color:var(--text2);text-align:center;line-height:1.5}
 
-.confirm-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:20px;}.confirm-overlay.open{display:flex}
-.confirm-box{background:rgba(20,15,40,0.98);border:1px solid var(--glass-border2);box-shadow:0 16px 48px rgba(0,0,0,0.6);border-radius:26px;padding:28px;width:100%;max-width:300px;text-align:center;}
-.confirm-icon{font-size:46px;margin-bottom:14px;}.confirm-title{font-size:20px;font-weight:800;margin-bottom:8px;}
-.confirm-sub{font-size:13px;color:var(--text3);margin-bottom:24px;line-height:1.5;}
-.confirm-btns{display:flex;gap:10px;}
-.confirm-cancel{flex:1;padding:13px;background:rgba(255,255,255,0.07);border:1px solid var(--glass-border);border-radius:14px;color:var(--text2);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
-.confirm-ok{flex:2;padding:13px;background:linear-gradient(135deg,#10b981,#2563eb);border:none;border-radius:14px;color:white;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;}
-
-.notif{position:fixed;top:68px;left:50%;transform:translateX(-50%) translateY(-20px);background:rgba(13,10,26,0.95);backdrop-filter:var(--blur);border:1px solid rgba(16,185,129,0.4);color:var(--text);padding:10px 22px;border-radius:24px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center;}
-.notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.empty{text-align:center;padding:50px 20px;}.ei{font-size:48px;margin-bottom:12px;opacity:0.5;}.et{color:var(--text3);font-size:14px;line-height:1.6;}
+/* ── TOAST ── */
+.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:rgba(10,10,20,0.95);border:1px solid rgba(124,58,237,0.3);color:#c4b5fd;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:300;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;backdrop-filter:blur(20px)}
+.toast.show{opacity:1}
 </style>
 </head>
 <body>
-<!-- Indicador GPS -->
-<div id="gpsIndicador" style="display:none;position:fixed;top:12px;right:12px;z-index:999;background:rgba(16,185,129,0.95);border-radius:100px;padding:8px 14px;align-items:center;gap:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;color:white;box-shadow:0 4px 16px rgba(16,185,129,0.4)"><span style="width:8px;height:8px;border-radius:50%;background:white;display:inline-block;animation:gpsPulse 1.5s ease-in-out infinite;margin-right:4px"></span>GPS activo</div>
-<style>@keyframes gpsPulse{0%,100%{opacity:1}50%{opacity:0.4}}</style>
-<div class="blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
 
+<!-- LOGIN -->
 <div id="loginScreen">
-  <div class="login-box">
-    <div class="login-orb">🛵</div>
-    <div class="login-title">Domiciliario</div>
-    <div class="login-sub">Ingresa tu nombre para continuar</div>
-    <div class="login-field">
-      <label class="login-label">Tu nombre</label>
-      <input class="login-input" id="loginNombre" placeholder="Ej: Carlos" autocomplete="off">
+  <div class="login-card">
+    <div class="login-luz">
+      <div class="login-av">
+        <img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" onerror="this.parentNode.style.background='linear-gradient(135deg,#7c3aed,#4f46e5)';this.style.display='none'">
+      </div>
+      <div class="login-nombre">LUZ <span>IA</span></div>
+      <div class="login-sub">Panel Domiciliario</div>
     </div>
-    <button class="login-btn" id="loginBtn">Entrar</button>
-    <div class="login-err" id="loginErr"></div>
+    <input class="l-input" id="loginTel" type="tel" placeholder="Tu número de celular" inputmode="numeric">
+    <input class="l-input" id="loginRestId" type="text" placeholder="ID del restaurante" style="font-size:12px">
+    <button class="l-btn" onclick="iniciarSesion()">Entrar</button>
+    <div class="l-err" id="loginErr"></div>
   </div>
 </div>
 
+<!-- APP -->
 <div id="app">
+  <!-- TOPBAR -->
   <div class="topbar">
     <div class="tb-left">
-      <div class="tb-avatar" id="tbAvatar">?</div>
-      <div><div class="tb-name" id="tbName">Domiciliario</div><div class="tb-role">LUZ IA · Domicilios</div></div>
+      <div class="tb-av">
+        <img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" onerror="this.parentNode.style.background='linear-gradient(135deg,#7c3aed,#4f46e5)';this.style.display='none'">
+      </div>
+      <div class="tb-info">
+        <div class="tb-name" id="domiNombre">Cargando...</div>
+        <div class="tb-status"><div class="sdot"></div><span id="domiStatusTxt">En línea</span></div>
+      </div>
     </div>
-    <div class="live-pill"><div class="live-dot"></div>EN VIVO</div>
+    <div class="tb-earnings" id="tbEarnings">$0</div>
   </div>
 
-  <div class="content">
-    <div class="page active" id="page-pedidos">
-      <!-- STATS REDESIGNED -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px 14px 0">
-        <div style="background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(99,102,241,0.05));border:1px solid rgba(99,102,241,0.25);border-radius:16px;padding:14px 12px;text-align:center">
-          <div style="font-size:26px;font-weight:900;color:#a5b4fc;line-height:1" id="statAsignados">0</div>
-          <div style="font-size:10px;color:rgba(255,255,255,0.45);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Listos</div>
-        </div>
-        <div style="background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(245,158,11,0.05));border:1px solid rgba(245,158,11,0.25);border-radius:16px;padding:14px 12px;text-align:center">
-          <div style="font-size:26px;font-weight:900;color:#fcd34d;line-height:1" id="statCamino">0</div>
-          <div style="font-size:10px;color:rgba(255,255,255,0.45);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">En ruta</div>
-        </div>
-        <div style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.25);border-radius:16px;padding:14px 12px;text-align:center">
-          <div style="font-size:26px;font-weight:900;color:#6ee7b7;line-height:1" id="statEntregados">0</div>
-          <div style="font-size:10px;color:rgba(255,255,255,0.45);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Hoy</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 14px 0">
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px">
-          <div style="font-size:22px">⚡</div>
-          <div><div style="font-size:18px;font-weight:800;color:#f1f0ff" id="statTiempoPromedio">--</div><div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;text-transform:uppercase;letter-spacing:0.04em">Tiempo prom.</div></div>
-        </div>
-        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px">
-          <div style="font-size:22px">🏆</div>
-          <div><div style="font-size:18px;font-weight:800;color:#fcd34d" id="statRecord">--</div><div style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;text-transform:uppercase;letter-spacing:0.04em">Mejor tiempo</div></div>
-        </div>
-      </div>
-      <div class="pedidos-pad" id="pedidosLista">
-        <div class="empty"><div class="ei">🛵</div><div class="et">Cargando pedidos...</div></div>
-      </div>
+  <!-- LUZ BAR -->
+  <div class="luz-bar">
+    <div class="luz-bar-av">
+      <img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" onerror="this.parentNode.style.background='linear-gradient(135deg,#7c3aed,#4f46e5)';this.style.display='none'">
     </div>
-
-    <div class="page" id="page-historial">
-      <div style="padding:14px 14px 4px"><div style="font-size:22px;font-weight:900;">Historial</div><div style="font-size:13px;color:var(--text3);margin-top:2px">Tus pedidos de hoy</div></div>
-      <div class="hist-pad" id="historialLista"><div class="empty"><div class="et">Cargando...</div></div></div>
-    </div>
-
-    <div class="page" id="page-informe">
-      <div style="padding:14px 14px 4px"><div style="font-size:22px;font-weight:900;">Mi día</div><div style="font-size:13px;color:var(--text3);margin-top:2px">Estadísticas y cuadre</div></div>
-      <div class="informe-pad">
-        <div class="informe-hero">
-          <div style="font-size:12px;font-weight:700;color:rgba(110,231,183,0.7);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px">Resumen del día</div>
-          <div class="informe-title" id="informeGreeting">Hola!</div>
-          <div class="informe-sub" id="informeSub">Cargando estadísticas...</div>
-        </div>
-        <div class="informe-stats">
-          <div class="istat"><div class="istat-val" id="iEntregados">0</div><div class="istat-label">Entregados</div></div>
-          <div class="istat"><div class="istat-val" id="iTiempoPromedio">--</div><div class="istat-label">Tiempo prom.</div></div>
-          <div class="istat"><div class="istat-val" id="iRecord">--</div><div class="istat-label">Mejor tiempo</div></div>
-          <div class="istat"><div class="istat-val" id="iPendientes">0</div><div class="istat-label">Pendientes</div></div>
-          <div class="istat wide" style="background:rgba(124,58,237,0.1);border-color:rgba(124,58,237,0.25)">
-            <div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Eficiencia del día</div>
-            <div id="barraEficiencia" style="height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:5px"><div id="barraFill" style="height:100%;background:linear-gradient(90deg,#10b981,#2563eb);border-radius:4px;width:0%;transition:width 0.8s ease"></div></div>
-            <div id="eficienciaLabel" style="font-size:11px;color:var(--text3)">Calculando...</div>
-          </div>
-        </div>
-
-        <!-- CUADRE DEL DÍA -->
-        <div class="cuadre-section">
-          <div class="cuadre-title">💰 Cuadre del día</div>
-          
-          <!-- Desglose por método de pago -->
-          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Ingresos por método de pago</div>
-          <div class="cuadre-row"><span class="cuadre-label">💵 Efectivo recibido</span><span class="cuadre-val" id="cuadreEfectivo">$0</span></div>
-          <div class="cuadre-row"><span class="cuadre-label">📱 Transferencias (Nequi/BC)</span><span class="cuadre-val" id="cuadreTransferencia">$0</span></div>
-          <div class="cuadre-row"><span class="cuadre-label">💳 Datáfono</span><span class="cuadre-val" id="cuadreDatafono">$0</span></div>
-          
-          <div style="height:1px;background:rgba(255,255,255,0.08);margin:10px 0"></div>
-          
-          <!-- Domicilios -->
-          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Domicilios</div>
-          <div class="cuadre-row"><span class="cuadre-label">Total domicilios cobrados</span><span class="cuadre-val amber" id="cuadreDomicilios">$0</span></div>
-          <div class="cuadre-row"><span class="cuadre-label">Pedidos entregados</span><span class="cuadre-val" id="cuadreConteo">0</span></div>
-
-          <div style="height:1px;background:rgba(255,255,255,0.08);margin:10px 0"></div>
-
-          <!-- Resumen final -->
-          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Resumen final</div>
-          <div class="cuadre-row"><span class="cuadre-label" style="color:var(--text);font-weight:700">Tu comisión (domicilios)</span><span class="cuadre-val green" id="cuadreGanancia">$0</span></div>
-          <div class="cuadre-row"><span class="cuadre-label">Efectivo a entregar al restaurante</span><span class="cuadre-val amber" id="cuadreEntregar">$0</span></div>
-          <div class="cuadre-row" style="background:rgba(16,185,129,0.06);border-radius:10px;padding:8px 10px;margin-top:4px;border:1px solid rgba(16,185,129,0.2)">
-            <span class="cuadre-label" style="color:#34d399;font-weight:800;font-size:14px">Total que te llevas 🏠</span>
-            <span class="cuadre-val green" id="cuadreTeLlevas" style="font-size:20px">$0</span>
-          </div>
-        </div>
-
-        <button id="btnCerrarSesion" style="width:100%;padding:13px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:14px;color:#fca5a5;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;">🚪 Cerrar sesión</button>
-      </div>
+    <div class="luz-bar-txt" id="luzBarTxt">Hola! Estoy monitoreando tus pedidos.</div>
+    <div class="luz-wave" id="luzWave">
+      <div class="lwb"></div><div class="lwb"></div><div class="lwb"></div><div class="lwb"></div><div class="lwb"></div>
     </div>
   </div>
 
-  <div class="tab-bar">
-    <div class="tab-bar-inner">
-      <div class="tab-btn active" id="tab-pedidos"><div class="tab-icon">🛵</div><div class="tab-label">Pedidos</div></div>
-      <div class="tab-btn" id="tab-historial"><div class="tab-icon">📋</div><div class="tab-label">Historial</div></div>
-      <div class="tab-btn" id="tab-informe"><div class="tab-icon">📊</div><div class="tab-label">Mi día</div></div>
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-cell"><div class="stat-v" id="statEntregas" style="color:var(--g)">0</div><div class="stat-l">Entregas hoy</div></div>
+    <div class="stat-cell"><div class="stat-v" id="statGanancias" style="color:var(--y)">$0</div><div class="stat-l">Ganancias</div></div>
+    <div class="stat-cell"><div class="stat-v" id="statProm" style="color:var(--p2)">0min</div><div class="stat-l">Promedio</div></div>
+  </div>
+
+  <!-- PEDIDO ACTIVO -->
+  <div class="ped-section" id="pedSection">
+    <div class="sin-ped">
+      <div class="sin-ped-av">
+        <img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" onerror="this.parentNode.style.background='linear-gradient(135deg,#7c3aed,#4f46e5)';this.style.display='none'">
+      </div>
+      <div class="sin-ped-txt">Sin pedido activo</div>
+      <div class="sin-ped-sub">Luz te avisará cuando llegue<br>un pedido para ti</div>
     </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="section-title">Entregas de hoy</div>
+  <div id="histList"></div>
+</div>
+
+<!-- FOTO MODAL -->
+<div id="fotoModal">
+  <div class="foto-msg">📸 Toma una foto como evidencia<br>de la entrega</div>
+  <img id="fotoPreview">
+  <input type="file" id="fotoInput" accept="image/*" capture="environment">
+  <div class="foto-btns">
+    <button class="foto-btn foto-take" onclick="document.getElementById('fotoInput').click()">📷 Tomar foto</button>
+    <button class="foto-btn foto-send" id="fotoSendBtn" onclick="enviarFoto()">✅ Confirmar</button>
+    <button class="foto-btn foto-cancel" onclick="cerrarFotoModal()">Cancelar</button>
   </div>
 </div>
 
-<div class="notif" id="notif"></div>
-<div class="confirm-overlay" id="confirmEntregado">
-  <div class="confirm-box">
-    <div class="confirm-icon">✅</div>
-    <div class="confirm-title">Confirmar entrega</div>
-    <div class="confirm-sub">¿Confirmás que entregaste el pedido <strong id="confirmNum">#?</strong> al cliente?</div>
-    <div class="confirm-btns">
-      <button class="confirm-cancel" id="confirmCancel">No aún</button>
-      <button class="confirm-ok" id="confirmOk">Sí, entregado!</button>
-    </div>
-  </div>
-</div>
+<div class="toast" id="toast"></div>
 
 <script>
-var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
-var rest=null,domiciliarioId=null,domiciliarioNombre="";
-var pedidosKnown={},pedidoAEntregar=null,pedidoAEntregarNum="";
-var timerPedidos=null;
+var SU = "https://vbxuwzcfzfjwhllkppkg.supabase.co";
+var SK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZieHV3emNmemZqd2hsbGtwcGtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTcxNzk2MDMsImV4cCI6MjAzMjc1NTYwM30.oOTC8F7-1MNaJfhgxJKI5TajJt4S1fC9VGMJmROqRrk";
 
-function get(t,f){return fetch(SU+"/rest/v1/"+t+"?"+(f||""),{headers:{"apikey":SK,"Authorization":"Bearer "+SK}}).then(function(r){return r.json();});}
-function fmt(n){return"$"+Number(n||0).toLocaleString("es-CO");}
-function ago(d){var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<1?"ahora":diff<60?diff+" min":Math.floor(diff/60)+"h "+(diff%60)+"m";}
-function fmtMin(m){if(!m||isNaN(m))return"--";return m<60?m+"min":Math.floor(m/60)+"h "+Math.round(m%60)+"m";}
-function notif(m,c){var e=document.getElementById("notif");e.textContent=m;e.style.borderColor=c||"rgba(16,185,129,0.4)";e.classList.add("show");setTimeout(function(){e.classList.remove("show");},2800);}
-function getHoraCol(){var a=new Date();return new Date(a.getTime()+a.getTimezoneOffset()*60000-(5*60*60*1000));}
-function playSound(){try{var ctx=new(window.AudioContext||window.webkitAudioContext)();[[880,0,0.4],[1046,0.15,0.5]].forEach(function(n){var o=ctx.createOscillator(),g=ctx.createGain(),t=ctx.currentTime+n[1];o.frequency.value=n[0];g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(n[2],t+0.02);g.gain.exponentialRampToValueAtTime(0.001,t+0.5);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.6);});}catch(e){}}
-function waLink(tel){var t=String(tel).replace(/[^0-9]/g,"");if(!t.startsWith("57")&&t.length===10)t="57"+t;return"https://wa.me/"+t;}
+var domi = null, restId = null, pedidoActivo = null;
+var pollTimer = null, mapaInst = null, mapaMarker = null;
+var historial = [], ganancias = 0, tiemposTotales = [], fotoBase64 = null;
+var luzAudioPlaying = false, luzAudioCache = {};
+var urlParams = new URLSearchParams(window.location.search);
 
-document.getElementById("loginBtn").addEventListener("click",doLogin);
-document.getElementById("loginNombre").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
-function doLogin(){
-  var nombre=document.getElementById("loginNombre").value.trim();
-  if(!nombre){document.getElementById("loginErr").textContent="Escribe tu nombre";return;}
-  var btn=document.getElementById("loginBtn");btn.textContent="Buscando...";btn.disabled=true;
-  var restId=localStorage.getItem("luzRestId");
-  var query=restId?"restaurante_id=eq."+restId+"&nombre=ilike."+encodeURIComponent(nombre)+"&activo=eq.true&select=*":"nombre=ilike."+encodeURIComponent(nombre)+"&activo=eq.true&select=*&limit=1";
-  get("domiciliarios",query).then(function(ds){
-    if(!ds||!ds.length){document.getElementById("loginErr").textContent="No encontramos ese nombre.";btn.textContent="Entrar";btn.disabled=false;return;}
-    var d=ds[0];
-    get("restaurantes","id=eq."+d.restaurante_id+"&select=*").then(function(rs){
-      if(!rs||!rs.length){document.getElementById("loginErr").textContent="Error al cargar el restaurante.";btn.textContent="Entrar";btn.disabled=false;return;}
-      rest=rs[0];domiciliarioId=d.id;domiciliarioNombre=d.nombre;
-      localStorage.setItem("luzDomiId",d.id);localStorage.setItem("luzDomiNombre",d.nombre);localStorage.setItem("luzRestId",rest.id);
-      arrancar();
-    }).catch(function(){document.getElementById("loginErr").textContent="Error de conexión";btn.textContent="Entrar";btn.disabled=false;});
-  }).catch(function(){document.getElementById("loginErr").textContent="Error de conexión";btn.textContent="Entrar";btn.disabled=false;});
-}
+// Pre-fill from URL
+if(urlParams.get("rest")) document.getElementById("loginRestId").value = urlParams.get("rest");
+if(urlParams.get("tel")) document.getElementById("loginTel").value = urlParams.get("tel");
 
-function arrancar(){
-  document.getElementById("loginScreen").style.display="none";
-  document.getElementById("app").style.display="block";
-  document.getElementById("tbAvatar").textContent=domiciliarioNombre.charAt(0).toUpperCase();
-  document.getElementById("tbName").textContent=domiciliarioNombre;
-  loadPedidos();loadHistorial();loadInforme();
-  timerPedidos=setInterval(function(){loadPedidos();},7000);
-  setInterval(function(){loadHistorial();loadInforme();},30000);
-}
-
-["pedidos","historial","informe"].forEach(function(n){
-  var el=document.getElementById("tab-"+n);if(!el)return;
-  el.addEventListener("click",function(){
-    document.querySelectorAll(".page").forEach(function(p){p.classList.remove("active");});
-    document.querySelectorAll(".tab-btn").forEach(function(t){t.classList.remove("active");});
-    document.getElementById("page-"+n).classList.add("active");
-    this.classList.add("active");
-    if(n==="historial")loadHistorial();
-    if(n==="informe")loadInforme();
-  });
-});
-
-function loadPedidos(){
-  if(!rest||!domiciliarioId)return;
-  get("pedidos","restaurante_id=eq."+rest.id+"&estado=in.(listo,en_camino)&domiciliario_id=eq."+domiciliarioId+"&order=created_at.asc&limit=20").then(function(pedidos){
-    var isFirst=Object.keys(pedidosKnown).length===0;
-    pedidos.forEach(function(p){if(!pedidosKnown[p.id]){if(!isFirst)playSound();pedidosKnown[p.id]=true;}});
-    document.getElementById("statAsignados").textContent=pedidos.filter(function(p){return p.estado==="listo";}).length;
-    document.getElementById("statCamino").textContent=pedidos.filter(function(p){return p.estado==="en_camino";}).length;
-    var col=getHoraCol(),desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
-    get("pedidos","restaurante_id=eq."+rest.id+"&estado=eq.entregado&domiciliario_id=eq."+domiciliarioId+"&created_at=gte."+desde+"&select=id,created_at,updated_at").then(function(e){
-      document.getElementById("statEntregados").textContent=e.length;
-      var tiempos=e.map(function(p){if(p.updated_at&&p.created_at){return Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);}return null;}).filter(function(t){return t!==null&&t>0&&t<300;});
-      if(tiempos.length){
-        var prom=Math.round(tiempos.reduce(function(s,t){return s+t;},0)/tiempos.length);
-        document.getElementById("statTiempoPromedio").textContent=fmtMin(prom);
-        document.getElementById("statRecord").textContent=fmtMin(Math.min.apply(null,tiempos));
-      }
-    }).catch(function(){});
-
-    var lista=document.getElementById("pedidosLista");
-    if(!pedidos.length){lista.innerHTML='<div class="empty"><div class="ei">🎉</div><div class="et">Todo entregado!<br>No hay pedidos pendientes.</div></div>';return;}
-    var ahora=Date.now();
-    var h="";
-    pedidos.forEach(function(p){
-      var items=Array.isArray(p.items)?p.items:[];
-      var total=Number(p.total||0);
-      var esRecoger=(p.direccion||"").toLowerCase().indexOf("recoger")!==-1;
-      var minutos=Math.floor((ahora-new Date(p.created_at))/60000);
-      var urgente=minutos>25;
-      var tel=p.cliente_tel||"";
-      h+='<div class="dcard estado-'+p.estado+'">';
-      h+='<div class="dcard-header h-'+p.estado+'"><div><div class="dcard-num n-'+p.estado+'">#'+p.numero_pedido+'</div><div style="font-size:10px;color:var(--text3);margin-top:1px">Pedido hace '+ago(p.created_at)+'</div></div>';
-      h+='<span class="dcard-etag '+(p.estado==="listo"?"etag-listo":"etag-en_camino")+'">'+(p.estado==="listo"?"⏳ Listo":"🛵 En camino")+'</span></div>';
-      h+='<div class="dcard-body">';
-      h+='<div class="dcard-timer">⏱ Tiempo: <span class="timer-val'+(urgente?" urgente":"")+'">'+minutos+' min'+(urgente?" ⚠️":"")+'</span></div>';
-      h+='<div class="dcard-section">Productos</div><div class="dcard-items">';
-      items.forEach(function(it){h+='<div class="dcard-item">• '+it+'</div>';});
-      h+='</div>';
-      if(p.notas_especiales)h+='<div class="dcard-notas">📋 '+p.notas_especiales+'</div>';
-      h+='<div class="dcard-dir"><div class="dcard-dir-icon">'+(esRecoger?"🏪":"📍")+'</div><div><div class="dcard-dir-text">'+(esRecoger?"RECOGER EN TIENDA":p.direccion||"Sin dirección")+'</div><div class="dcard-dir-sub">'+(tel?"📱 "+tel:"")+'</div></div></div>';
-      h+='<div class="dcard-total">Total: <span>'+fmt(total)+'</span></div>';
-      if(p.metodo_pago)h+='<div style="margin-bottom:10px"><span class="dcard-pago">💳 '+p.metodo_pago+'</span></div>';
-      h+='<div class="dcard-btns">';
-      // Botones contacto
-      if(tel){
-        h+='<div style="display:flex;gap:7px;margin-bottom:8px">';
-        h+='<a href="tel:'+tel+'" class="dcard-btn-call" title="Llamar">📞</a>';
-        h+='<a href="'+waLink(tel)+'" class="dcard-btn-wa" target="_blank" title="WhatsApp">💬</a>';
-        if(!esRecoger&&p.direccion&&p.direccion!=="Por confirmar"){
-          h+='<button class="dcard-btn-maps" style="flex:1;" data-dir="'+encodeURIComponent(p.direccion||"")+'">📍 Google Maps</button>';
-        }
-        h+='</div>';
-      } else if(!esRecoger&&p.direccion&&p.direccion!=="Por confirmar"){
-        h+='<button class="dcard-btn-maps" style="margin-bottom:8px;" data-dir="'+encodeURIComponent(p.direccion||"")+'">📍 Google Maps</button>';
-      }
-      h+='<div class="dcard-btns-row">';
-      if(p.estado==="listo")h+='<button class="dcard-btn btn-camino" data-id="'+p.id+'" data-e="en_camino" data-n="'+p.numero_pedido+'" data-t="'+tel+'">🛵 Salí en camino</button>';
-      if(p.estado==="en_camino")h+='<button class="dcard-btn btn-entregado" data-id="'+p.id+'" data-n="'+p.numero_pedido+'" data-t="'+tel+'">✅ Entregué el pedido</button>';
-      h+='</div></div></div></div>';
+// ── LOGIN ────────────────────────────────────────────────────────
+async function iniciarSesion(){
+  var tel = document.getElementById("loginTel").value.trim().replace(/[^0-9]/g,"");
+  var rid = document.getElementById("loginRestId").value.trim();
+  var err = document.getElementById("loginErr");
+  if(!tel||tel.length<10){err.textContent="Ingresa tu número";return;}
+  if(!rid){err.textContent="Ingresa el ID del restaurante";return;}
+  err.textContent="Verificando...";
+  try {
+    var r = await fetch(SU+"/rest/v1/domiciliarios?restaurante_id=eq."+rid+"&telefono=eq."+encodeURIComponent(tel)+"&select=*",{
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK}
     });
-    lista.innerHTML=h;
-    lista.querySelectorAll(".dcard-btn-maps[data-dir]").forEach(function(b){b.addEventListener("click",function(){window.open("https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(decodeURIComponent(this.getAttribute("data-dir"))+", Cali, Colombia"),"_blank");});});
-    lista.querySelectorAll(".dcard-btn[data-e='en_camino']").forEach(function(b){b.addEventListener("click",function(){var pid=this.getAttribute("data-id");cambiarEstado(pid,"en_camino",this.getAttribute("data-t"),this.getAttribute("data-n"));iniciarGPSTracking(pid);});});
-    lista.querySelectorAll(".btn-entregado[data-id]").forEach(function(b){b.addEventListener("click",function(){pedidoAEntregar=this.getAttribute("data-id");pedidoAEntregarNum=this.getAttribute("data-n");document.getElementById("confirmNum").textContent="#"+pedidoAEntregarNum;document.getElementById("confirmEntregado").classList.add("open");});});
-  }).catch(function(){});
+    var data = await r.json();
+    if(!data||!data.length){err.textContent="Número no registrado. Habla con el restaurante.";return;}
+    domi = data[0]; restId = rid;
+    try{localStorage.setItem("domi_tel",tel);localStorage.setItem("domi_rest",rid);}catch(e){}
+    document.getElementById("loginScreen").style.display="none";
+    document.getElementById("app").style.display="block";
+    document.getElementById("domiNombre").textContent=domi.nombre||tel;
+    iniciarApp();
+  } catch(e){err.textContent="Error de conexión";}
 }
 
-function loadHistorial(){
-  if(!rest||!domiciliarioId)return;
-  var col=getHoraCol(),desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
-  get("pedidos","restaurante_id=eq."+rest.id+"&or=(domiciliario_id.eq."+domiciliarioId+",domiciliario_nombre.eq."+encodeURIComponent(domiciliarioNombre)+")&created_at=gte."+desde+"&order=created_at.desc&limit=50").then(function(pedidos){
-    var lista=document.getElementById("historialLista");
-    if(!pedidos.length){lista.innerHTML='<div class="empty"><div class="ei">📋</div><div class="et">Aún no tienes pedidos hoy.</div></div>';return;}
-    var h="";
-    pedidos.forEach(function(p){
-      var total=Number(p.total||0);
-      var entregado=p.estado==="entregado";
-      var minutos=null;
-      if(entregado&&p.updated_at&&p.created_at){minutos=Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);if(minutos<0||minutos>300)minutos=null;}
-      h+='<div class="hcard">';
-      h+='<div class="hcard-top"><div><div class="hnum">#'+p.numero_pedido+'</div><div class="htime">'+new Date(p.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})+'</div></div><div style="text-align:right"><div class="htot">'+fmt(total)+'</div><span class="hstatus '+(entregado?"entregado":"pendiente")+'">'+(entregado?"✅ Entregado":"⏳ Pendiente")+'</span></div></div>';
-      if(p.direccion&&p.direccion!=="RECOGER EN TIENDA")h+='<div class="hdir">📍 '+p.direccion+'</div>';
-      if(minutos!==null)h+='<div class="htiempo">⏱ <span class="htiempo-val">'+fmtMin(minutos)+'</span></div>';
-      h+='</div>';
-    });
-    lista.innerHTML=h;
-  }).catch(function(){});
-}
-
-function loadInforme(){
-  if(!rest||!domiciliarioId)return;
-  var col=getHoraCol(),desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
-  document.getElementById("informeGreeting").textContent="Hola, "+domiciliarioNombre+"!";
-  get("pedidos","restaurante_id=eq."+rest.id+"&or=(domiciliario_id.eq."+domiciliarioId+",domiciliario_nombre.eq."+encodeURIComponent(domiciliarioNombre)+")&created_at=gte."+desde+"&order=created_at.asc&limit=100&select=*").then(function(pedidos){
-    var entregados=pedidos.filter(function(p){return p.estado==="entregado";});
-    var pendientes=pedidos.filter(function(p){return p.estado!=="entregado";});
-    var tiempos=entregados.map(function(p){if(p.updated_at&&p.created_at){var m=Math.round((new Date(p.updated_at)-new Date(p.created_at))/60000);return(m>0&&m<300)?m:null;}return null;}).filter(function(t){return t!==null;});
-    var prom=tiempos.length?Math.round(tiempos.reduce(function(s,t){return s+t;},0)/tiempos.length):null;
-    var mejor=tiempos.length?Math.min.apply(null,tiempos):null;
-    var eficiencia=Math.min(100,pedidos.length>0?Math.round((entregados.length/pedidos.length)*100):0);
-    document.getElementById("iEntregados").textContent=entregados.length;
-    document.getElementById("iTiempoPromedio").textContent=fmtMin(prom);
-    document.getElementById("iRecord").textContent=fmtMin(mejor);
-    document.getElementById("iPendientes").textContent=pendientes.length;
-    document.getElementById("barraFill").style.width=eficiencia+"%";
-    var msg=eficiencia>=90?"Excelente día! 🔥":eficiencia>=70?"Buen ritmo! 💪":entregados.length===0?"Esperando primer pedido...":"Vamos bien!";
-    document.getElementById("eficienciaLabel").textContent=eficiencia+"% — "+msg;
-    document.getElementById("informeSub").textContent=entregados.length+" entregado"+(entregados.length!==1?"s":"")+" hoy"+(prom?" · Promedio "+fmtMin(prom):"");
-
-    // CUADRE DEL DÍA
-    var totalEfectivo=0,totalTransferencia=0,totalDatafono=0,totalDomicilios=0;
-    entregados.forEach(function(p){
-      var dom=Number(p.domicilio||0);
-      var total=Number(p.total||0);
-      var met=(p.metodo_pago||"").toLowerCase();
-      totalDomicilios+=dom;
-      if(met==="efectivo"){
-        totalEfectivo+=total; // Recibe todo el efectivo
-      } else if(met==="datafono"){
-        totalDatafono+=dom; // Solo el domicilio en datáfono
-      } else {
-        // Nequi, bancolombia, digital - solo recibe el domicilio en efectivo si aplica
-        totalTransferencia+=dom;
-      }
-    });
-    var comision=Math.round(totalDomicilios*0.9); // 90% comision domi
-    var efectivoEntregado=totalEfectivo-comision; // Lo que entrega al restaurante
-    var teLlevas=comision+totalTransferencia+totalDatafono; // Su ganancia total
-    document.getElementById("cuadreEfectivo").textContent=fmt(totalEfectivo);
-    document.getElementById("cuadreTransferencia").textContent=fmt(totalTransferencia);
-    document.getElementById("cuadreDatafono").textContent=fmt(totalDatafono);
-    document.getElementById("cuadreDomicilios").textContent=fmt(totalDomicilios);
-    document.getElementById("cuadreConteo").textContent=entregados.length;
-    document.getElementById("cuadreGanancia").textContent=fmt(comision);
-    document.getElementById("cuadreEntregar").textContent=fmt(Math.max(0,efectivoEntregado));
-    document.getElementById("cuadreTeLlevas").textContent=fmt(teLlevas);
-  }).catch(function(){});
-}
-
-document.getElementById("confirmCancel").addEventListener("click",function(){document.getElementById("confirmEntregado").classList.remove("open");pedidoAEntregar=null;});
-document.getElementById("confirmOk").addEventListener("click",function(){
-  if(!pedidoAEntregar)return;
-  document.getElementById("confirmEntregado").classList.remove("open");
-  cambiarEstado(pedidoAEntregar,"entregado","",pedidoAEntregarNum);
-  pedidoAEntregar=null;
-});
-
-// ── GPS TRACKING ──
-var gpsWatchId=null;
-
-function iniciarGPSTracking(pedidoId){
-  if(!navigator.geolocation){notif("GPS no disponible en este dispositivo");return;}
-  if(gpsWatchId!==null){navigator.geolocation.clearWatch(gpsWatchId);}
-  mostrarGPS(true);
-  gpsWatchId=navigator.geolocation.watchPosition(
-    function(pos){enviarUbicacion(pedidoId,pos.coords.latitude,pos.coords.longitude);},
-    function(err){console.log("GPS:",err.message);},
-    {enableHighAccuracy:true,maximumAge:5000,timeout:15000}
-  );
-  notif("📍 GPS activado","rgba(16,185,129,0.9)");
-}
-
-function detenerGPSTracking(){
-  if(gpsWatchId!==null){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}
-  mostrarGPS(false);
-}
-
-function mostrarGPS(on){
-  var el=document.getElementById("gpsIndicador");
-  if(el)el.style.display=on?"flex":"none";
-}
-
-function enviarUbicacion(pedidoId,lat,lng){
-  if(!rest||!pedidoId)return;
-  fetch("/api/ubicacion-domiciliario",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({pedido_id:pedidoId,restaurante_id:rest.id,domiciliario_id:domiciliarioId||null,lat:lat,lng:lng})
-  }).catch(function(){});
-}
-
-function cambiarEstado(id,estado,tel,num){
-  notif("Actualizando...");
-  if(estado==="entregado"){detenerGPSTracking();}
-  fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null})})
-  .then(function(r){return r.json();})
-  .then(function(){
-    if(estado==="entregado"){notif("✅ Pedido #"+num+" entregado!");}
-    else{notif("🛵 En camino al pedido #"+num);}
-    loadPedidos();loadHistorial();loadInforme();
-  })
-  .catch(function(){notif("Error de conexión");});
-}
-
-document.getElementById("btnCerrarSesion").addEventListener("click",function(){
-  if(!confirm("¿Cerrar sesión?"))return;
-  localStorage.removeItem("luzDomiId");localStorage.removeItem("luzDomiNombre");
-  if(timerPedidos)clearInterval(timerPedidos);
-  location.reload();
-});
-
-(function(){
-  var savedId=localStorage.getItem("luzDomiId"),savedName=localStorage.getItem("luzDomiNombre"),savedRid=localStorage.getItem("luzRestId");
-  if(savedId&&savedName&&savedRid){
-    get("restaurantes","id=eq."+savedRid+"&select=*").then(function(d){
-      if(d&&d.length){rest=d[0];domiciliarioId=savedId;domiciliarioNombre=savedName;arrancar();}
-    }).catch(function(){});
+// Auto-login
+try {
+  var savedTel = localStorage.getItem("domi_tel");
+  var savedRest = localStorage.getItem("domi_rest");
+  if(savedTel&&savedRest){
+    document.getElementById("loginTel").value=savedTel;
+    document.getElementById("loginRestId").value=savedRest;
   }
-})();
+}catch(e){}
+
+// ── INIT APP ─────────────────────────────────────────────────────
+function iniciarApp(){
+  cargarStats();
+  cargarPedidoActivo();
+  cargarHistorial();
+  pollTimer = setInterval(function(){
+    cargarPedidoActivo();
+    cargarStats();
+  }, 5000);
+  iniciarGPS();
+  // Luz da la bienvenida
+  setTimeout(function(){
+    luzDecir("Hola "+domi.nombre.split(" ")[0]+"! Todo listo. Te aviso cuando llegue un pedido para ti.");
+  }, 1500);
+}
+
+// ── GPS ──────────────────────────────────────────────────────────
+var gpsTimer = null;
+function iniciarGPS(){
+  if(!navigator.geolocation)return;
+  gpsTimer = setInterval(function(){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      if(!pedidoActivo||!domi)return;
+      fetch("/api/domi-ubicacion",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({domiciliario_id:domi.id,lat:pos.coords.latitude,lng:pos.coords.longitude,restaurante_id:restId})
+      }).catch(function(){});
+      actualizarMapa(pos.coords.latitude,pos.coords.longitude);
+    },null,{enableHighAccuracy:true,timeout:8000});
+  },15000);
+}
+
+// ── PEDIDO ACTIVO ─────────────────────────────────────────────────
+var pedidoAnteriorId = null;
+async function cargarPedidoActivo(){
+  try {
+    var r = await fetch(SU+"/rest/v1/pedidos?restaurante_id=eq."+restId+
+      "&domiciliario_id=eq."+domi.id+
+      "&estado=in.(listo,en_camino)&order=created_at.desc&limit=1&select=*",{
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK}
+    });
+    var data = await r.json();
+    var ped = data&&data.length?data[0]:null;
+
+    if(ped&&(!pedidoAnteriorId||ped.id!==pedidoAnteriorId)){
+      pedidoAnteriorId=ped.id;
+      pedidoActivo=ped;
+      renderPedidoActivo(ped);
+      luzDecir("Nuevo pedido número "+ped.numero_pedido+"! "+formatDir(ped.direccion));
+    } else if(!ped&&pedidoAnteriorId){
+      pedidoAnteriorId=null;pedidoActivo=null;
+      renderSinPedido();
+    } else if(ped){
+      pedidoActivo=ped;
+      renderPedidoActivo(ped);
+    }
+  }catch(e){}
+}
+
+function renderPedidoActivo(p){
+  var items=[];try{items=Array.isArray(p.items)?p.items:JSON.parse(p.items||"[]");}catch(e){}
+  var itemsStr=items.map(function(i){return typeof i==="string"?i:(i.qty?i.qty+"× ":"")+i.nombre;}).join(" · ")||"Sin items";
+  var notas=(p.notas_especiales||"").trim();
+  var estClass=p.estado==="en_camino"?"est-camino":"est-listo";
+  var estLabel=p.estado==="en_camino"?"🛵 En camino":"✅ Listo para recoger";
+  var pago={efectivo:"💵 Efectivo",nequi:"📱 Nequi",bancolombia:"🏦 Bancolombia",datafono:"💳 Datáfono"}[p.metodo_pago]||p.metodo_pago||"";
+
+  document.getElementById("pedSection").innerHTML=
+    '<div class="ped-card">'
+    +'<div class="ped-head"><div class="ped-num">#'+p.numero_pedido+'</div><div class="ped-est '+estClass+'">'+estLabel+'</div></div>'
+    +'<div class="ped-body">'
+    +'<div class="ped-row"><div class="ped-ico">📍</div><div class="ped-data"><div class="ped-data-lbl">Dirección</div><div class="ped-data-val">'+esc(formatDir(p.direccion))+'</div></div></div>'
+    +'<div class="ped-row"><div class="ped-ico">📦</div><div class="ped-data"><div class="ped-data-lbl">Pedido</div><div class="ped-items-list">'+esc(itemsStr)+'</div></div></div>'
+    +(notas?'<div class="ped-notas"><div class="ped-notas-lbl">⚠️ Notas</div><div class="ped-notas-txt">'+esc(notas)+'</div></div>':'')
+    +'<div class="ped-row"><div class="ped-ico">👤</div><div class="ped-data"><div class="ped-data-lbl">Cliente</div><div class="ped-data-val">'+esc(p.cliente_tel||"")+'</div></div></div>'
+    +'<div class="ped-total-row"><div class="ped-total">$'+Number(p.total||0).toLocaleString("es-CO")+'</div><div class="ped-pago">'+esc(pago)+'</div></div>'
+    +'</div></div>'
+    +'<div id="mapaWrap" class="mapa-wrap"><div id="domiMapa"></div></div>'
+    +'<div class="acciones">'
+    +(p.estado==="listo"?'<button class="btn-navegar" onclick="navegar()">🗺️ Navegar a la dirección</button>':'')
+    +(p.estado==="listo"?'<button class="btn-llamar" onclick="llamarCliente()">📞 Llamar al cliente</button>':'')
+    +'<button class="btn-foto" onclick="abrirFotoModal()">📷 Foto de entrega</button>'
+    +'<button class="btn-entregar" onclick="marcarEntregado()">✅ MARCAR COMO ENTREGADO</button>'
+    +'</div>';
+
+  // Mapa
+  setTimeout(function(){iniciarMapa(p);},300);
+}
+
+function renderSinPedido(){
+  document.getElementById("pedSection").innerHTML=
+    '<div class="sin-ped">'
+    +'<div class="sin-ped-av"><img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" onerror="this.parentNode.style.background=\'linear-gradient(135deg,#7c3aed,#4f46e5)\';this.style.display=\'none\'"></div>'
+    +'<div class="sin-ped-txt">Sin pedido activo</div>'
+    +'<div class="sin-ped-sub">Luz te avisará cuando llegue<br>un pedido para ti 🛵</div>'
+    +'</div>';
+}
+
+// ── MAPA ─────────────────────────────────────────────────────────
+function iniciarMapa(p){
+  var el=document.getElementById("domiMapa");
+  if(!el)return;
+  if(mapaInst){mapaInst.remove();mapaInst=null;}
+  mapaInst=L.map("domiMapa",{zoomControl:false,attributionControl:false}).setView([3.4,-76.5],13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(mapaInst);
+  if(p.lat_destino&&p.lng_destino){
+    L.marker([p.lat_destino,p.lng_destino]).addTo(mapaInst).bindPopup("Destino").openPopup();
+    mapaInst.setView([p.lat_destino,p.lng_destino],15);
+  }
+}
+function actualizarMapa(lat,lng){
+  if(!mapaInst)return;
+  var icon=L.divIcon({html:"🛵",className:"",iconSize:[30,30]});
+  if(mapaMarker)mapaMarker.setLatLng([lat,lng]);
+  else mapaMarker=L.marker([lat,lng],{icon:icon}).addTo(mapaInst);
+}
+
+// ── ACCIONES ─────────────────────────────────────────────────────
+function navegar(){
+  if(!pedidoActivo)return;
+  var dir=pedidoActivo.direccion||"";
+  if(pedidoActivo.lat_destino&&pedidoActivo.lng_destino){
+    window.open("https://www.google.com/maps/dir/?api=1&destination="+pedidoActivo.lat_destino+","+pedidoActivo.lng_destino,"_blank");
+  } else if(dir){
+    window.open("https://www.google.com/maps/search/"+encodeURIComponent(dir),"_blank");
+  }
+}
+function llamarCliente(){
+  if(!pedidoActivo||!pedidoActivo.cliente_tel)return;
+  window.location.href="tel:+57"+pedidoActivo.cliente_tel.replace(/[^0-9]/g,"");
+}
+
+async function marcarEntregado(){
+  if(!pedidoActivo){toast("No hay pedido activo");return;}
+  try {
+    await fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:pedidoActivo.id,estado:"entregado",telefono_cliente:pedidoActivo.cliente_tel,numero_pedido:pedidoActivo.numero_pedido,restaurante_id:restId})
+    });
+    var mins=Math.floor((Date.now()-new Date(pedidoActivo.created_at))/60000);
+    tiemposTotales.push(mins);
+    historial.unshift({num:pedidoActivo.numero_pedido,dir:formatDir(pedidoActivo.direccion),total:pedidoActivo.total,ts:new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})});
+    ganancias+=Number(pedidoActivo.total||0)*0.08;
+    document.getElementById("statGanancias").textContent="$"+Math.round(ganancias).toLocaleString("es-CO");
+    pedidoActivo=null;pedidoAnteriorId=null;
+    renderSinPedido();
+    actualizarStats();
+    renderHistorial();
+    luzDecir("¡Excelente! Pedido número "+pedidoActivo?.numero_pedido+" entregado. "+historial.length+" entregas hoy. ¡Vas muy bien!");
+    toast("✅ Entrega confirmada");
+  }catch(e){toast("Error al confirmar");}
+}
+
+// ── FOTO ENTREGA ──────────────────────────────────────────────────
+function abrirFotoModal(){document.getElementById("fotoModal").classList.add("show");}
+function cerrarFotoModal(){document.getElementById("fotoModal").classList.remove("show");fotoBase64=null;document.getElementById("fotoPreview").style.display="none";document.getElementById("fotoSendBtn").style.display="none";}
+document.getElementById("fotoInput").addEventListener("change",function(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    fotoBase64=ev.target.result;
+    var prev=document.getElementById("fotoPreview");
+    prev.src=fotoBase64;prev.style.display="block";
+    document.getElementById("fotoSendBtn").style.display="flex";
+  };
+  reader.readAsDataURL(file);
+});
+async function enviarFoto(){
+  if(!fotoBase64||!pedidoActivo)return;
+  try {
+    await fetch("/enviar-imagen-cliente",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({telefono:pedidoActivo.cliente_tel,restaurante_id:restId,imagen:fotoBase64,mime:"image/jpeg"})
+    });
+    cerrarFotoModal();toast("📷 Foto enviada al cliente");
+    luzDecir("Foto de entrega enviada al cliente.");
+  }catch(e){toast("Error enviando foto");}
+}
+
+// ── STATS ─────────────────────────────────────────────────────────
+async function cargarStats(){
+  try {
+    var r=await fetch("/api/domi-stats?domiciliario_id="+domi.id+"&restaurante_id="+restId);
+    var d=await r.json();
+    if(d.ok){
+      document.getElementById("statEntregas").textContent=d.entregas_hoy||0;
+      var prom=d.tiempo_promedio?Math.round(d.tiempo_promedio)+"min":"—";
+      document.getElementById("statProm").textContent=prom;
+    }
+  }catch(e){}
+}
+function actualizarStats(){
+  document.getElementById("statEntregas").textContent=historial.length;
+  if(tiemposTotales.length){
+    var avg=Math.round(tiemposTotales.reduce(function(a,b){return a+b;},0)/tiemposTotales.length);
+    document.getElementById("statProm").textContent=avg+"min";
+  }
+}
+
+// ── HISTORIAL ─────────────────────────────────────────────────────
+async function cargarHistorial(){
+  try {
+    var hace8h=new Date(Date.now()-8*60*60*1000).toISOString();
+    var r=await fetch(SU+"/rest/v1/pedidos?restaurante_id=eq."+restId+
+      "&domiciliario_id=eq."+domi.id+"&estado=eq.entregado&created_at=gte."+hace8h+
+      "&order=created_at.desc&limit=15&select=numero_pedido,total,direccion,created_at",{
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK}
+    });
+    var data=await r.json();
+    historial=data||[];
+    renderHistorial();
+  }catch(e){}
+}
+function renderHistorial(){
+  var el=document.getElementById("histList");
+  if(!historial.length){el.innerHTML='<div style="padding:16px;text-align:center;font-size:13px;color:var(--text3)">Sin entregas aún hoy</div>';return;}
+  el.innerHTML=historial.map(function(p){
+    var ts=p.ts||new Date(p.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});
+    return '<div class="hist-item">'
+      +'<div class="hist-num">#'+(p.numero_pedido||"?")+'</div>'
+      +'<div class="hist-info"><div class="hist-dir">'+esc(formatDir(p.direccion))+'</div><div class="hist-sub">'+ts+'</div></div>'
+      +'<div class="hist-total">$'+Number(p.total||0).toLocaleString("es-CO")+'</div>'
+      +'</div>';
+  }).join("");
+}
+
+// ── LUZ VOICE ────────────────────────────────────────────────────
+async function luzDecir(texto){
+  luzBarUpdate(texto);
+  try {
+    if(luzAudioPlaying)return;
+    var cacheKey=texto.substring(0,60);
+    var audioUrl;
+    if(luzAudioCache[cacheKey]){audioUrl=luzAudioCache[cacheKey];}
+    else {
+      var resp=await fetch("/api/luz-voz",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({texto:texto}),signal:AbortSignal.timeout(8000)});
+      if(!resp.ok)throw new Error("HTTP "+resp.status);
+      var blob=await resp.blob();
+      audioUrl=URL.createObjectURL(blob);
+      luzAudioCache[cacheKey]=audioUrl;
+      var keys=Object.keys(luzAudioCache);
+      if(keys.length>20)delete luzAudioCache[keys[0]];
+    }
+    var audio=new Audio(audioUrl);
+    luzAudioPlaying=true;
+    var wave=document.getElementById("luzWave");
+    if(wave)wave.classList.add("on");
+    audio.onended=function(){luzAudioPlaying=false;if(wave)wave.classList.remove("on");};
+    audio.onerror=function(){luzAudioPlaying=false;if(wave)wave.classList.remove("on");};
+    audio.play().catch(function(){luzAudioPlaying=false;});
+  }catch(e){luzDecirWebSpeech(texto);}
+}
+function luzDecirWebSpeech(texto){
+  if(!window.speechSynthesis)return;
+  var limpio=texto.replace(/[⭐🎁🍔🛵💳📱⚠️✅❌🔥💰👋🌟📝💜🤖•]/g,"").replace(/\s+/g," ").trim();
+  if(!limpio)return;
+  window.speechSynthesis.cancel();
+  var u=new SpeechSynthesisUtterance(limpio.substring(0,150));
+  u.lang="es-CO";u.rate=1.05;u.pitch=1.1;u.volume=1;
+  var voices=window.speechSynthesis.getVoices();
+  var voz=voices.find(function(v){return v.lang.startsWith("es");});
+  if(voz)u.voice=voz;
+  var wave=document.getElementById("luzWave");
+  if(wave){wave.classList.add("on");u.onend=function(){wave.classList.remove("on");};}
+  window.speechSynthesis.speak(u);
+}
+function luzBarUpdate(txt){
+  var el=document.getElementById("luzBarTxt");
+  if(el){el.style.opacity="0";setTimeout(function(){el.textContent=txt;el.style.opacity="1";},200);}
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function formatDir(d){if(!d)return"Sin dirección";return d.length>60?d.substring(0,60)+"...":d;}
+function toast(msg){
+  var t=document.getElementById("toast");if(!t)return;
+  t.textContent=msg;t.classList.add("show");
+  setTimeout(function(){t.classList.remove("show");},3000);
+}
+
+// Mensajes rotativos de Luz cuando no hay pedido
+var luzMsgs=["Monitoreando pedidos en tiempo real 🛵","Todo tranquilo por ahora. Listo para la próxima entrega.","Aquí estoy, no te preocupes. Te aviso cuando llegue algo."];
+var luzMsgIdx=0;
+setInterval(function(){
+  if(!pedidoActivo){
+    luzBarUpdate(luzMsgs[luzMsgIdx%luzMsgs.length]);
+    luzMsgIdx++;
+  }
+},12000);
 </script>
-
-
 </body>
 </html>
