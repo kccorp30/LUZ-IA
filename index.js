@@ -2060,21 +2060,24 @@ Promo IDs: ${promos.map(function(p){return p.titulo+"="+p.id;}).join(" | ")}
 ACCIONES QUE PUEDES EJECUTAR:
 ACTION:CREAR_ZONA:{"nombre":"...","precio":0,"barrios":"b1,b2"}
 ACTION:CREAR_PROMO:{"titulo":"...","descripcion":"...","dia":"lunes|todos","activa":true}
+ACTION:ACTIVAR_PROMO:{"promo_id":"...","activa":true}
 ACTION:CREAR_DOMI:{"nombre":"...","telefono":"..."}
 ACTION:ACTUALIZAR_PRECIO:{"producto_id":"...","precio":0}
 ACTION:TOGGLE_PRODUCTO:{"producto_id":"...","disponible":true}
-ACTION:ENVIAR_PROMO_MASIVA:{"mensaje":"..."}
-ACTION:CREAR_CUPON:{"codigo":"...","descuento":10,"tipo":"porcentaje"}
+ACTION:CREAR_CUPON:{"codigo":"NOMBRE20","descuento":20,"tipo":"porcentaje","usos":100,"descripcion":"..."}
+ACTION:ENVIAR_PROMO_MASIVA:{"mensaje":"texto del mensaje"}
 ACTION:ENVIAR_MENSAJE_CLIENTE:{"telefono":"...","mensaje":"..."}
-ACTION:ACTIVAR_PROMO:{"promo_id":"...","activa":true}
+ACTION:MODIFICAR_PEDIDO:{"pedido_id":"uuid","numero":134,"estado":"en_preparacion|listo|entregado","notas":"..."}
+ACTION:SILENCIAR_CLIENTE:{"telefono":"..."}
 
-REGLAS:
+REGLAS CRÍTICAS:
+- Los cupones se guardan en el sistema del restaurante — usa ACTION:CREAR_CUPON para crearlos
+- Para modificar pedidos usa ACTION:MODIFICAR_PEDIDO con el id del pedido de la lista de arriba
 - Responde como asistente ejecutiva profesional y directa
-- Usa datos reales del contexto, nunca inventes cifras
-- Cuando ejecutes acciones, confirma claramente qué hiciste
+- Usa datos reales del contexto, NUNCA inventes cifras
+- Cuando ejecutes acciones, confirma claramente qué hiciste y que se refleja en el panel
 - Formatea respuestas con **negritas** para destacar datos importantes
-- Si el admin pide algo que no puedes hacer, explica por qué
-- Respuestas concisas pero completas — máximo 200 palabras
+- Si el admin pide algo que no puedes hacer, explica por qué y sugiere alternativa
 - Hora Colombia: ${getHoraColombia().toLocaleTimeString("es-CO")}`;
 
     var messages = (historial||[]).slice(-14).map(function(m){return{role:m.role,content:m.content};});
@@ -2127,10 +2130,17 @@ REGLAS:
         return "✅ Promo "+(d.activa?"activada":"desactivada");
       }},
       {re:/ACTION:CREAR_CUPON:(\{[^}]+\})/,fn:async function(d){
-        await axios.post(SUPABASE_URL+"/rest/v1/cupones",
-          {restaurante_id,codigo:d.codigo,descuento:Number(d.descuento),tipo:d.tipo||"porcentaje",activo:true},
+        // Los cupones se guardan en restaurante.cupones_activos como JSON array
+        var restR2=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+restaurante_id+"&select=cupones_activos",{headers:h});
+        var restData=restR2.data&&restR2.data[0]?restR2.data[0]:{};
+        var cups=[];
+        try{cups=JSON.parse(restData.cupones_activos||"[]");}catch(e){}
+        var nuevoCupon={id:Date.now(),codigo:(d.codigo||"CUPON"+Date.now()).toUpperCase(),valor:Number(d.descuento||10),tipo:d.tipo||"porcentaje",usos_max:Number(d.usos||100),usos_actual:0,activo:true,descripcion:d.descripcion||""};
+        cups.push(nuevoCupon);
+        await axios.patch(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+restaurante_id,
+          {cupones_activos:JSON.stringify(cups)},
           {headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});
-        return "✅ Cupón "+d.codigo+" creado ("+d.descuento+"% descuento)";
+        return "✅ Cupón "+nuevoCupon.codigo+" creado ("+d.descuento+"% descuento) — ya aparece en la pestaña Cupones";
       }},
       {re:/ACTION:ENVIAR_PROMO_MASIVA:(\{[^}]+\})/,fn:async function(d){
         var cliR2=await axios.get(SUPABASE_URL+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+restaurante_id+"&select=telefono",{headers:h});
@@ -2143,6 +2153,21 @@ REGLAS:
           if(i<tels.length-1)await new Promise(function(r){setTimeout(r,350);});
         }
         return "✅ Promo enviada a "+enviados+" clientes";
+      }},
+      {re:/ACTION:MODIFICAR_PEDIDO:(\{[^}]+\})/,fn:async function(d){
+        var patch={updated_at:new Date().toISOString()};
+        if(d.estado)patch.estado=d.estado;
+        if(d.notas)patch.notas_especiales=d.notas;
+        if(d.domiciliario_id)patch.domiciliario_id=d.domiciliario_id;
+        await axios.patch(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+d.pedido_id,patch,
+          {headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});
+        return "✅ Pedido #"+d.numero+" actualizado";
+      }},
+      {re:/ACTION:SILENCIAR_CLIENTE:(\{[^}]+\})/,fn:async function(d){
+        await axios.post(SUPABASE_URL+"/rest/v1/silencio_conversacion",
+          {restaurante_id,telefono:d.telefono,activo:true},
+          {headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});
+        return "✅ Conversación con "+d.telefono+" silenciada";
       }},
       {re:/ACTION:ENVIAR_MENSAJE_CLIENTE:(\{[^}]+\})/,fn:async function(d){
         var restInfo=await getRestaurante(null);
@@ -2164,8 +2189,17 @@ REGLAS:
       }
     }
 
-    console.log("[luz-panel] '"+mensaje.substring(0,40)+"' | acciones: "+accionesEjecutadas.length);
-    res.json({ok:true,respuesta:respuesta.trim(),acciones_ejecutadas:accionesEjecutadas});
+    // Determinar qué tab recargar
+    var reloadTab = null;
+    if(accionesEjecutadas.some(function(a){return a.includes("Zona")||a.includes("zona");})) reloadTab="config";
+    if(accionesEjecutadas.some(function(a){return a.includes("Promo")||a.includes("promo");})) reloadTab="promo";
+    if(accionesEjecutadas.some(function(a){return a.includes("Cupón")||a.includes("cupon");})) reloadTab="cupones";
+    if(accionesEjecutadas.some(function(a){return a.includes("Domiciliario")||a.includes("domi");})) reloadTab="domis";
+    if(accionesEjecutadas.some(function(a){return a.includes("precio")||a.includes("Producto")||a.includes("producto");})) reloadTab="menu";
+    if(accionesEjecutadas.some(function(a){return a.includes("Pedido")||a.includes("pedido");})) reloadTab="pedidos";
+
+    console.log("[luz-panel] '"+mensaje.substring(0,40)+"' | acciones: "+accionesEjecutadas.length+(reloadTab?" | reload: "+reloadTab:""));
+    res.json({ok:true,respuesta:respuesta.trim(),acciones_ejecutadas:accionesEjecutadas,reload_tab:reloadTab});
   }catch(e){
     console.error("[luz-panel]",e.response?JSON.stringify(e.response.data):e.message);
     res.json({ok:true,respuesta:"Tuve un problema técnico. Intenta de nuevo en un momento.",acciones_ejecutadas:[]});
@@ -2369,6 +2403,50 @@ Usa esto para: alergias, quejas, pedidos especiales, cliente frustrado. NO para 
   } catch(e) {
     console.error("[luz-agente] Error:", e.response ? JSON.stringify(e.response.data) : e.message);
     res.json({ ok: true, respuesta: "Uy, tuve un momentico de falla. Escríbenos por WhatsApp y te ayudamos enseguida 😊", productos: [] });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COCINA — Endpoints dedicados
+// ═══════════════════════════════════════════════════════════════════════════
+app.get("/api/cocina-pedidos", async function(req, res) {
+  var restaurante_id = req.query.restaurante_id;
+  if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+    var r = await axios.get(
+      SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
+      "&estado=in.(confirmado,en_preparacion,listo)&order=created_at.asc&select=*",
+      {headers:h}
+    );
+    res.json(r.data||[]);
+  } catch(e) {
+    console.error("[cocina-pedidos]",e.message);
+    res.status(500).json({error:e.message});
+  }
+});
+
+app.get("/api/cocina-stats", async function(req, res) {
+  var restaurante_id = req.query.restaurante_id;
+  if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var r = await axios.get(
+      SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
+      "&estado=in.(entregado,listo,en_camino,listo_entrega)&created_at=gte."+hoy.toISOString()+
+      "&select=total,tipo_pedido,direccion",
+      {headers:h}
+    );
+    var data = r.data||[];
+    var ventas = data.reduce(function(s,p){return s+Number(p.total||0);},0);
+    var domis = data.filter(function(p){return (p.direccion||"").toUpperCase().indexOf("MESA")===-1&&p.tipo_pedido!=="recoger";}).length;
+    var mesas = data.filter(function(p){return (p.direccion||"").toUpperCase().indexOf("MESA")!==-1;}).length;
+    res.json({ok:true,total:data.length,ventas:ventas,domis:domis,mesas:mesas});
+  } catch(e) {
+    res.status(500).json({error:e.message});
   }
 });
 
