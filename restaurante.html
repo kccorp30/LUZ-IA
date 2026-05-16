@@ -903,6 +903,19 @@ select.finput{cursor:pointer}
           <span style="font-size:22px" id="modoIcon">🌙</span>
           <div><div id="modoLabel" style="font-weight:700;font-size:14px">Modo noche activo</div><div id="modoSubLabel" style="font-size:11px;margin-top:2px;opacity:0.7">Luz usa el menu de noche</div></div>
         </div>
+        <div class="cfg-section" style="background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(79,70,229,0.04));border-color:rgba(124,58,237,0.2)">
+          <div class="cfg-title">🤖 LUZ — Número del dueño</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.5">Luz le enviará alertas, reportes diarios y puede recibir instrucciones de gestión directamente por WhatsApp.</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+            <input class="finput" id="cfg-telefono-dueno" placeholder="3001234567 (sin +57)" style="flex:1" type="tel">
+            <button onclick="guardarTelefonoDueno()" style="padding:10px 16px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:12px;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">Guardar</button>
+          </div>
+          <div style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15);border-radius:10px;padding:10px 12px;font-size:11px;color:#c4b5fd;line-height:1.6">
+            📌 <strong>Cómo usarlo:</strong> Escríbele a Luz por WhatsApp como si fuera tu asistente.<br>
+            Ejemplos: <em>"Crea una zona Centro con precio $4.000"</em> · <em>"¿Cuánto vendí hoy?"</em> · <em>"Activa la promo 2x1 para el viernes"</em>
+          </div>
+          <div id="cfg-dueno-status" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
+        </div>
         <div class="cfg-section">
           <div class="cfg-title">Menu activo</div>
           <div class="cfg-row"><div><div class="cfg-label">Menu de dia</div><div class="cfg-sub">Cambia entre menu dia/noche</div></div><button class="big-toggle off" id="toggleModoDia"></button></div>
@@ -1289,8 +1302,9 @@ select.finput{cursor:pointer}
         <div class="luz-vbar"></div><div class="luz-vbar"></div>
       </div>
     </div>
-    <div class="luz-float-avatar" id="luzFloatAv" onclick="luzHablar('Hola, soy Luz. Estoy monitoreando todos los pedidos en tiempo real.')">
-      <img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" alt="LUZ" onerror="this.parentNode.style.background='linear-gradient(135deg,#7c3aed,#4f46e5)';this.remove()">
+    <!-- Ícono de soporte — sin foto, discreta -->
+    <div class="luz-float-avatar" id="luzFloatAv" onclick="luzHablar('Hola, soy Luz. Estoy monitoreando todos los pedidos en tiempo real.')" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:22px">
+      🤖
     </div>
   </div>
 
@@ -1468,7 +1482,11 @@ if(window.speechSynthesis){
   setTimeout(function(){luzVoicesLoaded=true;},1000);
 }
 
-function luzHablar(texto, animacion){
+// Cache de audio para no repetir llamadas a ElevenLabs
+var luzAudioCache = {};
+var luzAudioPlaying = false;
+
+async function luzHablar(texto, animacion){
   var bubble = document.getElementById("luzBubbleFloat");
   var txt = document.getElementById("luzSpeechTxt");
   var bars = document.getElementById("luzVoiceBars");
@@ -1476,59 +1494,81 @@ function luzHablar(texto, animacion){
   if(!bubble||!txt) return;
   txt.textContent = texto;
   bubble.classList.add("show");
-  if(av&&animacion){ av.className="luz-float-avatar "+animacion; setTimeout(function(){av.className="luz-float-avatar";},1500); }
-  if(luzBubbleTimer) clearTimeout(luzBubbleTimer);
-  luzBubbleTimer = setTimeout(function(){bubble.classList.remove("show");}, 5500);
-
-  if(window.speechSynthesis){
-    window.speechSynthesis.cancel();
-    // Limpiar texto para voz — quitar markdown, emojis, signos raros
-    var textoVoz = texto
-      .replace(/\*\*([^*]+)\*\*/g, "$1")   // **negrita** → texto
-      .replace(/\*([^*]+)\*/g, "$1")         // *cursiva* → texto
-      .replace(/\[([^\]]+)\]\([^\)]+\)/g,"$1") // links
-      .replace(/\[[^\]]+\]/g, "")            // [corchetes] → nada
-      .replace(/#{1,6}\s/g, "")              // encabezados
-      .replace(/[•\-\*]\s/g, "")            // viñetas
-      .replace(/[\u{1F300}-\u{1FFFF}]/gu,"") // emojis
-      .replace(/[⭐🎁🍔🛵💳📱⚠️✅❌🔥💰👋🌟📝💜]/g,"")
-      .replace(/https?:\/\/\S+/g,"")         // URLs
-      .replace(/\s+/g," ")                   // espacios múltiples
-      .replace(/\n/g,". ")                   // saltos de línea → pausa
-      .trim();
-
-    // Solo hablar si hay texto real y no es muy largo
-    if(!textoVoz || textoVoz.length < 3) return;
-    if(textoVoz.length > 180) textoVoz = textoVoz.substring(0, 180) + "...";
-
-    var u = new SpeechSynthesisUtterance(textoVoz);
-    u.lang = "es-CO";
-    u.rate = 1.05;   // un poco más rápido — menos robótico
-    u.pitch = 1.15;  // tono más femenino y natural
-    u.volume = 0.88;
-
-    // Buscar mejor voz disponible
-    var voices = window.speechSynthesis.getVoices();
-    var voz = voices.find(function(v){
-      return v.lang === "es-CO" || v.lang === "es-419";
-    }) || voices.find(function(v){
-      return v.lang.startsWith("es") && (
-        v.name.indexOf("Paulina")!==-1 ||
-        v.name.indexOf("Mónica")!==-1 ||
-        v.name.indexOf("Monica")!==-1 ||
-        v.name.indexOf("Laura")!==-1 ||
-        v.name.indexOf("Sofia")!==-1 ||
-        v.name.indexOf("Female")!==-1 ||
-        v.name.indexOf("female")!==-1
-      );
-    }) || voices.find(function(v){ return v.lang.startsWith("es"); });
-
-    if(voz) u.voice = voz;
-    if(bars) bars.classList.add("on");
-    u.onend = function(){ if(bars) bars.classList.remove("on"); };
-    u.onerror = function(){ if(bars) bars.classList.remove("on"); };
-    window.speechSynthesis.speak(u);
+  if(av&&animacion){
+    av.className="luz-float-avatar "+animacion;
+    setTimeout(function(){av.className="luz-float-avatar";},1500);
   }
+  if(luzBubbleTimer) clearTimeout(luzBubbleTimer);
+  luzBubbleTimer = setTimeout(function(){bubble.classList.remove("show");},5500);
+  if(bars) bars.classList.add("on");
+
+  // Intentar ElevenLabs primero
+  try {
+    await luzHablarElevenLabs(texto);
+    if(bars) bars.classList.remove("on");
+    return;
+  } catch(e) {
+    console.warn("[Voz] ElevenLabs falló, usando Web Speech:", e.message);
+  }
+
+  // Fallback a Web Speech API
+  luzHablarWebSpeech(texto);
+  if(bars) bars.classList.remove("on");
+}
+
+async function luzHablarElevenLabs(texto){
+  if(luzAudioPlaying) return;
+  // Clave del cache por primeras 60 chars
+  var cacheKey = texto.substring(0,60);
+  var audioUrl;
+
+  if(luzAudioCache[cacheKey]){
+    audioUrl = luzAudioCache[cacheKey];
+  } else {
+    var resp = await fetch("/api/luz-voz", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ texto: texto }),
+      signal: AbortSignal.timeout(9000)
+    });
+    if(!resp.ok) throw new Error("HTTP " + resp.status);
+    var blob = await resp.blob();
+    audioUrl = URL.createObjectURL(blob);
+    luzAudioCache[cacheKey] = audioUrl;
+    // Limpiar cache si pasa de 30 entradas
+    var keys = Object.keys(luzAudioCache);
+    if(keys.length > 30){ delete luzAudioCache[keys[0]]; }
+  }
+
+  return new Promise(function(resolve, reject){
+    var audio = new Audio(audioUrl);
+    luzAudioPlaying = true;
+    audio.onended = function(){ luzAudioPlaying=false; resolve(); };
+    audio.onerror = function(){ luzAudioPlaying=false; reject(new Error("Audio error")); };
+    audio.play().catch(function(e){ luzAudioPlaying=false; reject(e); });
+  });
+}
+
+function luzHablarWebSpeech(texto){
+  if(!window.speechSynthesis) return;
+  var limpio = texto
+    .replace(/\*\*([^*]+)\*\*/g,"$1").replace(/\*([^*]+)\*/g,"$1")
+    .replace(/\[[^\]]*\]/g,"")
+    .replace(/[\u{1F300}-\u{1FFFF}]/gu,"")
+    .replace(/[⭐🎁🍔🛵💳📱⚠️✅❌🔥💰👋🌟📝💜🤖•]/g,"")
+    .replace(/\n/g,". ").replace(/\s+/g," ").trim();
+  var primera = limpio.split(/[.!?]\s/)[0];
+  if(primera.length > 80) primera = primera.substring(0,80);
+  if(!primera) return;
+  window.speechSynthesis.cancel();
+  var u = new SpeechSynthesisUtterance(primera);
+  u.lang="es-CO"; u.rate=1.05; u.pitch=1.15; u.volume=0.88;
+  var voices = window.speechSynthesis.getVoices();
+  var voz = voices.find(function(v){ return v.lang==="es-CO"||v.lang==="es-419"; })
+    || voices.find(function(v){ return v.lang.startsWith("es")&&/paulina|monica|laura|sofia/i.test(v.name); })
+    || voices.find(function(v){ return v.lang.startsWith("es"); });
+  if(voz) u.voice=voz;
+  window.speechSynthesis.speak(u);
 }
 
 function luzReaccionar(evento,datos){
@@ -2568,6 +2608,24 @@ function actualizarLinkDomi(){
   if(el)el.textContent=link;
   if(linkA)linkA.href=link;
 }
+function guardarTelefonoDueno(){
+  var tel = document.getElementById("cfg-telefono-dueno").value.trim().replace(/[^0-9]/g,"");
+  if(!tel||tel.length<10){notif("Ingresa un número válido");return;}
+  if(!rest)return;
+  fetch("/api/supabase/restaurantes?id=eq."+rest.id,{
+    method:"PATCH",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({telefono_dueno:tel,updated_at:new Date().toISOString()})
+  }).then(function(r){return r.json();})
+  .then(function(){
+    notif("✅ Número del dueño guardado");
+    rest.telefono_dueno = tel;
+    var st=document.getElementById("cfg-dueno-status");
+    if(st)st.textContent="✅ Luz enviará alertas al: +57"+tel;
+    st.style.color="#6ee7b7";
+  }).catch(function(){notif("Error guardando");});
+}
+
 function cargarConfig(){
   if(!rest)return;
   modoDiaActual=rest.modo_dia||false;actualizarToggleModoDia(modoDiaActual);
@@ -2582,6 +2640,13 @@ function cargarConfig(){
   document.getElementById("cfg-msg-camino").value=rest.msg_en_camino||"";
   var diasActivos=(rest.dias_activos||"lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
   document.querySelectorAll(".dia-btn").forEach(function(b){diasActivos.includes(b.getAttribute("data-dia"))?b.classList.add("activo"):b.classList.remove("activo");});
+  // Cargar teléfono del dueño
+  var telInput=document.getElementById("cfg-telefono-dueno");
+  var telStatus=document.getElementById("cfg-dueno-status");
+  if(telInput&&rest.telefono_dueno){
+    telInput.value=rest.telefono_dueno;
+    if(telStatus){telStatus.textContent="✅ Luz envía alertas al: +57"+rest.telefono_dueno;telStatus.style.color="#6ee7b7";}
+  }
 }
 function actualizarToggleModoDia(activo){
   var btn=document.getElementById("toggleModoDia"),banner=document.getElementById("modoBanner"),label=document.getElementById("modoLabel"),sub=document.getElementById("modoSubLabel"),icon=document.getElementById("modoIcon");
