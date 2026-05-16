@@ -216,7 +216,9 @@ html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);fon
 
 <script>
 var SU = "https://vbxuwzcfzfjwhllkppkg.supabase.co";
-var SK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZieHV3emNmemZqd2hsbGtwcGtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTcxNzk2MDMsImV4cCI6MjAzMjc1NTYwM30.oOTC8F7-1MNaJfhgxJKI5TajJt4S1fC9VGMJmROqRrk";
+var SU = "";
+var SK = "";
+// Todas las llamadas van por el backend — no directo a Supabase
 
 var domi = null, restId = null, pedidoActivo = null;
 var pollTimer = null, mapaInst = null, mapaMarker = null;
@@ -237,15 +239,7 @@ async function iniciarSesion(){
   if(!rid){err.textContent="Ingresa el ID del restaurante";return;}
   err.textContent="Verificando...";
   try {
-    // Buscar con múltiples formatos de teléfono
-    var tel10 = tel.replace(/^57/,""); // sin código de país
-    var tel12 = "57"+tel10;             // con código de país
-    var url = SU+"/rest/v1/domiciliarios?restaurante_id=eq."+rid+
-      "&or=(telefono.eq."+encodeURIComponent(tel10)+",telefono.eq."+encodeURIComponent(tel12)+",telefono.eq."+encodeURIComponent(tel)+")"
-      +"&select=*";
-    var r = await fetch(url,{
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK}
-    });
+    var r = await fetch("/api/domi-login?restaurante_id="+encodeURIComponent(rid)+"&telefono="+encodeURIComponent(tel10));
     var data = await r.json();
     if(!data||!data.length){
       err.textContent="Número no registrado ("+tel10+"). Habla con el restaurante.";
@@ -305,16 +299,8 @@ function iniciarGPS(){
 var pedidoAnteriorId = null;
 async function cargarPedidoActivo(){
   try {
-    var tel10 = domi.telefono ? domi.telefono.replace(/^57/,"") : "";
-    var tel12 = "57"+tel10;
-    // Buscar por domiciliario_id O por teléfono del domi en notas
-    var r = await fetch(SU+"/rest/v1/pedidos?restaurante_id=eq."+restId+
-      "&or=(domiciliario_id.eq."+domi.id+",domiciliario_id.eq."+encodeURIComponent(tel10)+",domiciliario_id.eq."+encodeURIComponent(tel12)+")"
-      +"&estado=in.(listo,en_camino)&order=created_at.desc&limit=1&select=*",{
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK}
-    });
-    var data = await r.json();
-    var ped = data&&data.length?data[0]:null;
+    var r = await fetch("/api/domi-pedido-activo?restaurante_id="+restId+"&domiciliario_id="+encodeURIComponent(domi.id));
+    var ped = await r.json();
 
     if(ped&&(!pedidoAnteriorId||ped.id!==pedidoAnteriorId)){
       pedidoAnteriorId=ped.id;
@@ -472,12 +458,7 @@ function actualizarStats(){
 // ── HISTORIAL ─────────────────────────────────────────────────────
 async function cargarHistorial(){
   try {
-    var hace8h=new Date(Date.now()-8*60*60*1000).toISOString();
-    var r=await fetch(SU+"/rest/v1/pedidos?restaurante_id=eq."+restId+
-      "&domiciliario_id=eq."+domi.id+"&estado=eq.entregado&created_at=gte."+hace8h+
-      "&order=created_at.desc&limit=15&select=numero_pedido,total,direccion,created_at",{
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK}
-    });
+    var r=await fetch("/api/domi-historial?restaurante_id="+restId+"&domiciliario_id="+encodeURIComponent(domi.id));
     var data=await r.json();
     historial=data||[];
     renderHistorial();
