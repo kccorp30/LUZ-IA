@@ -62,7 +62,9 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 .live-dot{width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399;animation:ldot 1.5s ease-in-out infinite;flex-shrink:0}
 @keyframes ldot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
 .content{padding-top:60px!important;padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
-.page{display:none}.page.active{display:block;animation:fadeUp 0.22s ease both}
+.page{display:none!important}.page.active{display:block!important;animation:fadeUp 0.22s ease both}
+.page.active.flex-page{display:flex!important;flex-direction:column}
+.pages-wrap{padding-bottom:80px}
 @keyframes luzAnim{0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.08);opacity:.9}}
 @keyframes luzLearn{0%{transform:scale(1)}30%{transform:scale(1.15) rotate(-5deg)}60%{transform:scale(1.1) rotate(5deg)}100%{transform:scale(1)}}
 @keyframes feedIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
@@ -878,7 +880,7 @@ select.finput{cursor:pointer}
 
     <!-- CUPONES -->
     <!-- PAGE: LUZ IA ASISTENTE PANEL -->
-    <div class="page" id="page-luz-ia" style="display:flex;flex-direction:column;height:100%">
+    <div class="page flex-page" id="page-luz-ia" style="height:calc(100vh - 68px)">
       <!-- Header -->
       <div style="padding:14px 16px;background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(79,70,229,0.05));border-bottom:1px solid rgba(124,58,237,0.2);flex-shrink:0">
         <div style="display:flex;align-items:center;gap:12px">
@@ -2704,6 +2706,19 @@ async function luzPanelEnviar(textoForzado){
     }
     chat.appendChild(luzDiv);
     chat.scrollTop=chat.scrollHeight;
+
+    // Auto-recargar el tab afectado
+    if(data.reload_tab){
+      setTimeout(function(){
+        if(data.reload_tab==="cupones"){renderCupones();}
+        else if(data.reload_tab==="promo"){loadPromoCount();renderProgs();}
+        else if(data.reload_tab==="domis"){loadDomiPanel();}
+        else if(data.reload_tab==="menu"){loadMenu();loadMenuEditor();}
+        else if(data.reload_tab==="pedidos"){loadPedidos();}
+        else if(data.reload_tab==="config"){cargarDomiciliarios();}
+        notif("✅ "+data.reload_tab+" actualizado por Luz");
+      }, 800);
+    }
 
     // Voz con la primera frase de la respuesta
     if(data.respuesta) luzHablar(data.respuesta.split(/[.!?]/)[0]||"", "pulse");
