@@ -2420,19 +2420,25 @@ Usa esto para: alergias, quejas, pedidos especiales, cliente frustrado. NO para 
 // COCINA — Endpoints dedicados
 // ═══════════════════════════════════════════════════════════════════════════
 app.get("/api/domi-login", async function(req, res) {
-  var {restaurante_id, telefono} = req.query;
-  if(!restaurante_id||!telefono) return res.status(400).json({error:"Faltan datos"});
+  var {restaurante_id, telefono, nombre} = req.query;
+  if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
-    var tel10 = telefono.replace(/^57/,"");
-    var tel12 = "57"+tel10;
-    var r = await axios.get(
-      SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restaurante_id+
-      "&or=(telefono.eq."+encodeURIComponent(tel10)+",telefono.eq."+encodeURIComponent(tel12)+",telefono.eq."+encodeURIComponent(telefono)+")"+
-      "&select=*",
-      {headers:h}
-    );
+    var url;
+    if(nombre) {
+      // Buscar por nombre (case-insensitive)
+      url = SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restaurante_id+
+        "&nombre=ilike."+encodeURIComponent("%"+nombre.trim()+"%")+"&select=*";
+    } else if(telefono) {
+      var tel10 = telefono.replace(/^57/,"");
+      var tel12 = "57"+tel10;
+      url = SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restaurante_id+
+        "&or=(telefono.eq."+encodeURIComponent(tel10)+",telefono.eq."+encodeURIComponent(tel12)+",telefono.eq."+encodeURIComponent(telefono)+")&select=*";
+    } else {
+      return res.status(400).json({error:"Falta nombre o teléfono"});
+    }
+    var r = await axios.get(url, {headers:h});
     res.json(r.data||[]);
   } catch(e) { res.status(500).json({error:e.message}); }
 });
@@ -2479,9 +2485,13 @@ app.get("/api/cocina-pedidos", async function(req, res) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+    // Solo pedidos de las últimas 18 horas — evita mostrar pedidos viejos atascados
+    var hace18h = new Date(Date.now() - 18*60*60*1000).toISOString();
     var r = await axios.get(
       SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
-      "&estado=in.(confirmado,en_preparacion,listo)&order=created_at.asc&select=*",
+      "&estado=in.(confirmado,en_preparacion,listo)"+
+      "&created_at=gte."+hace18h+
+      "&order=created_at.asc&select=*",
       {headers:h}
     );
     res.json(r.data||[]);
@@ -2497,19 +2507,22 @@ app.get("/api/cocina-stats", async function(req, res) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
-    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    // Medianoche en Colombia (UTC-5)
+    var hoy = new Date();
+    hoy.setUTCHours(5, 0, 0, 0); // 00:00 Colombia = 05:00 UTC
+    if(new Date().getUTCHours() < 5) hoy.setUTCDate(hoy.getUTCDate() - 1); // si es antes de 5am UTC, es ayer en Colombia
     var r = await axios.get(
       SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
-      "&estado=in.(entregado,listo,en_camino,listo_entrega)&created_at=gte."+hoy.toISOString()+
-      "&select=total,tipo_pedido,direccion",
+      "&created_at=gte."+hoy.toISOString()+"&select=total,tipo_pedido,direccion,estado",
       {headers:h}
     );
     var data = r.data||[];
-    var ventas = data.reduce(function(s,p){return s+Number(p.total||0);},0);
-    var domis = data.filter(function(p){return (p.direccion||"").toUpperCase().indexOf("MESA")===-1&&p.tipo_pedido!=="recoger";}).length;
-    var mesas = data.filter(function(p){return (p.direccion||"").toUpperCase().indexOf("MESA")!==-1;}).length;
-    var recoger = data.filter(function(p){return p.tipo_pedido==="recoger";}).length;
-    res.json({ok:true,total:data.length,ventas:ventas,domis:domis,mesas:mesas,recoger:recoger});
+    // Solo contar pedidos que no son cancelados
+    var validos = data.filter(function(p){return p.estado!=="cancelado";});
+    var domis = validos.filter(function(p){return (p.direccion||"").toUpperCase().indexOf("MESA")===-1&&p.tipo_pedido!=="recoger";}).length;
+    var mesas = validos.filter(function(p){return (p.direccion||"").toUpperCase().indexOf("MESA")!==-1;}).length;
+    var recoger = validos.filter(function(p){return p.tipo_pedido==="recoger";}).length;
+    res.json({ok:true,total:validos.length,domis:domis,mesas:mesas,recoger:recoger});
   } catch(e) {
     res.status(500).json({error:e.message});
   }
