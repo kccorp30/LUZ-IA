@@ -223,12 +223,12 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(
   <!-- COLUMNA LATERAL -->
   <div class="col-side">
 
-    <!-- Stats -->
+    <!-- Stats — solo operacionales, sin precios -->
     <div class="stats-grid">
-      <div class="stat-card"><div class="stat-val" id="sVentas" style="color:var(--g)">$0</div><div class="stat-lbl">Ventas hoy</div></div>
       <div class="stat-card"><div class="stat-val" id="sTotal" style="color:var(--o)">0</div><div class="stat-lbl">Pedidos hoy</div></div>
       <div class="stat-card"><div class="stat-val" id="sDomis" style="color:var(--b)">0</div><div class="stat-lbl">Domicilios</div></div>
       <div class="stat-card"><div class="stat-val" id="sMesas" style="color:var(--p2)">0</div><div class="stat-lbl">En mesa</div></div>
+      <div class="stat-card"><div class="stat-val" id="sRecoger" style="color:var(--y)">0</div><div class="stat-lbl">Para recoger</div></div>
     </div>
 
     <!-- Comandos de voz rápidos -->
@@ -478,11 +478,10 @@ async function cargarStatsHoy(){
     if(!r.ok) return;
     var data=await r.json();
     if(!data.ok) return;
-    var ventas=data.ventas||0;
-    document.getElementById("sVentas").textContent=ventas>=1000000?"$"+(ventas/1000000).toFixed(1)+"M":"$"+ventas.toLocaleString("es-CO");
     document.getElementById("sTotal").textContent=data.total||0;
     document.getElementById("sDomis").textContent=data.domis||0;
     document.getElementById("sMesas").textContent=data.mesas||0;
+    document.getElementById("sRecoger").textContent=data.recoger||0;
   }catch(e){}
 }
 
