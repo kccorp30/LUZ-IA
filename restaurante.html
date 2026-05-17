@@ -2341,35 +2341,32 @@ function renderMensajesChat(msgs, forzar){
       lastDay = dia;
     }
     var newCls = esNuevo&&esUltimo ? " chat-new" : "";
-    // Comprobante de pago — detectar por campo directo primero
+
+    // ── DETECCIÓN DE TIPO DE MENSAJE ─────────────────────────────
+    // 1. Comprobante — solo si tiene comprobante_media_id explícito
     var mediaIdComp = m.comprobante_media_id || null;
-    // Si no hay campo directo, buscar en media_id con contexto
-    if(!mediaIdComp && m.media_id){
-      var txtLow = txt.toLowerCase();
-      var esComp = txtLow.indexOf("comprobante")!==-1 || txtLow.indexOf("pago")!==-1 ||
-        txtLow.indexOf("transferen")!==-1 || m.tipo==="comprobante" ||
-        (m.mensaje||"").indexOf("[El cliente envio")!==-1;
-      if(esComp || !txt.replace(/\s/g,"")) mediaIdComp = m.media_id;
-    }
-    if(m.tipo==="cliente"&&mediaIdComp){
+    // 2. Imagen — solo si tiene media_id Y el texto dice explícitamente que es imagen
+    var esImagenCliente = !mediaIdComp && m.media_id &&
+      (m.mensaje||"").indexOf("[El cliente envio una imagen]") !== -1;
+    // 3. Texto normal con media_id — mostrar solo el texto, ignorar media_id
+    var ignorarMedia = m.media_id && !mediaIdComp && !esImagenCliente;
+
+    if(m.tipo==="cliente" && mediaIdComp){
       h += '<div class="chat-comp-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+mediaIdComp+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
       h += '<div class="chat-comp-label">📎 Comprobante de pago — <span style="font-weight:400;opacity:0.7">Toca para ampliar</span></div>';
-      h += '<img src="/api/comprobante/'+mediaIdComp+'" onerror="this.style.background=\'rgba(16,185,129,0.1)\';this.style.minHeight=\'120px\'" loading="lazy" style="min-height:80px">';
+      h += '<img src="/api/comprobante/'+mediaIdComp+'" onerror="this.style.background=\'rgba(16,185,129,0.1)\';this.style.minHeight=\'80px\'" loading="lazy" style="min-height:80px">';
       h += '<div class="chat-comp-time">'+horaStr+'</div></div>';
     }
-    // Imagen suelta del cliente
-    else if(m.tipo==="cliente"&&m.media_id&&!mediaIdComp){
+    else if(m.tipo==="cliente" && esImagenCliente){
       h += '<div class="chat-img-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+m.media_id+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
       h += '<img src="/api/comprobante/'+m.media_id+'" onerror="this.style.display=\'none\'" loading="lazy">';
       h += '<div class="chat-img-caption">📷 Imagen del cliente</div></div>';
     }
-    // Luz automático
     else if(m.tipo==="estado_luz"){
       h += '<div class="chat-bubble chat-luz-estado'+newCls+'">';
       h += '<div class="chat-label"><img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" style="width:14px;height:14px;border-radius:50%;object-fit:cover;object-position:center top" onerror="this.style.display=\'none\'"> LUZ · Auto</div>';
       h += '<div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';
     }
-    // Alerta / agente
     else if(m.tipo==="alerta_pregunta"){
       var limpioTxt = txt.replace("ALERTA_PREGUNTA: ","").replace("AGENTE LUZ:","<strong>🤖 AGENTE:</strong>");
       var esCanje = limpioTxt.indexOf("CANJE")!==-1;
@@ -2378,17 +2375,24 @@ function renderMensajesChat(msgs, forzar){
       h += '<div class="chat-label">'+(esCanje?"⭐ Canje":esAgente?"🤖 Agente Luz":"⚠️ Alerta")+'</div>';
       h += '<div>'+limpioTxt+'</div><div class="chat-time">'+horaStr+'</div></div>';
     }
-    // Panel
     else if(m.tipo==="restaurante"){
       h += '<div class="chat-bubble chat-restaurante'+newCls+'">';
       h += '<div class="chat-label">👤 Panel</div>';
       h += '<div>'+txt+'</div><div class="chat-time">'+horaStr+'</div></div>';
     }
-    // Cliente
     else{
-      h += '<div class="chat-bubble chat-cliente'+newCls+'">';
-      h += '<div>'+txt+'</div>';
-      h += '<div class="chat-time">'+horaStr+'</div></div>';
+      // Mensaje de cliente — solo texto, ignorar media_id si no es imagen explícita
+      if(txt.trim()){
+        h += '<div class="chat-bubble chat-cliente'+newCls+'">';
+        h += '<div>'+txt+'</div>';
+        h += '<div class="chat-time">'+horaStr+'</div></div>';
+      }
+      // Si el mensaje está vacío y tiene media_id sin context → mostrar placeholder
+      else if(m.media_id && !mediaIdComp){
+        h += '<div class="chat-bubble chat-cliente'+newCls+'">';
+        h += '<div style="color:var(--text3)">📎 Archivo adjunto</div>';
+        h += '<div class="chat-time">'+horaStr+'</div></div>';
+      }
     }
   });
   var box = document.getElementById("chatArea");
