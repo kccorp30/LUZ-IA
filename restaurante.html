@@ -2299,7 +2299,7 @@ function abrirChat(tel,num,comp){
   document.getElementById("msgOverlay").classList.add("open");
   cargarMensajesChat(true);
   if(chatTimer)clearInterval(chatTimer);
-  chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+  chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
   setTimeout(function(){document.getElementById("msgTexto").focus();},400);
 }
 function cargarMensajesChat(forzar){
@@ -2430,16 +2430,16 @@ document.getElementById("chatImgInput").addEventListener("change",function(){
         chatLastTs="";
         setTimeout(function(){
           cargarMensajesChat(true);
-          chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+          chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
         },800);
       }else{
         notif("Error: "+(d.error||"").substring(0,40));
-        chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+        chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
       }
     })
     .catch(function(){
       notif("Error de conexion");
-      chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+      chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
     })
     .finally(function(){btn.style.opacity="1";document.getElementById("chatImgInput").value="";});
   };
@@ -2472,17 +2472,17 @@ function enviarMensaje(){
       setTimeout(function(){
         cargarMensajesChat(true);
         // Reanudar polling
-        chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+        chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
       },800);
     } else {
       notif("Error enviando: "+(d.error||"").substring(0,40));
       // Reanudar polling
-      chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+      chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
     }
   })
   .catch(function(){
     notif("Error de conexión");
-    chatTimer=setInterval(function(){cargarMensajesChat(false);},2000);
+    chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
   })
   .finally(function(){
     btn.disabled=false;
