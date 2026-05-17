@@ -98,11 +98,22 @@ function limpiarNumero(str) {
 
 // ── HORA COLOMBIA UTC-5 ───────────────────────────────────────────────────────
 function getHoraColombia() {
+  // Colombia es siempre UTC-5 (sin horario de verano)
   var ahora = new Date();
-  return new Date(ahora.getTime() + ahora.getTimezoneOffset() * 60000 - 5 * 60 * 60 * 1000);
+  return new Date(ahora.getTime() - 5 * 60 * 60 * 1000);
 }
 function getDiaColombiaStr() {
   return ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"][getHoraColombia().getDay()];
+}
+function getMedionocheColombiaISO() {
+  var col = getHoraColombia();
+  // Medianoche Colombia = 05:00 UTC
+  var medianoche = new Date();
+  medianoche.setUTCHours(5, 0, 0, 0);
+  // Si ya pasó las 5am UTC de hoy, es la medianoche de hoy Colombia
+  // Si no, es la medianoche de ayer Colombia
+  if(new Date().getUTCHours() < 5) medianoche.setUTCDate(medianoche.getUTCDate() - 1);
+  return medianoche.toISOString();
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://vbxuwzcfzfjwhllkppkg.supabase.co";
@@ -540,8 +551,10 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
 async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo, comprobanteMediaId) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    // Truncar a 2000 chars para evitar errores de columna
+    var mensajeSafe = String(mensaje||"").substring(0, 2000);
     await axios.post(SUPABASE_URL + "/rest/v1/mensajes",
-      { restaurante_id: restauranteId, telefono, mensaje, tipo, comprobante_media_id: comprobanteMediaId || null },
+      { restaurante_id: restauranteId, telefono, mensaje: mensajeSafe, tipo, comprobante_media_id: comprobanteMediaId || null },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
   } catch (e) { console.error("guardarMensaje:", e.message); }
 }
@@ -2043,9 +2056,8 @@ app.post("/api/luz-panel-agent", async function(req, res) {
       return "❌ "+c.codigo+" (inactivo)";
     }).join(", ")||"";
 
-    // Calcular estadísticas reales
-    var hoy = new Date(); hoy.setHours(0,0,0,0);
-    var pedidosHoy = pedidos.filter(function(p){return new Date(p.created_at)>=hoy;});
+    // Pedidos de hoy en Colombia
+    var pedidosHoy = pedidos.filter(function(p){return p.created_at >= getMedionocheColombiaISO();});
     var ventasHoy = pedidosHoy.filter(function(p){return p.estado!=="cancelado";}).reduce(function(s,p){return s+Number(p.total||0);},0);
     var porMetodo = {};
     pedidosHoy.forEach(function(p){porMetodo[p.metodo_pago]=(porMetodo[p.metodo_pago]||0)+Number(p.total||0);});
@@ -2076,7 +2088,11 @@ DATOS EN TIEMPO REAL (${getHoraColombia().toLocaleString("es-CO")}):
 ${canjes.length>0 ? canjes.map(function(c){return "- "+c.telefono+" canjeó "+c.producto_nombre+" ("+c.puntos_usados+" pts) · Estado: "+c.estado+" · "+(c.created_at?new Date(c.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"}):"");}).join("\n") : "Sin canjes en las últimas 24 horas"}
 
 ⚠️ ALERTAS SIN RESOLVER:
-${mensajesSin.length>0 ? mensajesSin.map(function(m){return "- "+m.telefono+": \""+m.mensaje.substring(0,60)+"\" ("+new Date(m.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})+")";}).join("\n") : "Sin alertas pendientes"}
+${mensajesSin.length>0 ? mensajesSin.map(function(m){
+  var mins=Math.floor((Date.now()-new Date(m.created_at))/60000);
+  var urgencia=mins>60?"🔴 URGENTE ("+mins+"min sin atender)":mins>20?"🟡 "+mins+"min":"🟢 "+mins+"min";
+  return urgencia+" | "+m.telefono+": \""+m.mensaje+"\"";
+}).join("\n") : "✅ Sin alertas pendientes"}
 
 👥 CLIENTES:
 - Total registrados: ${clientes.length}
@@ -4241,21 +4257,36 @@ async function luzAgentTick() {
         }
       } catch(eVal) {}
 
-      // 4. PREGUNTAS SIN RESPONDER > 15 min — notificar dueño
+      // 4. PREGUNTAS SIN RESPONDER — escalamiento por tiempo
       try {
-        var hace15 = new Date(Date.now() - 15*60*1000).toISOString();
+        var hace2h = new Date(Date.now() - 2*60*60*1000).toISOString();
         var pregR = await axios.get(
           SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + restId +
-          "&tipo=eq.alerta_pregunta&created_at=lte." + hace15 + "&created_at=gte." + new Date(Date.now()-2*60*60*1000).toISOString() + "&select=telefono,mensaje",
+          "&tipo=eq.alerta_pregunta&created_at=gte." + hace2h +
+          "&order=created_at.asc&select=telefono,mensaje,created_at",
           { headers: h }
-        );
-        for (var preg of (pregR.data || []).slice(0,3)) {
-          var clp = "preg_" + preg.telefono + "_" + preg.mensaje.substring(0,20);
-          if (agentState.alertasEnviadas.has(clp)) continue;
-          agentState.alertasEnviadas.add(clp);
-          await alertarDueno("❓ Pregunta sin responder (>15min) de " + preg.telefono + ":\n\"" + (preg.mensaje||"").substring(0,100) + "\"\n\nEntra al panel para responder.");
+        ).catch(function(){ return { data: [] }; });
+
+        for (var preg of (pregR.data || [])) {
+          var mins = Math.floor((Date.now() - new Date(preg.created_at)) / 60000);
+          var base = "preg_" + preg.telefono + "_" + new Date(preg.created_at).getTime();
+          var msgCompleto = (preg.mensaje||"").replace(/^ALERTA_PREGUNTA:\s*/,"");
+
+          if (mins >= 10 && !agentState.alertasEnviadas.has(base+"_10")) {
+            agentState.alertasEnviadas.add(base+"_10");
+            await alertarDueno("❓ Cliente sin respuesta (10min)\n📱 "+preg.telefono+":\n\""+msgCompleto+"\"\n\nAbre el panel → Chats para responder.");
+          }
+          if (mins >= 30 && !agentState.alertasEnviadas.has(base+"_30")) {
+            agentState.alertasEnviadas.add(base+"_30");
+            await alertarDueno("⚠️ "+mins+"min SIN RESPUESTA\n📱 "+preg.telefono+":\n\""+msgCompleto+"\"\n\nEl cliente puede irse si no responden pronto.");
+          }
+          if (mins >= 60 && !agentState.alertasEnviadas.has(base+"_60")) {
+            agentState.alertasEnviadas.add(base+"_60");
+            await alertarDueno("🔴 CRÍTICO — "+mins+"min sin atender\n📱 "+preg.telefono+":\n\""+msgCompleto+"\"\n\nMás de 1 hora. Riesgo de reseña negativa.");
+          }
         }
-      } catch(ePreg) {}
+      } catch(ePreg) { console.error("[AGENTE] preguntas:", ePreg.message); }
+
 
       // 5. REPORTE DIARIO — a las 10pm Colombia
       var horaCol = getHoraColombia().getHours();
