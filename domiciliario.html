@@ -290,7 +290,9 @@ function iniciarGPS(){
       fetch("/api/domi-ubicacion",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({domiciliario_id:domi.id,lat:pos.coords.latitude,lng:pos.coords.longitude,restaurante_id:restId})
       }).catch(function(){});
-      actualizarMapa(pos.coords.latitude,pos.coords.longitude);
+      // Actualizar marcador en mapa
+      posicionActual = [pos.coords.latitude, pos.coords.longitude];
+      if(mapaInst&&mapaMarker) mapaMarker.setLatLng(posicionActual);
     },null,{enableHighAccuracy:true,timeout:8000});
   },15000);
 }
@@ -337,13 +339,16 @@ function renderPedidoActivo(p){
     +'</div></div>'
     +'<div id="mapaWrap" class="mapa-wrap"><div id="domiMapa"></div></div>'
     +'<div class="acciones">'
-    +(p.estado==="listo"?'<button class="btn-navegar" onclick="navegar()">🗺️ Navegar a la dirección</button>':'')
-    +(p.estado==="listo"?'<button class="btn-llamar" onclick="llamarCliente()">📞 Llamar al cliente</button>':'')
+    // Botón EN CAMINO — solo cuando está en listo
+    +(p.estado==="listo"
+      ?'<button class="btn-navegar" onclick="marcarEnCamino()">🛵 SALIR A DOMICILIO</button>'
+      :'<div style="padding:10px 14px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2);border-radius:12px;text-align:center;font-size:13px;font-weight:700;color:#c4b5fd">🛵 En camino al cliente</div>')
+    +'<button class="btn-navegar" style="background:linear-gradient(135deg,#1d4ed8,#2563eb)" onclick="navegar()">🗺️ Navegar con Maps</button>'
+    +'<button class="btn-llamar" onclick="llamarCliente()">📞 Llamar al cliente</button>'
     +'<button class="btn-foto" onclick="abrirFotoModal()">📷 Foto de entrega</button>'
-    +'<button class="btn-entregar" onclick="marcarEntregado()">✅ MARCAR COMO ENTREGADO</button>'
+    +'<button class="btn-entregar" onclick="marcarEntregado()">✅ CONFIRMAR ENTREGA</button>'
     +'</div>';
 
-  // Mapa
   setTimeout(function(){iniciarMapa(p);},300);
 }
 
@@ -356,23 +361,72 @@ function renderSinPedido(){
     +'</div>';
 }
 
-// ── MAPA ─────────────────────────────────────────────────────────
+async function marcarEnCamino(){
+  if(!pedidoActivo) return;
+  try {
+    await fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id:pedidoActivo.id,estado:"en_camino",telefono_cliente:pedidoActivo.cliente_tel,numero_pedido:pedidoActivo.numero_pedido,restaurante_id:restId})
+    });
+    pedidoActivo.estado = "en_camino";
+    renderPedidoActivo(pedidoActivo);
+    luzDecir("Perfecto, "+domi.nombre.split(" ")[0]+"! Pedido número "+pedidoActivo.numero_pedido+" marcado en camino. El cliente fue notificado.");
+    toast("🛵 ¡En camino! Cliente notificado");
+  } catch(e){ toast("Error al actualizar estado"); }
+}
+
+// ── MAPA CON RUTA REAL ───────────────────────────────────────────
+var posicionActual = null;
+
 function iniciarMapa(p){
   var el=document.getElementById("domiMapa");
-  if(!el)return;
-  if(mapaInst){mapaInst.remove();mapaInst=null;}
-  mapaInst=L.map("domiMapa",{zoomControl:false,attributionControl:false}).setView([3.4,-76.5],13);
+  if(!el) return;
+  if(mapaInst){mapaInst.remove();mapaInst=null;mapaMarker=null;}
+
+  // Centro inicial — Cali Colombia por defecto
+  var centroDefault = [3.4516, -76.5320];
+  mapaInst = L.map("domiMapa",{zoomControl:false,attributionControl:false});
+  mapaInst.setView(centroDefault, 13);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(mapaInst);
+
+  // Marcador de destino si hay coordenadas
   if(p.lat_destino&&p.lng_destino){
-    L.marker([p.lat_destino,p.lng_destino]).addTo(mapaInst).bindPopup("Destino").openPopup();
+    var destIcon = L.divIcon({html:'<div style="background:#ef4444;width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>',className:"",iconSize:[28,28],iconAnchor:[14,28]});
+    L.marker([p.lat_destino,p.lng_destino],{icon:destIcon}).addTo(mapaInst)
+      .bindPopup('<b>📍 '+formatDir(p.direccion)+'</b>').openPopup();
     mapaInst.setView([p.lat_destino,p.lng_destino],15);
   }
-}
-function actualizarMapa(lat,lng){
-  if(!mapaInst)return;
-  var icon=L.divIcon({html:"🛵",className:"",iconSize:[30,30]});
-  if(mapaMarker)mapaMarker.setLatLng([lat,lng]);
-  else mapaMarker=L.marker([lat,lng],{icon:icon}).addTo(mapaInst);
+
+  // Obtener posición actual del domi y dibujar ruta
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      posicionActual = [pos.coords.latitude, pos.coords.longitude];
+      // Marcador domi
+      var domiIcon = L.divIcon({html:'<div style="background:#7c3aed;width:34px;height:34px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:16px">🛵</div>',className:"",iconSize:[34,34],iconAnchor:[17,17]});
+      if(mapaMarker) mapaMarker.setLatLng(posicionActual);
+      else mapaMarker = L.marker(posicionActual,{icon:domiIcon}).addTo(mapaInst);
+
+      // Si hay destino — dibujar línea de ruta simple
+      if(p.lat_destino&&p.lng_destino){
+        // Línea punteada de origen a destino
+        L.polyline([posicionActual,[p.lat_destino,p.lng_destino]],{
+          color:"#7c3aed",weight:4,opacity:0.7,dashArray:"10 8"
+        }).addTo(mapaInst);
+        // Ajustar vista para ver toda la ruta
+        var bounds = L.latLngBounds([posicionActual,[p.lat_destino,p.lng_destino]]);
+        mapaInst.fitBounds(bounds,{padding:[24,24]});
+        // Calcular distancia aproximada
+        var dist = mapaInst.distance(posicionActual,[p.lat_destino,p.lng_destino]);
+        var distKm = (dist/1000).toFixed(1);
+        var tiempoEst = Math.ceil(dist/300); // ~18km/h en moto
+        luzBarUpdate("Destino a "+distKm+"km · ~"+tiempoEst+" min en moto");
+      } else {
+        mapaInst.setView(posicionActual, 15);
+      }
+    }, function(){
+      // Sin GPS — solo mostrar mapa estático
+      if(p.lat_destino&&p.lng_destino) mapaInst.setView([p.lat_destino,p.lng_destino],15);
+    }, {enableHighAccuracy:true,timeout:8000});
+  }
 }
 
 // ── ACCIONES ─────────────────────────────────────────────────────
