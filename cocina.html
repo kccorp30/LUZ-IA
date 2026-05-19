@@ -4,470 +4,363 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Cocina — La Curva</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Cocina · La Curva</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #080810;
-  --bg2: #0e0e1a;
-  --card: #12121f;
-  --card2: #1a1a2e;
-  --border: rgba(255,255,255,0.06);
-  --border2: rgba(255,255,255,0.12);
-  --o: #ff6b1a;
-  --g: #00e87a;
-  --r: #ff3b5c;
-  --y: #ffd60a;
-  --b: #3d9bff;
-  --p: #9b5cff;
-  --text: #f0eeff;
-  --text2: rgba(240,238,255,0.55);
-  --text3: rgba(240,238,255,0.28);
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#08070f;
+  --glass:rgba(255,255,255,0.05);
+  --glass-border:rgba(255,255,255,0.10);
+  --glass-hover:rgba(255,255,255,0.08);
+  --p:#9b6dff;--p2:#c4a1ff;--pd:#5a2fd0;
+  --o:#ff8533;--od:#c45a00;
+  --g:#00e5a0;--gd:#00a370;
+  --r:#ff4070;--y:#ffd060;
+  --text:#fff;--text2:rgba(255,255,255,0.55);--text3:rgba(255,255,255,0.25);
 }
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif}
 
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; }
-
-/* Noise texture overlay */
-body::before {
-  content:''; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.025;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+/* ── MESH BACKGROUND ── */
+.mesh{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 60% at 15% 0%,rgba(90,47,208,0.45),transparent 60%),
+    radial-gradient(ellipse 50% 50% at 90% 80%,rgba(255,133,51,0.22),transparent 55%),
+    radial-gradient(ellipse 40% 40% at 50% 50%,rgba(0,229,160,0.06),transparent 60%),
+    #08070f;
 }
-
-/* Subtle grid background */
-body::after {
-  content:''; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.04;
-  background-image: linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px);
-  background-size: 40px 40px;
+.mesh-grain{
+  position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.04;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-
-* { position:relative; z-index:1; }
+*{position:relative;z-index:2}
 
 /* ── TOPBAR ── */
-.topbar {
-  height:60px; background:rgba(8,8,16,.98);
-  border-bottom:1px solid var(--border2);
-  display:flex; align-items:center; gap:0;
-  flex-shrink:0; z-index:50;
-  box-shadow: 0 1px 0 rgba(255,255,255,.04), 0 4px 32px rgba(0,0,0,.6);
+.topbar{
+  height:62px;display:flex;align-items:center;padding:0 16px;gap:14px;flex-shrink:0;
+  background:rgba(8,7,15,0.7);
+  border-bottom:1px solid var(--glass-border);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
 }
+.tb-logo{
+  width:38px;height:38px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;
+  background:linear-gradient(135deg,var(--p),var(--o));
+  box-shadow:0 0 20px rgba(155,109,255,0.5),0 4px 12px rgba(0,0,0,0.4);
+}
+.tb-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;letter-spacing:-.01em;color:var(--text);flex-shrink:0}
+.tb-title span{color:var(--p2)}
 
-.tb-brand {
-  display:flex; align-items:center; gap:12px; padding:0 20px;
-  border-right:1px solid var(--border2);
+/* Stat pills */
+.tb-stats{display:flex;gap:6px;flex:1;justify-content:center;flex-wrap:nowrap}
+.st-pill{
+  display:flex;align-items:center;gap:6px;padding:5px 12px;
+  border-radius:20px;border:1px solid var(--glass-border);
+  background:var(--glass);backdrop-filter:blur(12px);
 }
-.tb-logo {
-  width:36px; height:36px; border-radius:10px;
-  background:linear-gradient(135deg,var(--o),#ff9f1a);
-  display:flex; align-items:center; justify-content:center;
-  font-size:18px; flex-shrink:0;
-  box-shadow:0 0 20px rgba(255,107,26,.4);
-}
-.tb-name {
-  font-family:'Bebas Neue',sans-serif;
-  font-size:20px; letter-spacing:.08em; line-height:1;
-  color:var(--text);
-}
-.tb-name span { color:var(--o); }
+.st-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.st-v{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;line-height:1}
+.st-l{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 
-.tb-stats {
-  display:flex; flex:1;
+/* Time + Mic */
+.tb-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.tb-time{font-family:'Syne',sans-serif;font-size:15px;color:var(--text3);letter-spacing:.04em}
+.mic{
+  width:38px;height:38px;border-radius:50%;cursor:pointer;flex-shrink:0;
+  border:1px solid var(--glass-border);background:var(--glass);
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+  transition:all .2s;
 }
-.tb-stat {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  padding:0 20px; border-right:1px solid var(--border2); height:60px; gap:1px;
-}
-.tb-stat:last-child { border-right:none; }
-.tb-sv {
-  font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:.04em; line-height:1;
-}
-.tb-sl {
-  font-size:8px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.12em;
-}
-
-.tb-right { display:flex; align-items:center; gap:10px; padding:0 16px; margin-left:auto; flex-shrink:0; }
-.tb-clock { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--text3); letter-spacing:.06em; }
-.tb-mic {
-  width:38px; height:38px; border-radius:50%;
-  background:rgba(155,92,255,.1); border:1.5px solid rgba(155,92,255,.3);
-  display:flex; align-items:center; justify-content:center;
-  font-size:16px; cursor:pointer; transition:all .2s; flex-shrink:0;
-}
-.tb-mic.on {
-  background:rgba(255,59,92,.2); border-color:var(--r);
-  box-shadow:0 0 0 0 rgba(255,59,92,.4);
-  animation:micPulse 1.2s ease infinite;
-}
-@keyframes micPulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,59,92,.4)} 50%{box-shadow:0 0 0 10px rgba(255,59,92,0)} }
+.mic.on{border-color:var(--r);background:rgba(255,64,112,0.15);animation:micP 1.2s ease infinite}
+@keyframes micP{0%,100%{box-shadow:0 0 0 0 rgba(255,64,112,0.5)}60%{box-shadow:0 0 0 12px rgba(255,64,112,0)}}
 
 /* ── LUZ BAR ── */
-.luzbar {
-  flex-shrink:0; height:36px; display:flex; align-items:center; gap:12px; padding:0 20px;
-  background:linear-gradient(90deg,rgba(155,92,255,.06),rgba(61,47,100,.03),transparent);
-  border-bottom:1px solid rgba(155,92,255,.1);
+.luzbar{
+  flex-shrink:0;display:flex;align-items:center;gap:10px;padding:7px 16px;
+  background:rgba(155,109,255,0.06);border-bottom:1px solid rgba(155,109,255,0.12);
 }
-.luzbar-av {
-  width:24px; height:24px; border-radius:50%; flex-shrink:0;
-  background:linear-gradient(135deg,#7c3aed,#4f46e5);
-  display:flex; align-items:center; justify-content:center; font-size:11px;
-  box-shadow:0 0 10px rgba(124,58,237,.4);
+.luz-av{
+  width:24px;height:24px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--p),var(--pd));
+  display:flex;align-items:center;justify-content:center;font-size:12px;
+  box-shadow:0 0 10px rgba(155,109,255,0.5);
 }
-.luzbar-txt { font-size:11px; color:rgba(155,92,255,.7); font-style:italic; flex:1; transition:all .3s; }
-.luzbar-wave { display:flex; gap:2px; align-items:center; height:14px; opacity:0; transition:opacity .2s; }
-.luzbar-wave.on { opacity:1; }
-.lwv { width:2px; border-radius:1px; background:var(--p); }
-.lwv:nth-child(1){height:3px;animation:wav .8s ease infinite;}
-.lwv:nth-child(2){height:8px;animation:wav .8s ease .1s infinite;}
-.lwv:nth-child(3){height:14px;animation:wav .8s ease .2s infinite;}
-.lwv:nth-child(4){height:8px;animation:wav .8s ease .3s infinite;}
-.lwv:nth-child(5){height:3px;animation:wav .8s ease .4s infinite;}
-@keyframes wav{0%,100%{transform:scaleY(.4);opacity:.5}50%{transform:scaleY(1);opacity:1}}
+.luz-txt{font-size:11.5px;color:rgba(196,161,255,0.75);font-style:italic;flex:1;transition:all .3s}
+.wave{display:flex;gap:2.5px;align-items:center;height:14px;opacity:0;transition:opacity .2s}
+.wave.on{opacity:1}
+.wv{width:2.5px;border-radius:2px;background:var(--p2)}
+.wv:nth-child(1){height:3px;animation:wva .8s ease 0s infinite}
+.wv:nth-child(2){height:9px;animation:wva .8s ease .1s infinite}
+.wv:nth-child(3){height:14px;animation:wva .8s ease .2s infinite}
+.wv:nth-child(4){height:9px;animation:wva .8s ease .3s infinite}
+.wv:nth-child(5){height:3px;animation:wva .8s ease .4s infinite}
+@keyframes wva{0%,100%{transform:scaleY(.35);opacity:.4}50%{transform:scaleY(1);opacity:1}}
 
-/* ── LAYOUT ── */
-.main { height:calc(100vh - 60px - 36px); display:flex; overflow:hidden; }
-
-.col-left { flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--border2); }
-.col-head { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:rgba(255,255,255,.02); border-bottom:1px solid var(--border); }
-.col-head-title { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:var(--text3); }
-.col-head-badge { font-size:11px; font-weight:800; padding:3px 12px; border-radius:20px; background:rgba(255,107,26,.1); color:var(--o); border:1px solid rgba(255,107,26,.2); }
-
-.ped-scroll { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:10px; }
-.ped-scroll::-webkit-scrollbar { width:3px; }
-.ped-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08); border-radius:2px; }
+/* ── SCROLL ── */
+.scroll{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.scroll::-webkit-scrollbar{width:0}
 
 /* ── PEDIDO CARD ── */
-@keyframes cardIn { from{transform:translateX(-12px) scale(.98);opacity:0} to{transform:none;opacity:1} }
-@keyframes urgentPulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,59,92,.3),0 8px 40px rgba(0,0,0,.5)} 50%{box-shadow:0 0 0 6px rgba(255,59,92,0),0 8px 40px rgba(0,0,0,.5)} }
+@keyframes cardIn{from{transform:translateY(16px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes urgGlow{0%,100%{box-shadow:0 0 0 0 rgba(255,64,112,0.4),0 8px 40px rgba(0,0,0,0.6)}50%{box-shadow:0 0 0 8px rgba(255,64,112,0),0 8px 40px rgba(0,0,0,0.6)}}
+@keyframes blk{0%,100%{opacity:1}50%{opacity:.3}}
 
-.ped {
-  background:var(--card);
-  border:1px solid var(--border2);
-  border-radius:16px; overflow:hidden;
-  transition:border-color .3s;
-  animation:cardIn .35s ease both;
-  box-shadow:0 8px 40px rgba(0,0,0,.5);
+.card{
+  border-radius:22px;overflow:hidden;animation:cardIn .4s cubic-bezier(.22,.68,0,1.2) both;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.10);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:0 8px 40px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.1);
 }
-.ped.estado-confirmado { border-color:rgba(255,210,10,.15); }
-.ped.estado-preparando { border-color:rgba(255,107,26,.3); }
-.ped.estado-listo { border-color:rgba(0,232,122,.35); box-shadow:0 0 24px rgba(0,232,122,.08),0 8px 40px rgba(0,0,0,.5); }
-.ped.urgente { border-color:rgba(255,59,92,.45); animation:urgentPulse 1.5s ease infinite; }
+.card.urgente{border-color:rgba(255,64,112,0.4);animation:urgGlow 1.6s ease infinite}
+.card.preparando{border-color:rgba(255,133,51,0.35)}
+.card.listo{border-color:rgba(0,229,160,0.4);box-shadow:0 0 30px rgba(0,229,160,0.1),0 8px 40px rgba(0,0,0,0.55)}
 
-/* Color stripe top — visual instant status */
-.ped-stripe {
-  height:5px; width:100%;
-  background:var(--y);
-  transition:background .3s;
-}
-.ped.estado-preparando .ped-stripe { background:linear-gradient(90deg,var(--o),#ff9f1a); }
-.ped.estado-listo .ped-stripe { background:linear-gradient(90deg,var(--g),#00c463); }
-.ped.urgente .ped-stripe { background:linear-gradient(90deg,var(--r),#ff6b88); }
+/* Top glow bar */
+.gbar{height:4px;width:100%;border-radius:0}
+.card .gbar{background:linear-gradient(90deg,var(--y),rgba(255,208,96,0))}
+.card.preparando .gbar{background:linear-gradient(90deg,var(--o),rgba(255,133,51,0))}
+.card.listo .gbar{background:linear-gradient(90deg,var(--g),rgba(0,229,160,0))}
+.card.urgente .gbar{background:linear-gradient(90deg,var(--r),rgba(255,64,112,0))}
 
 /* Card head */
-.ped-head {
-  display:flex; align-items:center; gap:10px; padding:10px 14px;
-  background:rgba(255,255,255,.02); border-bottom:1px solid var(--border);
+.card-head{
+  display:flex;align-items:center;gap:12px;padding:13px 16px 11px;
+  border-bottom:1px solid rgba(255,255,255,0.07);
 }
-.ped-num {
-  font-family:'Bebas Neue',sans-serif; font-size:32px; letter-spacing:.04em;
-  line-height:1; color:var(--o); flex-shrink:0; min-width:70px;
+.ped-num{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;line-height:1;letter-spacing:-.02em;
+  background:linear-gradient(135deg,#fff,rgba(255,255,255,0.6));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  flex-shrink:0;min-width:80px;
 }
-.ped-badges { display:flex; gap:5px; flex:1; flex-wrap:wrap; }
-.badge {
-  padding:3px 10px; border-radius:20px; font-size:10px; font-weight:800;
-  text-transform:uppercase; letter-spacing:.06em;
+.badges{display:flex;gap:6px;flex:1;flex-wrap:wrap;align-items:center}
+.badge{
+  padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;
+  letter-spacing:.04em;text-transform:uppercase;
+  border:1px solid;backdrop-filter:blur(8px);
 }
-.badge-domi { background:rgba(61,155,255,.1); color:#7ec8ff; border:1px solid rgba(61,155,255,.2); }
-.badge-mesa { background:rgba(0,232,122,.1); color:#7dffc8; border:1px solid rgba(0,232,122,.2); }
-.badge-reco { background:rgba(255,210,10,.1); color:#ffe97a; border:1px solid rgba(255,210,10,.2); }
-.badge-prep { background:rgba(255,107,26,.1); color:#ffb07a; border:1px solid rgba(255,107,26,.2); }
-.badge-list { background:rgba(0,232,122,.15); color:#7dffc8; border:1px solid rgba(0,232,122,.3); }
+.bd{background:rgba(61,155,255,.12);color:#90caff;border-color:rgba(61,155,255,.25)}
+.bm{background:rgba(0,229,160,.12);color:#7affd9;border-color:rgba(0,229,160,.25)}
+.br{background:rgba(255,208,96,.12);color:#ffe099;border-color:rgba(255,208,96,.25)}
+.bp{background:rgba(255,133,51,.12);color:#ffba8a;border-color:rgba(255,133,51,.3)}
+.bl{background:rgba(0,229,160,.18);color:#7affd9;border-color:rgba(0,229,160,.35)}
 
-.ped-timer {
-  font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:.06em;
-  padding:4px 12px; border-radius:10px; flex-shrink:0; min-width:52px; text-align:center;
+.timer{
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:800;letter-spacing:.02em;
+  padding:6px 14px;border-radius:14px;flex-shrink:0;border:1px solid;
 }
-.t-ok { background:rgba(0,232,122,.1); color:var(--g); }
-.t-warn { background:rgba(255,210,10,.1); color:var(--y); }
-.t-hot { background:rgba(255,59,92,.15); color:#ff8fa3; }
-@keyframes blinkT{0%,100%{opacity:1}50%{opacity:.35}}
-.t-hot { animation:blinkT .7s ease infinite; }
+.tok{background:rgba(0,229,160,.1);color:var(--g);border-color:rgba(0,229,160,.2)}
+.twn{background:rgba(255,208,96,.1);color:var(--y);border-color:rgba(255,208,96,.2)}
+.tht{background:rgba(255,64,112,.15);color:#ff8fa3;border-color:rgba(255,64,112,.3);animation:blk .7s ease infinite}
 
-/* Card body */
-.ped-body { padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
-
-.ped-item {
-  display:flex; align-items:flex-start; gap:10px;
-  padding:10px 12px; background:rgba(255,255,255,.03);
-  border-radius:12px; border-left:3px solid var(--o);
+/* Items */
+.items{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.item{
+  display:flex;align-items:flex-start;gap:12px;padding:13px 14px;
+  border-radius:16px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.07);
+  border-left:4px solid var(--o);
 }
-.ped-item.canje { border-left-color:var(--p); }
-.ped-item-ico { font-size:20px; flex-shrink:0; line-height:1.2; }
-.ped-item-body { flex:1; min-width:0; }
-.ped-item-name {
-  font-size:15px; font-weight:800; line-height:1.25;
-  display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+.item.canje{border-left-color:var(--p)}
+.item-ico{font-size:28px;flex-shrink:0;line-height:1.1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))}
+.item-right{flex:1;min-width:0}
+.item-name{
+  font-size:17px;font-weight:800;line-height:1.3;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
 }
-.ped-item-qty {
-  font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:.04em;
-  color:var(--o); flex-shrink:0;
+.item-qty{
+  font-family:'Syne',sans-serif;font-size:22px;font-weight:800;
+  background:linear-gradient(135deg,var(--o),var(--y));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  flex-shrink:0;
 }
-.ped-item-nota { font-size:11px; color:var(--y); margin-top:3px; font-weight:600; }
-.ped-item-desc { font-size:11px; color:var(--text3); margin-top:2px; line-height:1.4; }
+.item-nota{font-size:12px;color:var(--y);margin-top:4px;font-weight:600;opacity:.9}
+.item-desc{font-size:12px;color:var(--text3);margin-top:3px;line-height:1.45}
 
 /* Notas especiales */
-.ped-notas {
-  padding:10px 12px;
-  background:rgba(255,59,92,.06);
-  border:1px solid rgba(255,59,92,.2);
-  border-radius:12px;
+.notas{
+  margin:0 16px 4px;padding:13px 15px;
+  border-radius:16px;
+  background:rgba(255,64,112,0.07);
+  border:1px solid rgba(255,64,112,0.22);
   border-left:4px solid var(--r);
 }
-.ped-notas-title {
-  font-size:9px; font-weight:800; color:#ff8fa3;
-  text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px;
-}
-.ped-notas-val {
-  font-size:13px; font-weight:700; color:#ffb3bf;
-  line-height:1.5; white-space:pre-wrap; word-break:break-word;
-}
+.notas-label{font-size:10px;font-weight:800;color:#ff8fa3;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.notas-txt{font-size:14px;font-weight:700;color:#ffb3c4;line-height:1.5;white-space:pre-wrap;word-break:break-word}
 
 /* Tags */
-.ped-tags { display:flex; gap:6px; flex-wrap:wrap; }
-.ped-tag {
-  font-size:10px; padding:3px 9px; border-radius:8px;
-  background:rgba(255,255,255,.04); color:var(--text3);
-  border:1px solid var(--border); font-weight:600;
+.tags{padding:0 16px 10px;display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:11px;padding:4px 11px;border-radius:10px;background:rgba(255,255,255,0.05);color:var(--text3);border:1px solid rgba(255,255,255,0.08);font-weight:600}
+
+/* BOTONES — clave del diseño premium */
+.actions{padding:12px 16px 16px;display:flex;gap:8px}
+
+.btn-main{
+  flex:1;padding:18px 12px;border-radius:18px;
+  font-size:16px;font-weight:800;cursor:pointer;border:none;
+  font-family:'Outfit',sans-serif;letter-spacing:.01em;
+  transition:transform .14s,filter .14s;
+  position:relative;overflow:hidden;
+}
+.btn-main::before{
+  content:'';position:absolute;inset:0;border-radius:18px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.15),transparent);
+  pointer-events:none;
+}
+.btn-main:active{transform:scale(.91);filter:brightness(.8)}
+
+.btn-prep{
+  background:linear-gradient(135deg,rgba(255,133,51,0.85),rgba(196,90,0,0.9));
+  color:#fff;box-shadow:0 6px 24px rgba(255,133,51,0.35),0 2px 8px rgba(0,0,0,0.4);
+  border:1px solid rgba(255,133,51,0.4);
+}
+.btn-listo{
+  background:linear-gradient(135deg,rgba(0,229,160,0.8),rgba(0,130,90,0.9));
+  color:#fff;box-shadow:0 6px 24px rgba(0,229,160,0.3),0 2px 8px rgba(0,0,0,0.4);
+  border:1px solid rgba(0,229,160,0.35);
+}
+.btn-listo-glow{
+  background:linear-gradient(135deg,var(--g),var(--gd));
+  color:#fff;box-shadow:0 0 30px rgba(0,229,160,0.35),0 6px 24px rgba(0,229,160,0.3),0 2px 8px rgba(0,0,0,0.4);
+  border:1px solid rgba(0,229,160,0.5);
+}
+.btn-listo-dis{
+  background:rgba(0,229,160,0.15);color:rgba(0,229,160,0.4);
+  border:1px solid rgba(0,229,160,0.15);cursor:default;
+  box-shadow:none;
 }
 
-/* Acciones */
-.ped-actions { padding:10px 14px; display:flex; gap:8px; border-top:1px solid var(--border); }
-.btn-a {
-  flex:1; padding:12px; border-radius:12px;
-  font-size:13px; font-weight:800; cursor:pointer;
-  border:none; font-family:'Inter',sans-serif;
-  transition:transform .12s, filter .12s; letter-spacing:.01em;
+.btn-x{
+  width:56px;flex-shrink:0;padding:18px 0;border-radius:18px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);
+  color:rgba(255,255,255,0.3);font-size:18px;font-weight:900;cursor:pointer;
+  font-family:'Outfit',sans-serif;text-align:center;
+  transition:all .14s;
 }
-.btn-a:active { transform:scale(.93); filter:brightness(.85); }
-.btn-prep { background:rgba(255,107,26,.15); border:1.5px solid rgba(255,107,26,.35); color:#ffb07a; }
-.btn-listo { background:rgba(0,232,122,.15); border:1.5px solid rgba(0,232,122,.35); color:#7dffc8; }
-.btn-listo-glow {
-  background:rgba(0,232,122,.2); border:1.5px solid var(--g); color:#ccfff0;
-  box-shadow:0 0 20px rgba(0,232,122,.2);
-}
-.btn-x {
-  width:44px; padding:12px;
-  background:rgba(255,255,255,.05); border:1.5px solid var(--border2);
-  border-radius:12px; color:var(--text3); font-size:16px;
-  cursor:pointer; text-align:center;
-  transition:all .12s;
-}
-.btn-x:active { background:rgba(255,59,92,.1); border-color:rgba(255,59,92,.3); color:#ff8fa3; }
+.btn-x:active{background:rgba(255,64,112,0.15);border-color:rgba(255,64,112,0.35);color:#ff8fa3;transform:scale(.9)}
 
-/* ── PANEL LATERAL ── */
-.col-right { width:288px; flex-shrink:0; display:flex; flex-direction:column; overflow:hidden; }
+/* EMPTY */
+.empty{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:14px;text-align:center;padding:40px;
+}
+.empty-icon{font-size:72px;filter:drop-shadow(0 4px 16px rgba(0,0,0,0.4));opacity:.35}
+.empty-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text2);opacity:.35;letter-spacing:-.01em}
+.empty-sub{font-size:14px;color:var(--text3);opacity:.3;line-height:1.5}
 
-/* Stats */
-.stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border2); flex-shrink:0; }
-.stat-cell {
-  background:var(--bg); padding:14px 10px; text-align:center;
-  display:flex; flex-direction:column; align-items:center; gap:2px;
+/* TOAST */
+.toast{
+  position:fixed;top:74px;right:14px;z-index:500;
+  padding:12px 18px;border-radius:18px;font-size:14px;font-weight:700;
+  background:rgba(20,18,32,0.96);border:1px solid rgba(255,255,255,0.12);
+  color:var(--text);box-shadow:0 12px 40px rgba(0,0,0,0.6);
+  backdrop-filter:blur(24px);
+  opacity:0;transition:all .3s cubic-bezier(.22,.68,0,1.2);pointer-events:none;
+  max-width:280px;
 }
-.stat-v { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:.04em; line-height:1; }
-.stat-l { font-size:8px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.1em; }
+.toast.on{opacity:1;transform:translateY(4px)}
 
-/* Comandos */
-.cmds-wrap { padding:12px; border-bottom:1px solid var(--border); flex-shrink:0; }
-.cmds-title { font-size:9px; font-weight:800; color:var(--text3); text-transform:uppercase; letter-spacing:.12em; margin-bottom:8px; }
-.cmds-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-.cmd-btn {
-  padding:8px 6px; border-radius:10px;
-  background:rgba(155,92,255,.07); border:1px solid rgba(155,92,255,.15);
-  color:rgba(155,92,255,.8); font-size:10px; font-weight:700;
-  cursor:pointer; font-family:'Inter',sans-serif; text-align:center;
-  transition:all .15s; line-height:1.3;
+/* VFEED */
+.vfeed{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:500;
+  padding:12px 26px;border-radius:26px;font-size:13px;font-weight:700;
+  background:rgba(20,18,32,0.95);border:1px solid rgba(155,109,255,0.3);
+  color:var(--p2);box-shadow:0 8px 40px rgba(0,0,0,0.6),0 0 20px rgba(155,109,255,0.1);
+  backdrop-filter:blur(24px);
+  opacity:0;transition:opacity .25s;pointer-events:none;max-width:88vw;text-align:center;
 }
-.cmd-btn:hover { background:rgba(155,92,255,.14); }
-.cmd-btn:active { transform:scale(.94); }
-
-/* Historial */
-.hist-wrap { flex:1; overflow-y:auto; }
-.hist-wrap::-webkit-scrollbar { width:3px; }
-.hist-wrap::-webkit-scrollbar-thumb { background:rgba(255,255,255,.07); }
-.hist-head {
-  position:sticky; top:0; background:var(--bg);
-  display:flex; align-items:center; justify-content:space-between;
-  padding:10px 14px 8px;
-  border-bottom:1px solid var(--border);
-  font-size:9px; font-weight:800; color:var(--text3);
-  text-transform:uppercase; letter-spacing:.12em; z-index:10;
-}
-.hist-count { font-family:'Bebas Neue',sans-serif; font-size:16px; color:var(--p); letter-spacing:.04em; }
-.hist-item {
-  display:flex; align-items:center; gap:10px; padding:10px 14px;
-  border-bottom:1px solid rgba(255,255,255,.03);
-  transition:background .15s;
-}
-.hist-item:hover { background:rgba(255,255,255,.02); }
-.hist-num { font-family:'Bebas Neue',sans-serif; font-size:16px; color:var(--p); width:38px; letter-spacing:.04em; }
-.hist-info { flex:1; min-width:0; }
-.hist-name { font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text2); }
-.hist-time { font-size:10px; color:var(--text3); margin-top:1px; }
-.hist-dur { font-family:'Bebas Neue',sans-serif; font-size:15px; color:var(--g); letter-spacing:.04em; }
-
-/* ── EMPTY ── */
-.empty {
-  flex:1; display:flex; flex-direction:column; align-items:center;
-  justify-content:center; gap:14px; padding:40px; text-align:center;
-}
-.empty-ico { font-size:64px; opacity:.2; }
-.empty-title { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:.06em; color:var(--text2); opacity:.4; }
-.empty-sub { font-size:13px; color:var(--text3); opacity:.4; line-height:1.5; }
-
-/* ── VOICE OVERLAY ── */
-.vfeed {
-  position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-  background:rgba(10,8,24,.96); border:1px solid rgba(155,92,255,.35);
-  border-radius:24px; padding:11px 24px;
-  font-size:13px; color:rgba(155,92,255,.9); font-weight:600;
-  z-index:200; opacity:0; transition:opacity .25s; pointer-events:none;
-  max-width:340px; text-align:center;
-  backdrop-filter:blur(20px);
-  box-shadow:0 8px 40px rgba(0,0,0,.6);
-}
-.vfeed.on { opacity:1; }
-
-/* ── TOAST ── */
-.toast {
-  position:fixed; top:72px; right:16px;
-  background:rgba(10,8,24,.97);
-  border:1px solid var(--border2);
-  padding:10px 16px; border-radius:14px;
-  font-size:13px; font-weight:700; z-index:300;
-  opacity:0; transition:all .3s; pointer-events:none;
-  max-width:260px;
-  backdrop-filter:blur(20px);
-  box-shadow:0 8px 40px rgba(0,0,0,.5);
-}
-.toast.on { opacity:1; }
+.vfeed.on{opacity:1}
 </style>
 </head>
-<body style="display:flex;flex-direction:column">
+<body style="display:flex;flex-direction:column;height:100vh;overflow:hidden">
+<div class="mesh"></div>
+<div class="mesh-grain"></div>
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <div class="tb-brand">
-    <div class="tb-logo">🍳</div>
-    <div>
-      <div class="tb-name">La <span>Curva</span></div>
-      <div style="font-size:8px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-top:1px">Cocina</div>
-    </div>
-  </div>
+  <div class="tb-logo">🍳</div>
+  <div class="tb-title">La <span>Curva</span></div>
+
   <div class="tb-stats">
-    <div class="tb-stat">
-      <div class="tb-sv" id="tsCola" style="color:var(--o)">0</div>
-      <div class="tb-sl">En cola</div>
+    <div class="st-pill">
+      <div class="st-dot" style="background:var(--o);box-shadow:0 0 6px var(--o)"></div>
+      <div>
+        <div class="st-v" id="tsCola" style="color:var(--o)">0</div>
+        <div class="st-l">Cola</div>
+      </div>
     </div>
-    <div class="tb-stat">
-      <div class="tb-sv" id="tsPrep" style="color:var(--y)">0</div>
-      <div class="tb-sl">Preparando</div>
+    <div class="st-pill">
+      <div class="st-dot" style="background:var(--y);box-shadow:0 0 6px var(--y)"></div>
+      <div>
+        <div class="st-v" id="tsPrep" style="color:var(--y)">0</div>
+        <div class="st-l">Prep</div>
+      </div>
     </div>
-    <div class="tb-stat">
-      <div class="tb-sv" id="tsListos" style="color:var(--g)">0</div>
-      <div class="tb-sl">Listos hoy</div>
+    <div class="st-pill">
+      <div class="st-dot" style="background:var(--g);box-shadow:0 0 6px var(--g)"></div>
+      <div>
+        <div class="st-v" id="tsListos" style="color:var(--g)">0</div>
+        <div class="st-l">Listos</div>
+      </div>
     </div>
-    <div class="tb-stat">
-      <div class="tb-sv" id="tsTime" style="color:var(--p)">—</div>
-      <div class="tb-sl">Prom min</div>
+    <div class="st-pill">
+      <div class="st-dot" style="background:var(--p2);box-shadow:0 0 6px var(--p2)"></div>
+      <div>
+        <div class="st-v" id="tsHoy" style="color:var(--p2)">0</div>
+        <div class="st-l">Hoy</div>
+      </div>
     </div>
   </div>
+
   <div class="tb-right">
-    <div class="tb-clock" id="tbClock">--:--</div>
-    <button class="tb-mic" id="btnMic" onclick="toggleVoz()">🎤</button>
+    <div class="tb-time" id="tbTime">--:--</div>
+    <button class="mic" id="btnMic" onclick="toggleVoz()">🎤</button>
   </div>
 </div>
 
 <!-- LUZ BAR -->
 <div class="luzbar">
-  <div class="luzbar-av">🤖</div>
-  <div class="luzbar-txt" id="luzTxt">Monitoreando pedidos en tiempo real · Todo operativo</div>
-  <div class="luzbar-wave" id="luzWave">
-    <div class="lwv"></div><div class="lwv"></div><div class="lwv"></div><div class="lwv"></div><div class="lwv"></div>
+  <div class="luz-av">🤖</div>
+  <div class="luz-txt" id="luzTxt">Monitoreando pedidos en tiempo real · Todo operativo</div>
+  <div class="wave" id="luzWave">
+    <div class="wv"></div><div class="wv"></div><div class="wv"></div><div class="wv"></div><div class="wv"></div>
   </div>
 </div>
 
-<!-- MAIN -->
-<div class="main">
-  <!-- PEDIDOS -->
-  <div class="col-left">
-    <div class="col-head">
-      <div class="col-head-title">Pedidos activos</div>
-      <div class="col-head-badge" id="pedCount">0 pedidos</div>
-    </div>
-    <div class="ped-scroll" id="pedScroll">
-      <div class="empty">
-        <div class="empty-ico">✅</div>
-        <div class="empty-title">Sin pedidos</div>
-        <div class="empty-sub">Los pedidos aparecen aquí<br>en tiempo real</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PANEL DERECHO -->
-  <div class="col-right">
-    <div class="stats-grid">
-      <div class="stat-cell"><div class="stat-v" id="sTotal" style="color:var(--g)">0</div><div class="stat-l">Pedidos hoy</div></div>
-      <div class="stat-cell"><div class="stat-v" id="sDomis" style="color:var(--b)">0</div><div class="stat-l">Domicilios</div></div>
-      <div class="stat-cell"><div class="stat-v" id="sMesas" style="color:var(--p)">0</div><div class="stat-l">En mesa</div></div>
-      <div class="stat-cell"><div class="stat-v" id="sRecoger" style="color:var(--y)">0</div><div class="stat-l">Recoger</div></div>
-    </div>
-
-    <div class="cmds-wrap">
-      <div class="cmds-title">🎤 Comandos de voz</div>
-      <div class="cmds-grid">
-        <button class="cmd-btn" onclick="activarVoz()">🎤 Activar</button>
-        <button class="cmd-btn" onclick="estadoRapido()">📊 Estado</button>
-        <button class="cmd-btn" onclick="marcarTodoPrep()">👨‍🍳 Todo prep</button>
-        <button class="cmd-btn" onclick="decirUrgente()">⚡ Urgente</button>
-      </div>
-    </div>
-
-    <div class="hist-wrap">
-      <div class="hist-head">
-        Cerrados hoy
-        <span class="hist-count" id="histCount">0</span>
-      </div>
-      <div id="histList">
-        <div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">Sin pedidos cerrados aún</div>
-      </div>
-    </div>
+<!-- SCROLL -->
+<div class="scroll" id="pedScroll">
+  <div class="empty">
+    <div class="empty-icon">✅</div>
+    <div class="empty-title">Sin pedidos</div>
+    <div class="empty-sub">Cargando en tiempo real...</div>
   </div>
 </div>
 
-<div class="vfeed" id="vfeed"></div>
 <div class="toast" id="toast"></div>
+<div class="vfeed" id="vfeed"></div>
 
 <script>
-const REST_ID = "2cc8adc0-068b-4cc5-b880-5239346539ef";
-var pedidosMap={}, menuMap={}, historial=[], listosHoy=0, tiempos=[];
-var vozActiva=false, recognition=null, luzBusy=false, luzCache={};
+const REST_ID="2cc8adc0-068b-4cc5-b880-5239346539ef";
+var pedMap={},menuMap={},listosHoy=0,tiempos=[];
+var vozActiva=false,recognition=null,luzBusy=false,luzCache={};
 
-var EMOJIS={hamburguesa:"🍔",hamburgues:"🍔",burger:"🍔",angus:"🥩",especial:"🍔",sencilla:"🍔",
-  alita:"🍗",pollo:"🍗",crispy:"🍗",papa:"🍟",papas:"🍟",frita:"🍟",patacon:"🍟",
-  bebida:"🥤",gaseosa:"🥤",jugo:"🥤",agua:"🥤",limonada:"🥤",cerveza:"🍺",
-  postre:"🍰",torta:"🍰",helado:"🍦",arepa:"🫓",bandeja:"🍱",ensalada:"🥗",
-  sopa:"🍜",arroz:"🍚",hotdog:"🌭",perro:"🌭",pizza:"🍕",nacho:"🌮",
-  lomo:"🥩",churrasco:"🥩",costilla:"🥩",entrada:"🍽️",salsa:"🫙"};
+var EMOJIS={hamburguesa:"🍔",hamburgues:"🍔",burger:"🍔",angus:"🥩",especial:"🍔",sencilla:"🍔",super:"🍔",doble:"🍔",
+  alita:"🍗",pollo:"🍗",crispy:"🍗",
+  papa:"🍟",papas:"🍟",frita:"🍟",patacon:"🍟",
+  bebida:"🥤",gaseosa:"🥤",jugo:"🥤",agua:"🥤",limonada:"🥤",cerveza:"🍺",coca:"🥤",
+  postre:"🍰",helado:"🍦",arepa:"🫓",bandeja:"🍱",ensalada:"🥗",
+  nacho:"🌮",nachos:"🌮",entrada:"🍽️",
+  lomo:"🥩",churrasco:"🥩",costilla:"🥩",salsa:"🫙"};
 function getEmoji(n){n=(n||"").toLowerCase();for(var k in EMOJIS)if(n.indexOf(k)!==-1)return EMOJIS[k];return"🍽️";}
 
-function tickClock(){document.getElementById("tbClock").textContent=new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}
+function tickClock(){document.getElementById("tbTime").textContent=new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}
 setInterval(tickClock,1000);tickClock();
 
 async function cargarMenu(){
   try{var r=await fetch("/api/menu?restaurante_id="+REST_ID);if(!r.ok)return;
-    var items=await r.json();(items||[]).forEach(function(p){menuMap[p.nombre.toLowerCase().trim()]=p;});
-  }catch(e){}
+    var items=await r.json();(items||[]).forEach(function(p){menuMap[p.nombre.toLowerCase().trim()]=p;});}catch(e){}
 }
 
 async function cargarPedidos(){
@@ -475,183 +368,142 @@ async function cargarPedidos(){
     var r=await fetch("/api/cocina-pedidos?restaurante_id="+REST_ID);
     if(!r.ok)throw new Error("HTTP "+r.status);
     var peds=await r.json();if(!Array.isArray(peds))return;
-    var idsNew={};peds.forEach(function(p){idsNew[p.id]=true;});
-    var prev=Object.keys(pedidosMap);
-    peds.forEach(function(p){if(!pedidosMap[p.id]&&prev.length>0)anunciarPedido(p);pedidosMap[p.id]=p;});
-    prev.forEach(function(id){if(!idsNew[id])delete pedidosMap[id];});
+    var idsN={};peds.forEach(function(p){idsN[p.id]=true;});
+    var prev=Object.keys(pedMap);
+    peds.forEach(function(p){if(!pedMap[p.id]&&prev.length>0)anunciar(p);pedMap[p.id]=p;});
+    prev.forEach(function(id){if(!idsN[id])delete pedMap[id];});
     renderPedidos(peds);updateStats(peds);
   }catch(e){console.error("[cocina]",e.message);}
 }
 
 function renderPedidos(peds){
-  var scroll=document.getElementById("pedScroll");
-  document.getElementById("pedCount").textContent=peds.length+" pedido"+(peds.length!==1?"s":"");
+  var sc=document.getElementById("pedScroll");
   if(!peds.length){
-    scroll.innerHTML='<div class="empty"><div class="empty-ico">✅</div><div class="empty-title">Sin pedidos</div><div class="empty-sub">Todo al día — buen trabajo equipo</div></div>';return;
+    sc.innerHTML='<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">Sin pedidos</div><div class="empty-sub">Todo al día — buen trabajo equipo</div></div>';return;
   }
   var sorted=[...peds].sort(function(a,b){
     if(a.estado==="confirmado"&&b.estado!=="confirmado")return -1;
     if(b.estado==="confirmado"&&a.estado!=="confirmado")return 1;
     return new Date(a.created_at)-new Date(b.created_at);
   });
-  scroll.innerHTML=sorted.map(renderCard).join("");
+  sc.innerHTML=sorted.map(renderCard).join("");
 }
 
 function renderCard(p){
   var mins=Math.floor((Date.now()-new Date(p.created_at))/60000);
-  var tClass=mins<8?"t-ok":mins<15?"t-warn":"t-hot";
+  var tCls=mins<8?"tok":mins<15?"twn":"tht";
   var dir=(p.direccion||"").toUpperCase();
-  var tipo=p.tipo_pedido==="recoger"?"reco":dir.indexOf("MESA")!==-1?"mesa":"domi";
-  var tipoBadge={domi:'<span class="badge badge-domi">🛵 Domicilio</span>',
-    mesa:'<span class="badge badge-mesa">🪑 '+esc(p.direccion||"Mesa")+'</span>',
-    reco:'<span class="badge badge-reco">🏃 Recoger</span>'}[tipo];
-  var estBadge=p.estado==="en_preparacion"?'<span class="badge badge-prep">👨‍🍳 Preparando</span>':p.estado==="listo"?'<span class="badge badge-list">✅ Listo</span>':"";
-  var estClass=p.estado==="en_preparacion"?"estado-preparando":p.estado==="listo"?"estado-listo":"estado-confirmado";
-  var isUrgente=mins>=15&&p.estado==="confirmado";
+  var tipo=p.tipo_pedido==="recoger"?"r":dir.indexOf("MESA")!==-1?"m":"d";
+  var tipoBadge={
+    d:'<span class="badge bd">🛵 Domicilio</span>',
+    m:'<span class="badge bm">🪑 '+esc(p.direccion||"Mesa")+'</span>',
+    r:'<span class="badge br">🏃 Recoger</span>'
+  }[tipo];
+  var estBadge=p.estado==="en_preparacion"?'<span class="badge bp">👨‍🍳 Preparando</span>':p.estado==="listo"?'<span class="badge bl">✅ Listo</span>':"";
+  var cardCls=(mins>=15&&p.estado==="confirmado")?"urgente":p.estado==="en_preparacion"?"preparando":p.estado==="listo"?"listo":"";
 
-  // Items
   var items=[];try{items=Array.isArray(p.items)?p.items:JSON.parse(p.items||"[]");}catch(e){}
-  var itemsHtml=items.map(function(item){
-    var nombre=typeof item==="string"?item:(item.nombre||"");
-    var qty=(typeof item==="object")?(item.qty||item.cantidad||item.quantity||1):1;
-    var mQ=nombre.match(/^(\d+)[xX×]\s*/);if(mQ){qty=parseInt(mQ[1]);nombre=nombre.replace(/^\d+[xX×]\s*/,"");}
-    nombre=nombre.replace(/\s*\$[\d.,]+\s*$/,"").replace(/\s*-\s*\$[\d.,]+\s*$/,"").trim();
-    var notaInl="";var mN=nombre.match(/\s*\(([^)]{1,80})\)\s*$/);if(mN){notaInl=mN[1];nombre=nombre.replace(/\s*\([^)]+\)\s*$/,"").trim();}
-    var esCanje=nombre.toUpperCase().indexOf("CANJE")!==-1;
-    var emoji=getEmoji(nombre);
-    var menuItem=menuMap[nombre.toLowerCase().trim()];
-    var desc=menuItem&&(menuItem.descripcion||menuItem.ingredientes)?(menuItem.descripcion||menuItem.ingredientes).substring(0,100):"";
-    return '<div class="ped-item'+(esCanje?" canje":"")+'">'
-      +'<div class="ped-item-ico">'+emoji+'</div>'
-      +'<div class="ped-item-body">'
-      +'<div class="ped-item-name">'+(qty>1?'<span class="ped-item-qty">'+qty+'×</span>':'')+esc(nombre)+'</div>'
-      +(notaInl?'<div class="ped-item-nota">📝 '+esc(notaInl)+'</div>':"")
-      +(desc?'<div class="ped-item-desc">'+esc(desc)+'</div>':"")
+  var iHtml=items.map(function(item){
+    var n=typeof item==="string"?item:(item.nombre||"");
+    var qty=(typeof item==="object")?(item.qty||item.cantidad||1):1;
+    var mq=n.match(/^(\d+)[xX×]\s*/);if(mq){qty=parseInt(mq[1]);n=n.replace(/^\d+[xX×]\s*/,"");}
+    n=n.replace(/\s*\$[\d.,]+\s*$/,"").replace(/\s*-\s*\$[\d.,]+\s*$/,"").trim();
+    var nota="";var mn=n.match(/\s*\(([^)]{1,80})\)\s*$/);if(mn){nota=mn[1];n=n.replace(/\s*\([^)]+\)\s*$/,"").trim();}
+    var mi=menuMap[n.toLowerCase().trim()];
+    var desc=mi&&(mi.descripcion||mi.ingredientes)?(mi.descripcion||mi.ingredientes).substring(0,90):"";
+    var esCanje=n.toUpperCase().indexOf("CANJE")!==-1;
+    return '<div class="item'+(esCanje?" canje":"")+'">'
+      +'<div class="item-ico">'+getEmoji(n)+'</div>'
+      +'<div class="item-right">'
+      +'<div class="item-name">'+(qty>1?'<span class="item-qty">'+qty+'×</span>':'')+esc(n)+'</div>'
+      +(nota?'<div class="item-nota">📝 '+esc(nota)+'</div>':"")
+      +(desc?'<div class="item-desc">'+esc(desc)+'</div>':"")
       +'</div></div>';
   }).join("");
 
   var notas=(p.notas_especiales||"").trim();
-  var notasHtml=notas?'<div class="ped-notas"><div class="ped-notas-title">⚠️ Notas especiales</div><div class="ped-notas-val">'+esc(notas)+'</div></div>':"";
-
+  var nHtml=notas?'<div class="notas"><div class="notas-label">⚠️ Notas especiales</div><div class="notas-txt">'+esc(notas)+'</div></div>':"";
   var tags="";
-  if(tipo==="domi"&&p.direccion)tags+='<span class="ped-tag">📍 '+esc(p.direccion.substring(0,30))+'</span>';
-  if(p.cliente_tel)tags+='<span class="ped-tag">📱 '+esc(p.cliente_tel)+'</span>';
+  if(tipo==="d"&&p.direccion)tags+='<span class="tag">📍 '+esc(p.direccion.substring(0,28))+'</span>';
+  if(p.cliente_tel)tags+='<span class="tag">📱 '+esc(p.cliente_tel)+'</span>';
 
   var btns="";
   if(p.estado==="confirmado"){
-    btns='<button class="btn-a btn-prep" onclick="accion(\''+p.id+'\',\'en_preparacion\',\''+esc(p.cliente_tel)+'\','+p.numero_pedido+')">👨‍🍳 PREPARANDO</button>'
-      +'<button class="btn-a btn-listo" onclick="accion(\''+p.id+'\',\'listo\',\''+esc(p.cliente_tel)+'\','+p.numero_pedido+')">✅ LISTO</button>';
+    btns='<button class="btn-main btn-prep" onclick="accion(\''+p.id+'\',\'en_preparacion\',\''+esc(p.cliente_tel)+'\','+p.numero_pedido+')">👨‍🍳 PREPARANDO</button>'
+      +'<button class="btn-main btn-listo" onclick="accion(\''+p.id+'\',\'listo\',\''+esc(p.cliente_tel)+'\','+p.numero_pedido+')">✅ LISTO</button>';
   }else if(p.estado==="en_preparacion"){
-    btns='<button class="btn-a btn-listo-glow" onclick="accion(\''+p.id+'\',\'listo\',\''+esc(p.cliente_tel)+'\','+p.numero_pedido+')">✅ MARCAR LISTO — TOCAR</button>';
+    btns='<button class="btn-main btn-listo-glow" onclick="accion(\''+p.id+'\',\'listo\',\''+esc(p.cliente_tel)+'\','+p.numero_pedido+')">✅ MARCAR LISTO</button>';
   }else{
-    btns='<button class="btn-a btn-listo-glow" disabled style="opacity:.45;cursor:default">✅ Listo — Esperando mesero</button>';
+    btns='<button class="btn-main btn-listo-dis" disabled>✅ Listo — Esperando</button>';
   }
-  btns+='<button class="btn-x" onclick="cerrar(\''+p.id+'\','+p.numero_pedido+')" title="Cerrar orden">✕</button>';
+  btns+='<button class="btn-x" onclick="cerrar(\''+p.id+'\','+p.numero_pedido+')" title="Cerrar">✕</button>';
 
-  return '<div class="ped '+estClass+(isUrgente?" urgente":"")+'" id="c'+p.id+'">'
-    +'<div class="ped-stripe"></div>'
-    +'<div class="ped-head">'
+  return '<div class="card '+cardCls+'" id="c'+p.id+'">'
+    +'<div class="gbar"></div>'
+    +'<div class="card-head">'
     +'<div class="ped-num">#'+p.numero_pedido+'</div>'
-    +'<div class="ped-badges">'+tipoBadge+estBadge+'</div>'
-    +'<div class="ped-timer '+tClass+'">'+mins+'m</div>'
+    +'<div class="badges">'+tipoBadge+estBadge+'</div>'
+    +'<div class="timer '+tCls+'">'+mins+'m</div>'
     +'</div>'
-    +'<div class="ped-body">'+itemsHtml+notasHtml+(tags?'<div class="ped-tags">'+tags+'</div>':"")+'</div>'
-    +'<div class="ped-actions">'+btns+'</div>'
+    +'<div class="items">'+iHtml+'</div>'
+    +nHtml
+    +(tags?'<div class="tags">'+tags+'</div>':"")
+    +'<div class="actions">'+btns+'</div>'
     +'</div>';
 }
 
 async function accion(id,estado,tel,num){
-  var card=document.getElementById("c"+id);
-  if(card){card.style.opacity=".45";card.style.pointerEvents="none";}
+  var c=document.getElementById("c"+id);if(c){c.style.opacity=".4";c.style.pointerEvents="none";}
   try{
     await fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel,numero_pedido:num,restaurante_id:REST_ID})});
     if(estado==="listo"){
-      var p=pedidosMap[id];var mins=p?Math.floor((Date.now()-new Date(p.created_at))/60000):0;
-      tiempos.push(mins);listosHoy++;agregarHistorial(p,mins);
-      luzHablar("¡Listo el pedido "+num+"!");toast("✅ #"+num+" listo — cliente notificado");
-    }else{toast("👨‍🍳 #"+num+" en preparación");}
+      var p=pedMap[id];var m=p?Math.floor((Date.now()-new Date(p.created_at))/60000):0;
+      tiempos.push(m);listosHoy++;
+      luzHablar("¡Listo el pedido "+num+"!");toast("✅ Pedido #"+num+" listo");
+    }else{toast("👨‍🍳 Pedido #"+num+" en preparación");}
     setTimeout(cargarPedidos,350);
-  }catch(e){if(card){card.style.opacity="1";card.style.pointerEvents="all";}}
+  }catch(e){if(c){c.style.opacity="1";c.style.pointerEvents="all";}}
 }
 
 async function cerrar(id,num){
-  var card=document.getElementById("c"+id);
-  if(card){card.style.transition="all .3s";card.style.transform="scale(.94)";card.style.opacity=".25";}
+  var c=document.getElementById("c"+id);
+  if(c){c.style.transition="all .3s";c.style.transform="scale(.92)";c.style.opacity=".2";}
   try{
     await fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({id:id,estado:"listo_entrega",restaurante_id:REST_ID})});
     toast("🗂️ Orden #"+num+" cerrada");setTimeout(cargarPedidos,350);
-  }catch(e){if(card){card.style.transform="";card.style.opacity="1";}}
+  }catch(e){if(c){c.style.transform="";c.style.opacity="1";}}
 }
 
 function updateStats(peds){
-  document.getElementById("tsCola").textContent=peds.filter(function(p){return p.estado==="confirmado";}).length;
-  document.getElementById("tsPrep").textContent=peds.filter(function(p){return p.estado==="en_preparacion";}).length;
-  document.getElementById("tsListos").textContent=listosHoy;
-  var prom=tiempos.length?Math.round(tiempos.reduce(function(a,b){return a+b;},0)/tiempos.length)+"m":"—";
-  document.getElementById("tsTime").textContent=prom;
   var cola=peds.filter(function(p){return p.estado==="confirmado";}).length;
   var prep=peds.filter(function(p){return p.estado==="en_preparacion";}).length;
-  if(cola>=5)luzBarSet("⚠️ "+cola+" pedidos esperando — priorizar!");
-  else if(!cola&&!prep)luzBarSet("✅ Sin pedidos pendientes · Todo al día");
+  document.getElementById("tsCola").textContent=cola;
+  document.getElementById("tsPrep").textContent=prep;
+  document.getElementById("tsListos").textContent=listosHoy;
+  if(cola>=4)luzBarSet("⚠️ "+cola+" pedidos esperando — equipo a full");
+  else if(!cola&&!prep)luzBarSet("✅ Todo al día — buen trabajo equipo");
   else luzBarSet(cola+" en cola · "+prep+" preparando · "+listosHoy+" listos hoy");
 }
 
 async function cargarStatsHoy(){
-  try{
-    var r=await fetch("/api/cocina-stats?restaurante_id="+REST_ID);if(!r.ok)return;
-    var d=await r.json();
-    document.getElementById("sTotal").textContent=d.total||0;
-    document.getElementById("sDomis").textContent=d.domis||0;
-    document.getElementById("sMesas").textContent=d.mesas||0;
-    document.getElementById("sRecoger").textContent=d.recoger||0;
-  }catch(e){}
+  try{var r=await fetch("/api/cocina-stats?restaurante_id="+REST_ID);if(!r.ok)return;
+    var d=await r.json();document.getElementById("tsHoy").textContent=d.total||0;}catch(e){}
 }
 
-function agregarHistorial(p,mins){
-  if(!p)return;
+function anunciar(p){
   var items=[];try{items=Array.isArray(p.items)?p.items:JSON.parse(p.items||"[]");}catch(e){}
-  var resumen=items.slice(0,2).map(function(i){
-    var n=typeof i==="string"?i.replace(/^\d+[xX×]\s*/,"").replace(/\s*\$[\d.,]+\s*$/,""):(i.nombre||"");
-    return n.trim();
-  }).filter(Boolean).join(", ");
-  historial.unshift({num:p.numero_pedido,resumen:resumen,mins:mins,ts:new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})});
-  if(historial.length>50)historial.pop();renderHistorial();
-}
-function renderHistorial(){
-  document.getElementById("histCount").textContent=historial.length;
-  var el=document.getElementById("histList");
-  if(!historial.length){el.innerHTML='<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">Sin pedidos cerrados aún</div>';return;}
-  el.innerHTML=historial.slice(0,25).map(function(h){
-    return '<div class="hist-item"><div class="hist-num">#'+h.num+'</div>'
-      +'<div class="hist-info"><div class="hist-name">'+esc(h.resumen||"—")+'</div><div class="hist-time">'+h.ts+'</div></div>'
-      +'<div class="hist-dur">'+h.mins+'m</div></div>';
-  }).join("");
-}
-
-function anunciarPedido(p){
-  var items=[];try{items=Array.isArray(p.items)?p.items:JSON.parse(p.items||"[]");}catch(e){}
-  var resumen=items.slice(0,3).map(function(i){
-    var n=typeof i==="string"?i.replace(/^\d+[xX×]\s*/,"").replace(/\s*\$[\d.,]+\s*$/,""):(i.nombre||"");
-    return n.trim();
-  }).filter(Boolean).join(", ");
+  var res=items.slice(0,3).map(function(i){var n=typeof i==="string"?i.replace(/^\d+[xX×]\s*/,"").replace(/\s*\$[\d.,]+\s*$/,""):(i.nombre||"");return n.trim();}).filter(Boolean).join(", ");
   var tipo=p.tipo_pedido==="recoger"?"para recoger":(p.direccion||"").toUpperCase().indexOf("MESA")!==-1?"para mesa":"a domicilio";
-  luzHablar("Pedido "+p.numero_pedido+". "+resumen+". "+tipo+".");
-  toast("🔔 Nuevo pedido #"+p.numero_pedido);
+  luzHablar("Pedido "+p.numero_pedido+". "+res+". "+tipo+".");toast("🔔 Nuevo pedido #"+p.numero_pedido);
 }
 
 async function luzHablar(texto){
   luzBarSet(texto);if(luzBusy)return;luzBusy=true;
   try{
     var k=texto.substring(0,60);var url=luzCache[k];
-    if(!url){
-      var r=await fetch("/api/luz-voz",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({texto:texto}),signal:AbortSignal.timeout(8000)});
-      if(!r.ok)throw new Error("HTTP "+r.status);
-      url=URL.createObjectURL(await r.blob());luzCache[k]=url;
-      var ks=Object.keys(luzCache);if(ks.length>25)delete luzCache[ks[0]];
-    }
+    if(!url){var r=await fetch("/api/luz-voz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({texto:texto}),signal:AbortSignal.timeout(8000)});if(!r.ok)throw new Error();url=URL.createObjectURL(await r.blob());luzCache[k]=url;var ks=Object.keys(luzCache);if(ks.length>25)delete luzCache[ks[0]];}
     var audio=new Audio(url);var wave=document.getElementById("luzWave");
     if(wave)wave.classList.add("on");
     audio.onended=function(){luzBusy=false;if(wave)wave.classList.remove("on");};
@@ -659,30 +511,8 @@ async function luzHablar(texto){
     audio.play().catch(function(){luzBusy=false;luzWS(texto);});
   }catch(e){luzBusy=false;luzWS(texto);}
 }
-function luzWS(texto){
-  if(!window.speechSynthesis)return;
-  var u=new SpeechSynthesisUtterance(texto.replace(/[^\w\s.,!?áéíóúñ]/gi,"").substring(0,150));
-  u.lang="es-CO";u.rate=1.1;u.pitch=1.1;u.volume=1;
-  var wave=document.getElementById("luzWave");
-  var vz=window.speechSynthesis.getVoices().find(function(v){return v.lang.startsWith("es");});
-  if(vz)u.voice=vz;
-  if(wave){wave.classList.add("on");u.onend=function(){wave.classList.remove("on");};}
-  window.speechSynthesis.speak(u);
-}
+function luzWS(t){if(!window.speechSynthesis)return;var u=new SpeechSynthesisUtterance(t.substring(0,150));u.lang="es-CO";u.rate=1.1;u.pitch=1.1;u.volume=1;var vz=window.speechSynthesis.getVoices().find(function(v){return v.lang.startsWith("es");});if(vz)u.voice=vz;var w=document.getElementById("luzWave");if(w){w.classList.add("on");u.onend=function(){w.classList.remove("on");};}window.speechSynthesis.speak(u);}
 function luzBarSet(txt){var el=document.getElementById("luzTxt");if(!el)return;el.style.opacity="0";setTimeout(function(){el.textContent=txt;el.style.opacity="1";},200);}
-
-function activarVoz(){if(!vozActiva)toggleVoz();}
-function estadoRapido(){
-  var c=Object.values(pedidosMap).filter(function(p){return p.estado==="confirmado";}).length;
-  var pr=Object.values(pedidosMap).filter(function(p){return p.estado==="en_preparacion";}).length;
-  luzHablar("Hay "+c+" en cola y "+pr+" en preparación.");
-}
-function decirUrgente(){luzHablar("El más urgente es el "+getMasUrgente());}
-function marcarTodoPrep(){Object.values(pedidosMap).filter(function(p){return p.estado==="confirmado";}).forEach(function(p){accion(p.id,"en_preparacion",p.cliente_tel,p.numero_pedido);});}
-function getMasUrgente(){
-  var c=Object.values(pedidosMap).filter(function(p){return p.estado==="confirmado";}).sort(function(a,b){return new Date(a.created_at)-new Date(b.created_at);});
-  return c.length?"número "+c[0].numero_pedido:"ninguno";
-}
 
 function toggleVoz(){
   var btn=document.getElementById("btnMic");
@@ -690,34 +520,33 @@ function toggleVoz(){
   if(vozActiva){vozActiva=false;try{recognition.stop();}catch(e){}btn.classList.remove("on");btn.textContent="🎤";toast("Micrófono desactivado");return;}
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   recognition=new SR();recognition.lang="es-CO";recognition.continuous=true;recognition.interimResults=false;
-  recognition.onresult=function(e){var txt=e.results[e.results.length-1][0].transcript.toLowerCase().trim();vfeed('"'+txt+'"');procesarComando(txt);};
+  recognition.onresult=function(e){var txt=e.results[e.results.length-1][0].transcript.toLowerCase().trim();vfeed('"'+txt+'"');procesarCmd(txt);};
   recognition.onerror=function(e){if(e.error==="not-allowed"){vozActiva=false;btn.classList.remove("on");btn.textContent="🎤";}};
   recognition.onend=function(){if(vozActiva)setTimeout(function(){try{recognition.start();}catch(e){}},800);};
   recognition.start();vozActiva=true;btn.classList.add("on");btn.textContent="🔴";
   luzHablar("Micrófono activo.");toast("🎤 Escuchando comandos");
 }
-function procesarComando(txt){
-  var peds=Object.values(pedidosMap);var num=extraerNum(txt);
-  if((txt.includes("listo")||txt.includes("lista"))&&num){var p=peds.find(function(x){return x.numero_pedido===num;});if(p){accion(p.id,"listo",p.cliente_tel,p.numero_pedido);}else luzHablar("No encontré el "+num+".");}
-  else if((txt.includes("preparando")||txt.includes("preparo"))&&num){var p=peds.find(function(x){return x.numero_pedido===num;});if(p){accion(p.id,"en_preparacion",p.cliente_tel,p.numero_pedido);}}
+function procesarCmd(txt){
+  var peds=Object.values(pedMap);var num=getNum(txt);
+  if((txt.includes("listo")||txt.includes("lista"))&&num){var p=peds.find(function(x){return x.numero_pedido===num;});if(p)accion(p.id,"listo",p.cliente_tel,p.numero_pedido);else luzHablar("No encontré el "+num);}
+  else if((txt.includes("preparando")||txt.includes("preparo"))&&num){var p=peds.find(function(x){return x.numero_pedido===num;});if(p)accion(p.id,"en_preparacion",p.cliente_tel,p.numero_pedido);}
   else if((txt.includes("cerrar")||txt.includes("cerrado"))&&num){var p=peds.find(function(x){return x.numero_pedido===num;});if(p)cerrar(p.id,p.numero_pedido);}
-  else if(txt.includes("cuantos")||txt.includes("cuántos")){estadoRapido();}
-  else if(txt.includes("urgente")||txt.includes("primero")){decirUrgente();}
-  else if(txt.includes("todos listos")||txt.includes("listo todo")){peds.filter(function(p){return p.estado==="en_preparacion";}).forEach(function(p){accion(p.id,"listo",p.cliente_tel,p.numero_pedido);});luzHablar("Marcando todos como listos.");}
-  else luzHablar("No entendí.");
+  else if(txt.includes("cuantos")||txt.includes("cuántos")){var c=peds.filter(function(x){return x.estado==="confirmado";}).length;luzHablar("Hay "+c+" en cola.");}
+  else if(txt.includes("urgente")||txt.includes("primero")){var s=peds.filter(function(x){return x.estado==="confirmado";}).sort(function(a,b){return new Date(a.created_at)-new Date(b.created_at);});luzHablar(s.length?"El más urgente es el "+s[0].numero_pedido:"No hay pendientes.");}
+  else if(txt.includes("todos listos")||txt.includes("listo todo")){peds.filter(function(p){return p.estado==="en_preparacion";}).forEach(function(p){accion(p.id,"listo",p.cliente_tel,p.numero_pedido);});}
+  else luzHablar("No entendí. Di: listo el pedido.");
 }
-function extraerNum(txt){var m=txt.match(/\b(\d+)\b/);if(m)return parseInt(m[1]);return null;}
-
+function getNum(txt){var m=txt.match(/\b(\d+)\b/);return m?parseInt(m[1]):null;}
 function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 var toastT=null;
-function toast(msg){var t=document.getElementById("toast");if(!t)return;t.textContent=msg;t.classList.add("on");if(toastT)clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("on");},3000);}
+function toast(msg){var t=document.getElementById("toast");t.textContent=msg;t.classList.add("on");if(toastT)clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove("on");},3000);}
 var vfeedT=null;
-function vfeed(txt){var el=document.getElementById("vfeed");if(!el)return;el.textContent=txt;el.classList.add("on");if(vfeedT)clearTimeout(vfeedT);vfeedT=setTimeout(function(){el.classList.remove("on");},3500);}
+function vfeed(txt){var el=document.getElementById("vfeed");el.textContent=txt;el.classList.add("on");if(vfeedT)clearTimeout(vfeedT);vfeedT=setTimeout(function(){el.classList.remove("on");},3500);}
 
-setInterval(function(){if(Object.keys(pedidosMap).length)renderPedidos(Object.values(pedidosMap));},30000);
+setInterval(function(){if(Object.keys(pedMap).length)renderPedidos(Object.values(pedMap));},30000);
 cargarMenu();cargarPedidos();cargarStatsHoy();
-setInterval(cargarPedidos,4000);setInterval(cargarStatsHoy,30000);
-setTimeout(function(){luzHablar("Cocina activa. Monitoreo iniciado.");},2000);
+setInterval(cargarPedidos,4000);setInterval(cargarStatsHoy,60000);
+setTimeout(function(){luzHablar("Cocina activa.");},2000);
 </script>
 </body>
 </html>
