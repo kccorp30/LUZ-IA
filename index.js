@@ -764,15 +764,18 @@ function estaEnHorario(restaurante) {
     var ci = (restaurante.hora_cierre   || "00:00:00").split(":").map(Number);
     var minAp = ap[0] * 60 + ap[1];
     var minCi = ci[0] * 60 + ci[1];
-    // FIX: 00:00 means end of day (23:59), not start of day (0)
-    if (minCi === 0) minCi = 1439;
+    if (minCi === 0) minCi = 1439; // 00:00 = fin del día
     var dias = ["domingo","lunes","martes","miercoles","jueves","viernes","sabado"];
     var diaHoy = dias[col.getDay()];
-    var diasAct = (restaurante.dias_activos || "lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
-    if (!diasAct.includes(diaHoy)) return false;
-    // Schedule crosses midnight (e.g. 20:00 - 02:00)
-    if (minCi < minAp) return hora >= minAp || hora <= minCi;
-    return hora >= minAp && hora <= minCi;
+    var diasActRaw = (restaurante.dias_activos || "lunes,martes,miercoles,jueves,viernes,sabado,domingo");
+    // Normalizar acentos: miércoles→miercoles, sábado→sabado
+    var diasAct = diasActRaw.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().split(",").map(function(d){return d.trim();});
+    console.log("[horario] Día Colombia:", diaHoy, "| Días activos:", diasAct, "| Hora:", col.getHours()+":"+String(col.getMinutes()).padStart(2,"0"), "| Apertura:", minAp, "| Cierre:", minCi, "| HoraMin:", hora);
+    if (!diasAct.includes(diaHoy)) { console.log("[horario] ❌ Día no activo"); return false; }
+    if (minCi < minAp) return hora >= minAp || hora <= minCi; // cruza medianoche
+    var abierto = hora >= minAp && hora <= minCi;
+    console.log("[horario]", abierto ? "✅ Abierto" : "❌ Cerrado");
+    return abierto;
   } catch (e) { return true; }
 }
 
