@@ -2410,11 +2410,21 @@ function cerrarChat(){
 document.getElementById("btnCerrarChat").addEventListener("click",function(){cerrarChat();});
 document.getElementById("msgOverlay").addEventListener("click",function(e){if(e.target===this)cerrarChat();});
 document.getElementById("toggleSilencio").addEventListener("click",function(){
-  var tel=this.getAttribute("data-tel")||msgTel;
+  var tel = msgTel; // siempre usar el teléfono activo del chat
+  if(!tel){notif("No hay conversación activa");return;}
   silencioPorTel[tel]=!silencioPorTel[tel];
   this.className="big-toggle "+(silencioPorTel[tel]?"on":"off");
-  notif(silencioPorTel[tel]?"Luz en silencio":"Luz reactivada",silencioPorTel[tel]?"rgba(168,85,247,0.9)":"rgba(34,197,94,0.9)");
-  if(rest){fetch("/api/supabase/silencio_conversacion?on_conflict=restaurante_id,telefono",{method:"POST",headers:{"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({restaurante_id:rest.id,telefono:tel,activo:silencioPorTel[tel],updated_at:new Date().toISOString()})}).catch(function(){});}
+  notif(silencioPorTel[tel]?"🔕 Luz en silencio":"🔔 Luz reactivada",silencioPorTel[tel]?"rgba(168,85,247,0.9)":"rgba(34,197,94,0.9)");
+  if(rest){
+    fetch("/api/supabase/silencio_conversacion",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},
+      body:JSON.stringify({restaurante_id:rest.id,telefono:tel,activo:silencioPorTel[tel],updated_at:new Date().toISOString()})
+    }).then(function(r){
+      if(!r.ok) console.error("[silencio] Error guardando:",r.status);
+      else console.log("[silencio] Guardado para",tel,"→",silencioPorTel[tel]);
+    }).catch(function(e){console.error("[silencio]",e.message);});
+  }
 });
 document.getElementById("msgEnviar").addEventListener("click",enviarMensaje);
 document.getElementById("msgTexto").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();enviarMensaje();}});
