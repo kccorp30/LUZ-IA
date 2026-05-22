@@ -3320,31 +3320,63 @@ function renderESP32(dispositivos){
   var lista=document.getElementById("esp32Lista");
   var count=document.getElementById("esp32Count");
   if(!lista)return;
-  var online=dispositivos.filter(function(d){
-    return d.last_seen&&(Date.now()-new Date(d.last_seen))<30000;
-  }).length;
-  if(count)count.textContent=online+" / "+dispositivos.length+" online";
+  var online=dispositivos.filter(function(d){return d.last_seen&&(Date.now()-new Date(d.last_seen))<30000;}).length;
+  var sinAsignar=dispositivos.filter(function(d){return !d.mesa||d.mesa===0;}).length;
+  if(count){count.textContent=online+" online · "+dispositivos.length+" total"+(sinAsignar>0?" · ⚠️ "+sinAsignar+" sin asignar":"");}
   if(!dispositivos.length){
-    lista.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">Sin dispositivos registrados aún</div>';
+    lista.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px">Sin dispositivos aún — conecta un ESP32 al WiFi del restaurante</div>';
     return;
   }
-  lista.innerHTML=dispositivos.map(function(d){
+  var sorted=[...dispositivos].sort(function(a,b){if(!a.mesa&&b.mesa)return -1;if(a.mesa&&!b.mesa)return 1;return (a.mesa||0)-(b.mesa||0);});
+  lista.innerHTML=sorted.map(function(d){
     var isOnline=d.last_seen&&(Date.now()-new Date(d.last_seen))<30000;
-    var dotColor=isOnline?"#10b981":"#ef4444";
+    var noMesa=!d.mesa||d.mesa===0;
+    var dotColor=noMesa?"#f59e0b":isOnline?"#10b981":"#6b7280";
     var mins=d.last_seen?Math.floor((Date.now()-new Date(d.last_seen))/60000):null;
-    var cuandoVisto=mins===null?"Nunca":mins<1?"Ahora mismo":mins+"m atrás";
-    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)">'
+    var cuandoVisto=mins===null?"Nunca":mins<1?"Ahora mismo":mins<60?mins+"m atrás":Math.floor(mins/60)+"h atrás";
+    var macCorta=d.mac?d.mac.slice(-8):"??:??:??";
+    var safeMAC=d.mac?d.mac.replace(/:/g,"-"):"nomac";
+    var asignarHTML=noMesa
+      ?'<div style="display:flex;gap:5px;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">'
+        +'<span style="font-size:10px;color:#fcd34d;flex-shrink:0">Asignar mesa:</span>'
+        +'<input type="number" min="1" max="30" placeholder="Nº" id="asign-'+safeMAC+'" style="width:52px;padding:4px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;font-size:12px;font-weight:700;outline:none;text-align:center">'
+        +'<button onclick="asignarMesaESP32(\''+d.mac+'\',document.getElementById(\'asign-'+safeMAC+'\').value)" style="padding:4px 12px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Asignar ✓</button>'
+        +'</div>'
+      :'<div style="display:flex;gap:5px;margin-top:4px">'
+        +'<button onclick="cambiarEstadoMesa('+d.mesa+',\'celebracion\')" style="padding:4px 9px;border-radius:8px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.25);color:#fdba74;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🎉 Fiesta</button>'
+        +'<button onclick="cambiarEstadoMesa('+d.mesa+',\'libre\')" style="padding:4px 9px;border-radius:8px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🟢 Liberar</button>'
+        +'<button onclick="reasignarESP32(\''+d.mac+'\')" style="padding:4px 9px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">✏️</button>'
+        +'</div>';
+    return '<div style="padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid '+(noMesa?'rgba(245,158,11,0.3)':'rgba(255,255,255,0.07)')+';border-radius:14px">'
+      +'<div style="display:flex;align-items:center;gap:9px">'
       +'<div style="width:8px;height:8px;border-radius:50%;background:'+dotColor+';flex-shrink:0;box-shadow:0 0 6px '+dotColor+'"></div>'
       +'<div style="flex:1;min-width:0">'
-      +'<div style="font-size:13px;font-weight:700">Mesa '+d.mesa+' — '+d.num_leds+' LEDs</div>'
-      +'<div style="font-size:10px;color:var(--text3)">IP: '+(d.ip||"—")+' · '+cuandoVisto+'</div>'
+      +'<div style="font-size:13px;font-weight:800">'+(noMesa?'⚠️ Sin asignar':'Mesa '+d.mesa)+' <span style="font-size:10px;color:var(--text3);font-weight:500">· '+d.num_leds+' LEDs</span></div>'
+      +'<div style="font-size:10px;color:var(--text3)">...'+macCorta+' · '+(d.ip||"—")+' · '+cuandoVisto+'</div>'
       +'</div>'
-      +'<div style="display:flex;gap:5px">'
-      +'<button onclick="cambiarEstadoMesa('+d.mesa+',\'celebracion\')" style="padding:4px 9px;border-radius:8px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.25);color:#fdba74;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🎉</button>'
-      +'<button onclick="cambiarEstadoMesa('+d.mesa+',\'libre\')" style="padding:4px 9px;border-radius:8px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">Reset</button>'
+      +'<span style="font-size:10px;padding:2px 8px;border-radius:8px;background:'+(isOnline?'rgba(16,185,129,0.12)':'rgba(107,114,128,0.12)')+';color:'+(isOnline?'#6ee7b7':'var(--text3)')+';">'+(isOnline?'Online':'Offline')+'</span>'
       +'</div>'
+      +asignarHTML
       +'</div>';
   }).join("");
+}
+
+async function asignarMesaESP32(mac,mesaNum){
+  if(!rest||!mac||!mesaNum||parseInt(mesaNum)<1){notif("Ingresa un número de mesa válido");return;}
+  try{
+    var r=await fetch("/api/esp32-asignar",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({restaurante_id:rest.id,mac:mac,mesa:parseInt(mesaNum)})});
+    var d=await r.json();
+    if(d.ok){notif("✅ Mesa "+mesaNum+" asignada");cargarESP32();loadMesasRapidas();}
+    else{notif("Error: "+(d.error||""));}
+  }catch(e){notif("Error: "+e.message);}
+}
+
+function reasignarESP32(mac){
+  if(!rest)return;
+  fetch("/api/esp32-asignar",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({restaurante_id:rest.id,mac:mac,mesa:0})
+  }).then(function(){cargarESP32();}).catch(function(){});
 }
 
 // ── ANIMACIÓN NUEVO DISPOSITIVO ───────────────────────────
