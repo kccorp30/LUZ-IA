@@ -1054,6 +1054,11 @@ app.get("/api/mesa-estados", function(req, res) {
   if (!restauranteId) return res.json({});
   res.json(mesaEstados[restauranteId] || {});
 });
+// ── HEALTH CHECK — Fly.io lo usa para saber si el servidor está vivo ──
+app.get("/health", function(req, res) {
+  res.json({ ok: true, status: "alive", ts: new Date().toISOString(), app: "LUZ IA" });
+});
+
 app.get("/cocina",      function(req, res) { res.sendFile(path.join(__dirname, "cocina.html")); });
 app.get("/domi",        function(req, res) { res.sendFile(path.join(__dirname, "domiciliario.html")); });
 app.get("/mesero",      function(req, res) { res.sendFile(path.join(__dirname, "mesero2.html")); });
@@ -1605,17 +1610,75 @@ app.post("/enviar-mensaje-cliente", async function(req, res) {
 
 
 // ── UBICACIÓN DOMICILIARIO ─────────────────────────────────────────────────
+app.post("/api/domi-ubicacion", async function(req, res) {
+  // Alias de /api/ubicacion-domiciliario — mismo handler
+  req.url = "/api/ubicacion-domiciliario";
+  var { pedido_id, restaurante_id, domiciliario_id, lat, lng } = req.body;
+  if(!domiciliario_id || !lat || !lng) return res.status(400).json({error:"Faltan datos"});
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var headers = {"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"};
+    var body = { domiciliario_id, restaurante_id: restaurante_id||null, lat, lng, pedido_id: pedido_id||null, updated_at: new Date().toISOString() };
+    await axios.post(SUPABASE_URL+"/rest/v1/domiciliario_ubicacion?on_conflict=domiciliario_id", body, {headers}).catch(async function(){
+      await axios.post(SUPABASE_URL+"/rest/v1/domiciliario_ubicacion", body, {headers});
+    });
+    res.json({ok:true});
+  } catch(e) { res.status(500).json({error:e.message}); }
+});
+
 app.post("/api/ubicacion-domiciliario", async function(req, res) {
   try {
     var { pedido_id, restaurante_id, domiciliario_id, lat, lng } = req.body;
-    if (!pedido_id || !lat || !lng) return res.status(400).json({ error: "Faltan datos" });
+    if (!lat || !lng || !domiciliario_id) return res.status(400).json({ error: "Faltan datos" });
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var headers = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" };
-    var body = { pedido_id, restaurante_id, domiciliario_id: domiciliario_id || null, lat, lng, updated_at: new Date().toISOString() };
-    await axios.post(SUPABASE_URL + "/rest/v1/domiciliario_ubicacion?on_conflict=pedido_id", body, { headers });
+    // Guardar/actualizar ubicación — upsert por domiciliario_id
+    var body = { domiciliario_id, restaurante_id: restaurante_id || null, lat, lng, updated_at: new Date().toISOString() };
+    if (pedido_id) body.pedido_id = pedido_id;
+    // Intentar upsert por domiciliario_id
+    await axios.post(SUPABASE_URL + "/rest/v1/domiciliario_ubicacion?on_conflict=domiciliario_id", body, { headers }).catch(async function() {
+      // Si falla por constraint, intentar con pedido_id
+      if (pedido_id) {
+        await axios.post(SUPABASE_URL + "/rest/v1/domiciliario_ubicacion?on_conflict=pedido_id", body, { headers });
+      }
+    });
     res.json({ ok: true });
   } catch(e) {
     res.status(500).json({ ok: false, error: e.response?.data || e.message });
+  }
+});
+
+// ── UBICACIONES EN TIEMPO REAL DE DOMICILIARIOS ─────────────────
+app.get("/api/domi-ubicaciones", async function(req, res) {
+  var { restaurante_id } = req.query;
+  if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    // Ubicaciones actualizadas en los últimos 30 minutos
+    var hace30 = new Date(Date.now() - 30*60*1000).toISOString();
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/domiciliario_ubicacion?restaurante_id=eq." + restaurante_id +
+      "&updated_at=gte." + hace30 + "&select=domiciliario_id,lat,lng,updated_at,pedido_id",
+      { headers: h }
+    );
+    // Enriquecer con nombre del domi
+    var ubicaciones = r.data || [];
+    if (ubicaciones.length > 0) {
+      var ids = [...new Set(ubicaciones.map(function(u){ return u.domiciliario_id; }))].filter(Boolean);
+      var domisR = await axios.get(
+        SUPABASE_URL + "/rest/v1/domiciliarios?id=in.(" + ids.join(",") + ")&select=id,nombre",
+        { headers: h }
+      ).catch(function(){ return { data: [] }; });
+      var domisMap = {};
+      (domisR.data || []).forEach(function(d){ domisMap[d.id] = d.nombre; });
+      ubicaciones = ubicaciones.map(function(u){
+        return Object.assign({}, u, { nombre: domisMap[u.domiciliario_id] || "Domi" });
+      });
+    }
+    res.json(ubicaciones);
+  } catch(e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -4176,12 +4239,12 @@ async function luzAgentTick() {
 
     for (var rest of rests) {
       var restId = rest.id;
-      var phoneId = rest.whatsapp_phone_id;
+      var phoneId = rest.whatsapp_phone_id || process.env.WHATSAPP_PHONE_ID;
       var telDueno = rest.telefono_dueno ? "57" + String(rest.telefono_dueno).replace(/^57/,"") : null;
 
-      if (!telDueno || !phoneId) {
-        console.log("[AGENTE] " + rest.nombre + " — sin teléfono dueño configurado, saltando alertas WA");
-      }
+      console.log("[AGENTE tick] Restaurante:", rest.nombre,
+        "| Tel dueño:", telDueno || "❌ NO CONFIGURADO",
+        "| PhoneId:", phoneId ? "✅" : "❌ NO CONFIGURADO");
 
       // Helper para alertar al dueño — clave única por restaurante + contenido completo
       var makeAlertarDueno = function(tDueno, pId, rId) {
