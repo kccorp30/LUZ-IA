@@ -1055,6 +1055,65 @@ app.get("/api/mesa-estados", function(req, res) {
   res.json(mesaEstados[restauranteId] || {});
 });
 // ── HEALTH CHECK — Fly.io lo usa para saber si el servidor está vivo ──
+// ── MESAS ESTADO — para ESP32 ─────────────────────────────────────
+app.get("/api/mesas-estado", async function(req, res) {
+  var restaurante_id = req.query.restaurante_id;
+  if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    // Leer estado de mesas de la tabla
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/mesas?restaurante_id=eq." + restaurante_id + "&select=numero,estado&order=numero",
+      { headers: h }
+    );
+    var mesas = (r.data || []).map(function(m) {
+      return { mesa: m.numero, estado: m.estado || "libre" };
+    });
+    // Si no hay tabla mesas, derivar del estado de pedidos activos
+    if (!mesas.length) {
+      var pedR = await axios.get(
+        SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id +
+        "&estado=in.(confirmado,en_preparacion,listo)&select=direccion,estado,numero_pedido",
+        { headers: h }
+      );
+      var pedidos = pedR.data || [];
+      var mesasMap = {};
+      for (var p of pedidos) {
+        var dir = (p.direccion || "").toUpperCase();
+        var m = dir.match(/MESA\s*(\d+)/);
+        if (m) {
+          var num = parseInt(m[1]);
+          var est = p.estado === "listo" ? "lista" : "ocupada";
+          mesasMap[num] = est;
+        }
+      }
+      // Generar array para hasta 10 mesas
+      for (var i = 1; i <= 10; i++) {
+        mesas.push({ mesa: i, estado: mesasMap[i] || "libre" });
+      }
+    }
+    res.json(mesas);
+  } catch (e) {
+    console.error("[mesas-estado]", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/mesa-estado", async function(req, res) {
+  var { restaurante_id, mesa, estado } = req.body;
+  if (!restaurante_id || !mesa || !estado) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" };
+    await axios.post(SUPABASE_URL + "/rest/v1/mesas?on_conflict=restaurante_id,numero",
+      { restaurante_id, numero: mesa, estado, updated_at: new Date().toISOString() },
+      { headers: h }
+    );
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get("/health", function(req, res) {
   res.json({ ok: true, status: "alive", ts: new Date().toISOString(), app: "LUZ IA" });
 });
