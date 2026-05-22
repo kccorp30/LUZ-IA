@@ -1115,17 +1115,38 @@ app.get("/api/esp32-dispositivos", async function(req, res) {
 
 app.post("/api/esp32-registro", async function(req, res) {
   var { restaurante_id, mesa, mac, ip, num_leds } = req.body;
-  if (!restaurante_id || !mesa) return res.status(400).json({ error: "Faltan datos" });
+  if (!restaurante_id || !mac) return res.status(400).json({ error: "Faltan datos" });
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" };
-    await axios.post(SUPABASE_URL + "/rest/v1/esp32_dispositivos?on_conflict=restaurante_id,mesa",
-      { restaurante_id, mesa, mac: mac||null, ip: ip||null, num_leds: num_leds||8, online: true, last_seen: new Date().toISOString() },
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
+    // Buscar si ya existe por MAC
+    var existR = await axios.get(
+      SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + encodeURIComponent(mac) + "&restaurante_id=eq." + restaurante_id + "&select=id,mesa",
       { headers: h }
-    );
-    console.log("[ESP32] Mesa " + mesa + " registrada — IP:" + ip + " MAC:" + mac);
+    ).catch(function(){ return { data: [] }; });
+    var existe = existR.data && existR.data.length > 0;
+    if (existe) {
+      // Actualizar — preservar mesa asignada
+      var mesaActual = existR.data[0].mesa || mesa || 0;
+      await axios.patch(
+        SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + encodeURIComponent(mac) + "&restaurante_id=eq." + restaurante_id,
+        { ip: ip||null, num_leds: num_leds||20, online: true, last_seen: new Date().toISOString() },
+        { headers: { ...h, "Prefer": "return=minimal" } }
+      );
+      console.log("[ESP32] Actualizado — MAC:" + mac + " Mesa:" + mesaActual + " IP:" + ip);
+    } else {
+      // Insertar nuevo dispositivo
+      await axios.post(SUPABASE_URL + "/rest/v1/esp32_dispositivos",
+        { restaurante_id, mesa: parseInt(mesa)||0, mac, ip: ip||null, num_leds: num_leds||20, online: true, last_seen: new Date().toISOString() },
+        { headers: { ...h, "Prefer": "return=minimal" } }
+      );
+      console.log("[ESP32] NUEVO dispositivo — MAC:" + mac + " IP:" + ip);
+    }
     res.json({ ok: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) {
+    console.error("[ESP32 registro]", e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get("/api/mesas-estado", async function(req, res) {
@@ -1177,13 +1198,25 @@ app.post("/api/mesa-estado", async function(req, res) {
   if (!restaurante_id || !mesa || !estado) return res.status(400).json({ error: "Faltan datos" });
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" };
-    await axios.post(SUPABASE_URL + "/rest/v1/mesas?on_conflict=restaurante_id,numero",
-      { restaurante_id, numero: mesa, estado, updated_at: new Date().toISOString() },
-      { headers: h }
-    );
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
+    // Intentar PATCH primero (actualizar existente)
+    var patchR = await axios.patch(
+      SUPABASE_URL + "/rest/v1/mesas?restaurante_id=eq." + restaurante_id + "&numero=eq." + mesa,
+      { estado, updated_at: new Date().toISOString() },
+      { headers: { ...h, "Prefer": "return=minimal" } }
+    ).catch(function(){ return null; });
+    // Si no existe, insertar
+    if (!patchR || patchR.status >= 400) {
+      await axios.post(SUPABASE_URL + "/rest/v1/mesas",
+        { restaurante_id, numero: parseInt(mesa), estado, updated_at: new Date().toISOString() },
+        { headers: { ...h, "Prefer": "resolution=merge-duplicates,return=minimal" } }
+      );
+    }
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error("[mesa-estado]", e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get("/health", function(req, res) {
