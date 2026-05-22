@@ -1057,6 +1057,48 @@ app.get("/api/mesa-estados", function(req, res) {
 // ── HEALTH CHECK — Fly.io lo usa para saber si el servidor está vivo ──
 // ── MESAS ESTADO — para ESP32 ─────────────────────────────────────
 // ── ESP32 REGISTRO — dispositivo se registra al encender ──
+// ── ESP32 ASIGNACION — panel le asigna mesa a un dispositivo por MAC ──
+app.get("/api/esp32-asignacion", async function(req, res) {
+  var { mac, restaurante_id } = req.query;
+  if (!mac || !restaurante_id) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + encodeURIComponent(mac) + "&restaurante_id=eq." + restaurante_id + "&select=mesa",
+      { headers: h }
+    );
+    var data = r.data || [];
+    if (data.length && data[0].mesa > 0) {
+      res.json({ mesa: data[0].mesa });
+    } else {
+      res.json({ mesa: 0 });
+    }
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/esp32-asignar", async function(req, res) {
+  var { restaurante_id, mac, mesa } = req.body;
+  if (!restaurante_id || !mac || !mesa) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
+    await axios.patch(
+      SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + encodeURIComponent(mac) + "&restaurante_id=eq." + restaurante_id,
+      { mesa: parseInt(mesa) },
+      { headers: h }
+    );
+    // También asegurar que exista la mesa en tabla mesas
+    await axios.post(
+      SUPABASE_URL + "/rest/v1/mesas?on_conflict=restaurante_id,numero",
+      { restaurante_id, numero: parseInt(mesa), estado: "libre" },
+      { headers: { ...h, "Prefer": "resolution=merge-duplicates,return=minimal" } }
+    ).catch(function(){});
+    console.log("[ESP32] Mesa " + mesa + " asignada a MAC " + mac);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get("/api/esp32-dispositivos", async function(req, res) {
   var restaurante_id = req.query.restaurante_id;
   if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
