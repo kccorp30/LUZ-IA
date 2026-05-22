@@ -1056,6 +1056,22 @@ app.get("/api/mesa-estados", function(req, res) {
 });
 // ── HEALTH CHECK — Fly.io lo usa para saber si el servidor está vivo ──
 // ── MESAS ESTADO — para ESP32 ─────────────────────────────────────
+// ── ESP32 REGISTRO — dispositivo se registra al encender ──
+app.post("/api/esp32-registro", async function(req, res) {
+  var { restaurante_id, mesa, mac, ip, num_leds } = req.body;
+  if (!restaurante_id || !mesa) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" };
+    await axios.post(SUPABASE_URL + "/rest/v1/esp32_dispositivos?on_conflict=restaurante_id,mesa",
+      { restaurante_id, mesa, mac: mac||null, ip: ip||null, num_leds: num_leds||8, online: true, last_seen: new Date().toISOString() },
+      { headers: h }
+    );
+    console.log("[ESP32] Mesa " + mesa + " registrada — IP:" + ip + " MAC:" + mac);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get("/api/mesas-estado", async function(req, res) {
   var restaurante_id = req.query.restaurante_id;
   if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
