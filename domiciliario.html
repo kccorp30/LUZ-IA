@@ -348,16 +348,22 @@ function iniciarApp(){
 }
 
 function iniciarGPS(){
-  if(!navigator.geolocation)return;
-  setInterval(function(){
-    if(!pedActivo||!domi)return;
-    navigator.geolocation.getCurrentPosition(function(pos){
-      posActual=[pos.coords.latitude,pos.coords.longitude];
+  if(!navigator.geolocation){console.log("[GPS] No disponible");return;}
+  // Posición inicial inmediata
+  navigator.geolocation.getCurrentPosition(function(pos){
+    posActual=[pos.coords.latitude,pos.coords.longitude];
+    console.log("[GPS] Posición inicial:",posActual);
+  },function(e){console.log("[GPS] Error:",e.message);},{enableHighAccuracy:true,timeout:10000});
+  // Watch continuo — actualiza en cada movimiento y cada 10s
+  navigator.geolocation.watchPosition(function(pos){
+    posActual=[pos.coords.latitude,pos.coords.longitude];
+    if(mapaInst&&mapaMarker)mapaMarker.setLatLng(posActual);
+    if(domi){
       fetch("/api/domi-ubicacion",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({domiciliario_id:domi.id,lat:pos.coords.latitude,lng:pos.coords.longitude,restaurante_id:restId})}).catch(function(){});
-      if(mapaInst&&mapaMarker)mapaMarker.setLatLng(posActual);
-    },null,{enableHighAccuracy:true,timeout:8000});
-  },15000);
+        body:JSON.stringify({domiciliario_id:domi.id,lat:pos.coords.latitude,lng:pos.coords.longitude,restaurante_id:restId,pedido_id:pedActivo?pedActivo.id:null})
+      }).catch(function(){});
+    }
+  },function(e){console.log("[GPS] Watch error:",e.code,e.message);},{enableHighAccuracy:true,timeout:15000,maximumAge:5000});
 }
 
 var pedAnteriorId=null;
@@ -465,7 +471,7 @@ async function marcarEntregado(){
       body:JSON.stringify({id:pedActivo.id,estado:"entregado",telefono_cliente:pedActivo.cliente_tel,numero_pedido:pedActivo.numero_pedido,restaurante_id:restId})});
     var mins=Math.floor((Date.now()-new Date(pedActivo.created_at))/60000);tiempos.push(mins);
     historial.unshift({num:pedActivo.numero_pedido,dir:formatDir(pedActivo.direccion),total:pedActivo.total,ts:new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})});
-    ganancias+=Number(pedActivo.total||0)*0.08;
+    ganancias+=Number(pedActivo.total||0);
     var n=pedActivo.numero_pedido;pedActivo=null;pedAnteriorId=null;
     renderSinPedido();actualizarStats();renderHistorial();
     toast("✅ Entrega #"+n+" confirmada");
@@ -486,7 +492,12 @@ function actualizarStats(){
   if(tiempos.length){var avg=Math.round(tiempos.reduce(function(a,b){return a+b;},0)/tiempos.length);document.getElementById("stProm").textContent=avg+"m";}
 }
 async function cargarHistorial(){
-  try{var r=await fetch("/api/domi-historial?restaurante_id="+restId+"&domiciliario_id="+encodeURIComponent(domi.id));var data=await r.json();historial=data||[];renderHistorial();}catch(e){}
+  try{var r=await fetch("/api/domi-historial?restaurante_id="+restId+"&domiciliario_id="+encodeURIComponent(domi.id));var data=await r.json();
+    historial=data||[];
+    // Recalcular ganancias desde historial real
+    ganancias=historial.reduce(function(s,p){return s+Number(p.total||0);},0);
+    renderHistorial();actualizarStats();
+  }catch(e){}
 }
 function renderHistorial(){
   var el=document.getElementById("histList");
