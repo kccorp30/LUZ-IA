@@ -1021,6 +1021,20 @@ select.finput{cursor:pointer}
         <div><div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">Domiciliarios</div><div style="font-size:13px;color:var(--text3);margin-top:2px">Control y estadisticas de tu equipo</div></div>
         <button onclick="toggleCuadreDomis()" style="background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(16,185,129,0.1));border:1px solid rgba(16,185,129,0.3);border-radius:12px;color:#6ee7b7;padding:8px 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">💰 Cuadre</button>
       </div>
+
+      <!-- MAPA EN TIEMPO REAL -->
+      <div style="margin:8px 12px;border-radius:18px;overflow:hidden;border:1px solid rgba(124,58,237,0.25);box-shadow:0 4px 24px rgba(0,0,0,0.4)">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(124,58,237,0.1);border-bottom:1px solid rgba(124,58,237,0.18)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;animation:sdotP 2s ease infinite"></div>
+            <span style="font-size:12px;font-weight:800;color:#c4b5fd">📍 Tracking en vivo</span>
+          </div>
+          <button onclick="refrescarMapaDomis()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:8px;color:var(--text3);padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">↻ Actualizar</button>
+        </div>
+        <div id="mapaDomisAdmin" style="height:220px;background:#0d0c1a"></div>
+        <div id="mapaDomisInfo" style="padding:8px 14px;background:rgba(0,0,0,0.2);font-size:11px;color:var(--text3);font-weight:600">Cargando posiciones...</div>
+      </div>
+
       <div id="cuadreDomisPanel" style="display:none;margin:0 12px 10px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.2);border-radius:16px;overflow:hidden;">
         <div style="padding:12px 16px;border-bottom:1px solid rgba(16,185,129,0.15);display:flex;justify-content:space-between;align-items:center">
           <div style="font-size:13px;font-weight:800;color:#6ee7b7">💰 Cuadre del día — Domiciliarios</div>
@@ -1733,7 +1747,7 @@ function showTab(n){
   if(n==="promo"){loadPromoCount();renderProgs();}
   if(n==="chat")loadChatUniversal();if(n==="cupones")renderCupones();
   if(n==="mapa"){setTimeout(function(){cargarZonas();initMapa();},80);}
-  if(n==="config"){cargarDomiciliarios();actualizarLinkDomi();}if(n==="domis")loadDomiPanel();
+  if(n==="config"){cargarDomiciliarios();actualizarLinkDomi();}if(n==="domis"){loadDomiPanel();setTimeout(refrescarMapaDomis,400);}
   if(n==="clientes"){loadClientes();loadCanjeAdmin();loadCanjesRecibidos();}
   if(n==="mesas"){loadMesasRapidas();cargarMeseros();iniciarPollingMesas();}
   else{detenerPollingMesas();}
@@ -1741,6 +1755,54 @@ function showTab(n){
 }
 
 // DOMICILIARIOS
+// ── MAPA DOMIS EN TIEMPO REAL ─────────────────────────────────────
+var mapaDomisInst=null;var mapaDomisMarkers={};
+function initMapaDomis(){
+  if(mapaDomisInst)return;
+  var el=document.getElementById("mapaDomisAdmin");
+  if(!el)return;
+  mapaDomisInst=L.map("mapaDomisAdmin",{zoomControl:false,attributionControl:false}).setView([3.4516,-76.5320],13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(mapaDomisInst);
+}
+async function refrescarMapaDomis(){
+  if(!rest)return;
+  initMapaDomis();
+  try{
+    var r=await fetch("/api/domi-ubicaciones?restaurante_id="+rest.id);
+    var data=await r.json();
+    var locs=data||[];
+    var info=document.getElementById("mapaDomisInfo");
+    if(!locs.length){info.textContent="Sin domiciliarios con posición activa";return;}
+    var bounds=[];
+    // Limpiar markers viejos
+    Object.values(mapaDomisMarkers).forEach(function(m){if(m._map)mapaDomisInst.removeLayer(m);});
+    mapaDomisMarkers={};
+    locs.forEach(function(u){
+      if(!u.lat||!u.lng)return;
+      var mins=Math.floor((Date.now()-new Date(u.updated_at))/60000);
+      var color=mins<5?"#10b981":mins<15?"#f97316":"#ef4444";
+      var icon=L.divIcon({
+        html:'<div style="width:36px;height:36px;background:'+color+';border-radius:50%;border:3px solid white;box-shadow:0 2px 10px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:16px">🛵</div>',
+        className:"",iconSize:[36,36],iconAnchor:[18,18]
+      });
+      var marker=L.marker([u.lat,u.lng],{icon:icon}).addTo(mapaDomisInst);
+      var nombre=u.domiciliarios?u.domiciliarios.nombre:"Domi";
+      marker.bindPopup('<b>🛵 '+nombre+'</b><br>Última pos: hace '+mins+' min'+(u.pedido_id?'<br>🔴 Con pedido activo':'<br>🟢 Disponible'));
+      mapaDomisMarkers[u.domiciliario_id]=marker;
+      bounds.push([u.lat,u.lng]);
+    });
+    if(bounds.length>1)mapaDomisInst.fitBounds(L.latLngBounds(bounds),{padding:[24,24]});
+    else if(bounds.length===1)mapaDomisInst.setView(bounds[0],15);
+    info.textContent=locs.length+" domiciliario"+(locs.length!==1?"s":"")+" activo"+(locs.length!==1?"s":"")+" · Actualizado ahora";
+  }catch(e){document.getElementById("mapaDomisInfo").textContent="Error cargando posiciones";}
+}
+// Auto-refrescar mapa domis cada 20s cuando la pestaña está activa
+setInterval(function(){
+  if(document.getElementById("page-domis")&&document.getElementById("page-domis").classList.contains("active")){
+    refrescarMapaDomis();
+  }
+},20000);
+
 function toggleCuadreDomis(){
   var p=document.getElementById("cuadreDomisPanel");
   if(p.style.display==="none"){p.style.display="block";loadCuadreDomis("hoy");}
