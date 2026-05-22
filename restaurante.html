@@ -1124,55 +1124,107 @@ select.finput{cursor:pointer}
 
     <!-- MESAS -->
     <div class="page" id="page-mesas">
-      <!-- HEADER -->
-      <div style="padding:16px 12px 8px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+
+      <!-- ── HEADER ── -->
+      <div style="padding:16px 14px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px">
         <div>
-          <div style="font-size:22px;font-weight:900;letter-spacing:-0.02em">⚡ Mesas Rápidas</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px">Control en tiempo real · LED sincronizado</div>
+          <div style="font-size:20px;font-weight:900;letter-spacing:-.02em">⚡ Mesas Rápidas</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Control LED · Tiempo real · ESP32</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <div style="font-size:11px;color:var(--text3)">Mesas:</div>
-          <input id="mesaCount" type="number" min="1" max="30" value="10" onchange="loadMesasRapidas()" style="width:50px;padding:6px 8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:white;font-size:13px;font-weight:700;outline:none;text-align:center">
-          <button onclick="loadMesasRapidas()" style="padding:7px 12px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.3);border-radius:10px;color:#c4b5fd;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">⟳</button>
+          <input id="mesaCount" type="number" min="1" max="30" value="6" onchange="loadMesasRapidas()" style="width:46px;padding:6px 8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:white;font-size:13px;font-weight:700;outline:none;text-align:center">
+          <button onclick="loadMesasRapidas()" style="padding:7px 12px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.3);border-radius:10px;color:#c4b5fd;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">⟳ Actualizar</button>
         </div>
       </div>
 
-      <!-- LEYENDA LED -->
-      <div style="padding:0 12px 10px;display:flex;gap:10px;overflow-x:auto;scrollbar-width:none">
-        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:10px;height:10px;border-radius:50%;background:#555"></div><span style="font-size:10px;color:var(--text3)">Libre</span></div>
-        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:10px;height:10px;border-radius:50%;background:#3b82f6"></div><span style="font-size:10px;color:var(--text3)">Ocupada</span></div>
-        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:10px;height:10px;border-radius:50%;background:#f59e0b"></div><span style="font-size:10px;color:var(--text3)">En prep.</span></div>
-        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:10px;height:10px;border-radius:50%;background:#10b981"></div><span style="font-size:10px;color:var(--text3)">Listo</span></div>
-        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.6)"></div><span style="font-size:10px;color:var(--text3)">Sirviendo</span></div>
-        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:10px;height:10px;border-radius:50%;background:#ef4444"></div><span style="font-size:10px;color:var(--text3)">Cuenta</span></div>
+      <!-- ── ESP32 MONITOR ── -->
+      <div style="padding:0 14px 12px">
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden">
+          <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Dispositivos ESP32</div>
+            <div id="esp32Count" style="font-size:11px;color:#c4b5fd;font-weight:700">Cargando...</div>
+          </div>
+          <div id="esp32Lista" style="padding:10px 14px;display:flex;flex-direction:column;gap:7px">
+            <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">Cargando dispositivos...</div>
+          </div>
+        </div>
       </div>
 
-      <!-- GRID MESAS RÁPIDAS -->
-      <div style="padding:0 12px">
+      <!-- ── LEYENDA LED ── -->
+      <div style="padding:0 14px 10px;display:flex;gap:10px;overflow-x:auto;scrollbar-width:none">
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#10b981"></div><span style="font-size:10px;color:var(--text3)">Libre</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;color:var(--text3)">Ocupada</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#fbbf24"></div><span style="font-size:10px;color:var(--text3)">Esperando</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#3b82f6"></div><span style="font-size:10px;color:var(--text3)">Pedido listo</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,#f97316,#10b981)"></div><span style="font-size:10px;color:var(--text3)">Celebración</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#333"></div><span style="font-size:10px;color:var(--text3)">Inactiva</span></div>
+      </div>
+
+      <!-- ── GRID MESAS ── -->
+      <div style="padding:0 14px 4px">
         <div class="mesa-rapida-grid" id="mesasRapidasGrid"></div>
       </div>
 
-      <!-- SEPARADOR -->
-      <div style="margin:8px 12px 12px;height:1px;background:rgba(255,255,255,0.06)"></div>
+      <!-- ── ARMAR PEDIDO DESDE PANEL ── -->
+      <div style="padding:0 14px 14px">
+        <div style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15);border-radius:16px;overflow:hidden">
+          <div style="padding:12px 14px;border-bottom:1px solid rgba(124,58,237,0.1);display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">🧾</span>
+            <div>
+              <div style="font-size:14px;font-weight:800">Armar pedido de mesa</div>
+              <div style="font-size:11px;color:var(--text3)">Crea un pedido manualmente para cualquier mesa</div>
+            </div>
+          </div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+            <!-- Mesa selector -->
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:12px;color:var(--text3);white-space:nowrap">Mesa:</span>
+              <select id="pedMesaNum" style="flex:1;padding:9px 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:white;font-size:13px;font-weight:700;outline:none">
+                <option value="1">Mesa 1</option><option value="2">Mesa 2</option><option value="3">Mesa 3</option>
+                <option value="4">Mesa 4</option><option value="5">Mesa 5</option><option value="6">Mesa 6</option>
+              </select>
+            </div>
+            <!-- Items del pedido -->
+            <div id="pedMesaItems" style="display:flex;flex-direction:column;gap:6px;min-height:40px">
+              <div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">Sin items — agrega productos abajo</div>
+            </div>
+            <!-- Agregar item -->
+            <div style="display:flex;gap:6px">
+              <select id="pedMesaProd" style="flex:1;padding:9px 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:white;font-size:12px;outline:none">
+                <option value="">Selecciona producto...</option>
+              </select>
+              <button onclick="pedMesaAgregarItem()" style="padding:9px 14px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.3);border-radius:10px;color:#c4b5fd;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">+ Agregar</button>
+            </div>
+            <!-- Notas -->
+            <input id="pedMesaNotas" placeholder="Notas especiales (opcional)..." class="finput" style="padding:9px 12px;font-size:12px">
+            <!-- Total y confirmar -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">
+              <div style="font-size:14px;font-weight:800;color:#6ee7b7">Total: $<span id="pedMesaTotal">0</span></div>
+              <button onclick="confirmarPedidoMesa()" style="padding:11px 22px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:12px;color:white;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(16,185,129,0.3)">✅ Confirmar pedido</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <!-- QR SECTION -->
-      <div style="padding:0 12px 4px">
-        <div style="font-size:14px;font-weight:800;margin-bottom:4px">📱 QR por mesa</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Cada QR lleva al cliente directo al menú con su mesa asignada.</div>
+      <!-- ── QR SECTION ── -->
+      <div style="padding:0 14px 4px">
+        <div style="font-size:13px;font-weight:800;margin-bottom:4px">📱 QR por mesa</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px">Cada QR lleva al cliente directo al menú con su mesa.</div>
         <div class="mesas-grid" id="mesasGrid"></div>
       </div>
 
-      <!-- MESEROS -->
-      <div style="padding:8px 12px 4px">
-        <div style="font-size:14px;font-weight:800;margin-bottom:4px">👨‍🍳 Meseros</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Registra los meseros para asignarles pedidos.</div>
-        <div id="meserosList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+      <!-- ── MESEROS ── -->
+      <div style="padding:8px 14px 16px">
+        <div style="font-size:13px;font-weight:800;margin-bottom:4px">👨‍🍳 Meseros</div>
+        <div id="meserosList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
         <div style="display:flex;gap:8px">
           <input id="meseroNombreInput" placeholder="Nombre del mesero..." class="finput" style="flex:1;padding:10px 14px">
           <button onclick="agregarMesero()" style="padding:10px 18px;background:linear-gradient(135deg,#10b981,#2563eb);border:none;border-radius:12px;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">+ Agregar</button>
         </div>
         <button onclick="window.open('/mesero?rest='+rest.id,'_blank')" style="width:100%;margin-top:10px;padding:13px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:14px;color:#34d399;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">🪑 Abrir panel de meseros</button>
       </div>
+
     </div>
 
     <!-- MAPA -->
@@ -3167,31 +3219,35 @@ function ejecutarResetFidelidad(){
 
 // MESAS & QR
 // ── MESAS RÁPIDAS ─────────────────────────────────────────────────────────────
-var mesasRapidasEstados = {}; // { mesa_1: "libre", mesa_2: "ocupada", ... }
+var mesasRapidasEstados = {};
 var mesasRapidasTimer = null;
+var esp32Dispositivos = [];
+var esp32Conocidos = new Set();
 
 var MR_COLORES = {
-  libre:{led:"#333",label:"Libre",cls:"libre"},
-  ocupada:{led:"#3b82f6",label:"Ocupada",cls:"ocupada"},
-  confirmado:{led:"#f59e0b",label:"En prep.",cls:"en_preparacion"},
-  en_preparacion:{led:"#f59e0b",label:"En prep.",cls:"en_preparacion"},
-  listo:{led:"#10b981",label:"¡Listo!",cls:"listo"},
-  sirviendo:{led:"rgba(255,255,255,0.7)",label:"Sirviendo",cls:"sirviendo"},
-  cuenta:{led:"#ef4444",label:"La cuenta",cls:"cuenta"}
+  libre:         { led:"#10b981", label:"Libre",         btn:"Ocupar",     next:"ocupada" },
+  ocupada:       { led:"#f97316", label:"Ocupada",       btn:"Espera",     next:"espera" },
+  espera:        { led:"#fbbf24", label:"Esperando",     btn:"Pedido tomado", next:"ocupada" },
+  lista:         { led:"#3b82f6", label:"Pedido listo",  btn:"Servido ✓",  next:"ocupada" },
+  listo:         { led:"#3b82f6", label:"Pedido listo",  btn:"Servido ✓",  next:"ocupada" },
+  pedido_listo:  { led:"#3b82f6", label:"Pedido listo",  btn:"Servido ✓",  next:"ocupada" },
+  celebracion:   { led:"linear-gradient(135deg,#f97316,#10b981)", label:"Celebración", btn:"Normal", next:"ocupada" },
+  apagada:       { led:"#1f1f2e", label:"Inactiva",      btn:"Activar",    next:"libre" },
+  inactiva:      { led:"#1f1f2e", label:"Inactiva",      btn:"Activar",    next:"libre" }
 };
 
 function loadMesasRapidas(){
   if(!rest)return;
-  var n=parseInt(document.getElementById("mesaCount").value)||10;
-  // Cargar estados del backend
-  fetch("/api/mesa-estados?restaurante_id="+rest.id)
-  .then(function(r){return r.json();})
-  .then(function(estados){
-    mesasRapidasEstados=estados||{};
-    renderMesasRapidas(n);
-  })
-  .catch(function(){renderMesasRapidas(n);});
-  // Generar QR también
+  var n=parseInt(document.getElementById("mesaCount").value)||6;
+  fetch("/api/mesas-estado?restaurante_id="+rest.id)
+    .then(function(r){return r.json();})
+    .then(function(arr){
+      mesasRapidasEstados={};
+      (arr||[]).forEach(function(m){mesasRapidasEstados["mesa_"+m.mesa]=m.estado;});
+      renderMesasRapidas(n);
+    }).catch(function(){renderMesasRapidas(n);});
+  cargarESP32();
+  cargarProductosMesa();
   loadMesas();
 }
 
@@ -3203,54 +3259,243 @@ function renderMesasRapidas(n){
     var key="mesa_"+i;
     var est=mesasRapidasEstados[key]||"libre";
     var info=MR_COLORES[est]||MR_COLORES.libre;
-    h+='<div class="mr-card '+info.cls+'" id="mr-card-'+i+'">';
-    h+='<div class="mr-led" id="mr-led-'+i+'" style="background:'+info.led+'"></div>';
-    h+='<div class="mr-num">Mesa '+i+'</div>';
-    h+='<div class="mr-estado" id="mr-est-'+i+'">'+info.label+'</div>';
-    h+='<div class="mr-btns">';
-    if(est==="libre"){
-      h+='<button class="mr-btn primary" onclick="cambiarEstadoMesa('+i+',\'ocupada\')">Ocupar</button>';
-    } else if(est==="ocupada"){
-      h+='<button class="mr-btn primary" onclick="cambiarEstadoMesa('+i+',\'libre\')">Liberar</button>';
-    } else if(est==="listo"){
-      h+='<button class="mr-btn primary" onclick="cambiarEstadoMesa('+i+',\'sirviendo\')">Servido ✓</button>';
-    } else if(est==="sirviendo"){
-      h+='<button class="mr-btn primary" onclick="cambiarEstadoMesa('+i+',\'cuenta\')">Pide cuenta</button>';
-      h+='<button class="mr-btn" onclick="cambiarEstadoMesa('+i+',\'libre\')">Liberar</button>';
-    } else if(est==="cuenta"){
-      h+='<button class="mr-btn primary" onclick="cambiarEstadoMesa('+i+',\'libre\')">Cobrado ✓</button>';
-    } else {
-      h+='<button class="mr-btn" onclick="cambiarEstadoMesa('+i+',\'libre\')">Liberar</button>';
-    }
-    h+='</div></div>';
+    var ledStyle="background:"+info.led+";width:14px;height:14px;border-radius:50%;flex-shrink:0";
+    h+='<div class="mr-card '+est+'" id="mr-card-'+i+'" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px">';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between">';
+    h+='<div style="display:flex;align-items:center;gap:7px"><div style="'+ledStyle+'"></div><span style="font-size:14px;font-weight:800">Mesa '+i+'</span></div>';
+    h+='<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,0.08);color:var(--text2)">'+info.label+'</span>';
+    h+='</div>';
+    // Botones de estado
+    h+='<div style="display:flex;gap:5px;flex-wrap:wrap">';
+    var estados=[
+      {e:"libre",ico:"🟢",label:"Libre"},
+      {e:"ocupada",ico:"🟠",label:"Ocupar"},
+      {e:"espera",ico:"🟡",label:"Espera"},
+      {e:"lista",ico:"🔵",label:"Listo"},
+      {e:"celebracion",ico:"🎉",label:"Fiesta"},
+      {e:"apagada",ico:"⚫",label:"Apagar"}
+    ];
+    estados.forEach(function(s){
+      var activo=est===s.e;
+      h+='<button onclick="cambiarEstadoMesa('+i+',\''+s.e+'\')" style="padding:5px 9px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid '+(activo?'rgba(124,58,237,0.6)':'rgba(255,255,255,0.1)')+';background:'+(activo?'rgba(124,58,237,0.2)':'rgba(255,255,255,0.04)')+';color:'+(activo?'#c4b5fd':'var(--text2)')+'">'+s.ico+' '+s.label+'</button>';
+    });
+    h+='</div>';
+    // Botón armar pedido
+    h+='<button onclick="abrirPedidoMesa('+i+')" style="width:100%;padding:8px;border-radius:10px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">🧾 Armar pedido</button>';
+    h+='</div>';
   }
   grid.innerHTML=h;
 }
 
 function cambiarEstadoMesa(num,estado){
   if(!rest)return;
-  // Actualizar local inmediatamente
   mesasRapidasEstados["mesa_"+num]=estado;
-  renderMesasRapidas(parseInt(document.getElementById("mesaCount").value)||10);
-  // Enviar al backend
-  fetch("/api/mesa-led",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,mesa:num,estado:estado})})
-  .then(function(r){return r.json();})
-  .then(function(d){if(!d.ok)notif("Error sincronizando LED");})
-  .catch(function(){});
+  renderMesasRapidas(parseInt(document.getElementById("mesaCount").value)||6);
+  fetch("/api/mesa-estado",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({restaurante_id:rest.id,mesa:num,estado:estado})
+  }).catch(function(){});
 }
 
-// Polling de mesas cada 3 segundos cuando está activa
+// ── ESP32 MONITOR ─────────────────────────────────────────
+async function cargarESP32(){
+  if(!rest)return;
+  try{
+    var r=await fetch("/api/esp32-dispositivos?restaurante_id="+rest.id);
+    var data=await r.json();
+    var dispositivos=data||[];
+    // Detectar nuevos dispositivos
+    dispositivos.forEach(function(d){
+      var key=d.mac||("mesa_"+d.mesa);
+      if(!esp32Conocidos.has(key)&&esp32Conocidos.size>0){
+        animNuevoDispositivo(d);
+      }
+      esp32Conocidos.add(key);
+    });
+    esp32Dispositivos=dispositivos;
+    renderESP32(dispositivos);
+  }catch(e){}
+}
+
+function renderESP32(dispositivos){
+  var lista=document.getElementById("esp32Lista");
+  var count=document.getElementById("esp32Count");
+  if(!lista)return;
+  var online=dispositivos.filter(function(d){
+    return d.last_seen&&(Date.now()-new Date(d.last_seen))<30000;
+  }).length;
+  if(count)count.textContent=online+" / "+dispositivos.length+" online";
+  if(!dispositivos.length){
+    lista.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">Sin dispositivos registrados aún</div>';
+    return;
+  }
+  lista.innerHTML=dispositivos.map(function(d){
+    var isOnline=d.last_seen&&(Date.now()-new Date(d.last_seen))<30000;
+    var dotColor=isOnline?"#10b981":"#ef4444";
+    var mins=d.last_seen?Math.floor((Date.now()-new Date(d.last_seen))/60000):null;
+    var cuandoVisto=mins===null?"Nunca":mins<1?"Ahora mismo":mins+"m atrás";
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07)">'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:'+dotColor+';flex-shrink:0;box-shadow:0 0 6px '+dotColor+'"></div>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:13px;font-weight:700">Mesa '+d.mesa+' — '+d.num_leds+' LEDs</div>'
+      +'<div style="font-size:10px;color:var(--text3)">IP: '+(d.ip||"—")+' · '+cuandoVisto+'</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:5px">'
+      +'<button onclick="cambiarEstadoMesa('+d.mesa+',\'celebracion\')" style="padding:4px 9px;border-radius:8px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.25);color:#fdba74;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🎉</button>'
+      +'<button onclick="cambiarEstadoMesa('+d.mesa+',\'libre\')" style="padding:4px 9px;border-radius:8px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">Reset</button>'
+      +'</div>'
+      +'</div>';
+  }).join("");
+}
+
+// ── ANIMACIÓN NUEVO DISPOSITIVO ───────────────────────────
+function animNuevoDispositivo(d){
+  var overlay=document.createElement("div");
+  overlay.style.cssText="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(7,7,16,0.85);backdrop-filter:blur(12px);pointer-events:none";
+  overlay.innerHTML=`
+    <div style="text-align:center;animation:newDevIn .5s cubic-bezier(.22,.68,0,1.2) both">
+      <style>
+        @keyframes newDevIn{from{transform:scale(.5) translateY(30px);opacity:0}to{transform:none;opacity:1}}
+        @keyframes scanLine{0%{top:0}100%{top:100%}}
+        @keyframes pulse3d{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.8)}50%{box-shadow:0 0 0 30px rgba(124,58,237,0)}}
+      </style>
+      <div style="position:relative;width:120px;height:120px;margin:0 auto 20px;border-radius:24px;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;animation:pulse3d 1s ease infinite;overflow:hidden">
+        <div style="position:absolute;width:100%;height:3px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.6),transparent);animation:scanLine .8s linear infinite"></div>
+        <span style="font-size:48px">📡</span>
+      </div>
+      <div style="font-size:24px;font-weight:900;color:#fff;margin-bottom:6px">¡Nuevo dispositivo!</div>
+      <div style="font-size:16px;color:#c4b5fd;margin-bottom:4px">Mesa ${d.mesa} conectada</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.4)">${d.ip||""} · ${d.num_leds||8} LEDs</div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
+        ${Array.from({length:d.num_leds||8},function(_,i){
+          return '<div style="width:16px;height:16px;border-radius:50%;background:#7c3aed;animation:pulse3d '+(0.5+i*0.1)+'s ease infinite '+i*0.08+'s"></div>';
+        }).join("")}
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(function(){
+    overlay.style.opacity="0";overlay.style.transition="opacity .5s";
+    setTimeout(function(){if(overlay.parentNode)overlay.parentNode.removeChild(overlay);},500);
+  },4000);
+  luzHablar("Nueva mesa conectada. Mesa "+d.mesa+" en línea con "+( d.num_leds||8)+" LEDs.");
+}
+
+// ── ARMAR PEDIDO DESDE PANEL ──────────────────────────────
+var pedMesaItemsList=[];
+
+function abrirPedidoMesa(num){
+  document.getElementById("pedMesaNum").value=num;
+  pedMesaItemsList=[];
+  renderPedMesaItems();
+  document.getElementById("pedMesaNotas").value="";
+  document.getElementById("pedMesaNum").scrollIntoView({behavior:"smooth",block:"center"});
+}
+
+function cargarProductosMesa(){
+  if(!rest)return;
+  fetch("/api/menu?restaurante_id="+rest.id)
+    .then(function(r){return r.json();})
+    .then(function(items){
+      var sel=document.getElementById("pedMesaProd");
+      if(!sel)return;
+      sel.innerHTML='<option value="">Selecciona producto...</option>';
+      (items||[]).filter(function(p){return p.disponible!==false;}).forEach(function(p){
+        var opt=document.createElement("option");
+        opt.value=JSON.stringify({id:p.id,nombre:p.nombre,precio:p.precio});
+        opt.textContent=p.nombre+" — $"+Number(p.precio).toLocaleString("es-CO");
+        sel.appendChild(opt);
+      });
+    }).catch(function(){});
+}
+
+function pedMesaAgregarItem(){
+  var sel=document.getElementById("pedMesaProd");
+  if(!sel.value)return;
+  try{
+    var prod=JSON.parse(sel.value);
+    var existe=pedMesaItemsList.find(function(x){return x.id===prod.id;});
+    if(existe){existe.qty++;}else{pedMesaItemsList.push({id:prod.id,nombre:prod.nombre,precio:prod.precio,qty:1});}
+    renderPedMesaItems();
+    sel.value="";
+  }catch(e){}
+}
+
+function renderPedMesaItems(){
+  var el=document.getElementById("pedMesaItems");
+  var total=document.getElementById("pedMesaTotal");
+  if(!el)return;
+  if(!pedMesaItemsList.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">Sin items — agrega productos abajo</div>';
+    if(total)total.textContent="0";
+    return;
+  }
+  var sum=0;
+  el.innerHTML=pedMesaItemsList.map(function(item,idx){
+    sum+=item.precio*item.qty;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,0.04);border-radius:10px;border:1px solid rgba(255,255,255,0.07)">'
+      +'<span style="flex:1;font-size:12px;font-weight:700">'+escHtml(item.nombre)+'</span>'
+      +'<button onclick="pedMesaQty('+idx+',-1)" style="width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:white;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit">−</button>'
+      +'<span style="font-size:13px;font-weight:800;min-width:16px;text-align:center">'+item.qty+'</span>'
+      +'<button onclick="pedMesaQty('+idx+',1)" style="width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:white;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit">+</button>'
+      +'<span style="font-size:12px;color:#6ee7b7;min-width:60px;text-align:right">$'+Number(item.precio*item.qty).toLocaleString("es-CO")+'</span>'
+      +'</div>';
+  }).join("");
+  if(total)total.textContent=Number(sum).toLocaleString("es-CO");
+}
+
+function pedMesaQty(idx,delta){
+  pedMesaItemsList[idx].qty+=delta;
+  if(pedMesaItemsList[idx].qty<=0)pedMesaItemsList.splice(idx,1);
+  renderPedMesaItems();
+}
+
+async function confirmarPedidoMesa(){
+  if(!rest||!pedMesaItemsList.length){notif("Agrega al menos un producto");return;}
+  var mesaNum=document.getElementById("pedMesaNum").value;
+  var notas=document.getElementById("pedMesaNotas").value.trim();
+  var total=pedMesaItemsList.reduce(function(s,x){return s+x.precio*x.qty;},0);
+  var items=pedMesaItemsList.map(function(x){return x.nombre+(x.qty>1?" x"+x.qty:"")+" $"+Number(x.precio).toLocaleString("es-CO");});
+  try{
+    var r=await fetch("/api/crear-pedido",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        restaurante_id:rest.id,
+        direccion:"Mesa "+mesaNum,
+        tipo_pedido:"mesa",
+        items:items,
+        total:total,
+        notas_especiales:notas||"",
+        metodo_pago:"efectivo",
+        cliente_tel:"panel"
+      })
+    });
+    var d=await r.json();
+    if(d.ok||d.numero_pedido){
+      notif("✅ Pedido #"+(d.numero_pedido||"")+" creado para Mesa "+mesaNum);
+      cambiarEstadoMesa(parseInt(mesaNum),"ocupada");
+      pedMesaItemsList=[];
+      renderPedMesaItems();
+      document.getElementById("pedMesaNotas").value="";
+    }else{notif("Error: "+(d.error||"Error desconocido"));}
+  }catch(e){notif("Error al crear pedido: "+e.message);}
+}
+
+function escHtml(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+// Polling mesas
 function iniciarPollingMesas(){
   if(mesasRapidasTimer)clearInterval(mesasRapidasTimer);
   mesasRapidasTimer=setInterval(function(){
     if(!rest)return;
-    fetch("/api/mesa-estados?restaurante_id="+rest.id)
-    .then(function(r){return r.json();})
-    .then(function(estados){
-      var changed=JSON.stringify(estados)!==JSON.stringify(mesasRapidasEstados);
-      if(changed){mesasRapidasEstados=estados||{};renderMesasRapidas(parseInt(document.getElementById("mesaCount").value)||10);}
-    }).catch(function(){});
-  },3000);
+    fetch("/api/mesas-estado?restaurante_id="+rest.id)
+      .then(function(r){return r.json();})
+      .then(function(arr){
+        var nuevo={};(arr||[]).forEach(function(m){nuevo["mesa_"+m.mesa]=m.estado;});
+        if(JSON.stringify(nuevo)!==JSON.stringify(mesasRapidasEstados)){
+          mesasRapidasEstados=nuevo;
+          renderMesasRapidas(parseInt(document.getElementById("mesaCount").value)||6);
+        }
+      }).catch(function(){});
+    cargarESP32();
+  },5000);
 }
 function detenerPollingMesas(){if(mesasRapidasTimer){clearInterval(mesasRapidasTimer);mesasRapidasTimer=null;}}
 
