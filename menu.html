@@ -2620,7 +2620,6 @@ body::after {
       <div class="tipos-tabs">
         <button class="tipos-tab on" data-tipo="domicilio" onclick="setTipoCheckout('domicilio')">🛵 Domicilio</button>
         <button class="tipos-tab" data-tipo="recoger" onclick="setTipoCheckout('recoger')">🏪 Recoger</button>
-        <button class="tipos-tab" data-tipo="mesa" onclick="setTipoCheckout('mesa')">🪑 Mesa</button>
       </div>
 
       <!-- Cliente: WhatsApp -->
@@ -2652,14 +2651,7 @@ body::after {
         </div>
       </div>
 
-      <!-- Selector de mesa (para comer en el local) -->
-      <div id="flMesa" style="display:none">
-        <div class="fld">
-          <label class="fld-label">🪑 Número de mesa</label>
-          <input type="number" class="fld-input" id="cliMesa" placeholder="Ej: 1" min="1" max="30" style="text-align:center;font-size:18px;font-weight:700">
-          <div class="fld-hint" style="color:#c4b5fd;margin-top:4px;font-size:11px">El pedido llegará directo a tu mesa 🍔</div>
-        </div>
-      </div>
+      <!-- Cupón -->
       <div class="fld">
         <label class="fld-label">🎟 Cupón (opcional)</label>
         <div class="cup-row">
@@ -3697,10 +3689,9 @@ function setTipoCheckout(t) {
   document.querySelectorAll('.tipos-tab').forEach(function(el){
     el.classList.toggle('on', el.getAttribute('data-tipo') === t);
   });
+  // Mostrar/ocultar dirección
   var fd = document.getElementById('flDomicilio');
-  var fm = document.getElementById('flMesa');
   if (fd) fd.style.display = (t === 'domicilio' ? '' : 'none');
-  if (fm) fm.style.display = (t === 'mesa' ? '' : 'none');
   actualizarTotalesCheckout();
 }
 
@@ -4107,7 +4098,7 @@ async function enviarPedido() {
       restaurante_id: rest.id,
       cliente_tel: tel,
       nombre_cliente: nom,
-      direccion: tipoPedido === "domicilio" ? document.getElementById("cliDir").value.trim() : (tipoPedido === "mesa" ? "MESA " + (document.getElementById("cliMesa").value.trim()||"?") : ""),
+      direccion: tipoPedido === "domicilio" ? document.getElementById("cliDir").value.trim() : "",
       barrio: tipoPedido === "domicilio" ? document.getElementById("cliBarrio").value.trim() : "",
       tipo_pedido: tipoPedido,
       metodo_pago: pagoSel,
@@ -4146,8 +4137,6 @@ function mostrarExito(num, nombre, ptsGanados) {
   document.getElementById("exitoTitle").textContent = "Pedido enviado, " + nombre.split(" ")[0];
   document.getElementById("exitoSub").textContent = tipoPedido === "domicilio"
     ? "Tu pedido va en camino"
-    : tipoPedido === "mesa"
-    ? "Tu pedido entra directo a cocina 🍔"
     : "Tu pedido estará listo para recoger";
   document.getElementById("exitoNum").textContent = "#" + num;
   if (ptsGanados > 0) {
@@ -4314,12 +4303,44 @@ function renderPedidoCard(p, esActivo) {
   if (p.notas_especiales && p.notas_especiales.indexOf("CANJE") !== -1) {
     h += '<div style="font-size:11px;color:#fbbf24;margin-top:4px;padding:4px 8px;background:rgba(251,191,36,0.08);border-radius:6px">⭐ ' + p.notas_especiales.split("|").filter(function(n){return n.indexOf("CANJE")!==-1;}).join(" · ") + '</div>';
   }
+  // Botón mesero/cuenta — solo para pedidos de mesa activos
+  var esMesaActiva = esActivo && p.direccion && p.direccion.toUpperCase().indexOf("MESA") !== -1;
+  if (esMesaActiva) {
+    var mesaMatch = p.direccion.toUpperCase().match(/MESA\s*(\d+)/);
+    var mesaNum = mesaMatch ? mesaMatch[1] : null;
+    h += '<div style="display:flex;gap:8px;margin-top:8px">';
+    h += '<button onclick="solicitarMesero(' + JSON.stringify(mesaNum) + ',\'mesero\')" style="flex:1;padding:10px;border-radius:12px;background:linear-gradient(135deg,rgba(168,85,247,0.2),rgba(124,58,237,0.2));border:1px solid rgba(168,85,247,0.4);color:#d8b4fe;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">🔔 Llamar mesero</button>';
+    h += '<button onclick="solicitarMesero(' + JSON.stringify(mesaNum) + ',\'cuenta\')" style="flex:1;padding:10px;border-radius:12px;background:linear-gradient(135deg,rgba(168,85,247,0.2),rgba(124,58,237,0.2));border:1px solid rgba(168,85,247,0.4);color:#d8b4fe;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">💳 Pedir cuenta</button>';
+    h += '</div>';
+  }
   h += '<div class="mp-card-bottom">';
   h += '<div class="mp-card-total">' + fmt(p.total) + '</div>';
   h += '<div class="mp-card-pago">' + (pagoLabel[p.metodo_pago] || p.metodo_pago || "") + '</div>';
   h += '</div>';
   h += '</div>';
   return h;
+}
+
+async function solicitarMesero(mesaNum, tipo) {
+  if (!rest || !mesaNum) return;
+  var label = tipo === "cuenta" ? "cuenta" : "mesero";
+  var emoji = tipo === "cuenta" ? "💳" : "🔔";
+  try {
+    // Cambiar LED de la mesa a estado mesero (morado pulsante)
+    await fetch("/api/mesa-estado", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ restaurante_id: rest.id, mesa: mesaNum, estado: tipo === "cuenta" ? "cuenta" : "mesero" })
+    });
+    // Mostrar confirmación visual al cliente
+    var toast = document.createElement("div");
+    toast.style.cssText = "position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#7c3aed,#4f46e5);color:white;padding:12px 24px;border-radius:20px;font-size:14px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(124,58,237,0.5);animation:fadeInUp .3s ease";
+    toast.textContent = emoji + " Solicitud enviada — el mesero llega enseguida";
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.remove(); }, 3000);
+  } catch(e) {
+    console.error("solicitarMesero:", e.message);
+  }
 }
 
 function abrirRewards() {
@@ -4547,12 +4568,9 @@ window.addEventListener("load", async function() {
 
   try {
     // Cargar restaurante desde el backend (no Supabase directo)
-    var apiBase = window.location.origin.includes("localhost") || window.location.protocol === "file:"
-      ? "https://luz-ia-production-4cff.up.railway.app"
-      : "";
     var restUrl = restId
-      ? apiBase + "/api/restaurante?id=" + restId
-      : apiBase + "/api/restaurante";
+      ? "/api/restaurante?id=" + restId
+      : "/api/restaurante";
     var r = await fetch(restUrl);
     if (!r.ok) throw new Error("HTTP " + r.status);
     var d = await r.json();
