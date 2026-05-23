@@ -1203,19 +1203,16 @@ app.post("/api/mesa-estado", async function(req, res) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
-    // Intentar PATCH primero (actualizar existente)
-    var patchR = await axios.patch(
-      SUPABASE_URL + "/rest/v1/mesas?restaurante_id=eq." + restaurante_id + "&numero=eq." + mesa,
-      { estado, updated_at: new Date().toISOString() },
-      { headers: { ...h, "Prefer": "return=minimal" } }
-    ).catch(function(){ return null; });
-    // Si no existe, insertar
-    if (!patchR || patchR.status >= 400) {
-      await axios.post(SUPABASE_URL + "/rest/v1/mesas",
-        { restaurante_id, numero: parseInt(mesa), estado, updated_at: new Date().toISOString() },
-        { headers: { ...h, "Prefer": "resolution=merge-duplicates,return=minimal" } }
-      );
-    }
+    // ── Actualizar memoria inmediatamente — CHARR TOWER lo lee en 3s
+    if (!mesaEstados[restaurante_id]) mesaEstados[restaurante_id] = {};
+    mesaEstados[restaurante_id]["mesa_" + mesa] = estado;
+    console.log("[mesa-estado] Mesa " + mesa + " → " + estado + " (mem+db)");
+    // ── Upsert en Supabase con on_conflict — siempre funciona
+    await axios.post(
+      SUPABASE_URL + "/rest/v1/mesas?on_conflict=restaurante_id,numero",
+      { restaurante_id, numero: parseInt(mesa), estado, updated_at: new Date().toISOString() },
+      { headers: { ...h, "Prefer": "resolution=merge-duplicates,return=minimal" } }
+    );
     res.json({ ok: true });
   } catch (e) {
     console.error("[mesa-estado]", e.message);
