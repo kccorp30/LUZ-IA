@@ -3321,6 +3321,7 @@ async function cargarESP32(){
       if(isNowOnline&&!wasOnline){animNuevoDispositivo(d);}
       if(isNowOnline)esp32Conocidos.add(key+"_on"); else esp32Conocidos.delete(key+"_on");
       esp32Conocidos.add(key);
+    });
     esp32Dispositivos=dispositivos;
     renderESP32(dispositivos);
   }catch(e){}
