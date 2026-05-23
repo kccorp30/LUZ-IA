@@ -106,8 +106,7 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 .mr-card.listo{border-color:#10b981;background:rgba(16,185,129,0.15);animation:mesaPulse 1.5s ease infinite}
 .mr-card.servido{border-color:#3b82f6;background:rgba(59,130,246,0.15)}
 .mr-card.sirviendo{border-color:#3b82f6;background:rgba(59,130,246,0.15)}
-.mr-card.cuenta{border-color:#a855f7;background:rgba(168,85,247,0.15);animation:mesaPulse 1s ease infinite}
-.mr-card.mesero{border-color:#a855f7;background:rgba(168,85,247,0.15);animation:mesaPulse 1s ease infinite}
+.mr-card.cuenta{border-color:#3b82f6;background:rgba(59,130,246,0.15)}
 @keyframes mesaPulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}50%{box-shadow:0 0 0 6px rgba(16,185,129,0.2)}}
 .mr-led{width:18px;height:18px;border-radius:50%;margin:0 auto 8px;transition:all .3s}
 .mr-num{font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);margin-bottom:2px}
@@ -3238,8 +3237,7 @@ var MR_COLORES = {
   pedido_listo:  { led:"#10b981", label:"Pedido listo",   btn:"Servido ✓",    next:"servido" },
   servido:       { led:"#3b82f6", label:"Servido",        btn:"Liberar",      next:"libre" },
   sirviendo:     { led:"#3b82f6", label:"Servido",        btn:"Liberar",      next:"libre" },
-  cuenta:        { led:"#a855f7", label:"🔔 Cuenta",      btn:"Liberar",      next:"libre" },
-  mesero:        { led:"#a855f7", label:"🔔 Mesero",      btn:"Liberar",      next:"libre" },
+  cuenta:        { led:"#3b82f6", label:"Cuenta",         btn:"Liberar",      next:"libre" },
   celebracion:   { led:"#a855f7", label:"Celebración",    btn:"Liberar",      next:"libre" },
   apagada:       { led:"#1f1f2e", label:"Inactiva",       btn:"Activar",      next:"libre" },
   inactiva:      { led:"#1f1f2e", label:"Inactiva",       btn:"Activar",      next:"libre" }
@@ -3269,7 +3267,7 @@ function renderMesasRapidas(n){
     var est=mesasRapidasEstados[key]||"libre";
     var info=MR_COLORES[est]||MR_COLORES.libre;
     var ledStyle="background:"+info.led+";width:14px;height:14px;border-radius:50%;flex-shrink:0";
-    h+='<div class="mr-card '+est+'" id="mr-card-'+i+'" style="border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;transition:background .4s,border-color .4s">';
+    h+='<div class="mr-card '+est+'" id="mr-card-'+i+'" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px">';
     h+='<div style="display:flex;align-items:center;justify-content:space-between">';
     h+='<div style="display:flex;align-items:center;gap:7px"><div style="'+ledStyle+'"></div><span style="font-size:14px;font-weight:800">Mesa '+i+'</span></div>';
     h+='<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,0.08);color:var(--text2)">'+info.label+'</span>';
@@ -3282,7 +3280,6 @@ function renderMesasRapidas(n){
       {e:"en_preparacion",ico:"🟡",label:"Preparando"},
       {e:"listo",ico:"🟢",label:"Listo"},
       {e:"servido",ico:"🔵",label:"Servido"},
-      {e:"mesero",ico:"🟣",label:"Mesero/Cuenta"},
       {e:"apagada",ico:"⚫",label:"Apagar"}
     ];
     estados.forEach(function(s){
@@ -3349,14 +3346,16 @@ function renderESP32(dispositivos){
     var asignarHTML=noMesa
       ?'<div style="display:flex;gap:5px;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">'
         +'<span style="font-size:10px;color:#fcd34d;flex-shrink:0">Asignar mesa:</span>'
-        +'<input type="number" min="1" max="30" placeholder="Nº" id="asign-'+safeMAC+'" style="width:52px;padding:4px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;font-size:12px;font-weight:700;outline:none;text-align:center">'
-        +'<button onclick="asignarMesaESP32(\''+d.mac+'\',document.getElementById(\'asign-'+safeMAC+'\').value)" style="padding:4px 12px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Asignar ✓</button>'
+        +'<input type="number" min="1" max="30" placeholder="Nº" id="asign-'+safeMAC+'" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" style="width:52px;padding:4px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;font-size:12px;font-weight:700;outline:none;text-align:center">'
+        +'<button onclick="event.stopPropagation();asignarMesaESP32(\''+d.mac+'\',document.getElementById(\'asign-'+safeMAC+'\').value)" style="padding:4px 12px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Asignar ✓</button>'
         +'</div>'
-      :'<div style="display:flex;gap:5px;margin-top:4px">'
-        +'<button onclick="cambiarEstadoMesa('+d.mesa+',\'celebracion\')" style="padding:4px 9px;border-radius:8px;background:rgba(249,115,22,0.12);border:1px solid rgba(249,115,22,0.25);color:#fdba74;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🎉 Fiesta</button>'
+      :'<div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">'
+        +'<button onclick="cambiarEstadoMesa('+d.mesa+',\'celebracion\')" style="padding:4px 9px;border-radius:8px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.25);color:#d8b4fe;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🎉 Fiesta</button>'
         +'<button onclick="cambiarEstadoMesa('+d.mesa+',\'libre\')" style="padding:4px 9px;border-radius:8px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🟢 Liberar</button>'
-        +'<button onclick="reasignarESP32(\''+d.mac+'\')" style="padding:4px 9px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">✏️</button>'
-        +'</div>';
+        +'<button onclick="resetCharrTower(\''+d.mac+'\')" style="padding:4px 9px;border-radius:8px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.22);color:#fca5a5;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Reset</button>'
+        +'<button onclick="reasignarESP32(\''+d.mac+'\')" style="padding:4px 9px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">✏️ Cambiar</button>'
+        +'</div>'
+        +'<div style="font-size:9px;color:var(--text3);margin-top:4px;padding:4px 6px;background:rgba(255,255,255,0.03);border-radius:6px">📶 WiFi: conectar a <b style="color:#c4b5fd">LUZ-IA-Mesa</b> / <b style="color:#c4b5fd">lacurva2024</b> → 192.168.4.1</div>';
     return '<div style="padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid '+(noMesa?'rgba(245,158,11,0.3)':'rgba(255,255,255,0.07)')+';border-radius:14px">'
       +'<div style="display:flex;align-items:center;gap:9px">'
       +'<div style="width:8px;height:8px;border-radius:50%;background:'+dotColor+';flex-shrink:0;box-shadow:0 0 6px '+dotColor+'"></div>'
@@ -3387,6 +3386,18 @@ function reasignarESP32(mac){
   fetch("/api/esp32-asignar",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({restaurante_id:rest.id,mac:mac,mesa:0})
   }).then(function(){cargarESP32();}).catch(function(){});
+}
+
+async function resetCharrTower(mac){
+  if(!rest||!mac)return;
+  if(!confirm("¿Resetear este CHARR TOWER? Se reiniciará y reconectará automáticamente."))return;
+  try{
+    var r=await fetch("/api/esp32-reset",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({restaurante_id:rest.id,mac:mac})});
+    var d=await r.json();
+    if(d.ok){notif("🔄 Reset enviado — el dispositivo se reiniciará");}
+    else{notif("No se pudo enviar el reset: "+(d.error||""));}
+  }catch(e){notif("Error: "+e.message);}
 }
 
 // ── ANIMACIÓN NUEVO DISPOSITIVO ───────────────────────────
@@ -3543,16 +3554,21 @@ function iniciarPollingMesas(){
   if(mesasRapidasTimer)clearInterval(mesasRapidasTimer);
   mesasRapidasTimer=setInterval(function(){
     if(!rest)return;
+    // No re-renderizar si el usuario está escribiendo en un input
+    var inputActivo=document.activeElement&&(document.activeElement.tagName==="INPUT"||document.activeElement.tagName==="TEXTAREA");
     fetch("/api/mesas-estado?restaurante_id="+rest.id)
       .then(function(r){return r.json();})
       .then(function(arr){
         var nuevo={};(arr||[]).forEach(function(m){nuevo["mesa_"+m.mesa]=m.estado;});
         if(JSON.stringify(nuevo)!==JSON.stringify(mesasRapidasEstados)){
           mesasRapidasEstados=nuevo;
-          renderMesasRapidas(parseInt(document.getElementById("mesaCount").value)||6);
+          if(!inputActivo){
+            renderMesasRapidas(parseInt(document.getElementById("mesaCount").value)||6);
+          }
         }
       }).catch(function(){});
-    cargarESP32();
+    // Solo recargar lista ESP32 si no hay input activo
+    if(!inputActivo) cargarESP32();
   },5000);
 }
 function detenerPollingMesas(){if(mesasRapidasTimer){clearInterval(mesasRapidasTimer);mesasRapidasTimer=null;}}
