@@ -491,6 +491,40 @@ SI EL CLIENTE PREGUNTA SI ERES IA O UN BOT:
 }
 
 // ── GUARDAR PEDIDO ────────────────────────────────────────────────────────────
+// ── ACTUALIZAR ESTADO MESA AUTOMÁTICAMENTE ───────────────────────────────────
+// Se llama cada vez que entra o cambia un pedido de mesa
+async function actualizarEstadoMesa(restauranteId, direccion, estadoPedido) {
+  if (!restauranteId || !direccion) return;
+  var dir = (direccion||"").toUpperCase();
+  var m = dir.match(/MESA\s*(\d+)/);
+  if (!m) return;
+  var mesaNum = parseInt(m[1]);
+  if (!mesaNum) return;
+  // Mapear estado del pedido → estado del LED
+  var estadoLed = {
+    "confirmado":    "ocupada",
+    "en_preparacion":"en_preparacion",
+    "listo":         "listo",
+    "en_camino":     "listo",
+    "entregado":     "libre",
+    "cancelado":     "libre"
+  }[estadoPedido] || "ocupada";
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
+    // Actualizar memoria
+    if (!mesaEstados[restauranteId]) mesaEstados[restauranteId] = {};
+    mesaEstados[restauranteId]["mesa_" + mesaNum] = estadoLed;
+    // Actualizar Supabase
+    await axios.post(
+      SUPABASE_URL + "/rest/v1/mesas?on_conflict=restaurante_id,numero",
+      { restaurante_id: restauranteId, numero: mesaNum, estado: estadoLed, updated_at: new Date().toISOString() },
+      { headers: { ...h, "Prefer": "resolution=merge-duplicates,return=minimal" } }
+    );
+    console.log("[mesa-auto] Mesa " + mesaNum + " → " + estadoLed + " (pedido " + estadoPedido + ")");
+  } catch(e) { console.error("[mesa-auto]", e.message); }
+}
+
 async function guardarPedidoSupabase(restauranteId, pedidoData) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
@@ -522,6 +556,10 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
       headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
     });
     console.log("Pedido #" + pedidoData.orderNumber + " guardado. ID:", response.data[0]?.id || "?");
+    // Auto-actualizar LED de mesa si es pedido de mesa
+    if (pedidoData.address) {
+      actualizarEstadoMesa(restauranteId, pedidoData.address, "confirmado").catch(function(){});
+    }
     if (pedidoData.address && pedidoData.address !== "Por confirmar") {
       guardarDireccionFrecuente(restauranteId, pedidoData.phone, pedidoData.address);
     }
@@ -1590,6 +1628,10 @@ app.post("/api/pedido-estado", async function(req, res) {
   if (!id || !estado) return res.status(400).json({ error: "Faltan datos" });
   var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
   var estadoReal = estado === "listo_entrega" ? "listo_entrega" : estado;
+  // Auto-actualizar LED de mesa si viene la dirección
+  if (restaurante_id && req.body.direccion) {
+    actualizarEstadoMesa(restaurante_id, req.body.direccion, estado).catch(function(){});
+  }
   try {
     try {
       await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id, { estado: estadoReal },
@@ -2030,6 +2072,8 @@ app.post("/api/pedido-manual", async function(req, res) {
     });
     if (direccion && direccion !== "Por confirmar") guardarDireccionFrecuente(restaurante_id, telefono, direccion);
     console.log("[pedido-manual] ✅ Pedido #" + num + " desde WEB | " + nombre_cliente + " | " + metodo_pago + " | $" + total);
+    // Auto-actualizar LED de mesa si es pedido de mesa
+    if (direccion) actualizarEstadoMesa(restaurante_id, direccion, "confirmado").catch(function(){});
 
     // ══ SUMAR PUNTOS al cliente ══
     try {
