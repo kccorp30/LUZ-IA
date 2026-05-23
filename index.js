@@ -1117,6 +1117,29 @@ app.get("/api/esp32-dispositivos", async function(req, res) {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// Cola de resets pendientes — el ESP32 la consulta en cada heartbeat
+var resetPendiente = {};
+app.post("/api/esp32-reset", async function(req, res) {
+  var { restaurante_id, mac } = req.body;
+  if (!restaurante_id || !mac) return res.status(400).json({ error: "Faltan datos" });
+  var macClean = mac.toUpperCase().trim();
+  resetPendiente[macClean] = Date.now();
+  console.log("[ESP32 reset] Solicitado para MAC:", macClean);
+  res.json({ ok: true });
+});
+
+// El ESP32 consulta esto en cada heartbeat (modificar /api/esp32-registro para incluirlo)
+app.get("/api/esp32-cmd", async function(req, res) {
+  var mac = (req.query.mac || "").toUpperCase().trim();
+  if (!mac) return res.json({ cmd: null });
+  if (resetPendiente[mac] && (Date.now() - resetPendiente[mac]) < 60000) {
+    delete resetPendiente[mac];
+    console.log("[ESP32 cmd] Reset enviado a:", mac);
+    return res.json({ cmd: "reset" });
+  }
+  res.json({ cmd: null });
+});
+
 app.post("/api/esp32-registro", async function(req, res) {
   var { restaurante_id, mesa, mac, ip, num_leds } = req.body;
   if (!restaurante_id || !mac) return res.status(400).json({ error: "Faltan datos" });
