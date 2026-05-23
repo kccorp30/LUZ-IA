@@ -1723,7 +1723,7 @@ function get(t,f){
   // Route through backend proxy
   return fetch("/api/supabase/"+t+"?"+(f||"")).then(function(r){return r.json();});
 }
-function patchPedido(id,estado,tel,num){return fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
+function patchPedido(id,estado,tel,num,dir){return fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,estado:estado,telefono_cliente:tel||"",numero_pedido:num||"",restaurante_id:rest?rest.id:null,direccion:dir||""})}).then(function(r){if(!r.ok)return r.text().then(function(tx){throw new Error(tx)});return r.json();});}
 function notif(m,color){var e=document.getElementById("notif");e.textContent=m;e.style.background=color||"rgba(124,58,237,0.9)";e.classList.add("show");setTimeout(function(){e.classList.remove("show");},2800);}
 function fmt(n){return"$"+Number(n||0).toLocaleString("es-CO");}
 function getHoraColombia(){var a=new Date();return new Date(a.getTime()+a.getTimezoneOffset()*60000-(5*60*60*1000));}
@@ -2073,8 +2073,8 @@ function loadPedidos(){
       var bEstado=cfg.n,bLabel=cfg.bl,bClass=cfg.bc;
       if(esMesa&&p.estado==="listo"){bEstado="entregado";bLabel="💳 Cobrar y cerrar";bClass="bcerrar";}
       if(esMesa&&(p.estado==="en_camino"||p.estado==="listo_entrega")){bEstado="entregado";bLabel="💳 Cobrar y cerrar";bClass="bcerrar";}
-      if(bEstado)h+='<button class="ebtn '+bClass+'" data-id="'+p.id+'" data-e="'+bEstado+'" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">'+bLabel+'</button>';
-      if((p.estado==="listo"||p.estado==="en_camino")&&!esMesa)h+='<button class="ebtn bcerrar" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'">🔴 Cerrar orden</button>';
+      if(bEstado)h+='<button class="ebtn '+bClass+'" data-id="'+p.id+'" data-e="'+bEstado+'" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'" data-dir="'+encodeURIComponent(p.direccion||"")+'">'+bLabel+'</button>';
+      if((p.estado==="listo"||p.estado==="en_camino")&&!esMesa)h+='<button class="ebtn bcerrar" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'" data-dir="'+encodeURIComponent(p.direccion||"")+'">🔴 Cerrar orden</button>';
       if(p.estado==="listo"&&!esMesa)h+='<button class="ebtn" style="background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.35);flex:0;padding:10px 14px;font-size:16px;" data-domi="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'">🛵</button>';
       if(p.cliente_tel)h+='<button class="btn-msg ebtn be" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">💬</button>';
       h+='<button class="ebtn" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:2px solid rgba(59,130,246,0.3);flex:0;padding:10px 14px;" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+desechables+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">🖨</button>';
@@ -2083,7 +2083,7 @@ function loadPedidos(){
     });
     lista.innerHTML=h;
     lista.querySelectorAll(".comprobante-img").forEach(function(img){img.addEventListener("click",function(){document.getElementById("imgOverlayImg").src=this.src;document.getElementById("imgOverlay").classList.add("open");});});
-    lista.querySelectorAll(".ebtn[data-e]").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"),this.getAttribute("data-n"));});});
+    lista.querySelectorAll(".ebtn[data-e]").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();var dir=decodeURIComponent(this.getAttribute("data-dir")||"");cambiarEstado(this.getAttribute("data-id"),this.getAttribute("data-e"),this.getAttribute("data-t"),this.getAttribute("data-n"),dir);});});
     lista.querySelectorAll(".btn-msg[data-tel]").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();abrirChat(this.getAttribute("data-tel"),this.getAttribute("data-num"),"");});});
     lista.querySelectorAll("[data-print='1']").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();imprimirTicket(this);});});
     lista.querySelectorAll("[data-edit='1']").forEach(function(b){b.addEventListener("click",function(e){e.stopPropagation();editPedidoId=this.getAttribute("data-pid");document.getElementById("editPedidoNum").textContent="#"+this.getAttribute("data-pnum");document.getElementById("edit-dir").value=decodeURIComponent(this.getAttribute("data-pdir")||"");document.getElementById("edit-met").value=this.getAttribute("data-pmet")||"nequi";document.getElementById("edit-total").value=this.getAttribute("data-ptot")||"";document.getElementById("edit-domi").value=this.getAttribute("data-pdom")||"";try{var its=JSON.parse(decodeURIComponent(this.getAttribute("data-pitems")||"[]"));document.getElementById("edit-items").value=its.join("\n");}catch(ex){document.getElementById("edit-items").value="";}document.getElementById("editOverlay").classList.add("open");});});
@@ -2105,9 +2105,9 @@ function imprimirTicket(btn){
 }
 document.getElementById("imgOverlayClose").addEventListener("click",function(){document.getElementById("imgOverlay").classList.remove("open");});
 document.getElementById("imgOverlay").addEventListener("click",function(e){if(e.target===this)this.classList.remove("open");});
-function cambiarEstado(id,estado,tel,num){
+function cambiarEstado(id,estado,tel,num,dir){
   notif("Actualizando...");
-  patchPedido(id,estado,tel,num).then(function(){
+  patchPedido(id,estado,tel,num,dir||"").then(function(){
     if(estado==="entregado"){playSound("pedido_cerrado");notif("Pedido #"+num+" cerrado!","rgba(16,185,129,0.9)");}
     else{playSound("cambio_estado");notif({en_preparacion:"Preparando #"+num,listo:"Listo #"+num,en_camino:"En camino #"+num}[estado]||"OK");}
     loadPedidos();loadStats();
