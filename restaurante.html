@@ -99,14 +99,17 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 .mesa-rapida-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:14px}
 .mr-card{background:rgba(255,255,255,0.04);border:2px solid rgba(255,255,255,0.08);border-radius:16px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
 .mr-card:hover{transform:translateY(-2px)}
-.mr-card.libre{border-color:#f5f0e8;background:rgba(245,240,232,0.06)}
-.mr-card.confirmado{border-color:#ef4444;background:rgba(239,68,68,0.15);animation:mesaPulse 1s ease infinite}
-.mr-card.ocupada{border-color:#ef4444;background:rgba(239,68,68,0.15);animation:mesaPulse 1s ease infinite}
-.mr-card.en_preparacion{border-color:#f59e0b;background:rgba(245,158,11,0.15)}
-.mr-card.listo{border-color:#10b981;background:rgba(16,185,129,0.15);animation:mesaPulse 1.5s ease infinite}
-.mr-card.servido{border-color:#3b82f6;background:rgba(59,130,246,0.15)}
-.mr-card.sirviendo{border-color:#3b82f6;background:rgba(59,130,246,0.15)}
-.mr-card.cuenta{border-color:#3b82f6;background:rgba(59,130,246,0.15)}
+.mr-card.libre{border-color:rgba(245,240,232,0.3);background:rgba(245,240,232,0.04)}
+.mr-card.confirmado{border-color:#ef4444;background:rgba(239,68,68,0.13);animation:mesaPulse 1s ease infinite}
+.mr-card.ocupada{border-color:#ef4444;background:rgba(239,68,68,0.13);animation:mesaPulse 1s ease infinite}
+.mr-card.en_preparacion{border-color:#f59e0b;background:rgba(245,158,11,0.13)}
+.mr-card.listo{border-color:#10b981;background:rgba(16,185,129,0.13);animation:mesaPulse 1.5s ease infinite}
+.mr-card.servido{border-color:#3b82f6;background:rgba(59,130,246,0.13)}
+.mr-card.sirviendo{border-color:#3b82f6;background:rgba(59,130,246,0.13)}
+.mr-card.cuenta{border-color:#a855f7;background:rgba(168,85,247,0.13);animation:mesaPulse 1s ease infinite}
+.mr-card.mesero{border-color:#a855f7;background:rgba(168,85,247,0.13);animation:mesaPulse 1s ease infinite}
+.mr-card.celebracion{border-color:#f97316;background:rgba(249,115,22,0.13);animation:mesaPulse .8s ease infinite}
+.mr-card.apagada{border-color:rgba(255,255,255,0.06);background:rgba(255,255,255,0.02)}
 @keyframes mesaPulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}50%{box-shadow:0 0 0 6px rgba(16,185,129,0.2)}}
 .mr-led{width:18px;height:18px;border-radius:50%;margin:0 auto 8px;transition:all .3s}
 .mr-num{font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);margin-bottom:2px}
@@ -3267,7 +3270,7 @@ function renderMesasRapidas(n){
     var est=mesasRapidasEstados[key]||"libre";
     var info=MR_COLORES[est]||MR_COLORES.libre;
     var ledStyle="background:"+info.led+";width:14px;height:14px;border-radius:50%;flex-shrink:0";
-    h+='<div class="mr-card '+est+'" id="mr-card-'+i+'" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px">';
+    h+='<div class="mr-card '+est+'" id="mr-card-'+i+'" style="border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:8px;transition:background .5s,border-color .5s">';
     h+='<div style="display:flex;align-items:center;justify-content:space-between">';
     h+='<div style="display:flex;align-items:center;gap:7px"><div style="'+ledStyle+'"></div><span style="font-size:14px;font-weight:800">Mesa '+i+'</span></div>';
     h+='<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,0.08);color:var(--text2)">'+info.label+'</span>';
@@ -3331,45 +3334,63 @@ function renderESP32(dispositivos){
   var sinAsignar=dispositivos.filter(function(d){return !d.mesa||d.mesa===0;}).length;
   if(count){count.textContent=online+" online · "+dispositivos.length+" total"+(sinAsignar>0?" · ⚠️ "+sinAsignar+" sin asignar":"");}
   if(!dispositivos.length){
-    lista.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px">Sin dispositivos aún — conecta un CHARR TOWER al WiFi del restaurante</div>';
+    lista.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px;border:1px dashed rgba(124,58,237,0.2);border-radius:12px">📡 Sin dispositivos — conecta un CHARR TOWER al WiFi<br><span style="color:#7c3aed;font-weight:700">LUZ-IA-Mesa</span> / <span style="color:#c4b5fd">lacurva2024</span></div>';
     return;
   }
   var sorted=[...dispositivos].sort(function(a,b){if(!a.mesa&&b.mesa)return -1;if(a.mesa&&!b.mesa)return 1;return (a.mesa||0)-(b.mesa||0);});
   lista.innerHTML=sorted.map(function(d){
     var isOnline=d.last_seen&&(Date.now()-new Date(d.last_seen))<90000;
     var noMesa=!d.mesa||d.mesa===0;
-    var dotColor=noMesa?"#f59e0b":isOnline?"#10b981":"#6b7280";
     var mins=d.last_seen?Math.floor((Date.now()-new Date(d.last_seen))/60000):null;
-    var cuandoVisto=mins===null?"Nunca":mins<1?"Ahora mismo":mins<60?mins+"m atrás":Math.floor(mins/60)+"h atrás";
-    var macCorta=d.mac?d.mac.slice(-8):"??:??:??";
+    var cuandoVisto=mins===null?"—":mins<1?"ahora mismo":mins<60?mins+"m":Math.floor(mins/60)+"h";
+    var macCorta=d.mac?d.mac.slice(-8):"??:??";
     var safeMAC=d.mac?d.mac.replace(/:/g,"-"):"nomac";
+    var senal=isOnline?(mins<1?4:mins<2?3:2):0;
+    var senalBars='<div style="display:flex;align-items:flex-end;gap:1.5px;height:12px">'+
+      '<div style="width:3px;height:4px;border-radius:1px;background:'+(senal>=1?"#10b981":"rgba(255,255,255,0.1)")+'"></div>'+
+      '<div style="width:3px;height:6px;border-radius:1px;background:'+(senal>=2?"#10b981":"rgba(255,255,255,0.1)")+'"></div>'+
+      '<div style="width:3px;height:9px;border-radius:1px;background:'+(senal>=3?"#10b981":"rgba(255,255,255,0.1)")+'"></div>'+
+      '<div style="width:3px;height:12px;border-radius:1px;background:'+(senal>=4?"#10b981":"rgba(255,255,255,0.1)")+'"></div>'+
+      '</div>';
+    var mesaEst=isOnline&&!noMesa?(mesasRapidasEstados["mesa_"+d.mesa]||"libre"):"—";
+    var estColors={libre:"#f5f0e8",ocupada:"#ef4444",confirmado:"#ef4444",en_preparacion:"#f59e0b",listo:"#10b981",servido:"#3b82f6",mesero:"#a855f7",cuenta:"#a855f7",celebracion:"#f97316",apagada:"#333"};
+    var estColor=estColors[mesaEst]||"#555";
+    var statusBadge=isOnline
+      ?'<span style="font-size:9px;padding:2px 7px;border-radius:6px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7;font-weight:700;letter-spacing:.5px">● ONLINE</span>'
+      :'<span style="font-size:9px;padding:2px 7px;border-radius:6px;background:rgba(107,114,128,0.1);border:1px solid rgba(107,114,128,0.2);color:#6b7280;font-weight:700;letter-spacing:.5px">○ OFFLINE</span>';
     var asignarHTML=noMesa
-      ?'<div style="display:flex;gap:5px;align-items:center;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.07)">'
-        +'<span style="font-size:10px;color:#fcd34d;flex-shrink:0">Asignar mesa:</span>'
-        +'<input type="number" min="1" max="30" placeholder="Nº" id="asign-'+safeMAC+'" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" style="width:52px;padding:4px 8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;font-size:12px;font-weight:700;outline:none;text-align:center">'
-        +'<button onclick="event.stopPropagation();asignarMesaESP32(\''+d.mac+'\',document.getElementById(\'asign-'+safeMAC+'\').value)" style="padding:4px 12px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Asignar ✓</button>'
-        +'</div>'
-      :'<div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">'
-        +'<button onclick="cambiarEstadoMesa('+d.mesa+',\'celebracion\')" style="padding:4px 9px;border-radius:8px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.25);color:#d8b4fe;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🎉 Fiesta</button>'
-        +'<button onclick="cambiarEstadoMesa('+d.mesa+',\'libre\')" style="padding:4px 9px;border-radius:8px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🟢 Liberar</button>'
-        +'<button onclick="resetCharrTower(\''+d.mac+'\')" style="padding:4px 9px;border-radius:8px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.22);color:#fca5a5;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Reset</button>'
-        +'<button onclick="reasignarESP32(\''+d.mac+'\')" style="padding:4px 9px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">✏️ Cambiar</button>'
-        +'</div>'
-        +'<div style="font-size:9px;color:var(--text3);margin-top:4px;padding:4px 6px;background:rgba(255,255,255,0.03);border-radius:6px">📶 WiFi: conectar a <b style="color:#c4b5fd">LUZ-IA-Mesa</b> / <b style="color:#c4b5fd">lacurva2024</b> → 192.168.4.1</div>';
-    return '<div style="padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid '+(noMesa?'rgba(245,158,11,0.3)':'rgba(255,255,255,0.07)')+';border-radius:14px">'
-      +'<div style="display:flex;align-items:center;gap:9px">'
-      +'<div style="width:8px;height:8px;border-radius:50%;background:'+dotColor+';flex-shrink:0;box-shadow:0 0 6px '+dotColor+'"></div>'
-      +'<div style="flex:1;min-width:0">'
-      +'<div style="font-size:13px;font-weight:800">'+(noMesa?'⚠️ Sin asignar':'Mesa '+d.mesa)+' <span style="font-size:10px;color:var(--text3);font-weight:500">· '+d.num_leds+' LEDs</span></div>'
-      +'<div style="font-size:10px;color:var(--text3)">...'+macCorta+' · '+(d.ip||"—")+' · '+cuandoVisto+'</div>'
-      +'</div>'
-      +'<span style="font-size:10px;padding:2px 8px;border-radius:8px;background:'+(isOnline?'rgba(16,185,129,0.12)':'rgba(107,114,128,0.12)')+';color:'+(isOnline?'#6ee7b7':'var(--text3)')+';">'+(isOnline?'Online':'Offline')+'</span>'
-      +'</div>'
-      +asignarHTML
-      +'</div>';
+      ?'<div style="display:flex;gap:6px;align-items:center;margin-top:8px;padding:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:10px">'+
+        '<span style="font-size:10px;color:#fcd34d;flex-shrink:0;font-weight:700">📌 Mesa Nº</span>'+
+        '<input type="number" min="1" max="30" placeholder="1–30" id="asign-'+safeMAC+'" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()" style="flex:1;padding:5px 8px;background:rgba(0,0,0,0.3);border:1px solid rgba(245,158,11,0.3);border-radius:8px;color:white;font-size:13px;font-weight:800;outline:none;text-align:center;max-width:60px">'+
+        '<button onclick="event.stopPropagation();asignarMesaESP32(\'\'\''+d.mac+'\'\'\',document.getElementById(\'\'\'asign-'+safeMAC+'\'\'\').value)" style="padding:5px 14px;border-radius:8px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#000;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">ASIGNAR ✓</button>'+
+        '</div>'
+      :'<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px">'+
+        '<button onclick="cambiarEstadoMesa('+d.mesa+',\'libre\')" style="padding:5px;border-radius:8px;background:rgba(245,240,232,0.06);border:1px solid rgba(245,240,232,0.15);color:#f5f0e8;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">⬜ Libre</button>'+
+        '<button onclick="cambiarEstadoMesa('+d.mesa+',\'ocupada\')" style="padding:5px;border-radius:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🔴 Ocupar</button>'+
+        '<button onclick="cambiarEstadoMesa('+d.mesa+',\'en_preparacion\')" style="padding:5px;border-radius:8px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);color:#fcd34d;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🟡 Preparando</button>'+
+        '<button onclick="cambiarEstadoMesa('+d.mesa+',\'listo\')" style="padding:5px;border-radius:8px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#6ee7b7;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🟢 Listo</button>'+
+        '<button onclick="cambiarEstadoMesa('+d.mesa+',\'celebracion\')" style="padding:5px;border-radius:8px;background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);color:#d8b4fe;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🎉 Fiesta</button>'+
+        '<button onclick="resetCharrTower(\'\'\''+d.mac+'\'\'\')" style="padding:5px;border-radius:8px;background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.15);color:#fca5a5;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">🔄 Reset</button>'+
+        '</div>'+
+        '<button onclick="reasignarESP32(\'\'\''+d.mac+'\'\'\')" style="width:100%;margin-top:5px;padding:4px;border-radius:7px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text3);font-size:9px;font-weight:700;cursor:pointer;font-family:inherit">✏️ Cambiar número de mesa</button>';
+    return '<div style="padding:12px;margin-bottom:6px;background:linear-gradient(135deg,rgba(15,15,30,0.85),rgba(20,10,40,0.65));border:1px solid '+(noMesa?'rgba(245,158,11,0.35)':isOnline?'rgba(124,58,237,0.25)':'rgba(255,255,255,0.06)')+';border-radius:14px">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
+      '<div style="width:34px;height:34px;border-radius:9px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.25);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">📡</div>'+
+      '<div style="flex:1;min-width:0">'+
+      '<div style="font-size:13px;font-weight:800">'+(noMesa?'<span style="color:#fcd34d">⚠ Sin asignar</span>':'CHARR TOWER <span style="color:#c4b5fd;font-family:monospace">M'+(d.mesa||"?")+'</span>')+'</div>'+
+      '<div style="font-size:9px;color:var(--text3);font-family:monospace;margin-top:1px">'+(d.mac||"—")+' · '+(d.ip||"—")+' · '+cuandoVisto+'</div>'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+ statusBadge + senalBars +'</div>'+
+      '</div>'+
+      (isOnline&&!noMesa?'<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;padding:5px 9px;background:rgba(0,0,0,0.25);border-radius:8px">'+
+        '<div style="width:8px;height:8px;border-radius:50%;background:'+estColor+';box-shadow:0 0 8px '+estColor+'"></div>'+
+        '<span style="font-size:10px;color:var(--text2);font-weight:600">LED: '+mesaEst.replace(/_/g," ").toUpperCase()+'</span>'+
+        '<span style="font-size:9px;color:var(--text3);margin-left:auto">'+d.num_leds+' LEDs</span>'+
+        '</div>':'')+
+      asignarHTML+
+      '</div>';
   }).join("");
 }
-
 async function asignarMesaESP32(mac,mesaNum){
   if(!rest||!mac||!mesaNum||parseInt(mesaNum)<1){notif("Ingresa un número de mesa válido");return;}
   try{
