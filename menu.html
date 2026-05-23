@@ -2620,6 +2620,7 @@ body::after {
       <div class="tipos-tabs">
         <button class="tipos-tab on" data-tipo="domicilio" onclick="setTipoCheckout('domicilio')">🛵 Domicilio</button>
         <button class="tipos-tab" data-tipo="recoger" onclick="setTipoCheckout('recoger')">🏪 Recoger</button>
+        <button class="tipos-tab" data-tipo="mesa" onclick="setTipoCheckout('mesa')">🪑 Mesa</button>
       </div>
 
       <!-- Cliente: WhatsApp -->
@@ -2651,7 +2652,14 @@ body::after {
         </div>
       </div>
 
-      <!-- Cupón -->
+      <!-- Selector de mesa (para comer en el local) -->
+      <div id="flMesa" style="display:none">
+        <div class="fld">
+          <label class="fld-label">🪑 Número de mesa</label>
+          <input type="number" class="fld-input" id="cliMesa" placeholder="Ej: 1" min="1" max="30" style="text-align:center;font-size:18px;font-weight:700">
+          <div class="fld-hint" style="color:#c4b5fd;margin-top:4px;font-size:11px">El pedido llegará directo a tu mesa 🍔</div>
+        </div>
+      </div>
       <div class="fld">
         <label class="fld-label">🎟 Cupón (opcional)</label>
         <div class="cup-row">
@@ -3689,9 +3697,10 @@ function setTipoCheckout(t) {
   document.querySelectorAll('.tipos-tab').forEach(function(el){
     el.classList.toggle('on', el.getAttribute('data-tipo') === t);
   });
-  // Mostrar/ocultar dirección
   var fd = document.getElementById('flDomicilio');
+  var fm = document.getElementById('flMesa');
   if (fd) fd.style.display = (t === 'domicilio' ? '' : 'none');
+  if (fm) fm.style.display = (t === 'mesa' ? '' : 'none');
   actualizarTotalesCheckout();
 }
 
@@ -4098,7 +4107,7 @@ async function enviarPedido() {
       restaurante_id: rest.id,
       cliente_tel: tel,
       nombre_cliente: nom,
-      direccion: tipoPedido === "domicilio" ? document.getElementById("cliDir").value.trim() : "",
+      direccion: tipoPedido === "domicilio" ? document.getElementById("cliDir").value.trim() : (tipoPedido === "mesa" ? "MESA " + (document.getElementById("cliMesa").value.trim()||"?") : ""),
       barrio: tipoPedido === "domicilio" ? document.getElementById("cliBarrio").value.trim() : "",
       tipo_pedido: tipoPedido,
       metodo_pago: pagoSel,
@@ -4137,6 +4146,8 @@ function mostrarExito(num, nombre, ptsGanados) {
   document.getElementById("exitoTitle").textContent = "Pedido enviado, " + nombre.split(" ")[0];
   document.getElementById("exitoSub").textContent = tipoPedido === "domicilio"
     ? "Tu pedido va en camino"
+    : tipoPedido === "mesa"
+    ? "Tu pedido entra directo a cocina 🍔"
     : "Tu pedido estará listo para recoger";
   document.getElementById("exitoNum").textContent = "#" + num;
   if (ptsGanados > 0) {
@@ -4536,9 +4547,12 @@ window.addEventListener("load", async function() {
 
   try {
     // Cargar restaurante desde el backend (no Supabase directo)
+    var apiBase = window.location.origin.includes("localhost") || window.location.protocol === "file:"
+      ? "https://luz-ia-production-4cff.up.railway.app"
+      : "";
     var restUrl = restId
-      ? "/api/restaurante?id=" + restId
-      : "/api/restaurante";
+      ? apiBase + "/api/restaurante?id=" + restId
+      : apiBase + "/api/restaurante";
     var r = await fetch(restUrl);
     if (!r.ok) throw new Error("HTTP " + r.status);
     var d = await r.json();
