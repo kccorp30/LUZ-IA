@@ -99,12 +99,14 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 .mesa-rapida-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:14px}
 .mr-card{background:rgba(255,255,255,0.04);border:2px solid rgba(255,255,255,0.08);border-radius:16px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
 .mr-card:hover{transform:translateY(-2px)}
-.mr-card.libre{border-color:rgba(255,255,255,0.1)}
-.mr-card.ocupada{border-color:#3b82f6;background:rgba(59,130,246,0.1)}
-.mr-card.en_preparacion{border-color:#f59e0b;background:rgba(245,158,11,0.1)}
-.mr-card.listo{border-color:#10b981;background:rgba(16,185,129,0.1);animation:mesaPulse 1.5s ease infinite}
-.mr-card.sirviendo{border-color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.06)}
-.mr-card.cuenta{border-color:#ef4444;background:rgba(239,68,68,0.1);animation:mesaPulse 1s ease infinite}
+.mr-card.libre{border-color:#f5f0e8;background:rgba(245,240,232,0.06)}
+.mr-card.confirmado{border-color:#ef4444;background:rgba(239,68,68,0.15);animation:mesaPulse 1s ease infinite}
+.mr-card.ocupada{border-color:#ef4444;background:rgba(239,68,68,0.15);animation:mesaPulse 1s ease infinite}
+.mr-card.en_preparacion{border-color:#f59e0b;background:rgba(245,158,11,0.15)}
+.mr-card.listo{border-color:#10b981;background:rgba(16,185,129,0.15);animation:mesaPulse 1.5s ease infinite}
+.mr-card.servido{border-color:#3b82f6;background:rgba(59,130,246,0.15)}
+.mr-card.sirviendo{border-color:#3b82f6;background:rgba(59,130,246,0.15)}
+.mr-card.cuenta{border-color:#3b82f6;background:rgba(59,130,246,0.15)}
 @keyframes mesaPulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}50%{box-shadow:0 0 0 6px rgba(16,185,129,0.2)}}
 .mr-led{width:18px;height:18px;border-radius:50%;margin:0 auto 8px;transition:all .3s}
 .mr-num{font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);margin-bottom:2px}
@@ -1129,7 +1131,7 @@ select.finput{cursor:pointer}
       <div style="padding:16px 14px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px">
         <div>
           <div style="font-size:20px;font-weight:900;letter-spacing:-.02em">⚡ Mesas Rápidas</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">Control LED · Tiempo real · ESP32</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Control LED · Tiempo real · CHARR TOWER</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <div style="font-size:11px;color:var(--text3)">Mesas:</div>
@@ -1142,7 +1144,7 @@ select.finput{cursor:pointer}
       <div style="padding:0 14px 12px">
         <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden">
           <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between">
-            <div style="font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Dispositivos ESP32</div>
+            <div style="font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">Dispositivos CHARR TOWER</div>
             <div id="esp32Count" style="font-size:11px;color:#c4b5fd;font-weight:700">Cargando...</div>
           </div>
           <div id="esp32Lista" style="padding:10px 14px;display:flex;flex-direction:column;gap:7px">
@@ -1153,11 +1155,11 @@ select.finput{cursor:pointer}
 
       <!-- ── LEYENDA LED ── -->
       <div style="padding:0 14px 10px;display:flex;gap:10px;overflow-x:auto;scrollbar-width:none">
-        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#10b981"></div><span style="font-size:10px;color:var(--text3)">Libre</span></div>
-        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#f97316"></div><span style="font-size:10px;color:var(--text3)">Ocupada</span></div>
-        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#fbbf24"></div><span style="font-size:10px;color:var(--text3)">Esperando</span></div>
-        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#3b82f6"></div><span style="font-size:10px;color:var(--text3)">Pedido listo</span></div>
-        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,#f97316,#10b981)"></div><span style="font-size:10px;color:var(--text3)">Celebración</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#f5f0e8;border:1px solid rgba(255,255,255,0.3)"></div><span style="font-size:10px;color:var(--text3)">Libre</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#ef4444"></div><span style="font-size:10px;color:var(--text3)">Pedido / Ocupada</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#f59e0b"></div><span style="font-size:10px;color:var(--text3)">Preparando</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#10b981"></div><span style="font-size:10px;color:var(--text3)">Listo</span></div>
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#3b82f6"></div><span style="font-size:10px;color:var(--text3)">Servido</span></div>
         <div style="display:flex;align-items:center;gap:5px;white-space:nowrap"><div style="width:9px;height:9px;border-radius:50%;background:#333"></div><span style="font-size:10px;color:var(--text3)">Inactiva</span></div>
       </div>
 
@@ -3226,15 +3228,19 @@ var esp32Dispositivos = [];
 var esp32Conocidos = new Set();
 
 var MR_COLORES = {
-  libre:         { led:"#10b981", label:"Libre",         btn:"Ocupar",     next:"ocupada" },
-  ocupada:       { led:"#f97316", label:"Ocupada",       btn:"Espera",     next:"espera" },
-  espera:        { led:"#fbbf24", label:"Esperando",     btn:"Pedido tomado", next:"ocupada" },
-  lista:         { led:"#3b82f6", label:"Pedido listo",  btn:"Servido ✓",  next:"ocupada" },
-  listo:         { led:"#3b82f6", label:"Pedido listo",  btn:"Servido ✓",  next:"ocupada" },
-  pedido_listo:  { led:"#3b82f6", label:"Pedido listo",  btn:"Servido ✓",  next:"ocupada" },
-  celebracion:   { led:"linear-gradient(135deg,#f97316,#10b981)", label:"Celebración", btn:"Normal", next:"ocupada" },
-  apagada:       { led:"#1f1f2e", label:"Inactiva",      btn:"Activar",    next:"libre" },
-  inactiva:      { led:"#1f1f2e", label:"Inactiva",      btn:"Activar",    next:"libre" }
+  libre:         { led:"#f5f0e8", label:"Libre",          btn:"Ocupar",       next:"ocupada" },
+  ocupada:       { led:"#ef4444", label:"Ocupada",        btn:"Preparando",   next:"en_preparacion" },
+  confirmado:    { led:"#ef4444", label:"Pedido recibido",btn:"Preparando",   next:"en_preparacion" },
+  en_preparacion:{ led:"#f59e0b", label:"Preparando",     btn:"Listo",        next:"listo" },
+  listo:         { led:"#10b981", label:"Pedido listo",   btn:"Servido ✓",    next:"servido" },
+  lista:         { led:"#10b981", label:"Pedido listo",   btn:"Servido ✓",    next:"servido" },
+  pedido_listo:  { led:"#10b981", label:"Pedido listo",   btn:"Servido ✓",    next:"servido" },
+  servido:       { led:"#3b82f6", label:"Servido",        btn:"Liberar",      next:"libre" },
+  sirviendo:     { led:"#3b82f6", label:"Servido",        btn:"Liberar",      next:"libre" },
+  cuenta:        { led:"#3b82f6", label:"Cuenta",         btn:"Liberar",      next:"libre" },
+  celebracion:   { led:"#a855f7", label:"Celebración",    btn:"Liberar",      next:"libre" },
+  apagada:       { led:"#1f1f2e", label:"Inactiva",       btn:"Activar",      next:"libre" },
+  inactiva:      { led:"#1f1f2e", label:"Inactiva",       btn:"Activar",      next:"libre" }
 };
 
 function loadMesasRapidas(){
@@ -3269,11 +3275,11 @@ function renderMesasRapidas(n){
     // Botones de estado
     h+='<div style="display:flex;gap:5px;flex-wrap:wrap">';
     var estados=[
-      {e:"libre",ico:"🟢",label:"Libre"},
-      {e:"ocupada",ico:"🟠",label:"Ocupar"},
-      {e:"espera",ico:"🟡",label:"Espera"},
-      {e:"lista",ico:"🔵",label:"Listo"},
-      {e:"celebracion",ico:"🎉",label:"Fiesta"},
+      {e:"libre",ico:"⬜",label:"Libre"},
+      {e:"ocupada",ico:"🔴",label:"Ocupar"},
+      {e:"en_preparacion",ico:"🟡",label:"Preparando"},
+      {e:"listo",ico:"🟢",label:"Listo"},
+      {e:"servido",ico:"🔵",label:"Servido"},
       {e:"apagada",ico:"⚫",label:"Apagar"}
     ];
     estados.forEach(function(s){
@@ -3321,16 +3327,16 @@ function renderESP32(dispositivos){
   var lista=document.getElementById("esp32Lista");
   var count=document.getElementById("esp32Count");
   if(!lista)return;
-  var online=dispositivos.filter(function(d){return d.last_seen&&(Date.now()-new Date(d.last_seen))<30000;}).length;
+  var online=dispositivos.filter(function(d){return d.last_seen&&(Date.now()-new Date(d.last_seen))<90000;}).length;
   var sinAsignar=dispositivos.filter(function(d){return !d.mesa||d.mesa===0;}).length;
   if(count){count.textContent=online+" online · "+dispositivos.length+" total"+(sinAsignar>0?" · ⚠️ "+sinAsignar+" sin asignar":"");}
   if(!dispositivos.length){
-    lista.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px">Sin dispositivos aún — conecta un ESP32 al WiFi del restaurante</div>';
+    lista.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px">Sin dispositivos aún — conecta un CHARR TOWER al WiFi del restaurante</div>';
     return;
   }
   var sorted=[...dispositivos].sort(function(a,b){if(!a.mesa&&b.mesa)return -1;if(a.mesa&&!b.mesa)return 1;return (a.mesa||0)-(b.mesa||0);});
   lista.innerHTML=sorted.map(function(d){
-    var isOnline=d.last_seen&&(Date.now()-new Date(d.last_seen))<30000;
+    var isOnline=d.last_seen&&(Date.now()-new Date(d.last_seen))<90000;
     var noMesa=!d.mesa||d.mesa===0;
     var dotColor=noMesa?"#f59e0b":isOnline?"#10b981":"#6b7280";
     var mins=d.last_seen?Math.floor((Date.now()-new Date(d.last_seen))/60000):null;
@@ -3395,7 +3401,7 @@ function animNuevoDispositivo(d){
         <div style="position:absolute;width:100%;height:3px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.6),transparent);animation:scanLine .8s linear infinite"></div>
         <span style="font-size:48px">📡</span>
       </div>
-      <div style="font-size:24px;font-weight:900;color:#fff;margin-bottom:6px">¡Nuevo dispositivo!</div>
+      <div style="font-size:24px;font-weight:900;color:#fff;margin-bottom:6px">¡Nuevo CHARR TOWER!</div>
       <div style="font-size:16px;color:#c4b5fd;margin-bottom:4px">Mesa ${d.mesa} conectada</div>
       <div style="font-size:13px;color:rgba(255,255,255,0.4)">${d.ip||""} · ${d.num_leds||8} LEDs</div>
       <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
