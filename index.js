@@ -1064,8 +1064,9 @@ app.get("/api/esp32-asignacion", async function(req, res) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    var macClean = mac.toUpperCase().trim();
     var r = await axios.get(
-      SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + encodeURIComponent(mac) + "&restaurante_id=eq." + restaurante_id + "&select=mesa",
+      SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + macClean + "&restaurante_id=eq." + restaurante_id + "&select=mesa",
       { headers: h }
     );
     var data = r.data || [];
@@ -1079,22 +1080,25 @@ app.get("/api/esp32-asignacion", async function(req, res) {
 
 app.post("/api/esp32-asignar", async function(req, res) {
   var { restaurante_id, mac, mesa } = req.body;
-  if (!restaurante_id || !mac || !mesa) return res.status(400).json({ error: "Faltan datos" });
+  if (!restaurante_id || !mac) return res.status(400).json({ error: "Faltan datos" });
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
+    var macClean = mac.toUpperCase().trim();
+    var mesaNum = parseInt(mesa)||0;
     await axios.patch(
-      SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + encodeURIComponent(mac) + "&restaurante_id=eq." + restaurante_id,
-      { mesa: parseInt(mesa) },
-      { headers: h }
+      SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + macClean + "&restaurante_id=eq." + restaurante_id,
+      { mesa: mesaNum },
+      { headers: { ...h, "Prefer": "return=minimal" } }
     );
-    // También asegurar que exista la mesa en tabla mesas
-    await axios.post(
-      SUPABASE_URL + "/rest/v1/mesas?on_conflict=restaurante_id,numero",
-      { restaurante_id, numero: parseInt(mesa), estado: "libre" },
-      { headers: { ...h, "Prefer": "resolution=merge-duplicates,return=minimal" } }
-    ).catch(function(){});
-    console.log("[ESP32] Mesa " + mesa + " asignada a MAC " + mac);
+    if (mesaNum > 0) {
+      await axios.post(
+        SUPABASE_URL + "/rest/v1/mesas?on_conflict=restaurante_id,numero",
+        { restaurante_id, numero: mesaNum, estado: "libre" },
+        { headers: { ...h, "Prefer": "resolution=merge-duplicates,return=minimal" } }
+      ).catch(function(){});
+    }
+    console.log("[ESP32] Mesa " + mesaNum + " asignada a MAC " + macClean);
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -1119,32 +1123,32 @@ app.post("/api/esp32-registro", async function(req, res) {
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
-    // Buscar si ya existe por MAC
+    var macClean = mac.toUpperCase().trim();
+    console.log("[ESP32 registro] MAC recibida:", macClean, "IP:", ip, "Mesa:", mesa);
+    // Buscar si ya existe por MAC — sin encodeURIComponent para que los : pasen bien
     var existR = await axios.get(
-      SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + encodeURIComponent(mac) + "&restaurante_id=eq." + restaurante_id + "&select=id,mesa",
+      SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + macClean + "&restaurante_id=eq." + restaurante_id + "&select=id,mesa",
       { headers: h }
-    ).catch(function(){ return { data: [] }; });
+    ).catch(function(e){ console.log("[ESP32] Error buscando:", e.message); return { data: [] }; });
     var existe = existR.data && existR.data.length > 0;
     if (existe) {
-      // Actualizar — preservar mesa asignada
-      var mesaActual = existR.data[0].mesa || mesa || 0;
+      var mesaActual = existR.data[0].mesa || parseInt(mesa)||0;
       await axios.patch(
-        SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + encodeURIComponent(mac) + "&restaurante_id=eq." + restaurante_id,
-        { ip: ip||null, num_leds: num_leds||20, online: true, last_seen: new Date().toISOString() },
+        SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + macClean + "&restaurante_id=eq." + restaurante_id,
+        { ip: ip||null, num_leds: parseInt(num_leds)||20, online: true, last_seen: new Date().toISOString() },
         { headers: { ...h, "Prefer": "return=minimal" } }
       );
-      console.log("[ESP32] Actualizado — MAC:" + mac + " Mesa:" + mesaActual + " IP:" + ip);
+      console.log("[ESP32] ✅ Actualizado — Mesa:" + mesaActual + " IP:" + ip);
     } else {
-      // Insertar nuevo dispositivo
       await axios.post(SUPABASE_URL + "/rest/v1/esp32_dispositivos",
-        { restaurante_id, mesa: parseInt(mesa)||0, mac, ip: ip||null, num_leds: num_leds||20, online: true, last_seen: new Date().toISOString() },
+        { restaurante_id, mesa: parseInt(mesa)||0, mac: macClean, ip: ip||null, num_leds: parseInt(num_leds)||20, online: true, last_seen: new Date().toISOString() },
         { headers: { ...h, "Prefer": "return=minimal" } }
       );
-      console.log("[ESP32] NUEVO dispositivo — MAC:" + mac + " IP:" + ip);
+      console.log("[ESP32] ✅ NUEVO dispositivo registrado — MAC:" + macClean + " IP:" + ip);
     }
     res.json({ ok: true });
   } catch(e) {
-    console.error("[ESP32 registro]", e.message);
+    console.error("[ESP32 registro ERROR]", e.message, e.response?.data);
     res.status(500).json({ error: e.message });
   }
 });
