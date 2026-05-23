@@ -281,7 +281,7 @@ body>*:not(.blobs){position:relative;z-index:1}
 
   <div class="stats">
     <div class="st"><span class="st-v" id="stEntregas" style="color:#6ee7b7">0</span><span class="st-l">Entregas</span></div>
-    <div class="st"><span class="st-v" id="stGanancias" style="color:var(--a2);font-size:18px">$0</span><span class="st-l">Ganancias</span></div>
+    <div class="st"><span class="st-v" id="stGanancias" style="color:var(--a2);font-size:18px">$0</span><span class="st-l">Domicilios</span></div>
     <div class="st"><span class="st-v" id="stProm" style="color:#c4b5fd">—</span><span class="st-l">Prom min</span></div>
   </div>
 
@@ -387,7 +387,8 @@ function renderSinPedido(){
 
 function renderPedido(p){
   var items=[];try{items=Array.isArray(p.items)?p.items:JSON.parse(p.items||"[]");}catch(e){}
-  var itemsStr=items.map(function(i){var n=typeof i==="string"?i.replace(/^\d+[xX×]\s*/,"").replace(/\s*\$[\d.,]+\s*$/,""):(i.nombre||"");return n.trim();}).filter(Boolean).join(" · ")||"Sin items";
+  var itemsStr=items.map(function(i){var n=typeof i==="string"?i.replace(/^\d+[xX×]\s*/,"").replace(/\s*\$[\d.,]+\s*$/,""):(i.nombre||"");return n.trim();}).filter(Boolean);
+  var itemsHTML=itemsStr.length?itemsStr.map(function(it){return '<div style="padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px;color:var(--text2)">• '+esc(it)+'</div>';}).join(""):'<div style="font-size:12px;color:var(--text3)">Sin items</div>';
   var notas=(p.notas_especiales||"").trim();
   var pago={efectivo:"💵 Efectivo",nequi:"📱 Nequi",bancolombia:"🏦 Bancolombia",datafono:"💳 Datáfono"}[p.metodo_pago]||p.metodo_pago||"";
   var enCamino=p.estado==="en_camino";
@@ -401,7 +402,7 @@ function renderPedido(p){
     +'</div>'
     +'<div class="ped-body">'
     +'<div class="ped-row"><div class="ped-ico">📍</div><div class="ped-info"><div class="ped-lbl">Dirección</div><div class="ped-val">'+esc(formatDir(p.direccion))+'</div></div></div>'
-    +'<div class="ped-row"><div class="ped-ico">📦</div><div class="ped-info"><div class="ped-lbl">Pedido</div><div class="ped-items-str">'+esc(itemsStr)+'</div></div></div>'
+    +'<div class="ped-row"><div class="ped-ico">📦</div><div class="ped-info"><div class="ped-lbl">Pedido</div><div class="ped-items-str">'+itemsHTML+'</div></div></div>'
     +(notas?'<div class="ped-notas"><div class="ped-notas-lbl">⚠️ Notas</div><div class="ped-notas-txt">'+esc(notas)+'</div></div>':"")
     +'<div class="ped-row"><div class="ped-ico">👤</div><div class="ped-info"><div class="ped-lbl">Cliente</div><div class="ped-val">'+esc(p.cliente_tel||"")+'</div></div></div>'
     +'<div class="ped-total-row"><div class="ped-total">$'+Number(p.total||0).toLocaleString("es-CO")+'</div><div class="ped-pago">'+esc(pago)+'</div></div>'
@@ -470,8 +471,8 @@ async function marcarEntregado(){
     await fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({id:pedActivo.id,estado:"entregado",telefono_cliente:pedActivo.cliente_tel,numero_pedido:pedActivo.numero_pedido,restaurante_id:restId})});
     var mins=Math.floor((Date.now()-new Date(pedActivo.created_at))/60000);tiempos.push(mins);
-    historial.unshift({num:pedActivo.numero_pedido,dir:formatDir(pedActivo.direccion),total:pedActivo.total,ts:new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})});
-    ganancias+=Number(pedActivo.total||0);
+    historial.unshift({num:pedActivo.numero_pedido,dir:formatDir(pedActivo.direccion),total:pedActivo.total,domicilio:pedActivo.domicilio||0,ts:new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})});
+    ganancias+=Number(pedActivo.domicilio||0);
     var n=pedActivo.numero_pedido;pedActivo=null;pedAnteriorId=null;
     renderSinPedido();actualizarStats();renderHistorial();
     toast("✅ Entrega #"+n+" confirmada");
@@ -494,8 +495,8 @@ function actualizarStats(){
 async function cargarHistorial(){
   try{var r=await fetch("/api/domi-historial?restaurante_id="+restId+"&domiciliario_id="+encodeURIComponent(domi.id));var data=await r.json();
     historial=data||[];
-    // Recalcular ganancias desde historial real
-    ganancias=historial.reduce(function(s,p){return s+Number(p.total||0);},0);
+    // Recalcular ganancias desde historial real — solo valor del domicilio
+    ganancias=historial.reduce(function(s,p){return s+Number(p.domicilio||0);},0);
     renderHistorial();actualizarStats();
   }catch(e){}
 }
