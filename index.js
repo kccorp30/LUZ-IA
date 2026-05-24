@@ -1516,15 +1516,19 @@ app.post("/api/admin/login", async function(req, res) {
   if (!email || !password) return res.status(400).json({ ok: false, error: "Faltan datos" });
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    // Buscar por email O por teléfono
+    var query = email.includes("@")
+      ? "email=eq." + encodeURIComponent(email)
+      : "telefono=eq." + encodeURIComponent(email.replace(/[^0-9]/g,""));
     var r = await axios.get(
-      SUPABASE_URL + "/rest/v1/usuarios_sistema?email=eq." + encodeURIComponent(email) + "&activo=eq.true&select=*",
+      SUPABASE_URL + "/rest/v1/usuarios_sistema?" + query + "&activo=eq.true&select=*&limit=1",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
     );
     if (!r.data || !r.data.length) return res.json({ ok: false, error: "Usuario no encontrado" });
     var user = r.data[0];
     if (user.password_hash !== hashPassword(password)) return res.json({ ok: false, error: "Contraseña incorrecta" });
     var token = generateToken(user.id, user.rol);
-    res.json({ ok: true, token: token, user: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol } });
+    res.json({ ok: true, token: token, user: { id: user.id, nombre: user.nombre, email: user.email, telefono: user.telefono, rol: user.rol } });
   } catch (e) {
     console.error("[admin/login]", e.message);
     res.status(500).json({ ok: false, error: "Error del servidor" });
