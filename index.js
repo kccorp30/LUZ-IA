@@ -69,6 +69,25 @@ app.use((req, res, next) => {
 const conversations = {};
 const orderState    = {};
 let   orderCounter  = 100;
+// Inicializar orderCounter desde el máximo en Supabase para evitar duplicados al redeployar
+async function initOrderCounter() {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/pedidos?select=numero_pedido&order=numero_pedido.desc&limit=1",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    if (r.data && r.data.length && r.data[0].numero_pedido) {
+      var maxNum = parseInt(r.data[0].numero_pedido) || 100;
+      orderCounter = maxNum;
+      console.log("[init] orderCounter iniciado desde Supabase: " + orderCounter);
+    }
+  } catch(e) {
+    console.warn("[init] No se pudo leer max numero_pedido, usando 100:", e.message);
+  }
+}
+// Llamar al iniciar — no bloqueante
+initOrderCounter();
 
 // ── COLA PARALELA ─────────────────────────────────────────────────────────────
 const colasPorCliente = new Map();
@@ -88,6 +107,25 @@ function procesarEnCola(from, tarea) {
 }
 
 function nextOrderNumber() { return ++orderCounter; }
+
+// ── PLANES Y PRECIOS LUZ IA ────────────────────────────────────────────────
+var PLANES_LUZ = {
+  basico:       { nombre: "Básico",       precio: 159000, pago15: 79500,  charr: 0, sucursales: 1, tablets: 0 },
+  emprendedor:  { nombre: "Emprendedor",  precio: 320000, pago15: 160000, charr: 3, sucursales: 1, tablets: 0 },
+  dominante:    { nombre: "Dominante",    precio: 460000, pago15: 230000, charr: 5, sucursales: 1, tablets: 1 },
+  empresarial:  { nombre: "Empresarial",  precio: 760000, pago15: 380000, charr: 10,sucursales: 3, tablets: 2 }
+};
+// Funciones por plan (qué está INCLUIDO)
+var PLAN_FEATURES = {
+  basico:      ["menu","whatsapp","pedidos"],
+  emprendedor: ["menu","whatsapp","pedidos","cocina","domiciliarios","meseros","charr"],
+  dominante:   ["menu","whatsapp","pedidos","cocina","domiciliarios","meseros","charr","tablet_cocina"],
+  empresarial: ["menu","whatsapp","pedidos","cocina","domiciliarios","meseros","charr","tablet_cocina","multi_sucursal","promos","fidelizacion","reportes"]
+};
+function planTieneFeature(plan, feature) {
+  var feats = PLAN_FEATURES[plan] || PLAN_FEATURES.basico;
+  return feats.includes(feature);
+}
 
 function limpiarNumero(str) {
   if (!str) return "0";
@@ -1072,6 +1110,8 @@ function parseReply(reply, from) {
 
 // ── RUTAS ─────────────────────────────────────────────────────────────────────
 app.get("/menu",        function(req, res) { res.sendFile(path.join(__dirname, "menu.html")); });
+app.get("/admin",       function(req, res) { res.sendFile(path.join(__dirname, "admin.html")); });
+app.get("/vendedor",    function(req, res) { res.sendFile(path.join(__dirname, "vendedor.html")); });
 app.get("/mapa",        function(req, res) { res.sendFile(path.join(__dirname, "mapa_zonas.html")); });
 app.get("/admin",       function(req, res) { res.sendFile(path.join(__dirname, "admin.html")); });
 app.get("/vendedor",   function(req, res) { res.sendFile(path.join(__dirname, "vendedor.html")); });
@@ -1272,8 +1312,36 @@ app.get("/icon-512.png", function(req, res) {
 app.get("/icons/icon-192.png", function(req, res) { res.redirect("/icon-192.png"); });
 app.get("/icons/icon-512.png", function(req, res) { res.redirect("/icon-512.png"); });
 
+// ── PLAN FEATURES — verifica qué funciones tiene el restaurante ───────────────
+app.get("/api/plan-features", async function(req, res) {
+  var restaurante_id = req.query.restaurante_id;
+  if (!restaurante_id) return res.json({ plan: "basico", features: PLAN_FEATURES.basico });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=plan,estado,suscripcion_estado,fecha_vencimiento", {
+      headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey }
+    });
+    var rest = r.data && r.data[0];
+    if (!rest) return res.json({ plan: "basico", features: PLAN_FEATURES.basico });
+    var plan = rest.plan || "basico";
+    // Si está suspendido o vencido, solo menú básico
+    if (rest.estado === "suspendido" || rest.estado === "vencido") {
+      return res.json({ plan: plan, features: [], bloqueado: true, razon: "cuenta_suspendida" });
+    }
+    res.json({ plan: plan, features: PLAN_FEATURES[plan] || PLAN_FEATURES.basico, planes: PLANES_LUZ });
+  } catch(e) {
+    res.json({ plan: "basico", features: PLAN_FEATURES.basico });
+  }
+});
+
 // ── PWA MANIFESTS ─────────────────────────────────────────────────────────────
 var PWA_BASE = { start_url: "/", display: "standalone", background_color: "#0d0a1a", theme_color: "#7c3aed", icons: [{ src: "https://luz-ia-production-4cff.up.railway.app/icon-192.png", sizes: "192x192", type: "image/png" }, { src: "https://luz-ia-production-4cff.up.railway.app/icon-512.png", sizes: "512x512", type: "image/png" }] };
+app.get("/manifest-admin.json", function(req, res) {
+  res.json(Object.assign({}, PWA_BASE, { name: "Admin LUZ IA", short_name: "Admin", start_url: "/admin", theme_color: "#0d0a1a" }));
+});
+app.get("/manifest-vendedor.json", function(req, res) {
+  res.json(Object.assign({}, PWA_BASE, { name: "Vendedor LUZ IA", short_name: "Vendedor", start_url: "/vendedor", theme_color: "#0d0a1a" }));
+});
 app.get("/manifest-menu.json", function(req, res) {
   res.json(Object.assign({}, PWA_BASE, { name: "La Curva Menú", short_name: "Menú", start_url: "/menu", theme_color: "#0A0710", background_color: "#0A0710" }));
 });
@@ -1605,7 +1673,7 @@ app.post("/api/vendedor/crear-restaurante", requireAdmin, async function(req, re
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var b = req.body;
     var pin = b.pin || Math.floor(1000 + Math.random() * 9000).toString();
-    var trialFin = new Date(); trialFin.setDate(trialFin.getDate() + 7);
+    var trialFin = new Date(); trialFin.setDate(trialFin.getDate() + 15);
     var restData = {
       nombre: b.nombre, ciudad: b.ciudad || "Cali", ciudad_restaurante: b.ciudad || "Cali",
       direccion: b.direccion || null, tipo_comida: b.tipo_comida || null,
@@ -1629,6 +1697,47 @@ app.post("/api/vendedor/crear-restaurante", requireAdmin, async function(req, re
     ).catch(function() {});
     res.json({ ok: true, restaurante: created, pin: pin });
   } catch (e) { console.error("[vendedor/crear]", e.message); res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/admin/crear-usuario", requireAdmin, async function(req, res) {
+  try {
+    var { nombre, email, password, telefono, rol } = req.body;
+    if (!email || !password) return res.status(400).json({ ok: false, error: "Email y contraseña requeridos" });
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var crypto = require("crypto");
+    var hash = crypto.createHash("sha256").update(password + "luzia_salt_2024").digest("hex");
+    var r = await axios.post(SUPABASE_URL + "/rest/v1/usuarios_admin",
+      { nombre: nombre || null, email: email, password_hash: hash, telefono: telefono || null, rol: rol || "vendedor", activo: true },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" } }
+    );
+    res.json({ ok: true, usuario: r.data && r.data[0] });
+  } catch(e) {
+    if (e.response && e.response.status === 409) return res.json({ ok: false, error: "Email ya registrado" });
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/api/vendedor/notificar-creacion", requireAdmin, async function(req, res) {
+  try {
+    var { restaurante_id, telefono, pin, nombre } = req.body;
+    if (!telefono || !pin) return res.json({ ok: false });
+    var tel = "57" + String(telefono).replace(/^57/, "").replace(/[^0-9]/g, "");
+    var pid = process.env.WHATSAPP_PHONE_ID;
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    try {
+      var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=whatsapp_phone_id",
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+      if (rr.data && rr.data[0] && rr.data[0].whatsapp_phone_id) pid = rr.data[0].whatsapp_phone_id;
+    } catch(e) {}
+    var msg = "¡Bienvenido a LUZ IA! 🤖🎉\n\n" +
+      "Tu restaurante *" + nombre + "* ya está activo con 15 días de trial gratuito.\n\n" +
+      "📱 *Tu panel de control:*\n" +
+      process.env.MENU_PAGE_URL?.replace("/menu","") + "/restaurante\n\n" +
+      "🔑 *Tu PIN de acceso:* " + pin + "\n\n" +
+      "¿Dudas? Responde este mensaje y te ayudo. ¡Éxitos! 🚀";
+    await sendWhatsAppMessage(tel, msg, pid);
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 
 app.post("/api/vendedor/actividad", requireAdmin, async function(req, res) {
@@ -2135,8 +2244,15 @@ app.post("/api/pedido-manual", async function(req, res) {
   var nombre_cliente = req.body.nombre_cliente || null;
   var comprobante_url = req.body.comprobante_url || null;
   var descuento = req.body.descuento || 0;
+  var descuento_rango = req.body.descuento_rango || 0; // % de descuento por nivel
+  var nivel_fidelidad = req.body.nivel_fidelidad || null;
   var barrio = req.body.barrio || null;
   var tipo_pedido = req.body.tipo_pedido || "domicilio";
+  // Agregar nota de descuento por rango si aplica
+  if (descuento_rango > 0 && nivel_fidelidad) {
+    var notaDesc = "💎 DESCUENTO " + nivel_fidelidad.toUpperCase() + " " + descuento_rango + "%";
+    notas_especiales = notas_especiales ? notas_especiales + " | " + notaDesc : notaDesc;
+  }
 
   if (!restaurante_id || !telefono || !items || !total) return res.status(400).json({ ok: false, error: "Faltan datos: restaurante_id, telefono, items, total" });
   try {
@@ -2257,11 +2373,32 @@ app.post("/api/enviar-promo", async function(req, res) {
     // Fuente 2: pedidos históricos (complementa si hay clientes sin registro)
     try {
       var pedResp = await axios.get(
-        SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + req.body.restaurante_id + "&select=cliente_tel",
-        { headers: h }
+        SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + req.body.restaurante_id + "&select=cliente_tel&limit=10000",
+        { headers: { ...h, "Range-Unit": "items", "Range": "0-9999", "Prefer": "count=none" } }
       );
       (pedResp.data || []).forEach(function(p) { if (p.cliente_tel) telefonos.push(p.cliente_tel); });
     } catch(e) { console.error("[promo] Error pedidos:", e.message); }
+
+    // Fuente 3: mensajes — todos los que han escrito alguna vez (sin importar si pidieron)
+    // IMPORTANTE: agregar limit alto para no cortar en 1000 filas (default de Supabase)
+    try {
+      var msgResp = await axios.get(
+        SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + req.body.restaurante_id + "&select=telefono&limit=10000",
+        { headers: { ...h, "Range-Unit": "items", "Range": "0-9999", "Prefer": "count=none" } }
+      );
+      (msgResp.data || []).forEach(function(m) { if (m.telefono) telefonos.push(m.telefono); });
+      console.log("[promo] Fuente mensajes:", (msgResp.data||[]).length, "registros");
+    } catch(e) { console.error("[promo] Error mensajes:", e.message); }
+    
+    // Fuente 4: clientes_frecuentes sin filtro de fecha (todos sin excepcion)
+    try {
+      var cliAll = await axios.get(
+        SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + req.body.restaurante_id + "&select=telefono&limit=10000",
+        { headers: { ...h, "Range-Unit": "items", "Range": "0-9999", "Prefer": "count=none" } }
+      );
+      (cliAll.data || []).forEach(function(c) { if (c.telefono) telefonos.push(c.telefono); });
+      console.log("[promo] Fuente clientes_frecuentes:", (cliAll.data||[]).length, "registros");
+    } catch(e) { console.error("[promo] Error clientes_frecuentes extra:", e.message); }
 
     // Normalizar y deduplicar
     var unicos = {};
@@ -2726,8 +2863,14 @@ app.post("/api/luz-menu-chat", async function(req, res) {
 
 INFORMACIÓN DEL RESTAURANTE:
 - Nombre: ${restInfo.nombre || ""}
-- Domicilio: $${Number(restInfo.domicilio_base||0).toLocaleString("es-CO")}
+- Domicilio base (mínimo): $${Number(restInfo.domicilio_base||0).toLocaleString("es-CO")}
 - Pagos: Nequi ${restInfo.metodo_pago_nequi||""}, Bancolombia ${restInfo.metodo_pago_banco||""}, titular: ${restInfo.metodo_pago_nombre||""}
+
+REGLA DOMICILIO — MUY IMPORTANTE:
+- Si el cliente da su barrio y está en una zona: cobra el precio de esa zona.
+- Si el cliente NO da barrio o el barrio NO está en ninguna zona: cobra el domicilio base de $${Number(restInfo.domicilio_base||0).toLocaleString("es-CO")} y dile "El domicilio son $${Number(restInfo.domicilio_base||0).toLocaleString("es-CO")} para tu zona".
+- NUNCA cierres un pedido con domicilio $0 si es a domicilio. Si no sabes el barrio, usa el mínimo.
+- NUNCA asumas que el domicilio es gratis.
 
 CLIENTE ACTUAL:
 ${cliente ? `- Nombre: ${cliente.nombre_cliente || ""}
@@ -3219,6 +3362,84 @@ app.delete("/api/productos-canje/:id", async function(req, res) {
     );
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── PANEL CLIENTES — ranking, historial canjes, ajuste puntos ─────────────────
+app.get("/api/clientes-ranking", async function(req, res) {
+  var restaurante_id = req.query.restaurante_id;
+  if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante_id +
+      "&order=puntos.desc&limit=200&select=id,telefono,nombre_cliente,puntos,nivel_fidelidad,total_pedidos,ultimo_pedido,created_at",
+      { headers: h }
+    );
+    res.json(r.data || []);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/clientes-canjes", async function(req, res) {
+  var restaurante_id = req.query.restaurante_id;
+  var telefono = req.query.telefono;
+  if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    var q = SUPABASE_URL + "/rest/v1/canjes?restaurante_id=eq." + restaurante_id;
+    if (telefono) q += "&telefono=eq." + encodeURIComponent(telefono);
+    q += "&order=created_at.desc&limit=100&select=*";
+    var r = await axios.get(q, { headers: h });
+    res.json(r.data || []);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/ajustar-puntos", async function(req, res) {
+  var { restaurante_id, telefono, puntos_delta, motivo } = req.body;
+  if (!restaurante_id || !telefono || puntos_delta === undefined) return res.status(400).json({ error: "Faltan datos" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    var telLocal = stripCountryCode(telefono);
+    var cliR = await axios.get(
+      SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante_id + "&telefono=eq." + encodeURIComponent(telLocal) + "&select=id,puntos,nombre_cliente",
+      { headers: h }
+    );
+    if (!cliR.data || !cliR.data.length) return res.status(404).json({ error: "Cliente no encontrado" });
+    var cli = cliR.data[0];
+    var nuevosPuntos = Math.max(0, (cli.puntos || 0) + Number(puntos_delta));
+    await axios.patch(SUPABASE_URL + "/rest/v1/clientes_frecuentes?id=eq." + cli.id,
+      { puntos: nuevosPuntos, updated_at: new Date().toISOString() },
+      { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    // Registrar en canjes como ajuste manual
+    try {
+      await axios.post(SUPABASE_URL + "/rest/v1/canjes",
+        { restaurante_id, telefono: telLocal, producto_nombre: "Ajuste manual: " + (motivo||"sin motivo"), puntos_usados: -Number(puntos_delta), estado: "ajuste" },
+        { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+      );
+    } catch(e) {}
+    console.log("[ajuste-puntos] " + telLocal + ": " + (cli.puntos||0) + " → " + nuevosPuntos + " (" + (motivo||"-") + ")");
+    res.json({ ok: true, puntos_anteriores: cli.puntos || 0, puntos_nuevos: nuevosPuntos });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── PEDIDOS CON DESCUENTO — endpoint para panel ───────────────────────────────
+app.get("/api/pedidos-con-descuento", async function(req, res) {
+  var restaurante_id = req.query.restaurante_id;
+  if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    // Pedidos que tienen descuento (notas_especiales contiene DESCUENTO o items con precio_original)
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id +
+      "&notas_especiales=like.*DESCUENTO*&order=created_at.desc&limit=100&select=id,numero_pedido,cliente_tel,total,notas_especiales,estado,created_at",
+      { headers: h }
+    );
+    res.json(r.data || []);
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post("/api/canjear", async function(req, res) {
