@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0d0a1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Panel LUZ IA">
+<link rel="manifest" href="/manifest-restaurante.json">
 <title>LUZ IA</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Barlow+Condensed:wght@600;700;800;900&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <!-- Tailwind via CDN (no requiere build step en Railway) -->
@@ -1197,10 +1203,9 @@ select.finput{cursor:pointer}
             <!-- Buscar y agregar item -->
             <div style="position:relative">
               <input id="pedMesaBuscar" placeholder="🔍 Buscar producto..." oninput="pedMesaFiltrar(this.value)" autocomplete="off"
-                style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:12px;color:white;font-size:13px;font-weight:600;outline:none;font-family:inherit"
-                onfocus="document.getElementById('pedMesaDropdown').style.display='block'"
-                onblur="setTimeout(function(){document.getElementById('pedMesaDropdown').style.display='none'},200)">
-              <div id="pedMesaDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:200;background:#1a1030;border:1px solid rgba(255,255,255,0.14);border-radius:12px;max-height:200px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.5)"></div>
+                style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:12px;color:white;font-size:13px;font-weight:600;outline:none;font-family:inherit">
+              <div id="pedMesaCats" style="display:flex;gap:6px;overflow-x:auto;padding:6px 0 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch"></div>
+              <div id="pedMesaDropdown" style="background:rgba(15,10,35,0.98);border:1px solid rgba(124,58,237,0.25);border-radius:12px;max-height:220px;overflow-y:auto;margin-top:2px"></div>
             </div>
             <!-- Notas -->
             <input id="pedMesaNotas" placeholder="Notas especiales (opcional)..." class="finput" style="padding:9px 12px;font-size:12px">
@@ -2067,8 +2072,8 @@ function loadPedidos(){
       h+='</div>';
       h+='<div class="desglose"><div class="desglose-row"><span>Subtotal</span><span>'+fmt(subtotal)+'</span></div><div class="desglose-row"><span>Desechables</span><span>'+fmt(desechables)+'</span></div><div class="desglose-row"><span>Domicilio</span><span>'+fmt(domicilio)+'</span></div><div class="desglose-row total"><span>TOTAL</span><span>'+fmt(total)+'</span></div></div>';
       // Comprobante: puede venir por WhatsApp (media_id) o por menu web (url directa)
-      if(p.comprobante_media_id)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" onerror="this.style.display=\'none\'"></div>';
-      else if(p.comprobante_url)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante</div><img class="comprobante-img" src="'+escHtml(p.comprobante_url)+'" onerror="this.style.display=\'none\'"></div>';
+      if(p.comprobante_media_id)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante de pago</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" onerror="this.outerHTML=\'<div style=\\\"padding:8px 12px;font-size:11px;color:#34d399\\\">⏳ Imagen cargando... (puede tardar unos segundos)</div>\'"></div>';
+      else if(p.comprobante_url)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante de pago</div><img class="comprobante-img" src="'+escHtml(p.comprobante_url)+'" onerror="this.outerHTML=\'<div style=\\\"padding:8px 12px;font-size:11px;color:#34d399\\\">⏳ Imagen cargando...</div>\'"></div>';
       h+='<div class="ebtns">';
       var bEstado=cfg.n,bLabel=cfg.bl,bClass=cfg.bc;
       if(esMesa&&p.estado==="listo"){bEstado="entregado";bLabel="💳 Cobrar y cerrar";bClass="bcerrar";}
@@ -2474,7 +2479,7 @@ function renderMensajesChat(msgs, forzar){
     if(m.tipo==="cliente" && mediaIdComp){
       h += '<div class="chat-comp-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+mediaIdComp+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
       h += '<div class="chat-comp-label">📎 Comprobante de pago — <span style="font-weight:400;opacity:0.7">Toca para ampliar</span></div>';
-      h += '<img src="/api/comprobante/'+mediaIdComp+'" onerror="this.style.background=\'rgba(16,185,129,0.1)\';this.style.minHeight=\'80px\'" loading="lazy" style="min-height:80px">';
+      h += '<img src="/api/comprobante/'+mediaIdComp+'" onerror="this.outerHTML=\'<div style=\\\"padding:10px 12px;font-size:11px;color:#34d399;display:flex;align-items:center;gap:6px\\\">⏳ Comprobante recibido — cargando imagen...</div>\'" loading="lazy" style="min-height:60px;width:100%;object-fit:contain;border-radius:8px">';
       h += '<div class="chat-comp-time">'+horaStr+'</div></div>';
     }
     else if(m.tipo==="cliente" && esImagenCliente){
@@ -2905,24 +2910,29 @@ function guardarTelefonoDueno(){
 
 function cargarConfig(){
   if(!rest)return;
+  // ── Si hay un input activo en Config, no sobreescribir — el usuario está escribiendo
+  var activo=document.activeElement;
+  var enConfig=activo&&activo.closest&&activo.closest("#tabConfig");
   modoDiaActual=rest.modo_dia||false;actualizarToggleModoDia(modoDiaActual);
-  document.getElementById("cfg-apertura").value=(rest.hora_apertura||"16:00:00").substring(0,5);
-  document.getElementById("cfg-cierre").value=(rest.hora_cierre||"00:00:00").substring(0,5);
-  document.getElementById("cfg-menu-dia").value=rest.menu_dia||"";
-  document.getElementById("cfg-menu-noche").value=rest.menu_noche||"";
-  document.getElementById("cfg-direccion").value=rest.direccion||"";
-  document.getElementById("cfg-msg-bienvenida").value=rest.msg_bienvenida||"";
-  document.getElementById("cfg-msg-preparacion").value=rest.msg_en_preparacion||"";
-  document.getElementById("cfg-msg-listo").value=rest.msg_listo||"";
-  document.getElementById("cfg-msg-camino").value=rest.msg_en_camino||"";
-  var diasActivos=(rest.dias_activos||"lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
-  document.querySelectorAll(".dia-btn").forEach(function(b){diasActivos.includes(b.getAttribute("data-dia"))?b.classList.add("activo"):b.classList.remove("activo");});
-  // Cargar teléfono del dueño
-  var telInput=document.getElementById("cfg-telefono-dueno");
-  var telStatus=document.getElementById("cfg-dueno-status");
-  if(telInput&&rest.telefono_dueno){
-    telInput.value=rest.telefono_dueno;
-    if(telStatus){telStatus.textContent="✅ Luz envía alertas al: +57"+rest.telefono_dueno;telStatus.style.color="#6ee7b7";}
+  if(!enConfig){
+    document.getElementById("cfg-apertura").value=(rest.hora_apertura||"16:00:00").substring(0,5);
+    document.getElementById("cfg-cierre").value=(rest.hora_cierre||"00:00:00").substring(0,5);
+    document.getElementById("cfg-menu-dia").value=rest.menu_dia||"";
+    document.getElementById("cfg-menu-noche").value=rest.menu_noche||"";
+    document.getElementById("cfg-direccion").value=rest.direccion||"";
+    document.getElementById("cfg-msg-bienvenida").value=rest.msg_bienvenida||"";
+    document.getElementById("cfg-msg-preparacion").value=rest.msg_en_preparacion||"";
+    document.getElementById("cfg-msg-listo").value=rest.msg_listo||"";
+    document.getElementById("cfg-msg-camino").value=rest.msg_en_camino||"";
+    var diasActivos=(rest.dias_activos||"lunes,martes,miercoles,jueves,viernes,sabado,domingo").split(",");
+    document.querySelectorAll(".dia-btn").forEach(function(b){diasActivos.includes(b.getAttribute("data-dia"))?b.classList.add("activo"):b.classList.remove("activo");});
+    // Cargar teléfono del dueño
+    var telInput=document.getElementById("cfg-telefono-dueno");
+    var telStatus=document.getElementById("cfg-dueno-status");
+    if(telInput&&rest.telefono_dueno){
+      telInput.value=rest.telefono_dueno;
+      if(telStatus){telStatus.textContent="✅ Luz envía alertas al: +57"+rest.telefono_dueno;telStatus.style.color="#6ee7b7";}
+    }
   }
 }
 function actualizarToggleModoDia(activo){
@@ -3461,12 +3471,16 @@ function animNuevoDispositivo(d){
 
 // ── ARMAR PEDIDO DESDE PANEL ──────────────────────────────
 var pedMesaItemsList=[];
+var pedMesaCatActual="todas";
 
 function abrirPedidoMesa(num){
   document.getElementById("pedMesaNum").value=num;
   pedMesaItemsList=[];
   renderPedMesaItems();
   document.getElementById("pedMesaNotas").value="";
+  pedMesaCatActual="todas";
+  renderPedMesaCats();
+  renderPedMesaGrid("");
   document.getElementById("pedMesaNum").scrollIntoView({behavior:"smooth",block:"center"});
 }
 
@@ -3477,42 +3491,70 @@ function cargarProductosMesa(){
     .then(function(r){return r.json();})
     .then(function(items){
       pedMesaTodosProds=(items||[]).filter(function(p){return p.disponible!==false;});
+      renderPedMesaCats();
+      renderPedMesaGrid("");
     }).catch(function(){});
 }
 
-function pedMesaFiltrar(q){
-  var dd=document.getElementById("pedMesaDropdown");
-  if(!dd)return;
-  if(!q.trim()){dd.innerHTML="";dd.style.display="none";return;}
-  var filtrados=pedMesaTodosProds.filter(function(p){
-    return p.nombre.toLowerCase().includes(q.toLowerCase());
-  }).slice(0,8);
-  if(!filtrados.length){
-    dd.innerHTML='<div style="padding:12px;font-size:12px;color:var(--text3);text-align:center">Sin resultados</div>';
-    dd.style.display="block";return;
-  }
-  dd.innerHTML=filtrados.map(function(p){
-    return '<div onmousedown="pedMesaAgregarProd(\''+escHtml(JSON.stringify({id:p.id,nombre:p.nombre,precio:p.precio})).replace(/'/g,"&#39;")+'\')" '
-      +'style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);transition:background .1s" '
-      +'onmouseover="this.style.background=\'rgba(124,58,237,0.15)\'" onmouseout="this.style.background=\'none\'">'
-      +'<span style="font-size:13px;font-weight:700">'+escHtml(p.nombre)+'</span>'
-      +'<span style="font-size:12px;color:#6ee7b7;font-weight:700">$'+Number(p.precio).toLocaleString("es-CO")+'</span>'
-      +'</div>';
+function renderPedMesaCats(){
+  var catsWrap=document.getElementById("pedMesaCats");
+  if(!catsWrap)return;
+  var cats=["todas"];
+  pedMesaTodosProds.forEach(function(p){if(p.categoria&&cats.indexOf(p.categoria)===-1)cats.push(p.categoria);});
+  catsWrap.innerHTML=cats.map(function(c){
+    var on=c===pedMesaCatActual;
+    return '<div onclick="pedMesaSelCat(\'"+escHtml(c)+"\')" style="flex-shrink:0;padding:5px 13px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;background:'+(on?"rgba(124,58,237,0.25)":"rgba(255,255,255,0.06)")+';border:1px solid '+(on?"rgba(124,58,237,0.6)":"rgba(255,255,255,0.1)")+';color:'+(on?"#c4b5fd":"var(--text3)")+'">'+(c==="todas"?"Todos":c)+'</div>';
   }).join("");
-  dd.style.display="block";
 }
 
-function pedMesaAgregarProd(jsonStr){
-  try{
-    var prod=JSON.parse(jsonStr);
-    var existe=pedMesaItemsList.find(function(x){return x.id===prod.id;});
-    if(existe){existe.qty++;}else{pedMesaItemsList.push({id:prod.id,nombre:prod.nombre,precio:prod.precio,qty:1});}
-    renderPedMesaItems();
-    var inp=document.getElementById("pedMesaBuscar");
-    if(inp){inp.value="";}
-    var dd=document.getElementById("pedMesaDropdown");
-    if(dd){dd.style.display="none";}
-  }catch(e){}
+function pedMesaSelCat(cat){
+  pedMesaCatActual=cat;
+  renderPedMesaCats();
+  var q=document.getElementById("pedMesaBuscar")||{};
+  renderPedMesaGrid((q.value||"").trim());
+}
+
+function pedMesaFiltrar(q){
+  renderPedMesaGrid(q.trim());
+}
+
+function renderPedMesaGrid(q){
+  var dd=document.getElementById("pedMesaDropdown");
+  if(!dd)return;
+  var filtrados=pedMesaTodosProds.filter(function(p){
+    var catOk=pedMesaCatActual==="todas"||p.categoria===pedMesaCatActual;
+    var qOk=!q||p.nombre.toLowerCase().indexOf(q.toLowerCase())!==-1;
+    return catOk&&qOk;
+  }).slice(0,20);
+  if(!filtrados.length){
+    dd.innerHTML='<div style="padding:14px;font-size:12px;color:var(--text3);text-align:center">Sin resultados</div>';
+    return;
+  }
+  dd.innerHTML=filtrados.map(function(p){
+    var enCarrito=pedMesaItemsList.find(function(x){return x.id===p.id;});
+    var qty=enCarrito?enCarrito.qty:0;
+    var emoji=p.emoji||"🍽️";
+    var safeNombre=escHtml(p.nombre).replace(/"/g,"&quot;");
+    return '<div onmousedown="pedMesaAgregarProd(\'"+p.id+"\',"+ JSON.stringify(p.nombre)+","+ p.precio+")" '+
+      'style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);background:'+(qty>0?"rgba(124,58,237,0.08)":"transparent")+'" '+
+      'onmouseover="this.style.background=\'rgba(124,58,237,0.15)\'" onmouseout="this.style.background=\''+(qty>0?"rgba(124,58,237,0.08)":"transparent")+'\'">'
+      +'<span style="font-size:22px;flex-shrink:0;width:30px;text-align:center">'+emoji+'</span>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(p.nombre)+'</div>'
+      +(p.categoria?'<div style="font-size:9px;color:var(--text3);margin-top:1px">'+escHtml(p.categoria)+'</div>':"")
+      +'</div>'
+      +(qty>0?'<span style="font-size:11px;font-weight:800;background:rgba(124,58,237,0.3);border-radius:8px;padding:2px 7px;color:#c4b5fd">×'+qty+'</span>':"")
+      +'<span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;font-weight:700;color:#6ee7b7;flex-shrink:0">$'+Number(p.precio).toLocaleString("es-CO")+'</span>'
+      +'</div>';
+  }).join("");
+}
+
+function pedMesaAgregarProd(id,nombre,precio){
+  var existe=pedMesaItemsList.find(function(x){return x.id===id;});
+  if(existe){existe.qty++;}else{pedMesaItemsList.push({id:id,nombre:nombre,precio:precio,qty:1});}
+  renderPedMesaItems();
+  var q=document.getElementById("pedMesaBuscar")||{};
+  renderPedMesaGrid((q.value||"").trim());
+  notif("✓ "+nombre.substring(0,25));
 }
 
 function renderPedMesaItems(){
@@ -3520,19 +3562,19 @@ function renderPedMesaItems(){
   var total=document.getElementById("pedMesaTotal");
   if(!el)return;
   if(!pedMesaItemsList.length){
-    el.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">Sin items — agrega productos abajo</div>';
+    el.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">Sin items — toca un producto abajo</div>';
     if(total)total.textContent="0";
     return;
   }
   var sum=0;
   el.innerHTML=pedMesaItemsList.map(function(item,idx){
     sum+=item.precio*item.qty;
-    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,0.04);border-radius:10px;border:1px solid rgba(255,255,255,0.07)">'
-      +'<span style="flex:1;font-size:12px;font-weight:700">'+escHtml(item.nombre)+'</span>'
-      +'<button onclick="pedMesaQty('+idx+',-1)" style="width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:white;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit">−</button>'
-      +'<span style="font-size:13px;font-weight:800;min-width:16px;text-align:center">'+item.qty+'</span>'
-      +'<button onclick="pedMesaQty('+idx+',1)" style="width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:white;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit">+</button>'
-      +'<span style="font-size:12px;color:#6ee7b7;min-width:60px;text-align:right">$'+Number(item.precio*item.qty).toLocaleString("es-CO")+'</span>'
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(124,58,237,0.08);border-radius:10px;border:1px solid rgba(124,58,237,0.2)">'
+      +'<span style="flex:1;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(item.nombre)+'</span>'
+      +'<button onclick="pedMesaQty('+idx+',-1)" style="width:26px;height:26px;border-radius:7px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.25);color:#fca5a5;cursor:pointer;font-size:16px;font-weight:700;font-family:inherit;flex-shrink:0">−</button>'
+      +'<span style="font-family:\'JetBrains Mono\',monospace;font-size:13px;font-weight:800;min-width:20px;text-align:center;color:#c4b5fd">'+item.qty+'</span>'
+      +'<button onclick="pedMesaQty('+idx+',1)" style="width:26px;height:26px;border-radius:7px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.25);color:#c4b5fd;cursor:pointer;font-size:16px;font-weight:700;font-family:inherit;flex-shrink:0">+</button>'
+      +'<span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#6ee7b7;min-width:58px;text-align:right;flex-shrink:0">$'+Number(item.precio*item.qty).toLocaleString("es-CO")+'</span>'
       +'</div>';
   }).join("");
   if(total)total.textContent=Number(sum).toLocaleString("es-CO");
@@ -3542,25 +3584,35 @@ function pedMesaQty(idx,delta){
   pedMesaItemsList[idx].qty+=delta;
   if(pedMesaItemsList[idx].qty<=0)pedMesaItemsList.splice(idx,1);
   renderPedMesaItems();
+  var q=document.getElementById("pedMesaBuscar")||{};
+  renderPedMesaGrid((q.value||"").trim());
 }
+
 
 async function confirmarPedidoMesa(){
   if(!rest||!pedMesaItemsList.length){notif("Agrega al menos un producto");return;}
   var mesaNum=document.getElementById("pedMesaNum").value;
+  if(!mesaNum){notif("Selecciona una mesa");return;}
   var notas=document.getElementById("pedMesaNotas").value.trim();
   var total=pedMesaItemsList.reduce(function(s,x){return s+x.precio*x.qty;},0);
   var items=pedMesaItemsList.map(function(x){return x.nombre+(x.qty>1?" x"+x.qty:"")+" $"+Number(x.precio).toLocaleString("es-CO");});
+  var btn=document.querySelector("[onclick='confirmarPedidoMesa()']");
+  if(btn){btn.disabled=true;btn.textContent="Enviando...";}
   try{
-    var r=await fetch("/api/crear-pedido",{method:"POST",headers:{"Content-Type":"application/json"},
+    var r=await fetch("/api/pedido-manual",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
         restaurante_id:rest.id,
         direccion:"Mesa "+mesaNum,
         tipo_pedido:"mesa",
         items:items,
+        subtotal:total,
+        desechables:0,
+        domicilio:0,
         total:total,
-        notas_especiales:notas||"",
-        metodo_pago:"efectivo",
-        cliente_tel:"panel"
+        notas_especiales:notas||null,
+        metodo_pago:"en mesa",
+        cliente_tel:"MESA-"+mesaNum,
+        cliente_nombre:"Mesa "+mesaNum
       })
     });
     var d=await r.json();
@@ -3572,6 +3624,7 @@ async function confirmarPedidoMesa(){
       document.getElementById("pedMesaNotas").value="";
     }else{notif("Error: "+(d.error||"Error desconocido"));}
   }catch(e){notif("Error al crear pedido: "+e.message);}
+  finally{if(btn){btn.disabled=false;btn.textContent="✅ Confirmar pedido";}}
 }
 
 function escHtml(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
@@ -3824,6 +3877,14 @@ function cargarZonas(){
 }
 function renderZonasTabla(zonas){
   var tabla=document.getElementById("zonasTabla");if(!tabla)return;
+  // ── No re-renderizar si hay input activo dentro de la tabla
+  var activo=document.activeElement;
+  if(activo&&tabla.contains(activo))return;
+  // ── Guardar qué zonas están abiertas antes de re-renderizar
+  var abiertas=[];
+  tabla.querySelectorAll("[id^='editZona-']").forEach(function(el){
+    if(el.style.display!=="none")abiertas.push(el.id.replace("editZona-",""));
+  });
   if(!zonas||!zonas.length){tabla.innerHTML='<div style="color:var(--text3);font-size:13px;padding:10px 0;text-align:center">🗺️ No hay zonas configuradas aún. Agrega la primera arriba o carga las predefinidas de Cali.</div>';return;}
   var h="";
   zonas.forEach(function(z,idx){
@@ -3836,11 +3897,10 @@ function renderZonasTabla(zonas){
     h+='<div style="flex:1;min-width:0"><div class="mapa-zona-name">'+escHtml(z.nombre)+'</div><div class="mapa-zona-barrios">'+escHtml(barrios.substring(0,120))+(barrios.length>120?"...":"")+'</div></div>';
     h+='<div class="mapa-zona-price">'+fmt(precio)+'</div>';
     h+='</div>';
-    // Inline edit (hidden by default)
     h+='<div id="editZona-'+z.id+'" style="display:none;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06)">';
-    h+='<div class="frow" style="margin-bottom:8px"><div class="ffield"><label class="flabel">Nombre</label><input class="finput" id="zn-'+z.id+'" value="'+escHtml(z.nombre)+'" style="font-size:13px"></div>';
-    h+='<div class="ffield"><label class="flabel">Precio $</label><input class="finput" type="number" id="zp-'+z.id+'" value="'+precio+'" style="font-size:13px"></div></div>';
-    h+='<div class="ffield" style="margin-bottom:8px"><label class="flabel">Barrios (separados por coma)</label><textarea class="finput" id="zb-'+z.id+'" rows="3" style="font-size:12px;resize:none">'+escHtml(barrios)+'</textarea></div>';
+    h+='<div class="frow" style="margin-bottom:8px"><div class="ffield"><label class="flabel">Nombre</label><input class="finput" id="zn-'+z.id+'" value="'+escHtml(z.nombre)+'" style="font-size:13px" onclick="event.stopPropagation()"></div>';
+    h+='<div class="ffield"><label class="flabel">Precio $</label><input class="finput" type="number" id="zp-'+z.id+'" value="'+precio+'" style="font-size:13px" onclick="event.stopPropagation()"></div></div>';
+    h+='<div class="ffield" style="margin-bottom:8px"><label class="flabel">Barrios (separados por coma)</label><textarea class="finput" id="zb-'+z.id+'" rows="3" style="font-size:12px;resize:none" onclick="event.stopPropagation()">'+escHtml(barrios)+'</textarea></div>';
     h+='<div style="display:flex;gap:7px">';
     h+='<button onclick="event.stopPropagation();guardarZonaEdit(\''+z.id+'\')" style="flex:2;padding:9px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">💾 Guardar</button>';
     h+='<button onclick="event.stopPropagation();eliminarZona(\''+z.id+'\')" style="flex:1;padding:9px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:10px;color:#fca5a5;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">🗑</button>';
@@ -3848,6 +3908,11 @@ function renderZonasTabla(zonas){
     h+='</div>';
   });
   tabla.innerHTML=h;
+  // ── Restaurar zonas que estaban abiertas
+  abiertas.forEach(function(id){
+    var el=document.getElementById("editZona-"+id);
+    if(el)el.style.display="block";
+  });
 }
 function toggleEditZona(id){
   var el=document.getElementById("editZona-"+id);
@@ -5243,6 +5308,19 @@ function resolverPendiente(id){
   .then(function(r){return r.json();})
   .then(function(d){if(d.ok){notif("🧠 Luz ya sabe la respuesta!");loadCerebro();}})
   .catch(function(){notif("Error");});
+}
+</script>
+<button id="rPwaBtn" onclick="instalarRPWA()" style="display:none;position:fixed;bottom:20px;right:16px;z-index:9000;padding:10px 16px;border-radius:50px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;font-size:11px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 4px 16px rgba(124,58,237,.5)">📲 Instalar app</button>
+<script>
+var _rDeferredPWA=null;
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();_rDeferredPWA=e;
+  var btn=document.getElementById('rPwaBtn');if(btn)btn.style.display='block';
+});
+function instalarRPWA(){
+  if(!_rDeferredPWA)return;
+  _rDeferredPWA.prompt();
+  _rDeferredPWA.userChoice.then(function(){_rDeferredPWA=null;var btn=document.getElementById('rPwaBtn');if(btn)btn.style.display='none';});
 }
 </script>
 </body>
