@@ -737,13 +737,17 @@ function logout(){localStorage.removeItem("luzia_admin_token");location.reload()
 // Cargar badge de soporte sin leer
 async function checkSoporteBadge(){
   try{
-    var msgs=await sb("GET","mensajes",null,"telefono=like.SOPORTE_%&tipo=eq.alerta_pregunta&select=id&limit=50");
+    // Buscar mensajes de soporte (teléfonos que empiezan con SOPORTE_)
+    var msgs=await sb("GET","mensajes",null,"telefono=ilike.SOPORTE_%25&select=id&limit=99");
     var n=(msgs||[]).length;
-    var badge=document.getElementById("soporteBadge");
-    if(badge)badge.textContent=n>0?n:"";badge&&(badge.style.display=n>0?"inline":"none");
-  }catch(e){}
+    var badgeEl=document.getElementById("soporteBadge");
+    if(badgeEl){badgeEl.textContent=n>0?n:"";badgeEl.style.display=n>0?"inline":"none";}
+  }catch(e){
+    // Silenciar — tabla puede no tener el índice o campo
+    console.warn("[soporte badge]",e.message);
+  }
 }
-setInterval(checkSoporteBadge,30000);
+setInterval(checkSoporteBadge,60000);
 
 async function sb(method,table,data,filters){
   var url="/api/admin/sb/"+table;
@@ -1158,26 +1162,26 @@ function loadPlanes(){
 async function loadVendedores(){
   document.getElementById("vendList").innerHTML='<div class="loading"><span class="spin">⟳</span> Cargando...</div>';
   try{
-    var vs=await sb("GET","usuarios_sistema",null,"activo=eq.true&order=created_at.desc&select=id,nombre,email,rol,telefono,cedula,placa,direccion,emergencia_nombre,emergencia_tel,foto_url,notas_internas,created_at")||[];
+    // Seleccionar solo columnas base que siempre existen + columnas extra con fallback
+    var vs=await sb("GET","usuarios_sistema",null,"activo=eq.true&order=created_at.desc&select=*")||[];
     if(!vs.length){document.getElementById("vendList").innerHTML='<div class="empty"><div class="empty-ico">👤</div><p>Sin vendedores. Crea el primero arriba.</p></div>';return;}
-    var hoy=new Date().toISOString().split("T")[0];
     document.getElementById("vendList").innerHTML=vs.map(function(v){
       var restsV=CACHE.filter(function(r){return r.vendedor_id===v.id;});
       var activos=restsV.filter(function(r){return r.estado==="activo";});
       var mrr=activos.reduce(function(s,r){return s+(PRECIOS[r.plan]||0);},0);
+      var ini=(v.nombre||v.email||"V").charAt(0).toUpperCase();
       var fotoHtml=v.foto_url
         ?'<img src="'+v.foto_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px" onerror="this.style.display=\'none\'">'
-        :(v.nombre||v.email||"V").charAt(0).toUpperCase();
+        :ini;
       return'<div class="vcard">'+
         '<div class="vav">'+fotoHtml+'</div>'+
         '<div style="flex:1;min-width:0">'+
           '<div style="font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(v.nombre||"Sin nombre")+'</div>'+
           '<div style="font-size:11px;color:var(--m)">'+(v.telefono||v.email||"")+(v.cedula?" · CC "+v.cedula:"")+'</div>'+
           '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">'+
-            '<span style="font-size:10px;padding:2px 8px;background:rgba(124,58,237,.15);border-radius:20px;color:var(--p2);font-weight:700">'+v.rol+'</span>'+
+            '<span style="font-size:10px;padding:2px 8px;background:rgba(124,58,237,.15);border-radius:20px;color:var(--p2);font-weight:700">'+(v.rol||"vendedor")+'</span>'+
             '<span style="font-size:10px;padding:2px 8px;background:rgba(16,185,129,.1);border-radius:20px;color:#6ee7b7;font-weight:700">'+restsV.length+' restaurantes</span>'+
-            (v.placa?'<span style="font-size:10px;padding:2px 8px;background:rgba(59,130,246,.1);border-radius:20px;color:#93c5fd;font-weight:700">🏍 '+v.placa+'</span>':"")+
-          '</div>'+
+            (v.placa?'<span style="font-size:10px;padding:2px 8px;background:rgba(59,130,246,.1);border-radius:20px;color:#93c5fd;font-weight:700">🏍 '+v.placa+'</span>':"")+'</div>'+
         '</div>'+
         '<div style="text-align:right;flex-shrink:0">'+
           '<div style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;color:var(--a)">'+fmt(mrr)+'</div>'+
