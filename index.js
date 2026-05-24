@@ -1351,7 +1351,7 @@ app.get("/api/plan-features", async function(req, res) {
     });
     var rest = r.data && r.data[0];
     if (!rest) return res.json({ plan: "basico", features: PLAN_FEATURES.basico });
-    var plan = rest.plan || "basico";
+    var plan = rest.plan_id || rest.plan || "basico";
     // Si está suspendido o vencido, solo menú básico
     if (rest.estado === "suspendido" || rest.estado === "vencido") {
       return res.json({ plan: plan, features: [], bloqueado: true, razon: "cuenta_suspendida" });
@@ -1591,7 +1591,7 @@ app.get("/api/admin/dashboard", requireAdmin, async function(req, res) {
     var preciosPlan = {};
     (planes.data || []).forEach(function(p) { preciosPlan[p.nombre] = p.precio_mensual; });
     var mrr = data.filter(function(r) { return r.estado === "activo"; }).reduce(function(s, r) {
-      return s + (preciosPlan[r.plan] || 0);
+      return s + (preciosPlan[r.plan_id] || preciosPlan[r.plan] || 0);
     }, 0);
 
     // Vencen en 7 días
@@ -1704,58 +1704,66 @@ app.post("/api/vendedor/crear-restaurante", requireAdmin, async function(req, re
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var b = req.body;
-    var pin = b.pin || Math.floor(1000 + Math.random() * 9000).toString();
+    var pin = Math.floor(1000 + Math.random() * 9000).toString();
     var trialFin = new Date(); trialFin.setDate(trialFin.getDate() + 15);
-    // Campos base — siempre existen en la tabla restaurantes
+    // Solo campos que existen en CUALQUIER versión de la tabla restaurantes
     var restData = {
       nombre: b.nombre,
       ciudad: b.ciudad || "Cali",
       ciudad_restaurante: b.ciudad || "Cali",
-      direccion: b.direccion || null,
-      contacto_nombre: b.contacto_nombre || null,
-      contacto_telefono: b.contacto_telefono || null,
-      whatsapp: b.whatsapp || null,
-      whatsapp_phone_id: b.whatsapp_phone_id || null,
-      plan: b.plan || "basico",
       estado: "activo",
       suscripcion_estado: "trial",
       fecha_vencimiento: trialFin.toISOString().split("T")[0],
       pin: pin,
-      vendedor_id: req.adminUser.id,
       hora_apertura: (b.hora_apertura || "10:00") + ":00",
       hora_cierre: (b.hora_cierre || "22:00") + ":00"
     };
-    // Campos opcionales — agregar solo si existen valores
-    if (b.nombre_luz) restData.nombre_luz = b.nombre_luz;
-    if (b.personalidad_luz) restData.personalidad_luz = b.personalidad_luz;
-    if (b.tipo_comida) restData.tipo_comida = b.tipo_comida;
+    // Campos opcionales — solo si la columna puede existir
+    var optFields = {
+      direccion: b.direccion,
+      contacto_nombre: b.contacto_nombre,
+      contacto_telefono: b.contacto_telefono,
+      whatsapp: b.whatsapp,
+      whatsapp_phone_id: b.whatsapp_phone_id,
+      plan_id: b.plan || "basico",
+      vendedor_id: req.adminUser.id,
+      tipo_comida: b.tipo_comida || null
+    };
+    // Intentar con campos opcionales primero
+    var fullData = Object.assign({}, restData, optFields);
+    // Quitar nulls/undefined
+    Object.keys(fullData).forEach(function(k){ if(fullData[k]==null||fullData[k]==="")delete fullData[k]; });
     var r;
     try {
+      r = await axios.post(SUPABASE_URL + "/rest/v1/restaurantes", fullData,
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" } });
+    } catch(e1) {
+      console.warn("[crear-restaurante] full insert failed:", e1.response?.data, "— retrying with base only");
+      // Fallback: solo nombre + estado + pin
       r = await axios.post(SUPABASE_URL + "/rest/v1/restaurantes", restData,
         { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" } });
-    } catch(ePost) {
-      // Si falla con campos opcionales, intentar solo con campos base
-      if (ePost.response && ePost.response.status === 400) {
-        var baseOnly = { nombre:restData.nombre, ciudad:restData.ciudad, ciudad_restaurante:restData.ciudad_restaurante,
-          contacto_nombre:restData.contacto_nombre, contacto_telefono:restData.contacto_telefono,
-          whatsapp:restData.whatsapp, whatsapp_phone_id:restData.whatsapp_phone_id,
-          plan:restData.plan, estado:restData.estado, suscripcion_estado:restData.suscripcion_estado,
-          fecha_vencimiento:restData.fecha_vencimiento, pin:restData.pin, vendedor_id:restData.vendedor_id,
-          hora_apertura:restData.hora_apertura, hora_cierre:restData.hora_cierre };
-        r = await axios.post(SUPABASE_URL + "/rest/v1/restaurantes", baseOnly,
-          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" } });
-      } else { throw ePost; }
     }
-    var created = r.data && r.data[0] ? r.data[0] : r.data;
-    // Log activity
-    await axios.post(SUPABASE_URL + "/rest/v1/actividad_vendedor",
-      { vendedor_id: req.adminUser.id, tipo: "cierre", restaurante_id: created.id, restaurante_nombre: b.nombre, notas: "Trial 15 días creado. PIN: " + pin },
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
-    ).catch(function() {});
+    var created = (Array.isArray(r.data) ? r.data[0] : r.data) || {};
+    // Intentar guardar campos extra que pueden no existir en la tabla
+    if (created.id) {
+      var extras = {};
+      if (b.nombre_luz) extras.nombre_luz = b.nombre_luz;
+      if (b.personalidad_luz) extras.personalidad_luz = b.personalidad_luz;
+      if (Object.keys(extras).length) {
+        await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + created.id, extras,
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+        ).catch(function(){});
+      }
+      // Log actividad
+      await axios.post(SUPABASE_URL + "/rest/v1/actividad_vendedor",
+        { vendedor_id: req.adminUser.id, tipo: "cierre", restaurante_id: created.id, restaurante_nombre: b.nombre, notas: "Trial 15 días. PIN: " + pin },
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+      ).catch(function(){});
+    }
     res.json({ ok: true, restaurante: created, pin: pin });
   } catch (e) {
-    console.error("[vendedor/crear]", e.message, e.response && e.response.data);
-    res.status(500).json({ ok: false, error: e.message });
+    console.error("[vendedor/crear]", e.message, JSON.stringify(e.response?.data));
+    res.status(500).json({ ok: false, error: e.message, detail: e.response?.data });
   }
 });
 
