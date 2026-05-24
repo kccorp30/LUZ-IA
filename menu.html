@@ -2504,6 +2504,7 @@ body::after {
       <span class="hdr-btn-dot hide" id="mpDot"></span>
     </button>
     <button class="hdr-btn hdr-btn-rewards" onclick="abrirRewards()" title="Mis puntos">⭐</button>
+    <div id="rangoBadge" style="display:none;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;cursor:pointer;transition:all .3s" onclick="abrirRewards()"></div>
   </div>
 </header>
 
@@ -3218,7 +3219,7 @@ function renderProductCard(item, idx, esClasica, tipoDestacado) {
     + (item.descripcion ? '<div class="pcard-desc">' + escHtml(item.descripcion) + '</div>' : '')
     + '</div>'
     + '<div class="pcard-bottom">'
-    + '<div class="pcard-price">' + fmt(item.precio) + '</div>'
+    + fmtDescuento(item.precio)
     + ctrlHtml
     + '</div>'
     + '</div>'
@@ -3302,15 +3303,12 @@ function getItemById(id) {
 
 function agregarProducto(id) {
   var item = getItemById(id);
-  if (!item) {
-    console.warn("Producto no encontrado:", id);
-    return;
-  }
+  if (!item) { console.warn("Producto no encontrado:", id); return; }
   if (!carrito[id]) {
     carrito[id] = {
       id: item.id,
       nombre: item.nombre,
-      precio: item.precio,
+      precio: precioConDescuento(item.precio),
       qty: 0,
       adic: [],
       salsa: null
@@ -3394,7 +3392,16 @@ function abrirDetalleProducto(id) {
   var h = '<div class="det-img">' + imgHtml + '</div>';
   h += '<div class="det-name">' + escHtml(item.nombre) + '</div>';
   if (item.descripcion) h += '<div class="det-desc">' + escHtml(item.descripcion) + '</div>';
-  h += '<div class="det-price">' + fmt(item.precio) + '</div>';
+  var descPct = getDescuento();
+  if (descPct > 0) {
+    h += '<div style="display:flex;align-items:center;gap:8px">'
+       + '<div class="det-price" style="color:#10b981">' + fmt(precioConDescuento(item.precio)) + '</div>'
+       + '<div style="font-size:13px;color:var(--t3);text-decoration:line-through">' + fmt(item.precio) + '</div>'
+       + '<div style="font-size:11px;font-weight:800;background:rgba(16,185,129,0.15);color:#10b981;padding:2px 7px;border-radius:8px">-' + descPct + '%</div>'
+       + '</div>';
+  } else {
+    h += '<div class="det-price">' + fmt(item.precio) + '</div>';
+  }
 
   // Selector de gaseosa si es combo
   if (esCombo(item)) {
@@ -3438,7 +3445,7 @@ function renderDetFoot() {
     + '<button class="det-qty-btn" onclick="detQty++;renderDetFoot()">+</button>'
     + '</div>'
     + '<button class="det-add-btn" onclick="detAgregar()">'
-    + '<span>Agregar</span><span>' + fmt(item.precio * detQty) + '</span></button></div>';
+    + '<span>Agregar</span><span>' + fmt(precioConDescuento(item.precio) * detQty) + '</span></button></div>';
 }
 
 function detAgregar() {
@@ -3451,7 +3458,7 @@ function detAgregar() {
   }
   var notas = (document.getElementById("detNotas") || {}).value || "";
   if (!carrito[detItemId]) {
-    carrito[detItemId] = { id: item.id, nombre: item.nombre, precio: item.precio, qty: 0 };
+    carrito[detItemId] = { id: item.id, nombre: item.nombre, precio: precioConDescuento(item.precio), qty: 0 };
   }
   carrito[detItemId].qty = detQty;
   if (notas.trim()) carrito[detItemId].notas = notas.trim();
@@ -3672,6 +3679,26 @@ function irCheckout() {
 var pagoSel = null;
 var compB64 = null;
 var clienteData = null;
+// Descuentos por rango
+var DESCUENTOS_RANGO = { bronce: 0, plata: 5, oro: 10, diamante: 15 };
+function getDescuento() {
+  if (!clienteData) return 0;
+  var nivel = (clienteData.nivel_fidelidad || "bronce").toLowerCase();
+  return DESCUENTOS_RANGO[nivel] || 0;
+}
+function precioConDescuento(precio) {
+  var pct = getDescuento();
+  if (!pct) return precio;
+  return Math.round(precio * (1 - pct / 100));
+}
+function fmtDescuento(precio) {
+  var pct = getDescuento();
+  if (!pct) return '<span class="pcard-price">' + fmt(precio) + '</span>';
+  var nuevo = precioConDescuento(precio);
+  return '<span class="pcard-price-before">' + fmt(precio) + '</span>'
+       + '<span class="pcard-price" style="color:#10b981">' + fmt(nuevo) + '</span>';
+}
+var _luzPresentado = false;
 var chkTimer = null;
 var descVal = 0;
 var descTipo = null;
@@ -3785,6 +3812,9 @@ function checkCliente() {
         clienteData = d;
         var nombre = d.nombre_cliente || d.nombre;
         document.getElementById("cliNom").value = nombre;
+        // Update rank badge and re-render prices
+        actualizarBadgeRango();
+        renderProductos();
         var card = document.getElementById("cliCard");
         card.className = "cli-card";
         card.innerHTML = '<div class="cli-card-ico">👤</div>'
@@ -4420,6 +4450,83 @@ async function solicitarMesero(mesaNum, tipo) {
   }
 }
 
+// ── BADGE DE RANGO ──────────────────────────────────────────
+function actualizarBadgeRango() {
+  var badge = document.getElementById("rangoBadge");
+  if (!badge || !clienteData) { if(badge) badge.style.display="none"; return; }
+  var nivel = (clienteData.nivel_fidelidad || "bronce").toLowerCase();
+  var pct = DESCUENTOS_RANGO[nivel] || 0;
+  var cfg = {
+    bronce:  { emoji:"🥉", color:"#cd7f32", bg:"rgba(205,127,50,0.15)",  border:"rgba(205,127,50,0.35)" },
+    plata:   { emoji:"🥈", color:"#d1d5db", bg:"rgba(156,163,175,0.15)", border:"rgba(156,163,175,0.35)" },
+    oro:     { emoji:"🥇", color:"#fbbf24", bg:"rgba(251,191,36,0.15)",  border:"rgba(251,191,36,0.35)" },
+    diamante:{ emoji:"💎", color:"#818cf8", bg:"rgba(129,140,248,0.15)", border:"rgba(129,140,248,0.35)" }
+  }[nivel] || { emoji:"🥉", color:"#cd7f32", bg:"rgba(205,127,50,0.15)", border:"rgba(205,127,50,0.35)" };
+  badge.style.cssText = "display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:800;cursor:pointer;background:"+cfg.bg+";border:1px solid "+cfg.border+";color:"+cfg.color;
+  badge.innerHTML = cfg.emoji + " " + nivel.charAt(0).toUpperCase()+nivel.slice(1) + (pct > 0 ? ' <span style="opacity:.7">-'+pct+'%</span>' : "");
+  // Ocultar el botón ⭐ si ya hay badge con rango
+  var rewBtn = document.querySelector(".hdr-btn-rewards");
+  if (rewBtn) rewBtn.style.display = "none";
+  // Presentación de LUZ (solo una vez por sesión)
+  if (!_luzPresentado) {
+    _luzPresentado = true;
+    setTimeout(function(){ luzPresentarRango(nivel, pct, clienteData.puntos||0); }, 1500);
+  }
+}
+
+// ── PRESENTACIÓN DE LUZ CON VOZ ──────────────────────────────
+async function luzPresentarRango(nivel, pct, puntos) {
+  var nombre = clienteData ? (clienteData.nombre_cliente || clienteData.nombre || "").split(" ")[0] : "";
+  var nivelNom = nivel.charAt(0).toUpperCase() + nivel.slice(1);
+  var descMsg = pct > 0 ? " Tienes un " + pct + "% de descuento automático en todo el menú." : "";
+  var texto = "¡Hola" + (nombre ? " " + nombre : "") + "! Eres nivel " + nivelNom + " con " + puntos + " puntos." + descMsg + " Acumulas 1 punto por cada mil pesos. Puedes canjearlos por productos gratis desde Mis Puntos.";
+  // Mostrar toast iluminado
+  luzToastRango(texto, nivel);
+  // Intentar síntesis de voz
+  try {
+    if (rest) {
+      var r = await fetch("/api/luz-voz", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ texto: texto }), signal: AbortSignal.timeout(8000) });
+      if (r.ok) {
+        var url = URL.createObjectURL(await r.blob());
+        var audio = new Audio(url);
+        audio.play().catch(function(){});
+      }
+    }
+  } catch(e) {
+    // Fallback a síntesis del browser
+    if (window.speechSynthesis) {
+      var u = new SpeechSynthesisUtterance(texto);
+      u.lang = "es-CO"; u.rate = 1.05; u.pitch = 1.1;
+      window.speechSynthesis.speak(u);
+    }
+  }
+}
+
+function luzToastRango(texto, nivel) {
+  var colors = { bronce:"#cd7f32", plata:"#d1d5db", oro:"#fbbf24", diamante:"#818cf8" };
+  var color = colors[nivel] || "#c4b5fd";
+  var toast = document.createElement("div");
+  toast.id = "luzRangoToast";
+  toast.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;max-width:88vw;background:rgba(10,7,20,0.97);border:1.5px solid "+color+";border-radius:20px;padding:12px 18px;box-shadow:0 4px 24px rgba(0,0,0,0.6);display:flex;align-items:flex-start;gap:10px;animation:fadeInUp .35s ease";
+  toast.innerHTML = '<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🤖</div>'
+    + '<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:800;color:'+color+';text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">LUZ ›</div>'
+    + '<div style="font-size:13px;color:#f1f0ff;line-height:1.5">'+texto+'</div>'
+    + '<div style="display:flex;gap:2px;margin-top:6px" id="luzWaveRango">'
+    + '<div style="width:2.5px;height:3px;background:'+color+';border-radius:2px;animation:wva .8s ease 0s infinite"></div>'
+    + '<div style="width:2.5px;height:9px;background:'+color+';border-radius:2px;animation:wva .8s ease .1s infinite"></div>'
+    + '<div style="width:2.5px;height:14px;background:'+color+';border-radius:2px;animation:wva .8s ease .2s infinite"></div>'
+    + '<div style="width:2.5px;height:9px;background:'+color+';border-radius:2px;animation:wva .8s ease .3s infinite"></div>'
+    + '<div style="width:2.5px;height:3px;background:'+color+';border-radius:2px;animation:wva .8s ease .4s infinite"></div>'
+    + '</div></div>'
+    + '<div onclick="this.parentElement.remove()" style="cursor:pointer;font-size:16px;color:rgba(255,255,255,0.4);flex-shrink:0;padding:2px">×</div>';
+  document.body.appendChild(toast);
+  // Iluminar badge de rango
+  var badge = document.getElementById("rangoBadge");
+  if (badge) { badge.style.transform="scale(1.15)"; badge.style.boxShadow="0 0 16px "+color; setTimeout(function(){ badge.style.transform=""; badge.style.boxShadow=""; }, 2000); }
+  // Auto-cerrar a los 8s
+  setTimeout(function(){ if(toast.parentElement) toast.style.opacity="0"; setTimeout(function(){ if(toast.parentElement) toast.remove(); }, 400); }, 8000);
+}
+
 function abrirRewards() {
   document.getElementById('rewOv').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -4490,7 +4597,7 @@ async function fetchRewards(tel) {
     h += '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:8px">Tus beneficios</div>';
     h += '<div style="font-size:12px;color:var(--t2);line-height:1.7">';
     h += '🛒 <b>1 punto por cada $1.000</b> en compras<br>';
-    if (nivel === "plata" || nivel === "oro") h += '🏷️ <b>' + (nivel === "oro" ? "10" : "5") + '% descuento</b> automático en todo<br>';
+    if (nivel === "plata" || nivel === "oro" || nivel === "diamante") h += '🏷️ <b>' + (nivel === "diamante" ? "15" : nivel === "oro" ? "10" : "5") + '% descuento</b> automático en todo<br>';
     h += '🎁 Canjea tus puntos por productos gratis';
     h += '</div></div>';
 
@@ -4704,6 +4811,7 @@ window.addEventListener("load", async function() {
         .then(function(data) {
           var cli = data.cliente || data;
           if (cli && (cli.nombre_cliente || cli.puntos)) {
+            clienteData = cli; // ← cargar para activar descuentos
             var puntos = cli.puntos || 0;
             var nivel = cli.nivel_fidelidad || "bronce";
             var nombre = cli.nombre_cliente || "";
@@ -4712,6 +4820,9 @@ window.addEventListener("load", async function() {
             var rewSub = document.getElementById("rewSub");
             if (rewTitle) rewTitle.textContent = nivelEmoji + " " + puntos + " puntos · " + nivel.charAt(0).toUpperCase() + nivel.slice(1);
             if (rewSub) rewSub.textContent = nombre ? "Hola, " + nombre.split(" ")[0] : "Toca para ver tus beneficios";
+            // Mostrar badge y re-renderizar con descuentos
+            actualizarBadgeRango();
+            renderProductos();
           }
         }).catch(function() {});
     }
