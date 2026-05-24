@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0A0710">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="La Curva Menú">
+<link rel="manifest" href="/manifest-menu.json">
 <title>La Curva Street Food</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2620,6 +2625,18 @@ body::after {
       <div class="tipos-tabs">
         <button class="tipos-tab on" data-tipo="domicilio" onclick="setTipoCheckout('domicilio')">🛵 Domicilio</button>
         <button class="tipos-tab" data-tipo="recoger" onclick="setTipoCheckout('recoger')">🏪 Recoger</button>
+        <button class="tipos-tab" id="ckTabMesa" data-tipo="mesa" onclick="setTipoCheckout('mesa')" style="display:none">🪑 Mesa</button>
+      </div>
+
+      <!-- Selector de mesa (solo cuando tipo=mesa) -->
+      <div id="flMesa" style="display:none">
+        <div class="fld">
+          <label class="fld-label">🪑 Mesa</label>
+          <select class="fld-input" id="cliMesa" onchange="window._mesaSeleccionada=parseInt(this.value)" style="color:var(--text)">
+            <option value="">Selecciona tu mesa...</option>
+          </select>
+          <div class="fld-hint" id="mesaHint" style="color:#6ee7b7;font-size:11px;margin-top:4px"></div>
+        </div>
       </div>
 
       <!-- Cliente: WhatsApp -->
@@ -3664,6 +3681,12 @@ var zonasData = [];
 function abrirCheckout() {
   document.getElementById('checkoutOv').classList.add('open');
   document.body.style.overflow = 'hidden';
+  // Mostrar tab de mesa si viene de QR o ya es tipo mesa
+  var ckTabMesa = document.getElementById('ckTabMesa');
+  if (ckTabMesa && (window._mesaQR || tipoPedido === 'mesa')) {
+    ckTabMesa.style.display = '';
+    if (window._mesaQR) tipoPedido = 'mesa';
+  }
   setTipoCheckout(tipoPedido);
   cargarZonas();
   actualizarTotalesCheckout();
@@ -3689,10 +3712,58 @@ function setTipoCheckout(t) {
   document.querySelectorAll('.tipos-tab').forEach(function(el){
     el.classList.toggle('on', el.getAttribute('data-tipo') === t);
   });
-  // Mostrar/ocultar dirección
   var fd = document.getElementById('flDomicilio');
   if (fd) fd.style.display = (t === 'domicilio' ? '' : 'none');
+  var fm = document.getElementById('flMesa');
+  if (fm) fm.style.display = (t === 'mesa' ? '' : 'none');
+  // Si llega con mesa del QR, pre-seleccionar
+  if (t === 'mesa') {
+    cargarMesasConCharr();
+    if (window._mesaQR) {
+      window._mesaSeleccionada = window._mesaQR;
+      var sel = document.getElementById('cliMesa');
+      if (sel) sel.value = window._mesaQR;
+      var hint = document.getElementById('mesaHint');
+      if (hint) hint.textContent = '✅ Mesa ' + window._mesaQR + ' detectada por QR';
+    }
+  }
   actualizarTotalesCheckout();
+}
+
+// Cargar mesas con CHARR TOWER para el selector
+async function cargarMesasConCharr() {
+  var sel = document.getElementById('cliMesa');
+  if (!sel || !rest) return;
+  // Si ya tiene opciones (no solo el placeholder) no recargar
+  if (sel.options.length > 2) return;
+  try {
+    var r = await fetch('/api/esp32-dispositivos?restaurante_id=' + rest.id);
+    var towers = await r.json() || [];
+    var mesasCharr = towers.filter(function(t){ return t.mesa && t.mesa > 0; })
+      .sort(function(a,b){ return a.mesa - b.mesa; });
+    sel.innerHTML = '<option value="">Selecciona tu mesa...</option>';
+    if (mesasCharr.length) {
+      mesasCharr.forEach(function(t){
+        var opt = document.createElement('option');
+        opt.value = t.mesa;
+        opt.textContent = 'Mesa ' + t.mesa;
+        sel.appendChild(opt);
+      });
+    } else {
+      // Fallback: mostrar mesas 1 a numero_mesas si no hay CHARR
+      var total = parseInt(rest.numero_mesas) || 8;
+      for (var i = 1; i <= total; i++) {
+        var opt = document.createElement('option');
+        opt.value = i; opt.textContent = 'Mesa ' + i;
+        sel.appendChild(opt);
+      }
+    }
+    // Pre-seleccionar si viene del QR
+    if (window._mesaQR) sel.value = window._mesaQR;
+    sel.onchange = function(){ window._mesaSeleccionada = parseInt(this.value); };
+  } catch(e) {
+    console.warn('[mesaSelector]', e.message);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -4098,7 +4169,7 @@ async function enviarPedido() {
       restaurante_id: rest.id,
       cliente_tel: tel,
       nombre_cliente: nom,
-      direccion: tipoPedido === "domicilio" ? document.getElementById("cliDir").value.trim() : "",
+      direccion: tipoPedido === "domicilio" ? document.getElementById("cliDir").value.trim() : (tipoPedido === "mesa" ? "Mesa " + (window._mesaSeleccionada || window._mesaQR || "") : ""),
       barrio: tipoPedido === "domicilio" ? document.getElementById("cliBarrio").value.trim() : "",
       tipo_pedido: tipoPedido,
       metodo_pago: pagoSel,
@@ -4561,9 +4632,13 @@ window.addEventListener("load", async function() {
   var restId = gp("rest") || gp("r");
   var mesa = gp("mesa") || gp("m");
   if (mesa) {
-    var mt = document.getElementById("t-mesa");
-    if (mt) mt.classList.remove("hide");
-    setTipo("mesa");
+    var mesaNum = parseInt(mesa);
+    if (mesaNum > 0) {
+      window._mesaQR = mesaNum; // guardar globalmente
+      var mt = document.getElementById("t-mesa");
+      if (mt) mt.classList.remove("hide");
+      setTipo("mesa");
+    }
   }
 
   try {
@@ -4668,6 +4743,19 @@ window.addEventListener("load", async function() {
 
   console.log("%c[LUZ IA v3.0] Ready — Fase 3 pendiente: carrito + checkout", "color:#22C55E;font-weight:bold");
 });
+</script>
+<button id="menuPwaBtn" onclick="instalarMenuPWA()" style="display:none;position:fixed;bottom:80px;right:14px;z-index:900;padding:10px 16px;border-radius:50px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;font-size:11px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 4px 16px rgba(124,58,237,.5)">📲 Instalar app</button>
+<script>
+var _deferredPWA=null;
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();_deferredPWA=e;
+  var btn=document.getElementById('menuPwaBtn');if(btn)btn.style.display='block';
+});
+function instalarMenuPWA(){
+  if(!_deferredPWA)return;
+  _deferredPWA.prompt();
+  _deferredPWA.userChoice.then(function(){_deferredPWA=null;var btn=document.getElementById('menuPwaBtn');if(btn)btn.style.display='none';});
+}
 </script>
 </body>
 </html>
