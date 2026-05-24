@@ -445,6 +445,7 @@ var vfeedT=null;
 function vfeed(txt){var el=document.getElementById("vfeed");el.textContent=txt;el.classList.add("on");if(vfeedT)clearTimeout(vfeedT);vfeedT=setTimeout(function(){el.classList.remove("on");},3500);}
 
 // ── PWA ──
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(function(){}); }
 window.addEventListener("beforeinstallprompt",function(e){
   e.preventDefault();deferredPWA=e;
   var btn=document.getElementById("pwaBtn");btn.style.display="flex";
