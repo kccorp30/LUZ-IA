@@ -4378,10 +4378,10 @@ function renderPedidoCard(p, esActivo) {
   var esMesaActiva = esActivo && p.direccion && p.direccion.toUpperCase().indexOf("MESA") !== -1;
   if (esMesaActiva) {
     var mesaMatch = p.direccion.toUpperCase().match(/MESA\s*(\d+)/);
-    var mesaNum = mesaMatch ? mesaMatch[1] : null;
+    var mesaNum = mesaMatch ? mesaMatch[1] : "0";
     h += '<div style="display:flex;gap:8px;margin-top:8px">';
-    h += '<button onclick="solicitarMesero(' + JSON.stringify(mesaNum) + ',\'mesero\')" style="flex:1;padding:10px;border-radius:12px;background:linear-gradient(135deg,rgba(168,85,247,0.2),rgba(124,58,237,0.2));border:1px solid rgba(168,85,247,0.4);color:#d8b4fe;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">🔔 Llamar mesero</button>';
-    h += '<button onclick="solicitarMesero(' + JSON.stringify(mesaNum) + ',\'cuenta\')" style="flex:1;padding:10px;border-radius:12px;background:linear-gradient(135deg,rgba(168,85,247,0.2),rgba(124,58,237,0.2));border:1px solid rgba(168,85,247,0.4);color:#d8b4fe;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">💳 Pedir cuenta</button>';
+    h += '<button data-mesa="'+mesaNum+'" data-tipo="mesero" onclick="solicitarMeseroBtn(this)" style="flex:1;padding:10px;border-radius:12px;background:linear-gradient(135deg,rgba(168,85,247,0.2),rgba(124,58,237,0.2));border:1px solid rgba(168,85,247,0.4);color:#d8b4fe;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔔 Llamar mesero</button>';
+    h += '<button data-mesa="'+mesaNum+'" data-tipo="cuenta" onclick="solicitarMeseroBtn(this)" style="flex:1;padding:10px;border-radius:12px;background:linear-gradient(135deg,rgba(168,85,247,0.2),rgba(124,58,237,0.2));border:1px solid rgba(168,85,247,0.4);color:#d8b4fe;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💳 Pedir cuenta</button>';
     h += '</div>';
   }
   h += '<div class="mp-card-bottom">';
@@ -4390,6 +4390,12 @@ function renderPedidoCard(p, esActivo) {
   h += '</div>';
   h += '</div>';
   return h;
+}
+
+function solicitarMeseroBtn(btn) {
+  var mesa = btn.getAttribute('data-mesa');
+  var tipo = btn.getAttribute('data-tipo');
+  solicitarMesero(mesa, tipo);
 }
 
 async function solicitarMesero(mesaNum, tipo) {
