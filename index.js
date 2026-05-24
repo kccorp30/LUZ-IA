@@ -1706,29 +1706,57 @@ app.post("/api/vendedor/crear-restaurante", requireAdmin, async function(req, re
     var b = req.body;
     var pin = b.pin || Math.floor(1000 + Math.random() * 9000).toString();
     var trialFin = new Date(); trialFin.setDate(trialFin.getDate() + 15);
+    // Campos base — siempre existen en la tabla restaurantes
     var restData = {
-      nombre: b.nombre, ciudad: b.ciudad || "Cali", ciudad_restaurante: b.ciudad || "Cali",
-      direccion: b.direccion || null, tipo_comida: b.tipo_comida || null,
-      contacto_nombre: b.contacto_nombre || null, contacto_telefono: b.contacto_telefono || null,
-      whatsapp: b.whatsapp || null, whatsapp_phone_id: b.whatsapp_phone_id || null,
-      plan: b.plan || "crecimiento", estado: "activo", suscripcion_estado: "trial",
+      nombre: b.nombre,
+      ciudad: b.ciudad || "Cali",
+      ciudad_restaurante: b.ciudad || "Cali",
+      direccion: b.direccion || null,
+      contacto_nombre: b.contacto_nombre || null,
+      contacto_telefono: b.contacto_telefono || null,
+      whatsapp: b.whatsapp || null,
+      whatsapp_phone_id: b.whatsapp_phone_id || null,
+      plan: b.plan || "basico",
+      estado: "activo",
+      suscripcion_estado: "trial",
       fecha_vencimiento: trialFin.toISOString().split("T")[0],
-      pin: pin, vendedor_id: req.adminUser.id,
+      pin: pin,
+      vendedor_id: req.adminUser.id,
       hora_apertura: (b.hora_apertura || "10:00") + ":00",
-      hora_cierre: (b.hora_cierre || "22:00") + ":00",
-      nombre_luz: b.nombre_luz || "Luz",
-      personalidad_luz: b.personalidad_luz || "Amable, caleña, servicial"
+      hora_cierre: (b.hora_cierre || "22:00") + ":00"
     };
-    var r = await axios.post(SUPABASE_URL + "/rest/v1/restaurantes", restData,
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" } });
+    // Campos opcionales — agregar solo si existen valores
+    if (b.nombre_luz) restData.nombre_luz = b.nombre_luz;
+    if (b.personalidad_luz) restData.personalidad_luz = b.personalidad_luz;
+    if (b.tipo_comida) restData.tipo_comida = b.tipo_comida;
+    var r;
+    try {
+      r = await axios.post(SUPABASE_URL + "/rest/v1/restaurantes", restData,
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" } });
+    } catch(ePost) {
+      // Si falla con campos opcionales, intentar solo con campos base
+      if (ePost.response && ePost.response.status === 400) {
+        var baseOnly = { nombre:restData.nombre, ciudad:restData.ciudad, ciudad_restaurante:restData.ciudad_restaurante,
+          contacto_nombre:restData.contacto_nombre, contacto_telefono:restData.contacto_telefono,
+          whatsapp:restData.whatsapp, whatsapp_phone_id:restData.whatsapp_phone_id,
+          plan:restData.plan, estado:restData.estado, suscripcion_estado:restData.suscripcion_estado,
+          fecha_vencimiento:restData.fecha_vencimiento, pin:restData.pin, vendedor_id:restData.vendedor_id,
+          hora_apertura:restData.hora_apertura, hora_cierre:restData.hora_cierre };
+        r = await axios.post(SUPABASE_URL + "/rest/v1/restaurantes", baseOnly,
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" } });
+      } else { throw ePost; }
+    }
     var created = r.data && r.data[0] ? r.data[0] : r.data;
     // Log activity
     await axios.post(SUPABASE_URL + "/rest/v1/actividad_vendedor",
-      { vendedor_id: req.adminUser.id, tipo: "cierre", restaurante_id: created.id, restaurante_nombre: b.nombre, notas: "Trial 7 días creado. PIN: " + pin },
+      { vendedor_id: req.adminUser.id, tipo: "cierre", restaurante_id: created.id, restaurante_nombre: b.nombre, notas: "Trial 15 días creado. PIN: " + pin },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
     ).catch(function() {});
     res.json({ ok: true, restaurante: created, pin: pin });
-  } catch (e) { console.error("[vendedor/crear]", e.message); res.status(500).json({ ok: false, error: e.message }); }
+  } catch (e) {
+    console.error("[vendedor/crear]", e.message, e.response && e.response.data);
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 app.post("/api/admin/crear-usuario", requireAdmin, async function(req, res) {
