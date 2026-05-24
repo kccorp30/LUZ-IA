@@ -840,9 +840,9 @@ async function loadDashboard(){
     var vencen=rests.filter(function(r){return r.fecha_vencimiento&&new Date(r.fecha_vencimiento)<=en7&&r.estado==="activo";});
     // MRR solo de activos pagos (no trial)
     var activosPago=activos.filter(function(r){return r.suscripcion_estado!=="trial";});
-    var mrr=activosPago.reduce(function(s,r){return s+(PRECIOS[r.plan]||0);},0);
+    var mrr=activosPago.reduce(function(s,r){return s+(PRECIOS[r.plan_id||r.plan]||0);},0);
     // Próximo cobro = suma de pagos de 15 días de los que vencen pronto
-    var proxCobro=vencen.reduce(function(s,r){return s+Math.round((PRECIOS[r.plan]||0)/2);},0);
+    var proxCobro=vencen.reduce(function(s,r){return s+Math.round((PRECIOS[r.plan_id||r.plan]||0)/2);},0);
     document.getElementById("dMRR").textContent=fmt(mrr);
     document.getElementById("dARR").textContent=fmt(mrr*12);
     document.getElementById("dProxCobro").textContent=fmt(proxCobro)||(proxCobro?"":fmt(0));
@@ -854,13 +854,13 @@ async function loadDashboard(){
     // Alertas de vencimiento
     if(vencen.length){
       document.getElementById("alertV").classList.add("show");
-      document.getElementById("alertVtxt").textContent="Cobro pendiente: "+vencen.map(function(r){return r.nombre+" ("+fmt(Math.round((PRECIOS[r.plan]||0)/2))+")";}).join(" · ");
+      document.getElementById("alertVtxt").textContent="Cobro pendiente: "+vencen.map(function(r){return r.nombre+" ("+fmt(Math.round((PRECIOS[r.plan_id||r.plan]||0)/2))+")";}).join(" · ");
       // Cards individuales por vencimiento
       document.getElementById("vencenCards").innerHTML=vencen.map(function(r){
         var dias=Math.floor((new Date(r.fecha_vencimiento)-new Date())/86400000);
         return'<div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">'+
           '<div><div style="font-size:13px;font-weight:700">'+r.nombre+'</div><div style="font-size:11px;color:var(--m)">Vence en '+dias+' días · '+r.plan+'</div></div>'+
-          '<div style="text-align:right"><div style="font-family:\'JetBrains Mono\',monospace;font-size:15px;font-weight:700;color:var(--a)">'+fmt(Math.round((PRECIOS[r.plan]||0)/2))+'</div>'+
+          '<div style="text-align:right"><div style="font-family:\'JetBrains Mono\',monospace;font-size:15px;font-weight:700;color:var(--a)">'+fmt(Math.round((PRECIOS[r.plan_id||r.plan]||0)/2))+'</div>'+
           '<div style="font-size:10px;color:var(--m)">pago 15 días</div></div>'+
           '</div>';
       }).join("");
@@ -913,7 +913,7 @@ function renderCliTable(rests,actions){
     var est=r.suscripcion_estado==="trial"?"trial":r.estado||"activo";
     return'<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="cdot '+est+'"></div><div><div style="font-weight:700">'+r.nombre+'</div><div style="font-size:11px;color:var(--m)">'+(r.ciudad||r.ciudad_restaurante||"")+'</div></div></div></td>'+
     '<td style="font-family:monospace;font-size:11px">'+(r.whatsapp||"—")+'</td>'+
-    '<td style="text-transform:capitalize;font-size:12px">'+(r.plan||"—")+'</td>'+
+    '<td style="text-transform:capitalize;font-size:12px">'+(r.plan_id||r.plan||"—")+'</td>'+
     '<td>'+badge(est)+'</td>'+
     '<td '+vClr+'>'+(r.fecha_vencimiento||"—")+'</td>'+
     (actions?'<td><div style="display:flex;gap:4px;flex-wrap:wrap">'+
@@ -936,13 +936,13 @@ async function verCliente(id){
   document.getElementById("verBody").innerHTML=
     '<div class="dg">'+
     '<div class="di"><div class="di-l">Estado</div><div class="di-v">'+badge(est)+'</div></div>'+
-    '<div class="di"><div class="di-l">Plan</div><div class="di-v" style="text-transform:capitalize">'+(r.plan||"—")+'</div></div>'+
+    '<div class="di"><div class="di-l">Plan</div><div class="di-v" style="text-transform:capitalize">'+(r.plan_id||r.plan||"—")+'</div></div>'+
     '<div class="di"><div class="di-l">WhatsApp</div><div class="di-v" style="font-family:monospace;font-size:12px">'+(r.whatsapp||"—")+'</div></div>'+
     '<div class="di"><div class="di-l">Ciudad</div><div class="di-v">'+(r.ciudad||r.ciudad_restaurante||"—")+'</div></div>'+
     '<div class="di"><div class="di-l">Vencimiento</div><div class="di-v">'+(r.fecha_vencimiento||"—")+'</div></div>'+
     '<div class="di"><div class="di-l">Pedidos totales</div><div class="di-v" style="color:var(--p2)">'+peds.length+'</div></div>'+
     '<div class="di"><div class="di-l">Ventas totales</div><div class="di-v" style="color:var(--g)">'+fmt(tvt)+'</div></div>'+
-    '<div class="di"><div class="di-l">MRR aportado</div><div class="di-v" style="color:var(--a)">'+fmt(PRECIOS[r.plan]||0)+'</div></div>'+
+    '<div class="di"><div class="di-l">MRR aportado</div><div class="di-v" style="color:var(--a)">'+fmt(PRECIOS[r.plan_id||r.plan]||0)+'</div></div>'+
     '</div>'+
     '<div style="font-size:11px;color:var(--m);margin-bottom:6px;font-weight:700">PIN de acceso</div>'+
     '<div class="pinbox">'+(r.pin||"—")+'</div>'+
@@ -982,6 +982,7 @@ async function guardarEdicion(){
   var payload={
     nombre:document.getElementById("e-nom").value,
     estado:document.getElementById("e-est").value,
+    plan_id:document.getElementById("e-plan").value,
     plan:document.getElementById("e-plan").value,
     fecha_vencimiento:document.getElementById("e-vence").value||null,
     pin:document.getElementById("e-pin").value||null,
@@ -1168,7 +1169,7 @@ async function loadVendedores(){
     document.getElementById("vendList").innerHTML=vs.map(function(v){
       var restsV=CACHE.filter(function(r){return r.vendedor_id===v.id;});
       var activos=restsV.filter(function(r){return r.estado==="activo";});
-      var mrr=activos.reduce(function(s,r){return s+(PRECIOS[r.plan]||0);},0);
+      var mrr=activos.reduce(function(s,r){return s+(PRECIOS[r.plan_id||r.plan]||0);},0);
       var ini=(v.nombre||v.email||"V").charAt(0).toUpperCase();
       var fotoHtml=v.foto_url
         ?'<img src="'+v.foto_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px" onerror="this.style.display=\'none\'">'
@@ -1215,7 +1216,7 @@ async function verVendedor(id){
   var restsV=CACHE.filter(function(r){return r.vendedor_id===id;});
   var activos=restsV.filter(function(r){return r.estado==="activo";});
   var trials=restsV.filter(function(r){return r.suscripcion_estado==="trial";});
-  var mrr=activos.reduce(function(s,r){return s+(PRECIOS[r.plan]||0);},0);
+  var mrr=activos.reduce(function(s,r){return s+(PRECIOS[r.plan_id||r.plan]||0);},0);
   document.getElementById("vvActivos").textContent=activos.length;
   document.getElementById("vvTrials").textContent=trials.length;
   document.getElementById("vvMrr").textContent=fmt(mrr);
@@ -1235,8 +1236,8 @@ async function verVendedor(id){
       var est=r.suscripcion_estado==="trial"?"trial":r.estado||"activo";
       return'<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;margin-bottom:6px">'+
         '<div class="cdot '+est+'" style="flex-shrink:0"></div>'+
-        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700">'+r.nombre+'</div><div style="font-size:10px;color:var(--m)">'+(r.plan||"—")+" · "+(r.ciudad||r.ciudad_restaurante||"")+'</div></div>'+
-        '<div style="text-align:right"><div style="font-size:11px;font-weight:700;color:var(--a)">'+fmt(PRECIOS[r.plan]||0)+'</div><div style="font-size:10px;color:var(--m)">'+badge(est)+'</div></div>'+
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700">'+r.nombre+'</div><div style="font-size:10px;color:var(--m)">'+(r.plan_id||r.plan||"—")+" · "+(r.ciudad||r.ciudad_restaurante||"")+'</div></div>'+
+        '<div style="text-align:right"><div style="font-size:11px;font-weight:700;color:var(--a)">'+fmt(PRECIOS[r.plan_id||r.plan]||0)+'</div><div style="font-size:10px;color:var(--m)">'+badge(est)+'</div></div>'+
         '</div>';
     }).join("");
   document.getElementById("vvSuspBtn").textContent=v.activo?"⏸ Suspender":"▶ Activar";
