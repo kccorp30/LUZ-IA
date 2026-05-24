@@ -251,36 +251,50 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <!-- DASHBOARD -->
     <div class="page on" id="page-dashboard">
       <div class="ph">
-        <div><div class="ph-title">Dashboard</div><div class="ph-sub">Vista general de LUZ IA</div></div>
+        <div><div class="ph-title">Dashboard</div><div class="ph-sub" id="dashFecha">LUZ IA · Cargando...</div></div>
         <div class="ph-actions"><button class="btn btn-g" onclick="loadDashboard()">⟳ Actualizar</button></div>
       </div>
       <div class="alert" id="alertV">⚠️ <span id="alertVtxt"></span></div>
+
+      <!-- MRR principal -->
       <div class="mrr-card">
         <div>
-          <div class="mrr-l">MRR — Ingreso Mensual Recurrente</div>
+          <div class="mrr-l">💰 MRR — Ingreso Mensual Recurrente</div>
           <div class="mrr-v" id="dMRR">$0</div>
           <div class="mrr-sub" id="dMRRsub">Cargando...</div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:10px;color:var(--m);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">ARR Proyectado</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--p2)" id="dARR">$0</div>
+          <div style="font-size:10px;color:var(--m);margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em">ARR Proyectado</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--p2)" id="dARR">$0</div>
+          <div style="font-size:10px;color:var(--m);margin-top:8px">Próximo cobro</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--a)" id="dProxCobro">$0</div>
         </div>
       </div>
+
+      <!-- Stats de clientes -->
       <div class="sg">
-        <div class="sc" style="--accent-c:var(--g)"><div class="sc-l">Activos</div><div class="sc-v" style="color:var(--g)" id="dActivos">—</div><div class="sc-sub">restaurantes</div></div>
-        <div class="sc" style="--accent-c:var(--bl)"><div class="sc-l">En Trial</div><div class="sc-v" style="color:#67e8f9" id="dTrials">—</div><div class="sc-sub">7 días gratis</div></div>
-        <div class="sc" style="--accent-c:var(--r)"><div class="sc-l">Suspendidos</div><div class="sc-v" style="color:var(--r)" id="dSusp">—</div><div class="sc-sub">sin acceso</div></div>
-        <div class="sc" style="--accent-c:var(--a)"><div class="sc-l">Vencen en 7d</div><div class="sc-v" style="color:var(--a)" id="dVencen">—</div><div class="sc-sub" id="dVencenSub">sin alertas</div></div>
+        <div class="sc" style="--accent-c:var(--g)"><div class="sc-l">✅ Activos</div><div class="sc-v" style="color:var(--g)" id="dActivos">—</div><div class="sc-sub">pagan mensual</div></div>
+        <div class="sc" style="--accent-c:var(--cy)"><div class="sc-l">🧪 En Trial</div><div class="sc-v" style="color:#67e8f9" id="dTrials">—</div><div class="sc-sub">15 días gratis</div></div>
+        <div class="sc" style="--accent-c:var(--r)"><div class="sc-l">⏸ Suspendidos</div><div class="sc-v" style="color:var(--r)" id="dSusp">—</div><div class="sc-sub">sin acceso</div></div>
+        <div class="sc" style="--accent-c:var(--a)"><div class="sc-l">⚠️ Vencen 7d</div><div class="sc-v" style="color:var(--a)" id="dVencen">—</div><div class="sc-sub" id="dVencenSub">cobro pendiente</div></div>
       </div>
+
+      <!-- Stats de operación (de los restaurantes) -->
+      <div style="font-size:11px;font-weight:800;color:var(--m);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Operación de restaurantes hoy</div>
       <div class="sg">
-        <div class="sc" style="--accent-c:var(--p)"><div class="sc-l">Pedidos Hoy</div><div class="sc-v" style="color:var(--p2)" id="dPedHoy">—</div><div class="sc-sub">todos los restaurantes</div></div>
-        <div class="sc" style="--accent-c:var(--g)"><div class="sc-l">Facturado Hoy</div><div class="sc-v" style="color:var(--g)" id="dFactHoy">—</div><div class="sc-sub">suma de pedidos</div></div>
-        <div class="sc" style="--accent-c:var(--a)"><div class="sc-l">Pedidos Mes</div><div class="sc-v" style="color:var(--a)" id="dPedMes">—</div><div class="sc-sub">mes actual</div></div>
-        <div class="sc" style="--accent-c:var(--bl)"><div class="sc-l">Clientes Totales</div><div class="sc-v" style="color:#93c5fd" id="dCliTot">—</div><div class="sc-sub">fidelizados</div></div>
+        <div class="sc" style="--accent-c:var(--p)"><div class="sc-l">🛒 Pedidos hoy</div><div class="sc-v" style="color:var(--p2)" id="dPedHoy">—</div><div class="sc-sub">todos los restaurantes</div></div>
+        <div class="sc" style="--accent-c:var(--g)"><div class="sc-l">💵 Facturado hoy</div><div class="sc-v" style="color:var(--g)" id="dFactHoy">—</div><div class="sc-sub">suma pedidos</div></div>
+        <div class="sc" style="--accent-c:var(--a)"><div class="sc-l">📅 Pedidos mes</div><div class="sc-v" style="color:var(--a)" id="dPedMes">—</div><div class="sc-sub">mes actual</div></div>
+        <div class="sc" style="--accent-c:var(--bl)"><div class="sc-l">⭐ Clientes fiel.</div><div class="sc-v" style="color:#93c5fd" id="dCliTot">—</div><div class="sc-sub">en el sistema</div></div>
       </div>
+
+      <!-- Alertas de vencimiento -->
+      <div id="vencenCards" style="margin-bottom:16px"></div>
+
+      <!-- Tabla restaurantes activos -->
       <div class="tcard">
-        <div class="tc-head"><div class="tc-title">Restaurantes activos</div></div>
-        <div id="dashTable"><div class="loading"><span class="spin">⟳</span> Cargando...</div></div>
+        <div class="tc-head"><div class="tc-title">Restaurantes activos</div><button class="btn btn-g btn-sm" onclick="nav('clientes',document.querySelector('[onclick*=clientes]'))">Ver todos →</button></div>
+        <div id="dashTable"><div class="loading"><span class="spin">⟳</span></div></div>
       </div>
     </div>
 
@@ -303,9 +317,14 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <!-- PEDIDOS -->
     <div class="page" id="page-pedidos">
       <div class="ph">
-        <div><div class="ph-title">Pedidos</div><div class="ph-sub">Historial en tiempo real</div></div>
+        <div><div class="ph-title">Pedidos</div><div class="ph-sub">Por restaurante · Tiempo real</div></div>
         <div class="ph-actions">
-          <select class="sinp" id="pedFiltroRest" style="width:200px" onchange="loadPedidos()"><option value="">Todos los restaurantes</option></select>
+          <select class="sinp" id="pedFiltroRest" style="width:220px" onchange="loadPedidos()"><option value="">Todos los restaurantes</option></select>
+          <select class="sinp" id="pedFiltroEst" style="width:140px" onchange="loadPedidos()">
+            <option value="">Todos los estados</option>
+            <option value="confirmado">Confirmado</option><option value="en_preparacion">Preparando</option>
+            <option value="listo">Listo</option><option value="entregado">Entregado</option>
+          </select>
           <button class="btn btn-g" onclick="loadPedidos()">⟳</button>
         </div>
       </div>
@@ -323,34 +342,68 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
     <!-- PLANES -->
     <div class="page" id="page-planes">
-      <div class="ph"><div><div class="ph-title">Planes</div><div class="ph-sub">Estructura de precios</div></div></div>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:20px">
-        <div class="plan-card" style="--pc:var(--bl)">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#93c5fd;margin-bottom:8px">⚡ Básico</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:#93c5fd">$159.000<span style="font-size:13px;color:var(--m)">/mes</span></div>
-          <div style="font-size:11px;color:var(--m);margin:8px 0;line-height:1.5">Menú web + WhatsApp IA + Panel pedidos<br><span style="color:rgba(240,238,255,.3)">Facturado 2 × $79.500 c/15 días</span></div>
-          <div style="font-size:28px;font-family:'JetBrains Mono',monospace;font-weight:700;color:#93c5fd" id="pBasico">0</div>
+      <div class="ph"><div><div class="ph-title">Planes</div><div class="ph-sub">Estructura de precios · Facturación 2 pagos × 15 días</div></div></div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px">
+        <div class="plan-card" style="--pc:#93c5fd">
+          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#93c5fd;margin-bottom:10px">⚡ BÁSICO</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:#93c5fd;margin-bottom:3px">$159.000<span style="font-size:12px;color:var(--m)">/mes</span></div>
+          <div style="font-size:10px;color:var(--m);margin-bottom:12px">2 × $79.500 cada 15 días</div>
+          <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:14px;border-top:1px solid rgba(255,255,255,.05);padding-top:12px">
+            <div style="font-size:11px;color:var(--w2)">✓ Menú web con fotos y precios</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Asesora WhatsApp con IA (Luz)</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Panel de pedidos en tiempo real</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Programa de fidelización y puntos</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Cupones y descuentos por rango</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Cerebro IA y reportes del negocio</div>
+            <div style="font-size:11px;color:rgba(240,238,255,.25)">✗ Sin panel cocina</div>
+            <div style="font-size:11px;color:rgba(240,238,255,.25)">✗ Sin domiciliarios ni meseros</div>
+            <div style="font-size:11px;color:rgba(240,238,255,.25)">✗ Sin CHARR TOWER</div>
+          </div>
+          <div style="font-size:26px;font-family:'JetBrains Mono',monospace;font-weight:700;color:#93c5fd" id="pBasico">0</div>
           <div style="font-size:10px;color:var(--m)">clientes activos</div>
         </div>
         <div class="plan-card" style="--pc:var(--a)">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--a);margin-bottom:8px">🥈 Emprendedor</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--a)">$320.000<span style="font-size:13px;color:var(--m)">/mes</span></div>
-          <div style="font-size:11px;color:var(--m);margin:8px 0;line-height:1.5">+ Cocina + Domiciliarios + Meseros + 3 CHARR<br><span style="color:rgba(240,238,255,.3)">Facturado 2 × $160.000 c/15 días</span></div>
-          <div style="font-size:28px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--a)" id="pEmp">0</div>
+          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--a);margin-bottom:10px">🥈 EMPRENDEDOR</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--a);margin-bottom:3px">$320.000<span style="font-size:12px;color:var(--m)">/mes</span></div>
+          <div style="font-size:10px;color:var(--m);margin-bottom:12px">2 × $160.000 cada 15 días</div>
+          <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:14px;border-top:1px solid rgba(255,255,255,.05);padding-top:12px">
+            <div style="font-size:11px;color:var(--w2)">✓ Todo lo del plan Básico</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Panel cocina con voz de Luz</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Gestión de domiciliarios</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Panel de meseros en mesa</div>
+            <div style="font-size:11px;color:var(--w2)">✓ 3 dispositivos CHARR TOWER incluidos</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Promos masivas por WhatsApp</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Mapa de zonas de domicilio</div>
+          </div>
+          <div style="font-size:26px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--a)" id="pEmp">0</div>
           <div style="font-size:10px;color:var(--m)">clientes activos</div>
         </div>
         <div class="plan-card" style="--pc:var(--p2)">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--p2);margin-bottom:8px">🥇 Dominante</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--p2)">$460.000<span style="font-size:13px;color:var(--m)">/mes</span></div>
-          <div style="font-size:11px;color:var(--m);margin:8px 0;line-height:1.5">+ 5 CHARR + 1 tablet cocina<br><span style="color:rgba(240,238,255,.3)">Facturado 2 × $230.000 c/15 días</span></div>
-          <div style="font-size:28px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--p2)" id="pDom">0</div>
+          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--p2);margin-bottom:10px">🥇 DOMINANTE</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--p2);margin-bottom:3px">$460.000<span style="font-size:12px;color:var(--m)">/mes</span></div>
+          <div style="font-size:10px;color:var(--m);margin-bottom:12px">2 × $230.000 cada 15 días</div>
+          <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:14px;border-top:1px solid rgba(255,255,255,.05);padding-top:12px">
+            <div style="font-size:11px;color:var(--w2)">✓ Todo lo del plan Emprendedor</div>
+            <div style="font-size:11px;color:var(--w2)">✓ 5 dispositivos CHARR TOWER incluidos</div>
+            <div style="font-size:11px;color:var(--w2)">✓ 1 tablet para cocina incluida</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Soporte prioritario por WhatsApp</div>
+          </div>
+          <div style="font-size:26px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--p2)" id="pDom">0</div>
           <div style="font-size:10px;color:var(--m)">clientes activos</div>
         </div>
         <div class="plan-card" style="--pc:#f0abfc">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#f0abfc;margin-bottom:8px">💎 Empresarial</div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:#f0abfc">$760.000<span style="font-size:13px;color:var(--m)">/mes</span></div>
-          <div style="font-size:11px;color:var(--m);margin:8px 0;line-height:1.5">3 sucursales + 10 CHARR + 2 tablets<br><span style="color:rgba(240,238,255,.3)">Facturado 2 × $380.000 c/15 días</span></div>
-          <div style="font-size:28px;font-family:'JetBrains Mono',monospace;font-weight:700;color:#f0abfc" id="pEmpresarial">0</div>
+          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#f0abfc;margin-bottom:10px">💎 EMPRESARIAL</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:#f0abfc;margin-bottom:3px">$760.000<span style="font-size:12px;color:var(--m)">/mes</span></div>
+          <div style="font-size:10px;color:var(--m);margin-bottom:12px">2 × $380.000 cada 15 días</div>
+          <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:14px;border-top:1px solid rgba(255,255,255,.05);padding-top:12px">
+            <div style="font-size:11px;color:var(--w2)">✓ Todo lo del plan Dominante</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Hasta 3 sucursales del mismo negocio</div>
+            <div style="font-size:11px;color:var(--w2)">✓ 10 dispositivos CHARR TOWER incluidos</div>
+            <div style="font-size:11px;color:var(--w2)">✓ 2 tablets para cocina incluidas</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Panel centralizado de sucursales</div>
+            <div style="font-size:11px;color:var(--w2)">✓ Gerente de cuenta dedicado</div>
+          </div>
+          <div style="font-size:26px;font-family:'JetBrains Mono',monospace;font-weight:700;color:#f0abfc" id="pEmpresarial">0</div>
           <div style="font-size:10px;color:var(--m)">clientes activos</div>
         </div>
       </div>
@@ -699,47 +752,59 @@ function fillRestSel(selId){
 // ── DASHBOARD ──
 async function loadDashboard(){
   try{
+    document.getElementById("dashFecha").textContent="LUZ IA · "+new Date().toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"});
     var r=await fetch("/api/admin/dashboard",{headers:authH()});
     var d=await r.json();
     var rests;
     if(d.ok){rests=d.restaurantes;CACHE=rests;}
     else{rests=await sb("GET","restaurantes",null,"select=*&order=nombre")||[];CACHE=rests;}
-    
     var activos=rests.filter(function(r){return r.estado==="activo";});
     var trials=rests.filter(function(r){return r.suscripcion_estado==="trial";});
     var susp=rests.filter(function(r){return r.estado==="suspendido";});
     var en7=new Date();en7.setDate(en7.getDate()+7);
-    var vencen=activos.filter(function(r){return r.fecha_vencimiento&&new Date(r.fecha_vencimiento)<=en7;});
-    
-    var mrr=activos.reduce(function(s,r){return s+(PRECIOS[r.plan]||0);},0);
+    var vencen=rests.filter(function(r){return r.fecha_vencimiento&&new Date(r.fecha_vencimiento)<=en7&&r.estado==="activo";});
+    // MRR solo de activos pagos (no trial)
+    var activosPago=activos.filter(function(r){return r.suscripcion_estado!=="trial";});
+    var mrr=activosPago.reduce(function(s,r){return s+(PRECIOS[r.plan]||0);},0);
+    // Próximo cobro = suma de pagos de 15 días de los que vencen pronto
+    var proxCobro=vencen.reduce(function(s,r){return s+Math.round((PRECIOS[r.plan]||0)/2);},0);
     document.getElementById("dMRR").textContent=fmt(mrr);
     document.getElementById("dARR").textContent=fmt(mrr*12);
-    document.getElementById("dMRRsub").textContent=activos.length+" restaurantes activos";
+    document.getElementById("dProxCobro").textContent=fmt(proxCobro)||(proxCobro?"":fmt(0));
+    document.getElementById("dMRRsub").textContent=activosPago.length+" pagando · "+trials.length+" en trial";
     document.getElementById("dActivos").textContent=activos.length;
     document.getElementById("dTrials").textContent=trials.length;
     document.getElementById("dSusp").textContent=susp.length;
     document.getElementById("dVencen").textContent=vencen.length;
-    
+    // Alertas de vencimiento
     if(vencen.length){
       document.getElementById("alertV").classList.add("show");
-      document.getElementById("alertVtxt").textContent="Vencen en 7 días: "+vencen.map(function(r){return r.nombre;}).slice(0,3).join(", ")+(vencen.length>3?" y más…":"");
-    }else{document.getElementById("alertV").classList.remove("show");}
-    
+      document.getElementById("alertVtxt").textContent="Cobro pendiente: "+vencen.map(function(r){return r.nombre+" ("+fmt(Math.round((PRECIOS[r.plan]||0)/2))+")";}).join(" · ");
+      // Cards individuales por vencimiento
+      document.getElementById("vencenCards").innerHTML=vencen.map(function(r){
+        var dias=Math.floor((new Date(r.fecha_vencimiento)-new Date())/86400000);
+        return'<div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">'+
+          '<div><div style="font-size:13px;font-weight:700">'+r.nombre+'</div><div style="font-size:11px;color:var(--m)">Vence en '+dias+' días · '+r.plan+'</div></div>'+
+          '<div style="text-align:right"><div style="font-family:\'JetBrains Mono\',monospace;font-size:15px;font-weight:700;color:var(--a)">'+fmt(Math.round((PRECIOS[r.plan]||0)/2))+'</div>'+
+          '<div style="font-size:10px;color:var(--m)">pago 15 días</div></div>'+
+          '</div>';
+      }).join("");
+    }else{
+      document.getElementById("alertV").classList.remove("show");
+      document.getElementById("vencenCards").innerHTML="";
+    }
     // Pedidos hoy
     var hoy=new Date().toISOString().split("T")[0];
     try{
-      var pHoy=await sb("GET","pedidos",null,"created_at=gte."+hoy+"T00:00:00&select=total,restaurante_id");
+      var pHoy=await sb("GET","pedidos",null,"created_at=gte."+hoy+"T00:00:00&select=total");
       document.getElementById("dPedHoy").textContent=(pHoy||[]).length;
-      var factHoy=(pHoy||[]).reduce(function(s,p){return s+Number(p.total||0);},0);
-      document.getElementById("dFactHoy").textContent=fmt(factHoy);
+      document.getElementById("dFactHoy").textContent=fmt((pHoy||[]).reduce(function(s,p){return s+Number(p.total||0);},0));
       var pMes=await sb("GET","pedidos",null,"created_at=gte."+hoy.substring(0,7)+"-01T00:00:00&select=id");
       document.getElementById("dPedMes").textContent=(pMes||[]).length;
       var cliTot=await sb("GET","clientes_frecuentes",null,"select=id&limit=1000");
       document.getElementById("dCliTot").textContent=(cliTot||[]).length;
     }catch(e){}
-    
-    // Table
-    document.getElementById("dashTable").innerHTML=renderCliTable(rests.slice(0,10),false);
+    document.getElementById("dashTable").innerHTML=renderCliTable(rests.slice(0,8),false);
   }catch(e){console.error(e);}
 }
 
@@ -903,27 +968,55 @@ async function crearCliente(){
 async function loadPedidos(){
   document.getElementById("pedList").innerHTML='<div class="loading"><span class="spin">⟳</span> Cargando...</div>';
   var restId=document.getElementById("pedFiltroRest").value;
-  var f="select=*&order=created_at.desc&limit=80"+(restId?"&restaurante_id=eq."+restId:"");
+  var estFiltro=(document.getElementById("pedFiltroEst")||{}).value||"";
+  var f="select=*&order=created_at.desc&limit=200"
+    +(restId?"&restaurante_id=eq."+restId:"")
+    +(estFiltro?"&estado=eq."+estFiltro:"");
   var peds=await sb("GET","pedidos",null,f)||[];
-  var rm={};CACHE.forEach(function(r){rm[r.id]=r.nombre;});
+  var rm={};CACHE.forEach(function(r){rm[r.id]=r;});
   if(!peds.length){document.getElementById("pedList").innerHTML='<div class="empty"><div class="empty-ico">🛒</div><p>Sin pedidos</p></div>';return;}
-  document.getElementById("pedList").innerHTML=peds.map(function(p){
-    var items=Array.isArray(p.items)?p.items:[];
-    var disc=p.descuento_rango?"descuento "+p.descuento_rango+"%":"";
-    return'<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:14px;padding:16px 18px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">'+
-      '<div><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">'+
-      '<span style="font-family:\'JetBrains Mono\',monospace;font-size:20px;font-weight:700;color:var(--p2)">#'+p.numero_pedido+'</span>'+
-      badge(p.estado)+
-      (disc?'<span style="font-size:10px;background:rgba(16,185,129,.12);color:#6ee7b7;padding:2px 7px;border-radius:10px;font-weight:700">'+disc+'</span>':'')+
-      '</div>'+
-      '<div style="font-size:11px;color:var(--m)">🏪 '+(rm[p.restaurante_id]||"—")+' · 📱 '+(p.cliente_tel||"—")+' · 💳 '+(p.metodo_pago||"—")+'</div>'+
-      '<div style="font-size:10px;color:rgba(240,238,255,.25);margin-top:3px">'+items.slice(0,3).join(" · ")+'</div>'+
-      '<div style="font-size:10px;color:rgba(240,238,255,.25)">'+new Date(p.created_at).toLocaleString("es-CO")+'</div>'+
-      '</div>'+
-      '<div style="text-align:right">'+
-      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:22px;font-weight:700;color:var(--g)">'+fmt(p.total)+'</div>'+
-      (p.comprobante_media_id?'<div style="font-size:10px;color:var(--g);margin-top:3px">🧾 Comprobante</div>':'')+
-      '</div></div>';
+  // Agrupar por restaurante
+  var grupos={};
+  peds.forEach(function(p){
+    var rid=p.restaurante_id;
+    if(!grupos[rid])grupos[rid]={rest:rm[rid]||{nombre:"Restaurante",id:rid},peds:[],total:0};
+    grupos[rid].peds.push(p);
+    grupos[rid].total+=Number(p.total||0);
+  });
+  document.getElementById("pedList").innerHTML=Object.values(grupos).map(function(g){
+    var r=g.rest;
+    var est=r.suscripcion_estado==="trial"?"trial":r.estado||"activo";
+    var gid="pg-"+r.id;
+    var pedRows=g.peds.map(function(p){
+      var items=Array.isArray(p.items)?p.items:[];
+      var itemStr=items.slice(0,3).map(function(i){return typeof i==="string"?i.replace(/\s*\$[\d.,]+\s*$/,"").trim():(i.nombre||"");}).filter(Boolean).join(" · ");
+      var disc=p.descuento_rango?'<span style="font-size:9px;background:rgba(16,185,129,.12);color:#6ee7b7;padding:1px 6px;border-radius:8px;font-weight:700">-'+p.descuento_rango+'%</span>':"";
+      var tipo=(p.direccion||"").toUpperCase().indexOf("MESA")!==-1?"🪑":(p.tipo_pedido==="recoger"?"🏃":"🛵");
+      return'<tr style="border-bottom:1px solid rgba(255,255,255,.03)">'
+        +'<td><div style="display:flex;align-items:center;gap:6px"><span style="font-family:monospace;font-size:13px;font-weight:700;color:var(--p2)">#'+p.numero_pedido+'</span>'+disc+'</div></td>'
+        +'<td>'+badge(p.estado)+'</td>'
+        +'<td style="font-size:11px;color:var(--m)">'+tipo+' '+(p.direccion||"—").substring(0,22)+'</td>'
+        +'<td style="font-size:11px;color:var(--m)">'+(p.cliente_tel||"—")+'</td>'
+        +'<td style="font-size:11px;color:var(--m);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+itemStr+'</td>'
+        +'<td style="font-family:monospace;font-size:13px;font-weight:700;color:var(--g)">'+fmt(p.total)+'</td>'
+        +'<td style="font-size:10px;color:var(--m)">'+ago(p.created_at)+'</td>'
+        +'</tr>';
+    }).join("");
+    return'<div class="tcard" style="margin-bottom:12px">'
+      +'<div class="tc-head" style="cursor:pointer" onclick="document.getElementById(\''+gid+'\').style.display=document.getElementById(\''+gid+'\').style.display===\'none\'?\'block\':\'none\'">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<div class="cdot '+est+'"></div>'
+      +'<div><div class="tc-title">'+r.nombre+'</div><div style="font-size:11px;color:var(--m)">'+(r.ciudad||"")+(r.plan?" · "+r.plan:"")+'</div></div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<span style="font-family:monospace;font-size:13px;font-weight:700;color:var(--g)">'+fmt(g.total)+'</span>'
+      +'<span style="font-size:11px;color:var(--m)">'+g.peds.length+' pedidos</span>'
+      +'<span style="color:var(--m)">▾</span>'
+      +'</div></div>'
+      +'<div id="'+gid+'">'
+      +'<table><thead><tr><th>#</th><th>Estado</th><th>Dirección</th><th>Cliente</th><th>Items</th><th>Total</th><th>Hace</th></tr></thead>'
+      +'<tbody>'+pedRows+'</tbody></table>'
+      +'</div></div>';
   }).join("");
 }
 
@@ -976,24 +1069,32 @@ function loadPlanes(){
 async function loadVendedores(){
   document.getElementById("vendList").innerHTML='<div class="loading"><span class="spin">⟳</span> Cargando...</div>';
   try{
-    var vs=await sb("GET","usuarios_admin",null,"select=id,nombre,email,rol,created_at&order=created_at.desc")||[];
-    if(!vs.length){document.getElementById("vendList").innerHTML='<div class="empty"><div class="empty-ico">👤</div><p>Sin vendedores</p></div>';return;}
+    var vs=await sb("GET","usuarios_sistema",null,"activo=eq.true&order=created_at.desc&select=id,nombre,email,rol,telefono,created_at")||[];
+    if(!vs.length){document.getElementById("vendList").innerHTML='<div class="empty"><div class="empty-ico">👤</div><p>Sin vendedores. Crea el primero arriba.</p></div>';return;}
     document.getElementById("vendList").innerHTML=vs.map(function(v){
       var restsV=CACHE.filter(function(r){return r.vendedor_id===v.id;});
+      var mrr=restsV.filter(function(r){return r.estado==="activo";}).reduce(function(s,r){return s+(PRECIOS[r.plan]||0);},0);
       return'<div class="vcard">'+
         '<div class="vav">'+(v.nombre||v.email||"V").charAt(0).toUpperCase()+'</div>'+
         '<div style="flex:1"><div style="font-size:14px;font-weight:800">'+(v.nombre||"Sin nombre")+'</div>'+
-        '<div style="font-size:11px;color:var(--m)">'+(v.email||"")+'</div>'+
+        '<div style="font-size:11px;color:var(--m)">'+(v.email||"")+(v.telefono?" · "+v.telefono:"")+'</div>'+
         '<div style="display:flex;gap:6px;margin-top:6px">'+
         '<span style="font-size:10px;padding:2px 8px;background:rgba(124,58,237,.15);border-radius:20px;color:var(--p2);font-weight:700">'+v.rol+'</span>'+
         '<span style="font-size:10px;padding:2px 8px;background:rgba(16,185,129,.1);border-radius:20px;color:#6ee7b7;font-weight:700">'+restsV.length+' restaurantes</span>'+
         '</div></div>'+
         '<div style="text-align:right">'+
-        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;color:var(--a)">'+fmt(restsV.filter(function(r){return r.estado==="activo";}).reduce(function(s,r){return s+(PRECIOS[r.plan]||0);},0))+'</div>'+
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;color:var(--a)">'+fmt(mrr)+'</div>'+
         '<div style="font-size:10px;color:var(--m)">MRR gestionado</div>'+
+        '<button class="btn btn-r btn-sm" style="margin-top:6px" data-id="'+v.id+'" onclick="eliminarVendedor(this.getAttribute(\'data-id\'))">🗑 Eliminar</button>'+
         '</div></div>';
     }).join("");
   }catch(e){document.getElementById("vendList").innerHTML='<div class="empty"><p>Error: '+e.message+'</p></div>';}
+}
+
+async function eliminarVendedor(id){
+  if(!confirm("¿Eliminar este vendedor?"))return;
+  await sb("PATCH","usuarios_sistema?id=eq."+id,{activo:false});
+  toast("Vendedor desactivado");loadVendedores();
 }
 
 async function crearVendedor(){
