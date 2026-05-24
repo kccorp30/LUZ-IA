@@ -2078,8 +2078,8 @@ function loadPedidos(){
       h+='</div>';
       h+='<div class="desglose"><div class="desglose-row"><span>Subtotal</span><span>'+fmt(subtotal)+'</span></div><div class="desglose-row"><span>Desechables</span><span>'+fmt(desechables)+'</span></div><div class="desglose-row"><span>Domicilio</span><span>'+fmt(domicilio)+'</span></div><div class="desglose-row total"><span>TOTAL</span><span>'+fmt(total)+'</span></div></div>';
       // Comprobante: puede venir por WhatsApp (media_id) o por menu web (url directa)
-      if(p.comprobante_media_id)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante de pago</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" onerror="this.outerHTML=\'<div style=\\\"padding:8px 12px;font-size:11px;color:#34d399\\\">⏳ Imagen cargando... (puede tardar unos segundos)</div>\'"></div>';
-      else if(p.comprobante_url)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante de pago</div><img class="comprobante-img" src="'+escHtml(p.comprobante_url)+'" onerror="this.outerHTML=\'<div style=\\\"padding:8px 12px;font-size:11px;color:#34d399\\\">⏳ Imagen cargando...</div>\'"></div>';
+      if(p.comprobante_media_id)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante de pago</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" onerror="compImgErr(this)"></div>';
+      else if(p.comprobante_url)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante de pago</div><img class="comprobante-img" src="'+escHtml(p.comprobante_url)+'" onerror="compImgErr(this)"></div>';
       h+='<div class="ebtns">';
       var bEstado=cfg.n,bLabel=cfg.bl,bClass=cfg.bc;
       // Mesa en estado LISTO: botón azul Servido + botón Cobrar
@@ -2489,7 +2489,7 @@ function renderMensajesChat(msgs, forzar){
     if(m.tipo==="cliente" && mediaIdComp){
       h += '<div class="chat-comp-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+mediaIdComp+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
       h += '<div class="chat-comp-label">📎 Comprobante de pago — <span style="font-weight:400;opacity:0.7">Toca para ampliar</span></div>';
-      h += '<img src="/api/comprobante/'+mediaIdComp+'" onerror="this.outerHTML=\'<div style=\\\"padding:10px 12px;font-size:11px;color:#34d399;display:flex;align-items:center;gap:6px\\\">⏳ Comprobante recibido — cargando imagen...</div>\'" loading="lazy" style="min-height:60px;width:100%;object-fit:contain;border-radius:8px">';
+      h += '<img src="/api/comprobante/'+mediaIdComp+'" onerror="compImgErr(this)" loading="lazy" style="min-height:60px;width:100%;object-fit:contain;border-radius:8px">⏳ Comprobante recibido — cargando imagen...</div>\'" loading="lazy" style="min-height:60px;width:100%;object-fit:contain;border-radius:8px">';
       h += '<div class="chat-comp-time">'+horaStr+'</div></div>';
     }
     else if(m.tipo==="cliente" && esImagenCliente){
@@ -3637,6 +3637,12 @@ async function confirmarPedidoMesa(){
   finally{if(btn){btn.disabled=false;btn.textContent="✅ Confirmar pedido";}}
 }
 
+function compImgErr(img){
+  var d=document.createElement("div");
+  d.style.cssText="padding:10px 12px;font-size:11px;color:#34d399;display:flex;align-items:center;gap:6px";
+  d.textContent="⏳ Comprobante recibido — cargando...";
+  img.parentNode.replaceChild(d,img);
+}
 function escHtml(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 
 // Polling mesas
@@ -5438,6 +5444,10 @@ function resolverPendiente(id){
 <button id="rPwaBtn" onclick="instalarRPWA()" style="display:none;position:fixed;bottom:20px;right:16px;z-index:9000;padding:10px 16px;border-radius:50px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;font-size:11px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 4px 16px rgba(124,58,237,.5)">📲 Instalar app</button>
 <script>
 var _rDeferredPWA=null;
+// Registrar Service Worker — requerido para que Chrome permita instalar
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(function(){});
+}
 window.addEventListener('beforeinstallprompt',function(e){
   e.preventDefault();_rDeferredPWA=e;
   var btn=document.getElementById('rPwaBtn');if(btn)btn.style.display='block';
