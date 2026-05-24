@@ -1238,6 +1238,25 @@ app.post("/api/esp32-registro", async function(req, res) {
   }
 });
 
+// ── SERVICE WORKER — requerido para instalación PWA ───────────────────────────
+app.get("/sw.js", function(req, res) {
+  res.setHeader("Content-Type", "application/javascript");
+  res.setHeader("Cache-Control", "no-cache");
+  res.send(`
+const CACHE = 'luz-ia-v1';
+self.addEventListener('install', function(e) { self.skipWaiting(); });
+self.addEventListener('activate', function(e) { e.waitUntil(self.clients.claim()); });
+self.addEventListener('fetch', function(e) {
+  // Solo cachear GET, no API calls
+  if (e.request.method !== 'GET') return;
+  if (e.request.url.includes('/api/')) return;
+  e.respondWith(fetch(e.request).catch(function() {
+    return caches.match(e.request);
+  }));
+});
+  `.trim());
+});
+
 // ── PWA ICONS ─────────────────────────────────────────────────────────────────
 var PWA_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#7c3aed"/><text x="96" y="120" font-size="96" text-anchor="middle" font-family="Arial,sans-serif">🍔</text></svg>';
 app.get("/icon-192.png", function(req, res) {
