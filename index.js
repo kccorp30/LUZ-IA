@@ -1312,6 +1312,20 @@ app.get("/icon-512.png", function(req, res) {
 app.get("/icons/icon-192.png", function(req, res) { res.redirect("/icon-192.png"); });
 app.get("/icons/icon-512.png", function(req, res) { res.redirect("/icon-512.png"); });
 
+// ── SOPORTE INTERNO — mensajes del restaurante al admin ──────────────────────
+app.post("/api/soporte-mensaje", async function(req, res) {
+  try {
+    var { restaurante_id, restaurante_nombre, mensaje, tipo } = req.body;
+    if (!restaurante_id || !mensaje) return res.status(400).json({ ok: false });
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.post(SUPABASE_URL + "/rest/v1/mensajes",
+      { restaurante_id, telefono: "SOPORTE_" + restaurante_id, mensaje: "[" + (tipo||"soporte").toUpperCase() + "] " + mensaje, tipo: "alerta_pregunta" },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+
 // ── PLAN FEATURES — verifica qué funciones tiene el restaurante ───────────────
 app.get("/api/plan-features", async function(req, res) {
   var restaurante_id = req.query.restaurante_id;
@@ -1704,15 +1718,17 @@ app.post("/api/admin/crear-usuario", requireAdmin, async function(req, res) {
     var { nombre, email, password, telefono, rol } = req.body;
     if (!email || !password) return res.status(400).json({ ok: false, error: "Email y contraseña requeridos" });
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-    var crypto = require("crypto");
-    var hash = crypto.createHash("sha256").update(password + "luzia_salt_2024").digest("hex");
-    var r = await axios.post(SUPABASE_URL + "/rest/v1/usuarios_admin",
-      { nombre: nombre || null, email: email, password_hash: hash, telefono: telefono || null, rol: rol || "vendedor", activo: true },
+    // Verificar si ya existe
+    var check = await axios.get(SUPABASE_URL + "/rest/v1/usuarios_sistema?email=eq." + encodeURIComponent(email) + "&select=id",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    if (check.data && check.data.length) return res.json({ ok: false, error: "Email ya registrado" });
+    var r = await axios.post(SUPABASE_URL + "/rest/v1/usuarios_sistema",
+      { nombre: nombre || null, email: email, password_hash: hashPassword(password), telefono: telefono || null, rol: rol || "vendedor", activo: true },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" } }
     );
     res.json({ ok: true, usuario: r.data && r.data[0] });
   } catch(e) {
-    if (e.response && e.response.status === 409) return res.json({ ok: false, error: "Email ya registrado" });
+    console.error("[crear-usuario]", e.message, e.response?.data);
     res.status(500).json({ ok: false, error: e.message });
   }
 });
