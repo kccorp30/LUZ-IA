@@ -2076,11 +2076,15 @@ function loadPedidos(){
       else if(p.comprobante_url)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante de pago</div><img class="comprobante-img" src="'+escHtml(p.comprobante_url)+'" onerror="this.outerHTML=\'<div style=\\\"padding:8px 12px;font-size:11px;color:#34d399\\\">⏳ Imagen cargando...</div>\'"></div>';
       h+='<div class="ebtns">';
       var bEstado=cfg.n,bLabel=cfg.bl,bClass=cfg.bc;
-      if(esMesa&&p.estado==="listo"){bEstado="entregado";bLabel="💳 Cobrar y cerrar";bClass="bcerrar";}
-      if(esMesa&&(p.estado==="en_camino"||p.estado==="listo_entrega")){bEstado="entregado";bLabel="💳 Cobrar y cerrar";bClass="bcerrar";}
+      // Mesa en estado LISTO: botón azul Servido + botón Cobrar
+      if(esMesa&&p.estado==="listo"){
+        h+='<button class="ebtn" style="background:rgba(59,130,246,0.15);color:#93c5fd;border:1.5px solid rgba(59,130,246,0.35);" data-id="'+p.id+'" data-e="servido" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'" data-dir="'+encodeURIComponent(p.direccion||"")+'">🔵 Servido</button>';
+        h+='<button class="ebtn bcerrar" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'" data-dir="'+encodeURIComponent(p.direccion||"")+'">💳 Cobrar y cerrar</button>';
+        bEstado=null;
+      }
+      if(esMesa&&(p.estado==="servido"||p.estado==="en_camino"||p.estado==="listo_entrega")){bEstado="entregado";bLabel="💳 Cobrar y cerrar";bClass="bcerrar";}
       if(bEstado)h+='<button class="ebtn '+bClass+'" data-id="'+p.id+'" data-e="'+bEstado+'" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'" data-dir="'+encodeURIComponent(p.direccion||"")+'">'+bLabel+'</button>';
       if((p.estado==="listo"||p.estado==="en_camino")&&!esMesa)h+='<button class="ebtn bcerrar" data-id="'+p.id+'" data-e="entregado" data-t="'+(p.cliente_tel||"")+'" data-n="'+p.numero_pedido+'" data-dir="'+encodeURIComponent(p.direccion||"")+'">🔴 Cerrar orden</button>';
-      if(p.estado==="listo"&&!esMesa)h+='<button class="ebtn" style="background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.35);flex:0;padding:10px 14px;font-size:16px;" data-domi="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'">🛵</button>';
       if(p.cliente_tel)h+='<button class="btn-msg ebtn be" data-tel="'+(p.cliente_tel||"")+'" data-num="'+p.numero_pedido+'">💬</button>';
       h+='<button class="ebtn" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:2px solid rgba(59,130,246,0.3);flex:0;padding:10px 14px;" data-print="1" data-pnum="'+p.numero_pedido+'" data-ptel="'+(p.cliente_tel||"")+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"")+'" data-ptot="'+total+'" data-pdes="'+desechables+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">🖨</button>';
       h+='<button class="ebtn" style="background:rgba(255,107,43,0.12);color:#fb923c;border:2px solid rgba(255,107,43,0.25);flex:0;padding:10px 14px;" data-edit="1" data-pid="'+p.id+'" data-pnum="'+p.numero_pedido+'" data-pdir="'+encodeURIComponent(p.direccion||"")+'" data-pmet="'+(p.metodo_pago||"nequi")+'" data-ptot="'+total+'" data-pdom="'+domicilio+'" data-pitems="'+itemsEnc+'">✎</button>';
