@@ -1253,8 +1253,14 @@ select.finput{cursor:pointer}
             <div class="ffield"><label class="flabel">Precio domicilio</label><input class="finput" id="zona-precio" type="number" placeholder="4000"></div>
           </div>
           <div class="ffield">
-            <label class="flabel">Barrios (separados por coma)</label>
-            <textarea class="finput" id="zona-barrios" rows="2" placeholder="Canaveral, Granada, Santa Monica..."></textarea>
+            <label class="flabel">Barrios <span style="font-size:10px;color:var(--text3);font-weight:500">(Enter o coma para agregar)</span></label>
+            <div id="zona-chips-wrap" style="display:flex;flex-wrap:wrap;gap:5px;min-height:38px;padding:6px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:12px;cursor:text" onclick="document.getElementById('zona-barrio-inp').focus()">
+              <div id="zona-chips"></div>
+              <input id="zona-barrio-inp" placeholder="Agregar barrio..." autocomplete="off"
+                style="border:none;outline:none;background:transparent;color:var(--text);font-family:inherit;font-size:12px;min-width:120px;flex:1"
+                onkeydown="zonaChipKey(event)" oninput="zonaChipInput(this)">
+            </div>
+            <input type="hidden" id="zona-barrios">
           </div>
           <button class="badd" id="btnAgregarZona">Guardar zona</button>
           <button onclick="cargarZonasPredefinidas()" style="width:100%;margin-top:8px;padding:11px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);border-radius:13px;color:#c4b5fd;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer">⚡ Cargar zonas predefinidas de Cali</button>
@@ -3879,57 +3885,170 @@ function cargarZonas(){
   .then(function(zonas){renderZonasTabla(zonas);if(mapaObj)dibujarTodasZonas(zonas);})
   .catch(function(e){console.error("cargarZonas error:",e);});
 }
+function limpiarBarrios(raw) {
+  // Normalizar barrios: puede venir como JSON array string o texto plano con comas
+  if (!raw) return [];
+  var s = String(raw).trim();
+  // Si parece JSON array
+  if (s.startsWith('[')) {
+    try {
+      var arr = JSON.parse(s);
+      return arr.map(function(b){ return String(b).trim(); }).filter(Boolean);
+    } catch(e) {}
+  }
+  // Texto plano separado por comas
+  return s.split(',').map(function(b){ return b.trim(); }).filter(Boolean);
+}
+
+function renderChipsZona(containerId, inputId, barrios) {
+  var wrap = document.getElementById(containerId);
+  var inp = document.getElementById(inputId);
+  if (!wrap) return;
+  // Renderizar chips dentro del wrap (antes del input)
+  wrap.querySelectorAll('.zchip').forEach(function(c){ c.remove(); });
+  barrios.forEach(function(b, i) {
+    var chip = document.createElement('span');
+    chip.className = 'zchip';
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;padding:3px 8px 3px 10px;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.4);border-radius:20px;font-size:11px;font-weight:700;color:#c4b5fd;white-space:nowrap';
+    chip.innerHTML = escHtml(b) + '<span onclick="zonaChipRemove(this)" data-wrap="'+containerId+'" data-inp="'+inputId+'" style="cursor:pointer;font-size:13px;color:#a78bfa;margin-left:2px;line-height:1">×</span>';
+    if (inp) wrap.insertBefore(chip, inp);
+    else wrap.appendChild(chip);
+  });
+}
+
+function zonaChipKey(e) {
+  var inp = e.target;
+  var wrapId = inp.parentElement.id;
+  var hidId = inp.id.replace('-inp','').replace('zona-barrio','zona-barrios');
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    var val = inp.value.trim().replace(/,$/,'').trim();
+    if (!val) return;
+    var hidden = document.getElementById(hidId);
+    var current = hidden ? limpiarBarrios(hidden.value) : [];
+    if (!current.includes(val)) {
+      current.push(val);
+      if (hidden) hidden.value = current.join(', ');
+      renderChipsZona(wrapId, inp.id, current);
+    }
+    inp.value = '';
+  } else if (e.key === 'Backspace' && !inp.value) {
+    var hidden = document.getElementById(hidId);
+    var current = hidden ? limpiarBarrios(hidden.value) : [];
+    if (current.length) {
+      current.pop();
+      if (hidden) hidden.value = current.join(', ');
+      renderChipsZona(wrapId, inp.id, current);
+    }
+  }
+}
+
+function zonaChipInput(inp) {
+  if (inp.value.endsWith(',')) {
+    var e = new KeyboardEvent('keydown', { key: ',' });
+    inp.dispatchEvent(e);
+  }
+}
+
+function zonaChipRemove(x) {
+  var wrapId = x.getAttribute('data-wrap');
+  var inpId = x.getAttribute('data-inp');
+  var chip = x.parentElement;
+  var barrio = chip.childNodes[0].textContent.trim();
+  var hidId = inpId.replace('-inp','').replace('zona-barrio','zona-barrios');
+  var hidden = document.getElementById(hidId);
+  var current = hidden ? limpiarBarrios(hidden.value) : [];
+  current = current.filter(function(b){ return b !== barrio; });
+  if (hidden) hidden.value = current.join(', ');
+  renderChipsZona(wrapId, inpId, current);
+}
+
 function renderZonasTabla(zonas){
   var tabla=document.getElementById("zonasTabla");if(!tabla)return;
-  // ── No re-renderizar si hay input activo dentro de la tabla
   var activo=document.activeElement;
   if(activo&&tabla.contains(activo))return;
-  // ── Guardar qué zonas están abiertas antes de re-renderizar
   var abiertas=[];
   tabla.querySelectorAll("[id^='editZona-']").forEach(function(el){
     if(el.style.display!=="none")abiertas.push(el.id.replace("editZona-",""));
   });
-  if(!zonas||!zonas.length){tabla.innerHTML='<div style="color:var(--text3);font-size:13px;padding:10px 0;text-align:center">🗺️ No hay zonas configuradas aún. Agrega la primera arriba o carga las predefinidas de Cali.</div>';return;}
+  if(!zonas||!zonas.length){tabla.innerHTML='<div style="color:var(--text3);font-size:13px;padding:10px 0;text-align:center">🗺️ No hay zonas. Agrega la primera arriba.</div>';return;}
   var h="";
   zonas.forEach(function(z,idx){
     var color=z.color||ZONA_COLORES[idx%ZONA_COLORES.length];
-    var barrios=Array.isArray(z.barrios)?z.barrios.join(", "):(z.barrios||"");
+    var barriosArr=limpiarBarrios(z.barrios);
+    var barriosTxt=barriosArr.join(", ");
     var precio=z.precio_domicilio||z.precio||0;
-    h+='<div class="mapa-zona-card" style="flex-direction:column;align-items:stretch;gap:8px;padding:12px 14px;cursor:pointer" onclick="toggleEditZona(\''+z.id+'\')">';
+    h+='<div class="mapa-zona-card" style="flex-direction:column;align-items:stretch;gap:8px;padding:12px 14px;cursor:pointer" data-zid="'+z.id+'" onclick="toggleEditZona(this.dataset.zid)">';
     h+='<div style="display:flex;align-items:center;gap:8px">';
     h+='<div style="width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;box-shadow:0 0 6px '+color+'"></div>';
-    h+='<div style="flex:1;min-width:0"><div class="mapa-zona-name">'+escHtml(z.nombre)+'</div><div class="mapa-zona-barrios">'+escHtml(barrios.substring(0,120))+(barrios.length>120?"...":"")+'</div></div>';
+    h+='<div style="flex:1;min-width:0"><div class="mapa-zona-name">'+escHtml(z.nombre)+'</div>';
+    h+='<div class="mapa-zona-barrios" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">';
+    barriosArr.slice(0,6).forEach(function(b){
+      h+='<span style="padding:2px 7px;background:rgba(255,255,255,0.07);border-radius:10px;font-size:10px;color:var(--text2)">'+escHtml(b)+'</span>';
+    });
+    if(barriosArr.length>6)h+='<span style="font-size:10px;color:var(--text3)">+'+( barriosArr.length-6)+' más</span>';
+    h+='</div></div>';
     h+='<div class="mapa-zona-price">'+fmt(precio)+'</div>';
     h+='</div>';
-    h+='<div id="editZona-'+z.id+'" style="display:none;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06)">';
-    h+='<div class="frow" style="margin-bottom:8px"><div class="ffield"><label class="flabel">Nombre</label><input class="finput" id="zn-'+z.id+'" value="'+escHtml(z.nombre)+'" style="font-size:13px" onclick="event.stopPropagation()"></div>';
-    h+='<div class="ffield"><label class="flabel">Precio $</label><input class="finput" type="number" id="zp-'+z.id+'" value="'+precio+'" style="font-size:13px" onclick="event.stopPropagation()"></div></div>';
-    h+='<div class="ffield" style="margin-bottom:8px"><label class="flabel">Barrios (separados por coma)</label><textarea class="finput" id="zb-'+z.id+'" rows="3" style="font-size:12px;resize:none" onclick="event.stopPropagation()">'+escHtml(barrios)+'</textarea></div>';
+    // Panel de edición
+    h+='<div id="editZona-'+z.id+'" style="display:none;padding-top:12px;border-top:1px solid rgba(255,255,255,0.07)">';
+    h+='<div class="frow" style="margin-bottom:10px">';
+    h+='<div class="ffield"><label class="flabel">Nombre</label><input class="finput" id="zn-'+z.id+'" value="'+escHtml(z.nombre)+'" onclick="event.stopPropagation()"></div>';
+    h+='<div class="ffield"><label class="flabel">Precio $</label><input class="finput" type="number" id="zp-'+z.id+'" value="'+precio+'" onclick="event.stopPropagation()"></div>';
+    h+='</div>';
+    // Chips de barrios
+    h+='<div class="ffield" style="margin-bottom:10px">';
+    h+='<label class="flabel">Barrios <span style="font-size:10px;color:var(--text3);font-weight:500">(Enter o coma para agregar)</span></label>';
+    h+='<div id="zchip-'+z.id+'" data-zbinp="zbinp-'+z.id+'" onclick="event.stopPropagation();document.getElementById(this.dataset.zbinp).focus()" style="display:flex;flex-wrap:wrap;gap:5px;min-height:38px;padding:6px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:12px;cursor:text;align-items:center">';
+    h+='<input id="zbinp-'+z.id+'" placeholder="Agregar barrio..." autocomplete="off" onclick="event.stopPropagation()" style="border:none;outline:none;background:transparent;color:var(--text);font-family:inherit;font-size:12px;min-width:120px;flex:1" onkeydown="zonaChipKey(event)" oninput="zonaChipInput(this)">';
+    h+='</div>';
+    h+='<input type="hidden" id="zb-'+z.id+'" value="'+escHtml(barriosTxt)+'">';
+    h+='</div>';
     h+='<div style="display:flex;gap:7px">';
-    h+='<button onclick="event.stopPropagation();guardarZonaEdit(\''+z.id+'\')" style="flex:2;padding:9px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">💾 Guardar</button>';
-    h+='<button onclick="event.stopPropagation();eliminarZona(\''+z.id+'\')" style="flex:1;padding:9px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:10px;color:#fca5a5;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">🗑</button>';
+    h+='<button data-zid="'+z.id+'" onclick="event.stopPropagation();guardarZonaEdit(this.dataset.zid)" style="flex:2;padding:10px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:white;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">💾 Guardar</button>';
+    h+='<button data-zid="'+z.id+'" onclick="event.stopPropagation();eliminarZona(this.dataset.zid)" style="flex:1;padding:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:10px;color:#fca5a5;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit">🗑</button>';
     h+='</div></div>';
     h+='</div>';
   });
   tabla.innerHTML=h;
-  // ── Restaurar zonas que estaban abiertas
+  // Restaurar zonas abiertas con sus chips
   abiertas.forEach(function(id){
     var el=document.getElementById("editZona-"+id);
-    if(el)el.style.display="block";
+    if(el){
+      el.style.display="block";
+      var zona=zonas.find(function(z){return z.id===id;});
+      if(zona){
+        var arr=limpiarBarrios(zona.barrios);
+        renderChipsZona("zchip-"+id,"zbinp-"+id,arr);
+      }
+    }
   });
 }
 function toggleEditZona(id){
   var el=document.getElementById("editZona-"+id);
-  if(el)el.style.display=el.style.display==="none"?"block":"none";
+  if(!el)return;
+  var open=el.style.display==="none"||el.style.display==="";
+  el.style.display=open?"block":"none";
+  if(open){
+    // Renderizar chips con barrios actuales
+    var hid=document.getElementById("zb-"+id);
+    if(hid){
+      var arr=limpiarBarrios(hid.value);
+      renderChipsZona("zchip-"+id,"zbinp-"+id,arr);
+    }
+  }
 }
 function guardarZonaEdit(id){
   var nombre=(document.getElementById("zn-"+id)||{}).value||"";
   var precio=Number((document.getElementById("zp-"+id)||{}).value)||0;
-  var barrios=(document.getElementById("zb-"+id)||{}).value||"";
+  var barriosRaw=(document.getElementById("zb-"+id)||{}).value||"";
+  var barriosArr=limpiarBarrios(barriosRaw);
+  var inp=document.getElementById("zbinp-"+id);
+  if(inp&&inp.value.trim()){barriosArr.push(inp.value.trim());inp.value="";}
   if(!nombre||!precio){notif("Nombre y precio obligatorios");return;}
-  fetch("/api/zonas/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({nombre:nombre.trim(),precio_domicilio:precio,barrios:barrios.trim()})})
+  fetch("/api/zonas/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({nombre:nombre.trim(),precio_domicilio:precio,barrios:barriosArr})})
   .then(function(r){return r.json();})
-  .then(function(d){if(d.ok){notif("✅ Zona actualizada");cargarZonas();}else notif("Error");})
+  .then(function(d){if(d.ok){notif("✅ Zona actualizada");cargarZonas();}else notif("Error: "+(d.error||""));})
   .catch(function(){notif("Error de conexión");});
 }
 function eliminarZona(id){
@@ -4038,32 +4157,34 @@ document.getElementById("btnAgregarZona").addEventListener("click",function(){
   if(!rest)return;
   var nombre=document.getElementById("zona-nombre").value.trim();
   var precio=parseInt(document.getElementById("zona-precio").value);
-  var barriosRaw=document.getElementById("zona-barrios").value.trim();
-  if(!nombre||!precio||!barriosRaw){notif("Completa todos los campos");return;}
-  // barrios se guarda como TEXT (string CSV), no como array
-  var barriosLimpio=barriosRaw.split(",").map(function(b){return b.trim();}).filter(function(b){return b;}).join(", ");
+  // Leer barrios del input hidden (chips) + cualquier texto pendiente en el input
+  var inp=document.getElementById("zona-barrio-inp");
+  if(inp&&inp.value.trim()){
+    var hidden=document.getElementById("zona-barrios");
+    var cur=limpiarBarrios(hidden?hidden.value:"");
+    cur.push(inp.value.trim());
+    if(hidden)hidden.value=cur.join(", ");
+    renderChipsZona("zona-chips-wrap","zona-barrio-inp",cur);
+    inp.value="";
+  }
+  var barriosArr=limpiarBarrios((document.getElementById("zona-barrios")||{}).value||"");
+  if(!nombre||!precio||!barriosArr.length){notif("Completa nombre, precio y al menos un barrio");return;}
   var btn=this;btn.textContent="Guardando...";btn.disabled=true;
-  // Asignar color automático basado en cantidad de zonas existentes
   var colorAuto=ZONA_COLORES[(document.querySelectorAll(".mapa-zona-card").length||0)%ZONA_COLORES.length];
   fetch("/api/supabase/zonas_domicilio",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      restaurante_id:rest.id,
-      nombre:nombre,
-      precio_domicilio:precio,
-      barrios:barriosLimpio,
-      color:colorAuto
-    })
+    body:JSON.stringify({restaurante_id:rest.id,nombre:nombre,precio_domicilio:precio,barrios:barriosArr,color:colorAuto})
   })
   .then(function(r){
     if(r.ok||r.status===201){
       notif("✅ Zona guardada!");
-      ["zona-nombre","zona-precio","zona-barrios"].forEach(function(id){document.getElementById(id).value="";});
+      document.getElementById("zona-nombre").value="";
+      document.getElementById("zona-precio").value="";
+      document.getElementById("zona-barrios").value="";
+      document.getElementById("zona-chips-wrap").querySelectorAll(".zchip").forEach(function(c){c.remove();});
       cargarZonas();
-    }else{
-      return r.text().then(function(t){throw new Error(t);});
-    }
+    }else{return r.text().then(function(t){throw new Error(t);});}
   })
   .catch(function(e){notif("❌ Error: "+String(e.message||e).substring(0,60));})
   .finally(function(){btn.textContent="Guardar zona";btn.disabled=false;});
