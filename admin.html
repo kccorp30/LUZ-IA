@@ -235,7 +235,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="snav-sect">Operaciones</div>
       <div class="nitem" onclick="nav('vendedores',this)"><span class="nitem-ico">👤</span>Vendedores</div>
       <div class="nitem" onclick="nav('menus',this)"><span class="nitem-ico">📋</span>Menús</div>
-      <div class="nitem" onclick="nav('chat',this)"><span class="nitem-ico">💬</span>Soporte</div>
+      <div class="nitem" onclick="nav('chat',this)"><span class="nitem-ico">💬</span>Soporte<span class="nbadge" id="soporteBadge" style="display:none"></span></div>
     </div>
     <div class="sfoot">
       <div class="sfoot-av" id="sfAv">A</div>
@@ -442,21 +442,24 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
     </div>
 
-    <!-- CHAT -->
+    <!-- CHAT / SOPORTE -->
     <div class="page" id="page-chat">
       <div class="ph">
-        <div><div class="ph-title">Soporte</div><div class="ph-sub">Conversaciones con Luz</div></div>
+        <div><div class="ph-title">Soporte & Chats</div><div class="ph-sub">Conversaciones con restaurantes</div></div>
         <div class="ph-actions">
-          <select class="sinp" id="chatFRest" style="width:220px" onchange="loadChatList()"><option value="">Todos los restaurantes</option></select>
+          <button class="btn btn-g btn-sm" id="btnVerSoporte" onclick="filtroChat='soporte';loadChatList()" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.25);color:#fcd34d">⚠️ Solo soporte</button>
+          <button class="btn btn-g btn-sm" onclick="filtroChat='';loadChatList()">💬 Todos</button>
+          <select class="sinp" id="chatFRest" style="width:200px" onchange="loadChatList()"><option value="">Todos los restaurantes</option></select>
         </div>
       </div>
       <div class="chat-grid">
         <div class="chat-list" id="chatList"><div class="loading" style="padding:20px"><span class="spin">⟳</span></div></div>
         <div class="chat-win" id="chatWin">
           <div class="cwh" id="cwh">Selecciona una conversación</div>
+          <div id="cwRestInfo" style="display:none;padding:8px 18px;background:rgba(124,58,237,.06);border-bottom:1px solid var(--bdr);font-size:11px;color:var(--m)"></div>
           <div class="cwm" id="cwm"><div class="empty" style="padding:30px"><div class="empty-ico">💬</div><div>Selecciona un cliente</div></div></div>
           <div class="cwi" id="cwi" style="display:none">
-            <input id="cwMsg" placeholder="Escribe un mensaje..." onkeydown="if(event.key==='Enter')sendMsg()">
+            <input id="cwMsg" placeholder="Escribe un mensaje para enviar por WhatsApp..." onkeydown="if(event.key==='Enter')sendMsg()">
             <button class="btn btn-p" onclick="sendMsg()">Enviar</button>
           </div>
         </div>
@@ -638,24 +641,79 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <!-- MODAL VENDEDOR -->
 <div class="mov" id="mod-vendedor">
-  <div class="modal">
-    <div class="mt">👤 Nuevo Vendedor</div>
+  <div class="modal" style="max-width:640px">
+    <div class="mt" id="vndModalTit">👤 Nuevo Vendedor</div>
+    <input type="hidden" id="vnd-id">
+    <div class="sdiv">Información personal</div>
     <div class="fgrid">
-      <div class="fg"><label class="fl">Nombre</label><input class="fi" id="vnd-nom" placeholder="Carlos García"></div>
-      <div class="fg"><label class="fl">Email (usuario)</label><input class="fi" id="vnd-email" placeholder="carlos@empresa.com"></div>
+      <div class="fg"><label class="fl">Nombre completo *</label><input class="fi" id="vnd-nom" placeholder="José García Martínez"></div>
+      <div class="fg"><label class="fl">Cédula / NIT *</label><input class="fi" id="vnd-cedula" placeholder="1234567890"></div>
     </div>
     <div class="fgrid">
-      <div class="fg"><label class="fl">Contraseña</label><input class="fi" type="password" id="vnd-pass" placeholder="Contraseña segura"></div>
-      <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="vnd-tel" placeholder="3001234567"></div>
+      <div class="fg"><label class="fl">Celular *</label><input class="fi" id="vnd-tel" placeholder="3001234567"></div>
+      <div class="fg"><label class="fl">Email</label><input class="fi" id="vnd-email" placeholder="jose@email.com"></div>
     </div>
-    <div class="fg"><label class="fl">Rol</label>
-      <select class="fi" id="vnd-rol">
-        <option value="vendedor">Vendedor</option><option value="superadmin">Super Admin</option>
-      </select>
+    <div class="fgrid">
+      <div class="fg"><label class="fl">Dirección</label><input class="fi" id="vnd-dir" placeholder="Cl. 16 #56-40, Cali"></div>
+      <div class="fg"><label class="fl">Placa moto / vehículo</label><input class="fi" id="vnd-placa" placeholder="ABC123"></div>
     </div>
+    <div class="sdiv">Contacto de emergencia</div>
+    <div class="fgrid">
+      <div class="fg"><label class="fl">Nombre contacto</label><input class="fi" id="vnd-emnom" placeholder="María García"></div>
+      <div class="fg"><label class="fl">Teléfono emergencia</label><input class="fi" id="vnd-emtel" placeholder="3009876543"></div>
+    </div>
+    <div class="sdiv">Acceso y rol</div>
+    <div class="fgrid">
+      <div class="fg"><label class="fl">Contraseña *</label><input class="fi" type="password" id="vnd-pass" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
+      <div class="fg"><label class="fl">Rol</label>
+        <select class="fi" id="vnd-rol">
+          <option value="vendedor">Vendedor</option>
+          <option value="superadmin">Super Admin</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Foto de perfil (URL)</label><input class="fi" id="vnd-foto" placeholder="https://... (opcional)"></div>
+    <div class="fg"><label class="fl">Notas internas</label><textarea class="fi" id="vnd-notas" rows="2" placeholder="Zona asignada, observaciones..."></textarea></div>
     <div class="mact">
       <button class="btn btn-g" onclick="closeMod('vendedor')">Cancelar</button>
-      <button class="btn btn-p" onclick="crearVendedor()">Crear vendedor</button>
+      <button class="btn btn-p" id="vndGuardarBtn" onclick="guardarVendedor()">Crear vendedor</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VER VENDEDOR -->
+<div class="mov" id="mod-ver-vendedor">
+  <div class="modal" style="max-width:680px">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+      <div id="vvFoto" style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--p),#4f46e5);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;flex-shrink:0;overflow:hidden"></div>
+      <div style="flex:1">
+        <div style="font-size:20px;font-weight:900" id="vvNom">—</div>
+        <div style="font-size:12px;color:var(--m)" id="vvRol">—</div>
+      </div>
+      <button class="btn btn-p btn-sm" onclick="editarVendedor(window._vvId)">✏️ Editar</button>
+    </div>
+    <!-- Stats del vendedor -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px">
+      <div class="sc" style="--accent-c:var(--g)"><div class="sc-l">Activos</div><div class="sc-v" style="color:var(--g);font-size:22px" id="vvActivos">0</div></div>
+      <div class="sc" style="--accent-c:var(--cy)"><div class="sc-l">En Trial</div><div class="sc-v" style="color:#67e8f9;font-size:22px" id="vvTrials">0</div></div>
+      <div class="sc" style="--accent-c:var(--a)"><div class="sc-l">MRR</div><div class="sc-v" style="color:var(--a);font-size:18px" id="vvMrr">$0</div></div>
+      <div class="sc" style="--accent-c:var(--p2)"><div class="sc-l">Pedidos hoy</div><div class="sc-v" style="color:var(--p2);font-size:22px" id="vvPedHoy">0</div></div>
+    </div>
+    <!-- Info personal -->
+    <div class="dg" style="margin-bottom:14px">
+      <div class="di"><div class="di-l">Celular</div><div class="di-v" id="vvTel">—</div></div>
+      <div class="di"><div class="di-l">Email</div><div class="di-v" id="vvEmail">—</div></div>
+      <div class="di"><div class="di-l">Cédula</div><div class="di-v" id="vvCedula">—</div></div>
+      <div class="di"><div class="di-l">Placa</div><div class="di-v" id="vvPlaca">—</div></div>
+      <div class="di"><div class="di-l">Dirección</div><div class="di-v" id="vvDir">—</div></div>
+      <div class="di"><div class="di-l">Emergencia</div><div class="di-v" id="vvEmg">—</div></div>
+    </div>
+    <!-- Lista de restaurantes del vendedor -->
+    <div style="font-size:11px;font-weight:800;color:var(--m);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Restaurantes gestionados</div>
+    <div id="vvRests" style="max-height:220px;overflow-y:auto"></div>
+    <div class="mact">
+      <button class="btn btn-g" onclick="closeMod('ver-vendedor')">Cerrar</button>
+      <button class="btn btn-r" id="vvSuspBtn" onclick="toggleVendedor(window._vvId)">Suspender</button>
     </div>
   </div>
 </div>
@@ -669,11 +727,23 @@ var chatTel="",chatRest="";
 var PRECIOS={basico:159000,emprendedor:320000,dominante:460000,empresarial:760000};
 
 function authH(){return{"Authorization":"Bearer "+TOKEN,"Content-Type":"application/json"};}
+function escHtml(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function fmt(n){return"$"+Number(n||0).toLocaleString("es-CO");}
 function ago(d){if(!d)return"—";var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<1?"ahora":diff<60?diff+" min":diff<1440?Math.floor(diff/60)+"h":new Date(d).toLocaleDateString("es-CO");}
 function badge(e){var m={activo:"activo",trial:"trial",suspendido:"suspendido",vencido:"vencido"};return'<span class="badge '+(m[e]||"")+'">'+e+'</span>';}
 function toast(msg,clr){var t=document.getElementById("toast");t.textContent=msg;t.style.background=clr||"#10b981";t.classList.add("show");setTimeout(function(){t.classList.remove("show");},2600);}
 function logout(){localStorage.removeItem("luzia_admin_token");location.reload();}
+
+// Cargar badge de soporte sin leer
+async function checkSoporteBadge(){
+  try{
+    var msgs=await sb("GET","mensajes",null,"telefono=like.SOPORTE_%&tipo=eq.alerta_pregunta&select=id&limit=50");
+    var n=(msgs||[]).length;
+    var badge=document.getElementById("soporteBadge");
+    if(badge)badge.textContent=n>0?n:"";badge&&(badge.style.display=n>0?"inline":"none");
+  }catch(e){}
+}
+setInterval(checkSoporteBadge,30000);
 
 async function sb(method,table,data,filters){
   var url="/api/admin/sb/"+table;
@@ -719,6 +789,7 @@ function enterApp(){
     document.getElementById("sfAv").textContent=(ME.nombre||ME.email||"A").charAt(0).toUpperCase();
   }
   loadDashboard();loadCache();
+  setTimeout(checkSoporteBadge,2000);
 }
 
 // ── NAV ──
@@ -1083,49 +1154,180 @@ function loadPlanes(){
 }
 
 // ── VENDEDORES ──
+// ── VENDEDORES ───────────────────────────────────────────────────────────────
 async function loadVendedores(){
   document.getElementById("vendList").innerHTML='<div class="loading"><span class="spin">⟳</span> Cargando...</div>';
   try{
-    var vs=await sb("GET","usuarios_sistema",null,"activo=eq.true&order=created_at.desc&select=id,nombre,email,rol,telefono,created_at")||[];
+    var vs=await sb("GET","usuarios_sistema",null,"activo=eq.true&order=created_at.desc&select=id,nombre,email,rol,telefono,cedula,placa,direccion,emergencia_nombre,emergencia_tel,foto_url,notas_internas,created_at")||[];
     if(!vs.length){document.getElementById("vendList").innerHTML='<div class="empty"><div class="empty-ico">👤</div><p>Sin vendedores. Crea el primero arriba.</p></div>';return;}
+    var hoy=new Date().toISOString().split("T")[0];
     document.getElementById("vendList").innerHTML=vs.map(function(v){
       var restsV=CACHE.filter(function(r){return r.vendedor_id===v.id;});
-      var mrr=restsV.filter(function(r){return r.estado==="activo";}).reduce(function(s,r){return s+(PRECIOS[r.plan]||0);},0);
+      var activos=restsV.filter(function(r){return r.estado==="activo";});
+      var mrr=activos.reduce(function(s,r){return s+(PRECIOS[r.plan]||0);},0);
+      var fotoHtml=v.foto_url
+        ?'<img src="'+v.foto_url+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px" onerror="this.style.display=\'none\'">'
+        :(v.nombre||v.email||"V").charAt(0).toUpperCase();
       return'<div class="vcard">'+
-        '<div class="vav">'+(v.nombre||v.email||"V").charAt(0).toUpperCase()+'</div>'+
-        '<div style="flex:1"><div style="font-size:14px;font-weight:800">'+(v.nombre||"Sin nombre")+'</div>'+
-        '<div style="font-size:11px;color:var(--m)">'+(v.email||"")+(v.telefono?" · "+v.telefono:"")+'</div>'+
-        '<div style="display:flex;gap:6px;margin-top:6px">'+
-        '<span style="font-size:10px;padding:2px 8px;background:rgba(124,58,237,.15);border-radius:20px;color:var(--p2);font-weight:700">'+v.rol+'</span>'+
-        '<span style="font-size:10px;padding:2px 8px;background:rgba(16,185,129,.1);border-radius:20px;color:#6ee7b7;font-weight:700">'+restsV.length+' restaurantes</span>'+
-        '</div></div>'+
-        '<div style="text-align:right">'+
-        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;color:var(--a)">'+fmt(mrr)+'</div>'+
-        '<div style="font-size:10px;color:var(--m)">MRR gestionado</div>'+
-        '<button class="btn btn-r btn-sm" style="margin-top:6px" data-id="'+v.id+'" onclick="eliminarVendedor(this.getAttribute(\'data-id\'))">🗑 Eliminar</button>'+
-        '</div></div>';
+        '<div class="vav">'+fotoHtml+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(v.nombre||"Sin nombre")+'</div>'+
+          '<div style="font-size:11px;color:var(--m)">'+(v.telefono||v.email||"")+(v.cedula?" · CC "+v.cedula:"")+'</div>'+
+          '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">'+
+            '<span style="font-size:10px;padding:2px 8px;background:rgba(124,58,237,.15);border-radius:20px;color:var(--p2);font-weight:700">'+v.rol+'</span>'+
+            '<span style="font-size:10px;padding:2px 8px;background:rgba(16,185,129,.1);border-radius:20px;color:#6ee7b7;font-weight:700">'+restsV.length+' restaurantes</span>'+
+            (v.placa?'<span style="font-size:10px;padding:2px 8px;background:rgba(59,130,246,.1);border-radius:20px;color:#93c5fd;font-weight:700">🏍 '+v.placa+'</span>':"")+
+          '</div>'+
+        '</div>'+
+        '<div style="text-align:right;flex-shrink:0">'+
+          '<div style="font-family:\'JetBrains Mono\',monospace;font-size:18px;font-weight:700;color:var(--a)">'+fmt(mrr)+'</div>'+
+          '<div style="font-size:10px;color:var(--m)">MRR gestionado</div>'+
+          '<div style="display:flex;gap:5px;margin-top:8px;justify-content:flex-end">'+
+            '<button class="btn btn-g btn-sm" data-id="'+v.id+'" onclick="verVendedor(this.getAttribute(\'data-id\'))">👁</button>'+
+            '<button class="btn btn-g btn-sm" data-id="'+v.id+'" onclick="editarVendedor(this.getAttribute(\'data-id\'))">✏️</button>'+
+            '<button class="btn btn-r btn-sm" data-id="'+v.id+'" onclick="eliminarVendedor(this.getAttribute(\'data-id\'))">🗑</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
     }).join("");
   }catch(e){document.getElementById("vendList").innerHTML='<div class="empty"><p>Error: '+e.message+'</p></div>';}
 }
 
+async function verVendedor(id){
+  window._vvId=id;
+  var v=await sb("GET","usuarios_sistema",null,"id=eq."+id+"&select=*");
+  v=v&&v[0];if(!v)return;
+  var fotoEl=document.getElementById("vvFoto");
+  if(v.foto_url){fotoEl.innerHTML='<img src="'+v.foto_url+'" style="width:100%;height:100%;object-fit:cover">';
+  }else{fotoEl.textContent=(v.nombre||"V").charAt(0).toUpperCase();}
+  document.getElementById("vvNom").textContent=v.nombre||"Sin nombre";
+  document.getElementById("vvRol").textContent=(v.rol||"vendedor")+" · Desde "+new Date(v.created_at).toLocaleDateString("es-CO");
+  document.getElementById("vvTel").textContent=v.telefono||"—";
+  document.getElementById("vvEmail").textContent=v.email||"—";
+  document.getElementById("vvCedula").textContent=v.cedula||"—";
+  document.getElementById("vvPlaca").textContent=v.placa||"—";
+  document.getElementById("vvDir").textContent=v.direccion||"—";
+  document.getElementById("vvEmg").textContent=(v.emergencia_nombre||"—")+(v.emergencia_tel?" · "+v.emergencia_tel:"");
+  var restsV=CACHE.filter(function(r){return r.vendedor_id===id;});
+  var activos=restsV.filter(function(r){return r.estado==="activo";});
+  var trials=restsV.filter(function(r){return r.suscripcion_estado==="trial";});
+  var mrr=activos.reduce(function(s,r){return s+(PRECIOS[r.plan]||0);},0);
+  document.getElementById("vvActivos").textContent=activos.length;
+  document.getElementById("vvTrials").textContent=trials.length;
+  document.getElementById("vvMrr").textContent=fmt(mrr);
+  // Pedidos hoy de sus restaurantes
+  try{
+    var hoy=new Date().toISOString().split("T")[0];
+    if(restsV.length){
+      var ids=restsV.map(function(r){return r.id;});
+      var pHoy=await sb("GET","pedidos",null,"created_at=gte."+hoy+"T00:00:00&restaurante_id=in.("+ids.join(",")+")"+"&select=id");
+      document.getElementById("vvPedHoy").textContent=(pHoy||[]).length;
+    }else{document.getElementById("vvPedHoy").textContent="0";}
+  }catch(e){}
+  // Lista de restaurantes
+  document.getElementById("vvRests").innerHTML=!restsV.length
+    ?'<div style="color:var(--m);font-size:11px;padding:8px">Sin restaurantes asignados aún</div>'
+    :restsV.map(function(r){
+      var est=r.suscripcion_estado==="trial"?"trial":r.estado||"activo";
+      return'<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;margin-bottom:6px">'+
+        '<div class="cdot '+est+'" style="flex-shrink:0"></div>'+
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700">'+r.nombre+'</div><div style="font-size:10px;color:var(--m)">'+(r.plan||"—")+" · "+(r.ciudad||r.ciudad_restaurante||"")+'</div></div>'+
+        '<div style="text-align:right"><div style="font-size:11px;font-weight:700;color:var(--a)">'+fmt(PRECIOS[r.plan]||0)+'</div><div style="font-size:10px;color:var(--m)">'+badge(est)+'</div></div>'+
+        '</div>';
+    }).join("");
+  document.getElementById("vvSuspBtn").textContent=v.activo?"⏸ Suspender":"▶ Activar";
+  openMod("ver-vendedor");
+}
+
+function editarVendedor(id){
+  sb("GET","usuarios_sistema",null,"id=eq."+id+"&select=*").then(function(vs){
+    var v=vs&&vs[0];if(!v)return;
+    document.getElementById("vnd-id").value=v.id;
+    document.getElementById("vnd-nom").value=v.nombre||"";
+    document.getElementById("vnd-cedula").value=v.cedula||"";
+    document.getElementById("vnd-tel").value=v.telefono||"";
+    document.getElementById("vnd-email").value=v.email||"";
+    document.getElementById("vnd-dir").value=v.direccion||"";
+    document.getElementById("vnd-placa").value=v.placa||"";
+    document.getElementById("vnd-emnom").value=v.emergencia_nombre||"";
+    document.getElementById("vnd-emtel").value=v.emergencia_tel||"";
+    document.getElementById("vnd-rol").value=v.rol||"vendedor";
+    document.getElementById("vnd-foto").value=v.foto_url||"";
+    document.getElementById("vnd-notas").value=v.notas_internas||"";
+    document.getElementById("vnd-pass").value="";
+    document.getElementById("vndModalTit").textContent="✏️ Editar Vendedor";
+    document.getElementById("vndGuardarBtn").textContent="Guardar cambios";
+    closeMod("ver-vendedor");
+    openMod("vendedor");
+  });
+}
+
+async function guardarVendedor(){
+  var id=document.getElementById("vnd-id").value;
+  var nom=document.getElementById("vnd-nom").value.trim();
+  var tel=document.getElementById("vnd-tel").value.trim();
+  var pass=document.getElementById("vnd-pass").value.trim();
+  if(!nom||!tel){toast("Nombre y celular obligatorios","#ef4444");return;}
+  var payload={
+    nombre:nom,
+    telefono:tel,
+    email:document.getElementById("vnd-email").value.trim()||null,
+    cedula:document.getElementById("vnd-cedula").value.trim()||null,
+    direccion:document.getElementById("vnd-dir").value.trim()||null,
+    placa:document.getElementById("vnd-placa").value.trim()||null,
+    emergencia_nombre:document.getElementById("vnd-emnom").value.trim()||null,
+    emergencia_tel:document.getElementById("vnd-emtel").value.trim()||null,
+    rol:document.getElementById("vnd-rol").value,
+    foto_url:document.getElementById("vnd-foto").value.trim()||null,
+    notas_internas:document.getElementById("vnd-notas").value.trim()||null,
+    activo:true
+  };
+  if(pass) payload.password_hash = null; // backend sets hash
+  try{
+    if(id){
+      // Editar existente
+      var patchData=Object.assign({},payload);
+      delete patchData.password_hash;
+      await sb("PATCH","usuarios_sistema?id=eq."+id,patchData);
+      if(pass){
+        var r=await fetch("/api/admin/reset-password",{method:"POST",headers:authH(),body:JSON.stringify({id:id,password:pass})});
+        var d=await r.json();
+        if(!d.ok)toast("⚠️ Datos guardados pero contraseña no cambió","#f59e0b");
+      }
+      closeMod("vendedor");toast("✅ Vendedor actualizado");
+    }else{
+      // Crear nuevo
+      var email=document.getElementById("vnd-email").value.trim()||tel+"@luzia.app";
+      if(!pass){toast("La contraseña es obligatoria al crear","#ef4444");return;}
+      var r=await fetch("/api/admin/crear-usuario",{method:"POST",headers:authH(),
+        body:JSON.stringify(Object.assign({},payload,{email:email,password:pass}))});
+      var d=await r.json();
+      if(d.ok){closeMod("vendedor");toast("✅ Vendedor creado");}
+      else{toast("❌ "+(d.error||"Error"),"#ef4444");return;}
+    }
+    // Reset modal
+    document.getElementById("vnd-id").value="";
+    document.getElementById("vndModalTit").textContent="👤 Nuevo Vendedor";
+    document.getElementById("vndGuardarBtn").textContent="Crear vendedor";
+    loadVendedores();
+  }catch(e){toast("❌ Error: "+e.message,"#ef4444");}
+}
+
+async function toggleVendedor(id){
+  var vs=await sb("GET","usuarios_sistema",null,"id=eq."+id+"&select=activo");
+  var activo=vs&&vs[0]&&vs[0].activo;
+  await sb("PATCH","usuarios_sistema?id=eq."+id,{activo:!activo});
+  toast(activo?"⏸ Vendedor suspendido":"✅ Vendedor activado");
+  closeMod("ver-vendedor");loadVendedores();
+}
+
 async function eliminarVendedor(id){
-  if(!confirm("¿Eliminar este vendedor?"))return;
+  if(!confirm("¿Desactivar este vendedor?"))return;
   await sb("PATCH","usuarios_sistema?id=eq."+id,{activo:false});
   toast("Vendedor desactivado");loadVendedores();
 }
 
-async function crearVendedor(){
-  var nom=document.getElementById("vnd-nom").value.trim();
-  var email=document.getElementById("vnd-email").value.trim();
-  var pass=document.getElementById("vnd-pass").value.trim();
-  if(!nom||!email||!pass){toast("Completa todos los campos","#ef4444");return;}
-  try{
-    var r=await fetch("/api/admin/crear-usuario",{method:"POST",headers:authH(),body:JSON.stringify({nombre:nom,email:email,password:pass,telefono:document.getElementById("vnd-tel").value||null,rol:document.getElementById("vnd-rol").value})});
-    var d=await r.json();
-    if(d.ok){closeMod("vendedor");toast("✅ Vendedor creado");loadVendedores();}
-    else{toast("❌ "+(d.error||"Error"),"#ef4444");}
-  }catch(e){toast("❌ Error","#ef4444");}
-}
+async function crearVendedor(){ guardarVendedor(); }
 
 // ── MENÚS ──
 async function loadMenuRest(){
@@ -1173,19 +1375,37 @@ async function addMenuItem(){
 }
 
 // ── CHAT ──
+var filtroChat="";
 async function loadChatList(){
   var restId=document.getElementById("chatFRest").value;
-  var f="select=telefono,restaurante_id,mensaje,tipo,created_at&order=created_at.desc&limit=300"+(restId?"&restaurante_id=eq."+restId:"");
+  var f="select=telefono,restaurante_id,mensaje,tipo,created_at&order=created_at.desc&limit=500"
+    +(restId?"&restaurante_id=eq."+restId:"");
   var msgs=await sb("GET","mensajes",null,f)||[];
-  if(!msgs.length){document.getElementById("chatList").innerHTML='<div class="empty" style="padding:20px"><p>Sin conversaciones</p></div>';return;}
+  var rm={};CACHE.forEach(function(r){rm[r.id]=r;});
+  // Agrupar por tel+rest
   var conv={};
-  msgs.forEach(function(m){var k=m.telefono+"_"+m.restaurante_id;if(!conv[k])conv[k]={tel:m.telefono,rid:m.restaurante_id,last:m.mensaje,ts:m.created_at};});
-  var rm={};CACHE.forEach(function(r){rm[r.id]=r.nombre;});
-  document.getElementById("chatList").innerHTML=Object.values(conv).map(function(c){
-    return'<div class="chat-item" data-tel="'+c.tel+'" data-rid="'+c.rid+'" onclick="abrirChat(this.getAttribute(\'data-tel\'),this.getAttribute(\'data-rid\'),this)">'+
-    '<div class="ci-name">📱 '+c.tel+'</div>'+
-    '<div class="ci-prev">'+(c.last||"").substring(0,50)+'</div>'+
-    '<div class="ci-time">'+(rm[c.rid]||"—")+" · "+ago(c.ts)+'</div></div>';
+  msgs.forEach(function(m){
+    var key=m.telefono+"_"+m.restaurante_id;
+    if(!conv[key])conv[key]={tel:m.telefono,rid:m.restaurante_id,last:m.mensaje,ts:m.created_at,isSoporte:false,unread:0};
+    if(m.telefono&&m.telefono.startsWith("SOPORTE_"))conv[key].isSoporte=true;
+    if(m.tipo==="cliente")conv[key].unread++;
+  });
+  var list=Object.values(conv);
+  if(filtroChat==="soporte")list=list.filter(function(c){return c.isSoporte;});
+  list.sort(function(a,b){return new Date(b.ts)-new Date(a.ts);});
+  if(!list.length){document.getElementById("chatList").innerHTML='<div class="empty" style="padding:20px;font-size:12px">Sin conversaciones</div>';return;}
+  document.getElementById("chatList").innerHTML=list.map(function(c){
+    var rest=rm[c.rid]||{};
+    var isSop=c.isSoporte;
+    var telDisplay=isSop?("🆘 "+rest.nombre):"📱 "+c.tel;
+    return'<div class="chat-item'+(isSop?" on":"")+'" data-tel="'+c.tel+'" data-rid="'+c.rid+'" onclick="abrirChat(this.getAttribute(\'data-tel\'),this.getAttribute(\'data-rid\'),this)">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between">'+
+        '<div class="ci-name">'+telDisplay+'</div>'+
+        (c.unread>0?'<span style="background:var(--r);color:#fff;border-radius:20px;padding:1px 6px;font-size:9px;font-weight:800">'+c.unread+'</span>':"")+
+      '</div>'+
+      '<div class="ci-prev">'+(c.last||"").replace("[SOPORTE]","[Soporte]").replace("[UPGRADE]","[Upgrade]").substring(0,55)+'</div>'+
+      '<div class="ci-time">'+(rest.nombre||"—")+" · "+ago(c.ts)+'</div>'+
+    '</div>';
   }).join("");
 }
 
@@ -1193,13 +1413,23 @@ async function abrirChat(tel,rid,el){
   chatTel=tel;chatRest=rid;
   document.querySelectorAll(".chat-item").forEach(function(x){x.classList.remove("on");});
   if(el)el.classList.add("on");
-  document.getElementById("cwh").textContent="💬 "+tel;
-  document.getElementById("cwi").style.display="flex";
+  var rest=CACHE.find(function(r){return r.id===rid;})||{};
+  var isSop=tel&&tel.startsWith("SOPORTE_");
+  document.getElementById("cwh").textContent=(isSop?"🆘 Soporte — ":"💬 ")+rest.nombre+(isSop?"":" · "+tel);
+  var info=document.getElementById("cwRestInfo");
+  if(rest.nombre){
+    info.style.display="block";
+    info.innerHTML="🏪 "+rest.nombre+" · 📦 "+(rest.plan||"—")+" · 📅 vence: "+(rest.fecha_vencimiento||"—")+(rest.whatsapp?" · 📱 "+rest.whatsapp:"");
+  }else{info.style.display="none";}
+  document.getElementById("cwi").style.display=rest.whatsapp?"flex":"none";
+  if(!rest.whatsapp){document.getElementById("cwi").innerHTML='<div style="font-size:11px;color:var(--m);padding:8px">Sin WhatsApp configurado — no se puede responder</div>';}
   var msgs=await sb("GET","mensajes",null,"telefono=eq."+encodeURIComponent(tel)+"&restaurante_id=eq."+rid+"&order=created_at.asc&limit=100")||[];
   var box=document.getElementById("cwm");
   box.innerHTML=msgs.map(function(m){
-    var cls=m.tipo==="cliente"?"bcliente":"bluz";
-    return'<div class="bubble '+cls+'"><div>'+(m.mensaje||"")+'</div><div class="btime">'+new Date(m.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})+'</div></div>';
+    var isPanel=m.tipo==="panel"||m.tipo==="alerta_pregunta";
+    var cls=isPanel?"bluz":"bcliente";
+    var label=isPanel?"LUZ IA":"Cliente";
+    return'<div class="bubble '+cls+'"><div style="font-size:9px;color:rgba(255,255,255,.35);margin-bottom:3px">'+label+'</div><div>'+escHtml(m.mensaje||"")+'</div><div class="btime">'+new Date(m.created_at).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"})+'</div></div>';
   }).join("");
   box.scrollTop=box.scrollHeight;
 }
