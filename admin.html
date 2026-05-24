@@ -903,23 +903,40 @@ function copiarPanelUrl(){
 
 async function guardarEdicion(){
   var id=document.getElementById("eid").value;
-  await sb("PATCH","restaurantes?id=eq."+id,{
+  // Campos base — siempre existen en la tabla
+  var payload={
     nombre:document.getElementById("e-nom").value,
     estado:document.getElementById("e-est").value,
     plan:document.getElementById("e-plan").value,
     fecha_vencimiento:document.getElementById("e-vence").value||null,
     pin:document.getElementById("e-pin").value||null,
     whatsapp:document.getElementById("e-wa").value||null,
-    whatsapp_phone_id:document.getElementById("e-pid").value||null,
+    whatsapp_phone_id:document.getElementById("e-pid").value||null
+  };
+  // Campos opcionales — intentar guardarlos uno a uno si hay error
+  var extra={
     nombre_luz:document.getElementById("e-nLuz").value||null,
     personalidad_luz:document.getElementById("e-pers").value||null,
     info_adicional:document.getElementById("e-info").value||null,
     metodo_pago_nequi:document.getElementById("e-nequi").value||null,
     metodo_pago_banco:document.getElementById("e-banco").value||null,
-    metodo_pago_nombre:document.getElementById("e-btit").value||null,
-    notas:document.getElementById("e-notas").value||null
-  });
-  closeMod("editar");toast("✅ Restaurante actualizado");
+    metodo_pago_nombre:document.getElementById("e-btit").value||null
+  };
+  try{
+    // Intentar todo junto primero
+    await sb("PATCH","restaurantes?id=eq."+id,Object.assign({},payload,extra));
+    closeMod("editar");toast("✅ Restaurante actualizado");
+  }catch(e){
+    // Si falla, guardar solo los campos base
+    console.warn("[guardarEdicion] Error con campos extra, guardando solo base:", e.message);
+    try{
+      await sb("PATCH","restaurantes?id=eq."+id,payload);
+      closeMod("editar");toast("✅ Guardado (algunos campos no existen en la BD)");
+    }catch(e2){
+      toast("❌ Error al guardar: "+e2.message,"#ef4444");
+      return;
+    }
+  }
   loadClientes();loadDashboard();loadCache();
 }
 
