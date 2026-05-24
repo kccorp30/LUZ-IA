@@ -737,15 +737,13 @@ function logout(){localStorage.removeItem("luzia_admin_token");location.reload()
 // Cargar badge de soporte sin leer
 async function checkSoporteBadge(){
   try{
-    // Buscar mensajes de soporte (teléfonos que empiezan con SOPORTE_)
-    var msgs=await sb("GET","mensajes",null,"telefono=ilike.SOPORTE_%25&select=id&limit=99");
-    var n=(msgs||[]).length;
+    var r=await fetch("/api/soporte-count",{headers:authH()});
+    if(!r.ok)return;
+    var d=await r.json();
+    var n=d.count||0;
     var badgeEl=document.getElementById("soporteBadge");
     if(badgeEl){badgeEl.textContent=n>0?n:"";badgeEl.style.display=n>0?"inline":"none";}
-  }catch(e){
-    // Silenciar — tabla puede no tener el índice o campo
-    console.warn("[soporte badge]",e.message);
-  }
+  }catch(e){console.warn("[soporte badge]",e.message);}
 }
 setInterval(checkSoporteBadge,60000);
 
