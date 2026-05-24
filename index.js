@@ -704,13 +704,32 @@ function getMenuUrl(restaurante) {
 async function descargarImagenMeta(mediaId) {
   try {
     var token = process.env.WHATSAPP_TOKEN;
-    if (!token) return null;
-    var urlRes = await axios.get("https://graph.facebook.com/v20.0/" + mediaId, { headers: { "Authorization": "Bearer " + token } });
-    var mediaUrl = urlRes.data?.url;
-    if (!mediaUrl) return null;
-    var imgRes = await axios.get(mediaUrl, { headers: { "Authorization": "Bearer " + token }, responseType: "arraybuffer" });
+    if (!token) { console.error("[comprobante] WHATSAPP_TOKEN no configurado"); return null; }
+    // Intentar con v21.0 primero, luego v20.0 como fallback
+    var mediaUrl = null;
+    for (var ver of ["v21.0", "v20.0", "v22.0"]) {
+      try {
+        var urlRes = await axios.get("https://graph.facebook.com/" + ver + "/" + mediaId, {
+          headers: { "Authorization": "Bearer " + token },
+          timeout: 8000
+        });
+        mediaUrl = urlRes.data?.url;
+        if (mediaUrl) break;
+      } catch(ev) {
+        console.warn("[comprobante] Meta API " + ver + " falló:", ev.response?.status, ev.message?.substring(0,60));
+      }
+    }
+    if (!mediaUrl) { console.error("[comprobante] No se obtuvo URL del mediaId:", mediaId); return null; }
+    var imgRes = await axios.get(mediaUrl, {
+      headers: { "Authorization": "Bearer " + token },
+      responseType: "arraybuffer",
+      timeout: 15000
+    });
     return "data:" + (imgRes.headers["content-type"] || "image/jpeg") + ";base64," + Buffer.from(imgRes.data).toString("base64");
-  } catch (e) { console.error("descargarImagen:", e.message); return null; }
+  } catch (e) {
+    console.error("[comprobante] descargarImagenMeta error:", e.response?.status, e.message?.substring(0,80));
+    return null;
+  }
 }
 
 async function sendWhatsAppImage(to, imageUrl, caption, phoneId) {
@@ -1211,6 +1230,41 @@ app.post("/api/esp32-registro", async function(req, res) {
   } catch(e) {
     console.error("[ESP32 registro ERROR]", e.message, e.response?.data);
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ── PWA MANIFESTS ─────────────────────────────────────────────────────────────
+var PWA_BASE = { start_url: "/", display: "standalone", background_color: "#0d0a1a", theme_color: "#7c3aed", icons: [{ src: "https://luz-ia-production-4cff.up.railway.app/icon-192.png", sizes: "192x192", type: "image/png" }, { src: "https://luz-ia-production-4cff.up.railway.app/icon-512.png", sizes: "512x512", type: "image/png" }] };
+app.get("/manifest-menu.json", function(req, res) {
+  res.json(Object.assign({}, PWA_BASE, { name: "La Curva Menú", short_name: "Menú", start_url: "/menu", theme_color: "#0A0710", background_color: "#0A0710" }));
+});
+app.get("/manifest-mesero.json", function(req, res) {
+  res.json(Object.assign({}, PWA_BASE, { name: "Mesero · La Curva", short_name: "Mesero", start_url: "/mesero2" }));
+});
+app.get("/manifest-cocina.json", function(req, res) {
+  res.json(Object.assign({}, PWA_BASE, { name: "Cocina · La Curva", short_name: "Cocina", start_url: "/cocina", theme_color: "#f97316" }));
+});
+app.get("/manifest-restaurante.json", function(req, res) {
+  res.json(Object.assign({}, PWA_BASE, { name: "Panel · La Curva", short_name: "Panel", start_url: "/restaurante" }));
+});
+
+// ── GEOCODIFICACIÓN — Nominatim OpenStreetMap (gratuito, sin API key) ─────────
+app.get("/api/geocode", async function(req, res) {
+  var q = req.query.q;
+  if (!q) return res.json({ results: [] });
+  try {
+    var url = "https://nominatim.openstreetmap.org/search?q=" + encodeURIComponent(q) + "&format=json&limit=5&countrycodes=co";
+    var r = await axios.get(url, {
+      headers: { "User-Agent": "LUZ-IA/1.0 restaurante" },
+      timeout: 6000
+    });
+    var results = (r.data || []).map(function(item) {
+      return { display_name: item.display_name, lat: parseFloat(item.lat), lon: parseFloat(item.lon) };
+    });
+    res.json({ results: results });
+  } catch(e) {
+    console.error("[geocode]", e.message);
+    res.json({ results: [] });
   }
 });
 
@@ -4473,10 +4527,15 @@ async function luzAgentTick() {
       var restId = rest.id;
       var phoneId = rest.whatsapp_phone_id || process.env.WHATSAPP_PHONE_ID;
       var telDueno = rest.telefono_dueno ? "57" + String(rest.telefono_dueno).replace(/^57/,"") : null;
-
-      console.log("[AGENTE tick] Restaurante:", rest.nombre,
-        "| Tel dueño:", telDueno || "❌ NO CONFIGURADO",
-        "| PhoneId:", phoneId ? "✅" : "❌ NO CONFIGURADO");
+      // Solo loguear NO CONFIGURADO UNA vez — evita spam en logs
+      if (!global._telWarnLogged) global._telWarnLogged = {};
+      if (!telDueno && !global._telWarnLogged[rest.id]) {
+        global._telWarnLogged[rest.id] = true;
+        console.log("[AGENTE] ⚠️  Tel dueño NO CONFIGURADO para:", rest.nombre, "— ve a Config > Teléfono dueño");
+      } else if (telDueno && global._telWarnLogged[rest.id]) {
+        delete global._telWarnLogged[rest.id];
+        console.log("[AGENTE] ✅ Tel dueño configurado para:", rest.nombre);
+      }
 
       // Helper para alertar al dueño — clave única por restaurante + contenido completo
       var makeAlertarDueno = function(tDueno, pId, rId) {
