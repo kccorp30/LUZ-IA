@@ -1326,6 +1326,20 @@ app.post("/api/admin/reset-password", requireAdmin, async function(req, res) {
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// ── SOPORTE COUNT — badge en admin ───────────────────────────────────────────
+app.get("/api/soporte-count", requireAdmin, async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/mensajes?telefono=like.SOPORTE_%25&select=id&limit=99",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json({ ok: true, count: (r.data || []).length });
+  } catch(e) {
+    res.json({ ok: false, count: 0 });
+  }
+});
+
 // ── SOPORTE INTERNO — mensajes del restaurante al admin ──────────────────────
 app.post("/api/soporte-mensaje", async function(req, res) {
   try {
