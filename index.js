@@ -1238,6 +1238,21 @@ app.post("/api/esp32-registro", async function(req, res) {
   }
 });
 
+// ── PWA ICONS ─────────────────────────────────────────────────────────────────
+var PWA_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#7c3aed"/><text x="96" y="120" font-size="96" text-anchor="middle" font-family="Arial,sans-serif">🍔</text></svg>';
+app.get("/icon-192.png", function(req, res) {
+  res.setHeader("Content-Type", "image/svg+xml");
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.send(PWA_ICON_SVG);
+});
+app.get("/icon-512.png", function(req, res) {
+  res.setHeader("Content-Type", "image/svg+xml");
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.send(PWA_ICON_SVG.replace(/192/g, "512").replace("96", "256").replace("120", "320"));
+});
+app.get("/icons/icon-192.png", function(req, res) { res.redirect("/icon-192.png"); });
+app.get("/icons/icon-512.png", function(req, res) { res.redirect("/icon-512.png"); });
+
 // ── PWA MANIFESTS ─────────────────────────────────────────────────────────────
 var PWA_BASE = { start_url: "/", display: "standalone", background_color: "#0d0a1a", theme_color: "#7c3aed", icons: [{ src: "https://luz-ia-production-4cff.up.railway.app/icon-192.png", sizes: "192x192", type: "image/png" }, { src: "https://luz-ia-production-4cff.up.railway.app/icon-512.png", sizes: "512x512", type: "image/png" }] };
 app.get("/manifest-menu.json", function(req, res) {
@@ -1696,16 +1711,20 @@ app.post("/api/pedido-estado", async function(req, res) {
       await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id, { estado: estadoReal },
         { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
     } catch(ePatch) {
-      // Si listo_entrega no está en el CHECK constraint, usar entregado
-      if (estadoReal === "listo_entrega") {
-        await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id, { estado: "entregado" },
+      // Si el estado no está en el CHECK constraint, usar el más cercano
+      var fallbackEstado = null;
+      if (estadoReal === "listo_entrega") fallbackEstado = "entregado";
+      if (estadoReal === "servido" || estadoReal === "sirviendo") fallbackEstado = "listo";
+      if (fallbackEstado) {
+        await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id, { estado: fallbackEstado },
           { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
-        console.log("[pedido-estado] listo_entrega fallback → entregado para pedido " + id);
+        console.log("[pedido-estado] " + estadoReal + " fallback → " + fallbackEstado + " para pedido " + id);
       } else {
         throw ePatch;
       }
     }
-    if (estado === "listo_entrega") { return res.json({ ok: true }); }
+    // servido y listo_entrega: solo actualizar estado, no mandar WhatsApp
+    if (estado === "listo_entrega" || estado === "servido" || estado === "sirviendo") { return res.json({ ok: true }); }
     if (telefono_cliente) {
       var restaurante = null;
       if (restaurante_id) {
