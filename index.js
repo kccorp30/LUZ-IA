@@ -1312,6 +1312,20 @@ app.get("/icon-512.png", function(req, res) {
 app.get("/icons/icon-192.png", function(req, res) { res.redirect("/icon-192.png"); });
 app.get("/icons/icon-512.png", function(req, res) { res.redirect("/icon-512.png"); });
 
+// ── RESET PASSWORD ─────────────────────────────────────────────────────────
+app.post("/api/admin/reset-password", requireAdmin, async function(req, res) {
+  try {
+    var { id, password } = req.body;
+    if (!id || !password) return res.status(400).json({ ok: false, error: "Faltan datos" });
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    await axios.patch(SUPABASE_URL + "/rest/v1/usuarios_sistema?id=eq." + id,
+      { password_hash: hashPassword(password) },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // ── SOPORTE INTERNO — mensajes del restaurante al admin ──────────────────────
 app.post("/api/soporte-mensaje", async function(req, res) {
   try {
