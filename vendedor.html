@@ -243,9 +243,10 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
           <div class="fg"><label class="fl">Nombre de la IA</label><input class="fi" id="nr-nLuz" value="Luz"></div>
           <div class="fg"><label class="fl">Plan inicial</label>
             <select class="fi" id="nr-plan">
-              <option value="emprendedor">🥉 Emprendedor</option>
-              <option value="crecimiento" selected>🥈 Crecimiento</option>
-              <option value="dominante">🥇 Dominante</option>
+              <option value="basico">⚡ Básico — $159.000/mes</option>
+              <option value="emprendedor" selected>🥈 Emprendedor — $320.000/mes</option>
+              <option value="dominante">🥇 Dominante — $460.000/mes</option>
+              <option value="empresarial">💎 Empresarial — $760.000/mes</option>
             </select>
           </div>
         </div>
@@ -255,7 +256,7 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
         <div style="font-size:10px;color:var(--m);margin-bottom:8px">Una por línea — definen el comportamiento de Luz desde el primer día</div>
         <div class="fg"><textarea class="fi" id="nr-reglas" rows="5" placeholder="No ofrecemos domicilio después de las 11pm&#10;Solo aceptamos Nequi, Bancolombia y efectivo&#10;Los combos incluyen papas y bebida&#10;Mínimo de pedido $15.000 para domicilio"></textarea></div>
 
-        <button class="btn btn-p btn-xl" onclick="crearRestaurante()">🚀 Crear restaurante · Trial 7 días</button>
+        <button class="btn btn-p btn-xl" onclick="crearRestaurante()">🚀 Crear restaurante · Trial 15 días gratis</button>
         <div id="nr-res"></div>
       </div>
     </div>
@@ -468,8 +469,10 @@ async function loadPipeline(){
     var keys={trial:"Trial",activo:"Activo",vencido:"Vencido",suspendido:"Susp"};
     Object.keys(cols).forEach(function(k){
       var Key=k.charAt(0).toUpperCase()+k.slice(1);
-      document.getElementById("p"+Key).innerHTML=cols[k].join("")||'<div style="color:var(--m);font-size:10px;padding:8px;text-align:center">Vacío</div>';
-      document.getElementById("c"+Key).textContent=cols[k].length;
+      var pEl=document.getElementById("p"+Key);
+      var cEl=document.getElementById("c"+Key);
+      if(pEl)pEl.innerHTML=cols[k].join("")||'<div style="color:var(--m);font-size:10px;padding:8px;text-align:center">Vacío</div>';
+      if(cEl)cEl.textContent=cols[k].length;
     });
     // Actividad
     if(d.actividad&&d.actividad.length){
@@ -524,7 +527,7 @@ async function crearRestaurante(){
       document.getElementById("nr-res").innerHTML=
         '<div class="rbox"><div style="font-size:28px;margin-bottom:8px">🎉</div>'+
         '<div style="font-weight:800;font-size:16px;margin-bottom:6px">¡Restaurante creado!</div>'+
-        '<div style="font-size:11px;color:var(--m);margin-bottom:12px">Trial de 7 días activo · Plan '+body.plan+'</div>'+
+        '<div style="font-size:11px;color:var(--m);margin-bottom:12px">Trial de 15 días activo · Plan '+body.plan+'</div>'+
         '<div class="pinbox">'+d.pin+'</div>'+
         '<div style="font-size:11px;color:var(--m);margin-bottom:12px">PIN de acceso al panel · Entrar en: <span style="color:var(--p2)">'+location.origin+'/restaurante</span></div>'+
         '<button class="btn btn-p" style="margin-right:8px" onclick="navigator.clipboard.writeText(\'PIN: '+d.pin+' | Panel: '+location.origin+'/restaurante\').then(function(){toast(\'✅ Credenciales copiadas\');})">📋 Copiar credenciales</button>'+
