@@ -1722,10 +1722,25 @@ app.post("/api/vendedor/crear-restaurante", requireAdmin, async function(req, re
     var trialFin = new Date(); trialFin.setDate(trialFin.getDate() + 15);
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" };
 
-    // PASO 1: Insert mínimo — solo lo que no puede fallar
-    var minData = { nombre: b.nombre || "Nuevo restaurante", ciudad: b.ciudad || "Cali", pin: pin };
+    // PASO 1: Insert mínimo — nombre, whatsapp (NOT NULL), ciudad, pin
+    var minData = { 
+      nombre: b.nombre || "Nuevo restaurante", 
+      whatsapp: b.whatsapp || b.contacto_telefono || "0000000000",
+      ciudad: b.ciudad || "Cali", 
+      pin: pin 
+    };
     console.log("[crear-restaurante] Intentando insert mínimo:", JSON.stringify(minData));
-    var r = await axios.post(SUPABASE_URL + "/rest/v1/restaurantes", minData, { headers: h });
+    console.log("[crear-restaurante] URL:", SUPABASE_URL + "/rest/v1/restaurantes");
+    console.log("[crear-restaurante] Tiene svcKey:", !!svcKey, "len:", svcKey ? svcKey.length : 0);
+    var r;
+    try {
+      r = await axios.post(SUPABASE_URL + "/rest/v1/restaurantes", minData, { headers: h });
+    } catch(eMin) {
+      console.error("[crear-restaurante] INSERT MÍNIMO FALLÓ:", eMin.message);
+      console.error("[crear-restaurante] Status:", eMin.response && eMin.response.status);
+      console.error("[crear-restaurante] Data:", JSON.stringify(eMin.response && eMin.response.data));
+      throw eMin;
+    }
     var created = (Array.isArray(r.data) ? r.data[0] : r.data) || {};
     var newId = created.id;
     console.log("[crear-restaurante] Insert mínimo OK, id:", newId);
