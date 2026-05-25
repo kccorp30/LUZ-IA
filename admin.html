@@ -976,19 +976,18 @@ function copiarPanelUrl(){
 
 async function guardarEdicion(){
   var id=document.getElementById("eid").value;
-  // Campos base — siempre existen en la tabla
+  // Solo los campos que definitivamente existen según el schema visto
   var payload={
     nombre:document.getElementById("e-nom").value,
     estado:document.getElementById("e-est").value,
-    plan_id:document.getElementById("e-plan").value,
     plan:document.getElementById("e-plan").value,
-    fecha_vencimiento:document.getElementById("e-vence").value||null,
-    pin:document.getElementById("e-pin").value||null,
     whatsapp:document.getElementById("e-wa").value||null,
     whatsapp_phone_id:document.getElementById("e-pid").value||null
   };
-  // Campos opcionales — intentar guardarlos uno a uno si hay error
-  var extra={
+  // Campos opcionales que pueden o no existir
+  var extras={
+    fecha_vencimiento:document.getElementById("e-vence").value||null,
+    pin:document.getElementById("e-pin").value||null,
     nombre_luz:document.getElementById("e-nLuz").value||null,
     personalidad_luz:document.getElementById("e-pers").value||null,
     info_adicional:document.getElementById("e-info").value||null,
@@ -996,22 +995,33 @@ async function guardarEdicion(){
     metodo_pago_banco:document.getElementById("e-banco").value||null,
     metodo_pago_nombre:document.getElementById("e-btit").value||null
   };
+  // Quitar nulls de extras
+  Object.keys(extras).forEach(function(k){if(!extras[k])delete extras[k];});
+  var saved=false;
+  // Intento 1: todo junto
   try{
-    // Intentar todo junto primero
-    await sb("PATCH","restaurantes?id=eq."+id,Object.assign({},payload,extra));
-    closeMod("editar");toast("✅ Restaurante actualizado");
+    await sb("PATCH","restaurantes?id=eq."+id,Object.assign({},payload,extras));
+    saved=true;
   }catch(e){
-    // Si falla, guardar solo los campos base
-    console.warn("[guardarEdicion] Error con campos extra, guardando solo base:", e.message);
+    console.warn("[guardarEdicion] Full patch failed:",e.message);
+    // Intento 2: solo campos base
     try{
       await sb("PATCH","restaurantes?id=eq."+id,payload);
-      closeMod("editar");toast("✅ Guardado (algunos campos no existen en la BD)");
+      saved=true;
+      // Intentar extras uno por uno
+      for(var k in extras){
+        var single={};single[k]=extras[k];
+        await sb("PATCH","restaurantes?id=eq."+id,single).catch(function(){});
+      }
     }catch(e2){
-      toast("❌ Error al guardar: "+e2.message,"#ef4444");
-      return;
+      toast("❌ Error al guardar: "+e2.message,"#ef4444");return;
     }
   }
-  loadClientes();loadDashboard();loadCache();
+  if(saved){
+    closeMod("editar");
+    toast("✅ Restaurante actualizado");
+    loadClientes();loadDashboard();loadCache();
+  }
 }
 
 async function cambiarEstado(id,est){
