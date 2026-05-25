@@ -990,7 +990,25 @@ select.finput{cursor:pointer}
           <div id="cfg-dueno-status" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
         </div>
         <div class="cfg-section">
-          <div class="cfg-title">🌅 Menú de Día / Almuerzo</div>
+          <div class="cfg-title">🎨 Tema del menú web</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+            <label id="tema-street" onclick="seleccionarTema('street')" style="cursor:pointer;border-radius:14px;overflow:hidden;border:2px solid transparent;transition:all .2s">
+              <div style="background:linear-gradient(135deg,#1a0f05,#2a1a0a);padding:14px;text-align:center;border-radius:12px">
+                <div style="font-size:22px;margin-bottom:4px">🍊</div>
+                <div style="font-size:12px;font-weight:800;color:#FF7A1A">Street Food</div>
+                <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px">Naranja vibrante</div>
+              </div>
+            </label>
+            <label id="tema-luz" onclick="seleccionarTema('luz')" style="cursor:pointer;border-radius:14px;overflow:hidden;border:2px solid transparent;transition:all .2s">
+              <div style="background:linear-gradient(135deg,#0d0a1a,#13102a);padding:14px;text-align:center;border-radius:12px">
+                <div style="font-size:22px;margin-bottom:4px">✨</div>
+                <div style="font-size:12px;font-weight:800;color:#a78bfa">LUZ Clásico</div>
+                <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px">Morado oscuro</div>
+              </div>
+            </label>
+          </div>
+          <input type="hidden" id="cfg-menu-tema" value="street">
+        </div>
           <!-- Toggle modo día -->
           <div class="cfg-row" style="margin-bottom:12px">
             <div>
@@ -3096,6 +3114,11 @@ function cargarConfig(){
     document.getElementById("cfg-apertura").value=(rest.hora_apertura||"16:00:00").substring(0,5);
     document.getElementById("cfg-cierre").value=(rest.hora_cierre||"00:00:00").substring(0,5);
     document.getElementById("cfg-menu-dia").value=rest.menu_dia||"";
+    // Cargar tema guardado
+    var temaGuardado=rest.menu_tema||"street";
+    var temaInput=document.getElementById("cfg-menu-tema");
+    if(temaInput)temaInput.value=temaGuardado;
+    seleccionarTema(temaGuardado);
     // Mostrar/ocultar panel modo día según estado actual
     var panelDia=document.getElementById("cfgModoDiaPanel");
     if(panelDia) panelDia.style.display=rest.modo_dia?"block":"none";
@@ -3137,10 +3160,19 @@ document.getElementById("toggleModoDia").addEventListener("click",function(){
   if(modoDiaActual) cargarProductosDia();
 });
 document.querySelectorAll(".dia-btn").forEach(function(b){b.addEventListener("click",function(){this.classList.toggle("activo");});});
+function seleccionarTema(tema){
+  document.getElementById("cfg-menu-tema").value=tema;
+  ["street","luz"].forEach(function(t){
+    var el=document.getElementById("tema-"+t);
+    if(el)el.style.borderColor=t===tema?"var(--brand,#f97316)":"transparent";
+  });
+  notif(tema==="luz"?"✨ Tema LUZ aplicado":"🍊 Tema Street Food aplicado");
+}
+
 document.getElementById("cfgGuardar").addEventListener("click",function(){
   if(!rest){notif("Error: sin restaurante");return;}
   var diasSel=[];document.querySelectorAll(".dia-btn.activo").forEach(function(b){diasSel.push(b.getAttribute("data-dia"));});
-  var config={modo_dia:modoDiaActual,hora_apertura:document.getElementById("cfg-apertura").value+":00",hora_cierre:document.getElementById("cfg-cierre").value+":00",menu_dia:document.getElementById("cfg-menu-dia").value.trim(),menu_noche:document.getElementById("cfg-menu-noche").value.trim(),dias_activos:diasSel.join(","),direccion:document.getElementById("cfg-direccion").value.trim(),domicilio_base:Number(document.getElementById("cfg-domicilio-base").value)||0,msg_bienvenida:document.getElementById("cfg-msg-bienvenida").value.trim(),msg_en_preparacion:document.getElementById("cfg-msg-preparacion").value.trim(),msg_listo:document.getElementById("cfg-msg-listo").value.trim(),msg_en_camino:document.getElementById("cfg-msg-camino").value.trim(),hora_dia_inicio:(document.getElementById("cfg-hora-dia-inicio")||{value:"11:00"}).value||"11:00",hora_dia_fin:(document.getElementById("cfg-hora-dia-fin")||{value:"15:00"}).value||"15:00"};
+  var config={modo_dia:modoDiaActual,hora_apertura:document.getElementById("cfg-apertura").value+":00",hora_cierre:document.getElementById("cfg-cierre").value+":00",menu_dia:document.getElementById("cfg-menu-dia").value.trim(),menu_noche:document.getElementById("cfg-menu-noche").value.trim(),dias_activos:diasSel.join(","),direccion:document.getElementById("cfg-direccion").value.trim(),domicilio_base:Number(document.getElementById("cfg-domicilio-base").value)||0,msg_bienvenida:document.getElementById("cfg-msg-bienvenida").value.trim(),msg_en_preparacion:document.getElementById("cfg-msg-preparacion").value.trim(),msg_listo:document.getElementById("cfg-msg-listo").value.trim(),msg_en_camino:document.getElementById("cfg-msg-camino").value.trim(),hora_dia_inicio:(document.getElementById("cfg-hora-dia-inicio")||{value:"11:00"}).value||"11:00",hora_dia_fin:(document.getElementById("cfg-hora-dia-fin")||{value:"15:00"}).value||"15:00",menu_tema:(document.getElementById("cfg-menu-tema")||{value:"street"}).value||"street"};
   var btn=this;btn.textContent="Guardando...";btn.disabled=true;
   fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:config})})
     .then(function(r){return r.json();})
