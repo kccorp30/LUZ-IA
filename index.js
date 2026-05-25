@@ -1720,90 +1720,74 @@ app.post("/api/vendedor/crear-restaurante", requireAdmin, async function(req, re
     var b = req.body;
     var pin = Math.floor(1000 + Math.random() * 9000).toString();
     var trialFin = new Date(); trialFin.setDate(trialFin.getDate() + 15);
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" };
 
-    // Obtener columnas reales de la tabla
-    var colsRes = await axios.get(
-      SUPABASE_URL + "/rest/v1/restaurantes?limit=0&select=*",
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Prefer": "count=none" } }
-    ).catch(function(){ return { data: [] }; });
-    // Las columnas las inferimos del primer registro o hacemos insert mínimo
-    
-    // Mapa completo de campos posibles → valor
-    // IMPORTANTE: plan_id es UUID (no texto), vendedor_id es UUID
-    // plan es texto y acepta "basico","emprendedor", etc.
-    var todosLosCampos = {
-      nombre: b.nombre,
-      ciudad: b.ciudad || "Cali",
-      ciudad_restaurante: b.ciudad || "Cali",
-      estado: "activo",
-      suscripcion_estado: "trial",
-      fecha_vencimiento: trialFin.toISOString().split("T")[0],
-      pin: pin,
-      hora_apertura: (b.hora_apertura || "10:00") + ":00",
-      hora_cierre: (b.hora_cierre || "22:00") + ":00",
-      plan: b.plan || "basico",
-      direccion: b.direccion || null,
-      contacto_nombre: b.contacto_nombre || null,
-      contacto_telefono: b.contacto_telefono || null,
-      whatsapp: b.whatsapp || null,
-      whatsapp_phone_id: b.whatsapp_phone_id || null,
-      nombre_luz: b.nombre_luz || "Luz",
-      personalidad_luz: b.personalidad_luz || "Amable, caleña, servicial",
-      info_adicional: b.tipo_comida || null
-    };
-    // vendedor_id es UUID — solo agregar si el adminUser tiene un UUID válido
-    if(req.adminUser && req.adminUser.id && req.adminUser.id.match(/^[0-9a-f-]{36}$/i)){
-      todosLosCampos.vendedor_id = req.adminUser.id;
+    // PASO 1: Insert mínimo — solo lo que no puede fallar
+    var minData = { nombre: b.nombre || "Nuevo restaurante", ciudad: b.ciudad || "Cali", pin: pin };
+    console.log("[crear-restaurante] Intentando insert mínimo:", JSON.stringify(minData));
+    var r = await axios.post(SUPABASE_URL + "/rest/v1/restaurantes", minData, { headers: h });
+    var created = (Array.isArray(r.data) ? r.data[0] : r.data) || {};
+    var newId = created.id;
+    console.log("[crear-restaurante] Insert mínimo OK, id:", newId);
+
+    if (!newId) { return res.json({ ok: true, restaurante: created, pin: pin }); }
+
+    // PASO 2: PATCH con el resto de campos — campo por campo para no fallar
+    var camposExtra = [
+      { ciudad_restaurante: b.ciudad || "Cali" },
+      { estado: "activo" },
+      { suscripcion_estado: "trial" },
+      { fecha_vencimiento: trialFin.toISOString().split("T")[0] },
+      { plan: b.plan || "basico" },
+      { hora_apertura: (b.hora_apertura || "10:00") + ":00" },
+      { hora_cierre: (b.hora_cierre || "22:00") + ":00" },
+      { whatsapp: b.whatsapp || null },
+      { whatsapp_phone_id: b.whatsapp_phone_id || null },
+      { direccion: b.direccion || null },
+      { contacto_nombre: b.contacto_nombre || null },
+      { contacto_telefono: b.contacto_telefono || null },
+      { nombre_luz: b.nombre_luz || "Luz" },
+      { personalidad_luz: b.personalidad_luz || "Amable, caleña, servicial" }
+    ];
+    // Si vendedor_id es UUID válido, agregarlo
+    if (req.adminUser && req.adminUser.id && /^[0-9a-f-]{36}$/i.test(req.adminUser.id)) {
+      camposExtra.push({ vendedor_id: req.adminUser.id });
     }
 
-    // Quitar nulls
-    Object.keys(todosLosCampos).forEach(function(k){
-      if(todosLosCampos[k]===null||todosLosCampos[k]===undefined) delete todosLosCampos[k];
-    });
+    var patchUrl = SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + newId;
+    var patchH = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" };
 
-    // Intentar insert completo, si falla ir quitando campos opcionales uno a uno
-    var camposObligatorios = ["nombre","ciudad","estado","pin"];
-    var camposOpcionales = ["ciudad_restaurante","fecha_vencimiento","suscripcion_estado",
-      "hora_apertura","hora_cierre","direccion","contacto_nombre","contacto_telefono",
-      "whatsapp","whatsapp_phone_id","plan_id","vendedor_id","tipo_comida",
-      "nombre_luz","personalidad_luz"];
-    
-    var r;
-    var intentos = [todosLosCampos];
-    // Fallbacks progresivos
-    intentos.push({nombre:b.nombre,ciudad:b.ciudad||"Cali",estado:"activo",pin:pin,plan:b.plan||"basico",
-      suscripcion_estado:"trial",fecha_vencimiento:trialFin.toISOString().split("T")[0]});
-    intentos.push({nombre:b.nombre,ciudad:b.ciudad||"Cali",estado:"activo",pin:pin,plan:b.plan||"basico"});
-    intentos.push({nombre:b.nombre,ciudad:b.ciudad||"Cali",pin:pin});
-    
-    for(var i=0;i<intentos.length;i++){
-      try{
-        r = await axios.post(SUPABASE_URL + "/rest/v1/restaurantes", intentos[i],
-          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, 
-            "Content-Type": "application/json", "Prefer": "return=representation" } });
-        console.log("[crear-restaurante] OK con intento "+(i+1));
-        break;
-      }catch(ei){
-        console.warn("[crear-restaurante] Intento "+(i+1)+" falló:", ei.response&&JSON.stringify(ei.response.data));
-        if(i===intentos.length-1) throw ei;
+    // Intentar todo junto primero
+    var allExtra = Object.assign.apply(Object, [{}].concat(camposExtra.filter(function(c){
+      var v=Object.values(c)[0]; return v!==null&&v!==undefined;
+    })));
+    try {
+      await axios.patch(patchUrl, allExtra, { headers: patchH });
+      console.log("[crear-restaurante] PATCH completo OK");
+    } catch(ePatch) {
+      console.warn("[crear-restaurante] PATCH completo falló, intentando campo por campo:", ePatch.response&&JSON.stringify(ePatch.response.data));
+      // Fallback: campo por campo
+      for (var i = 0; i < camposExtra.length; i++) {
+        var val = Object.values(camposExtra[i])[0];
+        if (val === null || val === undefined) continue;
+        await axios.patch(patchUrl, camposExtra[i], { headers: patchH }).catch(function(ec){
+          console.warn("[crear-restaurante] Campo fallido:", JSON.stringify(ec.response&&ec.response.data));
+        });
       }
     }
 
-    var created = (Array.isArray(r.data) ? r.data[0] : r.data) || {};
-    
-    // Log actividad (no crítico)
-    if(created.id){
-      await axios.post(SUPABASE_URL + "/rest/v1/actividad_vendedor",
-        { vendedor_id: req.adminUser.id, tipo: "cierre", restaurante_id: created.id, 
-          restaurante_nombre: b.nombre, notas: "Trial 15 días. PIN: " + pin },
-        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, 
-          "Content-Type": "application/json", "Prefer": "return=minimal" } }
-      ).catch(function(){});
-    }
+    // Actividad (no crítico)
+    await axios.post(SUPABASE_URL + "/rest/v1/actividad_vendedor",
+      { vendedor_id: req.adminUser.id, tipo: "cierre", restaurante_id: newId, restaurante_nombre: b.nombre, notas: "Trial 15 días. PIN: " + pin },
+      { headers: patchH }
+    ).catch(function(){});
 
-    res.json({ ok: true, restaurante: created, pin: pin });
+    // Retornar restaurante actualizado
+    var finalR = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + newId + "&select=*", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }).catch(function(){ return { data: [created] }; });
+    res.json({ ok: true, restaurante: (finalR.data&&finalR.data[0])||created, pin: pin });
+
   } catch (e) {
-    console.error("[vendedor/crear] FINAL ERROR:", e.message, JSON.stringify(e.response&&e.response.data));
+    console.error("[vendedor/crear] ERROR:", e.message, JSON.stringify(e.response&&e.response.data));
     res.status(500).json({ ok: false, error: e.message, detail: e.response&&e.response.data });
   }
 });
