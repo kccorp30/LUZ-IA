@@ -1340,6 +1340,41 @@ app.get("/api/soporte-count", requireAdmin, async function(req, res) {
   }
 });
 
+// ── CHARR TOWER USA — Endpoints base ─────────────────────────────────────────
+app.post("/api/charr/verify-pin", async function(req, res) {
+  try {
+    var pin = req.body.pin;
+    if (!pin) return res.json({ ok: false, error: "PIN requerido" });
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    try {
+      var r = await axios.get(SUPABASE_URL + "/rest/v1/charr_accounts?pin=eq." + pin + "&select=*&limit=1",
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+      if (r.data && r.data.length) {
+        var acc = r.data[0];
+        return res.json({ ok: true, account: { id: acc.id, nombre_negocio: acc.nombre_negocio, email: acc.email } });
+      }
+      res.json({ ok: false, error: "PIN incorrecto" });
+    } catch(e) { res.json({ ok: false, error: "CHARR USA próximamente" }); }
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/api/charr/login", async function(req, res) {
+  try {
+    var email = req.body.email, password = req.body.password;
+    if (!email || !password) return res.json({ ok: false, error: "Email and password required" });
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    try {
+      var r = await axios.get(SUPABASE_URL + "/rest/v1/charr_accounts?email=eq." + encodeURIComponent(email) + "&select=*&limit=1",
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+      if (!r.data || !r.data.length) return res.json({ ok: false, error: "Account not found" });
+      var acc = r.data[0];
+      if (acc.password_hash !== hashPassword(password)) return res.json({ ok: false, error: "Invalid password" });
+      var token = generateToken(acc.id, "charr_owner");
+      res.json({ ok: true, token, account: { id: acc.id, nombre_negocio: acc.nombre_negocio, email: acc.email } });
+    } catch(e) { res.json({ ok: false, error: "CHARR USA coming soon" }); }
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // ── SOPORTE INTERNO — mensajes del restaurante al admin ──────────────────────
 app.post("/api/soporte-mensaje", async function(req, res) {
   try {
@@ -1365,7 +1400,10 @@ app.get("/api/plan-features", async function(req, res) {
     });
     var rest = r.data && r.data[0];
     if (!rest) return res.json({ plan: "basico", features: PLAN_FEATURES.basico });
-    var plan = rest.plan_id || rest.plan || "basico";
+    var plan = rest.plan || "basico";
+    // Normalizar — asegurarse que sea uno de los valores válidos
+    var planesValidos = ["basico","emprendedor","dominante","empresarial"];
+    if (!planesValidos.includes(plan)) plan = "basico";
     // Si está suspendido o vencido, solo menú básico
     if (rest.estado === "suspendido" || rest.estado === "vencido") {
       return res.json({ plan: plan, features: [], bloqueado: true, razon: "cuenta_suspendida" });
@@ -2091,8 +2129,19 @@ app.post("/api/menu-add", async function(req, res) {
 app.post("/api/restaurante-config", async function(req, res) {
   if (!req.body.restaurante_id || !req.body.config) return res.status(400).json({ error: "Faltan datos" });
   try {
-    await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id, req.body.config,
-      { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    var config = Object.assign({}, req.body.config);
+    // Intentar con config completo
+    try {
+      await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id, config,
+        { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    } catch(ePatch) {
+      // Si falla (columna no existe), quitar campos opcionales nuevos e intentar de nuevo
+      console.warn("[restaurante-config] full patch failed, retrying without new cols:", ePatch.response && ePatch.response.data);
+      var safeConfig = Object.assign({}, config);
+      ["menu_tema","hora_dia_inicio","hora_dia_fin","color_primario","color_secundario"].forEach(function(k){ delete safeConfig[k]; });
+      await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id, safeConfig,
+        { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+    }
     invalidarCacheRestaurante();
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message }); }
@@ -5102,4 +5151,67 @@ app.listen(PORT, function() {
       .catch(function(e) { console.error("[silencio] Reset error:", e.message); });
     }
   }, 60000);
+
+  // ── RECORDATORIOS DE COBRO TRIAL ─────────────────────────────────────────
+  // Corre cada hora, a las 10am Colombia envía recordatorios
+  var ultimoRecordatorioDia = "";
+  setInterval(async function() {
+    try {
+      var col = getHoraColombia();
+      var hora = col.getHours();
+      var dia = col.toISOString().split("T")[0];
+      if (hora !== 10 || dia === ultimoRecordatorioDia) return;
+      ultimoRecordatorioDia = dia;
+      console.log("[recordatorios] ▶ Revisando trials vencidos/por vencer...");
+      var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+      var r = await axios.get(
+        SUPABASE_URL + "/rest/v1/restaurantes?suscripcion_estado=eq.trial&estado=eq.activo&select=id,nombre,whatsapp,fecha_vencimiento,whatsapp_phone_id",
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+      );
+      var rests = r.data || [];
+      var hoy = new Date(dia);
+      for (var i = 0; i < rests.length; i++) {
+        var rest = rests[i];
+        if (!rest.whatsapp || !rest.fecha_vencimiento) continue;
+        var vence = new Date(rest.fecha_vencimiento);
+        var diffMs = vence - hoy;
+        var diffDias = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        var msg = null;
+        if (diffDias === 2) {
+          // Día 13 del trial — vence en 2 días
+          msg = "🌟 Hola *" + rest.nombre + "*, tu periodo de prueba de *LUZ IA* vence en *2 días* (" + rest.fecha_vencimiento + ").\n\n"
+            + "Para continuar sin interrupciones, activa tu plan:\n"
+            + "⚡ Básico: $159.000/mes\n🥈 Emprendedor: $320.000/mes\n🥇 Dominante: $460.000/mes\n\n"
+            + "📲 Responde aquí o escríbenos al 3243387313 para activar tu plan. ¡No pierdas tu configuración!";
+        } else if (diffDias === 0) {
+          // Día 15 — vence hoy
+          msg = "⚠️ *" + rest.nombre + "*, tu trial de LUZ IA *vence hoy*.\n\n"
+            + "Activa tu plan ahora para seguir recibiendo pedidos por WhatsApp sin interrupción.\n\n"
+            + "📲 Escríbenos al 3243387313 o responde aquí. ¡Tu negocio no puede parar!";
+        } else if (diffDias < 0) {
+          // Vencido — suspender automáticamente
+          await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + rest.id,
+            { estado: "suspendido", suscripcion_estado: "vencido" },
+            { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+          );
+          console.log("[recordatorios] ⏸ Suspendido:", rest.nombre);
+          msg = "🔴 *" + rest.nombre + "*, tu acceso a LUZ IA ha sido suspendido por vencimiento del trial.\n\n"
+            + "Reactiva tu cuenta escribiéndonos al 3243387313. Todos tus datos están seguros. 🙏";
+        }
+        if (msg) {
+          var tel = rest.whatsapp.replace(/[^0-9]/g, "");
+          if (!tel.startsWith("57") && tel.length === 10) tel = "57" + tel;
+          var token = process.env.WHATSAPP_TOKEN;
+          var pid = process.env.WHATSAPP_PHONE_ID || rest.whatsapp_phone_id;
+          if (token && pid) {
+            await axios.post("https://graph.facebook.com/v20.0/" + pid + "/messages",
+              { messaging_product: "whatsapp", to: tel, type: "text", text: { body: msg } },
+              { headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } }
+            ).catch(function(e) { console.error("[recordatorios] Error WA:", rest.nombre, e.message); });
+            console.log("[recordatorios] ✅ Enviado a:", rest.nombre, "— días restantes:", diffDias);
+          }
+        }
+      }
+    } catch(e) { console.error("[recordatorios] Error general:", e.message); }
+  }, 3600000); // cada hora
 });
