@@ -512,8 +512,8 @@ select.finput{cursor:pointer}
 .mesa-url{font-size:10px;color:var(--text3);word-break:break-all;text-align:center;max-width:180px;}
 .mesa-btn-dl{padding:8px 18px;background:linear-gradient(135deg,#10b981,#2563eb);border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
 .mesas-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;}
-.float-nav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:400;width:calc(100% - 20px);max-width:520px}
-.float-nav-inner{background:rgba(15,10,35,0.94);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(124,58,237,0.35);border-radius:28px;display:flex;padding:5px 8px calc(5px + env(safe-area-inset-bottom));box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 40px rgba(124,58,237,0.12);overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.float-nav{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:400;width:calc(100% - 20px);max-width:560px;overflow:visible}
+.float-nav-inner{background:rgba(15,10,35,0.94);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(124,58,237,0.35);border-radius:28px;display:flex;padding:5px 8px calc(5px + env(safe-area-inset-bottom));box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 40px rgba(124,58,237,0.12);overflow-x:auto;overflow-y:visible;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
 .float-nav-inner::-webkit-scrollbar{display:none;}
 .fnav-tab{flex:0 0 auto;min-width:50px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:7px 4px 4px;transition:all 0.2s;border-radius:20px;margin:2px;position:relative}
 .fnav-icon{font-size:19px;line-height:1;transition:transform 0.25s cubic-bezier(0.34,1.56,0.64,1)}.fnav-label{font-size:9px;color:rgba(255,255,255,0.3);font-weight:600;letter-spacing:0.03em}
@@ -977,7 +977,7 @@ select.finput{cursor:pointer}
           <div><div id="modoLabel" style="font-weight:700;font-size:14px">Modo noche activo</div><div id="modoSubLabel" style="font-size:11px;margin-top:2px;opacity:0.7">Luz usa el menu de noche</div></div>
         </div>
         <div class="cfg-section" style="background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(79,70,229,0.04));border-color:rgba(124,58,237,0.2)">
-          <div class="cfg-title">🤖 LUZ — Número del dueño</div>
+          <div class="cfg-title">✨ LUZ — Número del dueño</div>
           <div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.5">Luz le enviará alertas, reportes diarios y puede recibir instrucciones de gestión directamente por WhatsApp.</div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
             <input class="finput" id="cfg-telefono-dueno" placeholder="3001234567 (sin +57)" style="flex:1" type="tel">
@@ -990,10 +990,72 @@ select.finput{cursor:pointer}
           <div id="cfg-dueno-status" style="margin-top:8px;font-size:12px;color:var(--text3)"></div>
         </div>
         <div class="cfg-section">
-          <div class="cfg-title">Menu activo</div>
-          <div class="cfg-row"><div><div class="cfg-label">Menu de dia</div><div class="cfg-sub">Cambia entre menu dia/noche</div></div><button class="big-toggle off" id="toggleModoDia"></button></div>
-          <div style="margin-top:12px"><label class="flabel">Texto menu de dia</label><textarea class="finput" id="cfg-menu-dia" placeholder="Menu de dia con precios..." style="height:100px;resize:none;margin-top:6px;"></textarea></div>
-          <div style="margin-top:10px"><label class="flabel">Texto menu de noche</label><textarea class="finput" id="cfg-menu-noche" placeholder="Menu de noche con precios..." style="height:100px;resize:none;margin-top:6px;"></textarea></div>
+          <div class="cfg-title">🌅 Menú de Día / Almuerzo</div>
+          <!-- Toggle modo día -->
+          <div class="cfg-row" style="margin-bottom:12px">
+            <div>
+              <div class="cfg-label">Activar modo día</div>
+              <div class="cfg-sub">Cuando está activo, Luz usa el menú y horario de almuerzo</div>
+            </div>
+            <button class="big-toggle off" id="toggleModoDia"></button>
+          </div>
+
+          <!-- Horario específico del modo día -->
+          <div id="cfgModoDiaPanel" style="display:none">
+            <div style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);border-radius:14px;padding:14px;margin-bottom:14px">
+              <div style="font-size:10px;font-weight:800;color:#fcd34d;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">⏰ Horario del menú de día</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div><label class="flabel">Inicia</label><input class="finput" type="time" id="cfg-hora-dia-inicio" value="11:00" style="margin-top:4px"></div>
+                <div><label class="flabel">Termina</label><input class="finput" type="time" id="cfg-hora-dia-fin" value="15:00" style="margin-top:4px"></div>
+              </div>
+              <div style="font-size:10px;color:rgba(252,211,77,0.6);margin-top:8px">Luz cambiará automáticamente al menú de día en este horario</div>
+            </div>
+
+            <!-- Editor de productos del menú de día -->
+            <div style="font-size:10px;font-weight:800;color:#fcd34d;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">🍽️ Productos del menú de día</div>
+            <div id="menuDiaProductos" style="margin-bottom:10px"></div>
+
+            <!-- Agregar producto -->
+            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:13px;padding:13px;margin-bottom:10px">
+              <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:10px">+ Agregar plato</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+                <div><label class="flabel">Nombre del plato *</label><input class="finput" id="dia-prod-nom" placeholder="Bandeja paisa" style="margin-top:4px"></div>
+                <div><label class="flabel">Precio *</label><input class="finput" type="number" id="dia-prod-precio" placeholder="15000" style="margin-top:4px"></div>
+              </div>
+              <div style="margin-bottom:8px"><label class="flabel">Descripción / Ingredientes</label><input class="finput" id="dia-prod-desc" placeholder="Frijoles, arroz, carne molida, chicharrón, aguacate, huevo..." style="margin-top:4px"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+                <div><label class="flabel">Categoría</label>
+                  <select class="finput" id="dia-prod-cat" style="margin-top:4px">
+                    <option value="Plato del día">🍽️ Plato del día</option>
+                    <option value="Sopa">🍲 Sopa</option>
+                    <option value="Principio">🫘 Principio</option>
+                    <option value="Proteína">🥩 Proteína</option>
+                    <option value="Bebida">🥤 Bebida</option>
+                    <option value="Postre">🍮 Postre</option>
+                    <option value="Especial">⭐ Especial</option>
+                  </select>
+                </div>
+                <div><label class="flabel">Disponible</label>
+                  <select class="finput" id="dia-prod-dis" style="margin-top:4px">
+                    <option value="true">✅ Sí</option>
+                    <option value="false">❌ No</option>
+                  </select>
+                </div>
+              </div>
+              <button onclick="agregarProductoDia()" style="width:100%;padding:10px;background:linear-gradient(135deg,rgba(245,158,11,0.3),rgba(245,158,11,0.15));border:1px solid rgba(245,158,11,0.4);border-radius:10px;color:#fcd34d;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">+ Agregar al menú de día</button>
+            </div>
+
+            <!-- Texto libre adicional para Luz -->
+            <div style="margin-bottom:8px">
+              <label class="flabel">Notas adicionales para Luz (opcional)</label>
+              <textarea class="finput" id="cfg-menu-dia" placeholder="Ej: Hoy el especial incluye jugo. No hay sopa los domingos..." style="height:60px;resize:none;margin-top:6px;font-size:12px"></textarea>
+            </div>
+          </div>
+
+          <!-- Cuando modo día está OFF — solo menú de noche -->
+          <div id="cfgMenuNochePanel">
+            <div style="margin-top:4px"><label class="flabel">Notas para el menú nocturno (lo que Luz comunica)</label><textarea class="finput" id="cfg-menu-noche" placeholder="Menu de noche con precios..." style="height:80px;resize:none;margin-top:6px;"></textarea></div>
+          </div>
         </div>
         <div class="cfg-section">
           <div class="cfg-title">Horario</div>
@@ -1444,13 +1506,13 @@ select.finput{cursor:pointer}
     </div>
     <!-- Ícono de soporte — sin foto, discreta -->
     <div class="luz-float-avatar" id="luzFloatAv" onclick="luzHablar('Hola, soy Luz. Estoy monitoreando todos los pedidos en tiempo real.')" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:22px">
-      🤖
+      ✨
     </div>
   </div>
 
   <div class="float-nav">
     <div class="float-nav-inner">
-      <div class="fnav-tab" id="tab-luz-ia" onclick="showTab('luz-ia')"><div class="fnav-icon" style="font-size:20px">🤖</div><div class="fnav-label">Luz IA</div></div>
+      <div class="fnav-tab" id="tab-luz-ia" onclick="showTab('luz-ia')"><div class="fnav-icon" style="font-size:20px">✨</div><div class="fnav-label">Luz IA</div></div>
       <div class="fnav-tab active" id="tab-pedidos"><div class="fnav-icon">🛒</div><div class="fnav-label">Pedidos</div><div class="nav-badge" id="pedidosBadge"></div></div>
       <div class="fnav-tab" id="tab-historial"><div class="fnav-icon">📊</div><div class="fnav-label">Historial</div></div>
       <div class="fnav-tab" id="tab-menu"><div class="fnav-icon">📋</div><div class="fnav-label">Menú</div></div>
@@ -1784,13 +1846,8 @@ var featuresActuales = [];
 
 // Mapa: tab → feature requerida para acceder
 var TAB_FEATURES = {
-  "tab-domis":    "domiciliarios",
-  "tab-mesas":    "meseros",
-  "tab-clientes": "fidelizacion",
-  "tab-promo":    "promos",
-  "tab-cupones":  "fidelizacion",
-  "tab-mapa":     "domiciliarios",
-  "tab-cerebro":  "reportes"
+  "tab-domis": "domiciliarios",
+  "tab-mesas": "meseros"
 };
 
 // Info de upgrade por feature
@@ -3039,6 +3096,15 @@ function cargarConfig(){
     document.getElementById("cfg-apertura").value=(rest.hora_apertura||"16:00:00").substring(0,5);
     document.getElementById("cfg-cierre").value=(rest.hora_cierre||"00:00:00").substring(0,5);
     document.getElementById("cfg-menu-dia").value=rest.menu_dia||"";
+    // Mostrar/ocultar panel modo día según estado actual
+    var panelDia=document.getElementById("cfgModoDiaPanel");
+    if(panelDia) panelDia.style.display=rest.modo_dia?"block":"none";
+    // Cargar horario día si existe
+    var hdIni=document.getElementById("cfg-hora-dia-inicio");
+    var hdFin=document.getElementById("cfg-hora-dia-fin");
+    if(hdIni&&rest.hora_dia_inicio) hdIni.value=rest.hora_dia_inicio.substring(0,5);
+    if(hdFin&&rest.hora_dia_fin) hdFin.value=rest.hora_dia_fin.substring(0,5);
+    if(rest.modo_dia) cargarProductosDia();
     document.getElementById("cfg-menu-noche").value=rest.menu_noche||"";
     document.getElementById("cfg-direccion").value=rest.direccion||"";
     var cfgDomBase=document.getElementById("cfg-domicilio-base");
@@ -3063,12 +3129,18 @@ function actualizarToggleModoDia(activo){
   if(activo){btn.className="big-toggle on";banner.className="modo-banner modo-dia";icon.textContent="🌅";label.textContent="Modo dia activo";sub.textContent="Luz usa el menu de dia";}
   else{btn.className="big-toggle off";banner.className="modo-banner modo-noche";icon.textContent="🌙";label.textContent="Modo noche activo";sub.textContent="Luz usa el menu de noche";}
 }
-document.getElementById("toggleModoDia").addEventListener("click",function(){modoDiaActual=!modoDiaActual;actualizarToggleModoDia(modoDiaActual);});
+document.getElementById("toggleModoDia").addEventListener("click",function(){
+  modoDiaActual=!modoDiaActual;
+  actualizarToggleModoDia(modoDiaActual);
+  var panelDia=document.getElementById("cfgModoDiaPanel");
+  if(panelDia){panelDia.style.display=modoDiaActual?"block":"none";}
+  if(modoDiaActual) cargarProductosDia();
+});
 document.querySelectorAll(".dia-btn").forEach(function(b){b.addEventListener("click",function(){this.classList.toggle("activo");});});
 document.getElementById("cfgGuardar").addEventListener("click",function(){
   if(!rest){notif("Error: sin restaurante");return;}
   var diasSel=[];document.querySelectorAll(".dia-btn.activo").forEach(function(b){diasSel.push(b.getAttribute("data-dia"));});
-  var config={modo_dia:modoDiaActual,hora_apertura:document.getElementById("cfg-apertura").value+":00",hora_cierre:document.getElementById("cfg-cierre").value+":00",menu_dia:document.getElementById("cfg-menu-dia").value.trim(),menu_noche:document.getElementById("cfg-menu-noche").value.trim(),dias_activos:diasSel.join(","),direccion:document.getElementById("cfg-direccion").value.trim(),domicilio_base:Number(document.getElementById("cfg-domicilio-base").value)||0,msg_bienvenida:document.getElementById("cfg-msg-bienvenida").value.trim(),msg_en_preparacion:document.getElementById("cfg-msg-preparacion").value.trim(),msg_listo:document.getElementById("cfg-msg-listo").value.trim(),msg_en_camino:document.getElementById("cfg-msg-camino").value.trim()};
+  var config={modo_dia:modoDiaActual,hora_apertura:document.getElementById("cfg-apertura").value+":00",hora_cierre:document.getElementById("cfg-cierre").value+":00",menu_dia:document.getElementById("cfg-menu-dia").value.trim(),menu_noche:document.getElementById("cfg-menu-noche").value.trim(),dias_activos:diasSel.join(","),direccion:document.getElementById("cfg-direccion").value.trim(),domicilio_base:Number(document.getElementById("cfg-domicilio-base").value)||0,msg_bienvenida:document.getElementById("cfg-msg-bienvenida").value.trim(),msg_en_preparacion:document.getElementById("cfg-msg-preparacion").value.trim(),msg_listo:document.getElementById("cfg-msg-listo").value.trim(),msg_en_camino:document.getElementById("cfg-msg-camino").value.trim(),hora_dia_inicio:(document.getElementById("cfg-hora-dia-inicio")||{value:"11:00"}).value||"11:00",hora_dia_fin:(document.getElementById("cfg-hora-dia-fin")||{value:"15:00"}).value||"15:00"};
   var btn=this;btn.textContent="Guardando...";btn.disabled=true;
   fetch("/api/restaurante-config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,config:config})})
     .then(function(r){return r.json();})
