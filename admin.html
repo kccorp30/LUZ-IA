@@ -954,7 +954,7 @@ async function editarCliente(id){
   document.getElementById("eid").value=r.id;
   document.getElementById("e-nom").value=r.nombre||"";
   document.getElementById("e-est").value=r.estado||"activo";
-  document.getElementById("e-plan").value=r.plan||"crecimiento";
+  document.getElementById("e-plan").value=r.plan||"basico";
   document.getElementById("e-vence").value=r.fecha_vencimiento||"";
   document.getElementById("e-pin").value=r.pin||"";
   document.getElementById("e-wa").value=r.whatsapp||"";
@@ -977,10 +977,11 @@ function copiarPanelUrl(){
 async function guardarEdicion(){
   var id=document.getElementById("eid").value;
   var waVal=document.getElementById("e-wa").value.trim();
+  var planVal=document.getElementById("e-plan").value;
   var payload={
     nombre:document.getElementById("e-nom").value,
     estado:document.getElementById("e-est").value,
-    plan:document.getElementById("e-plan").value
+    plan:planVal
   };
   if(waVal)payload.whatsapp=waVal;
   var wpid=document.getElementById("e-pid").value.trim();
@@ -1000,14 +1001,23 @@ async function guardarEdicion(){
     saved=true;
   }catch(e){
     console.warn("[guardarEdicion] Full failed:",e.message);
+    // Fallback: guardar solo campos base uno por uno
     try{
-      await sb("PATCH","restaurantes?id=eq."+id,payload);
+      // Plan primero — es lo más crítico
+      await sb("PATCH","restaurantes?id=eq."+id,{plan:planVal});
+      await sb("PATCH","restaurantes?id=eq."+id,{nombre:payload.nombre,estado:payload.estado});
+      if(waVal)await sb("PATCH","restaurantes?id=eq."+id,{whatsapp:waVal}).catch(function(){});
       saved=true;
-      for(var k in extras){var single={};single[k]=extras[k];await sb("PATCH","restaurantes?id=eq."+id,single).catch(function(){});}
+      // Extras uno por uno
+      for(var k in extras){
+        var s={};s[k]=extras[k];
+        await sb("PATCH","restaurantes?id=eq."+id,s).catch(function(){});
+      }
     }catch(e2){toast("❌ Error: "+e2.message,"#ef4444");return;}
   }
-  if(saved){closeMod("editar");toast("✅ Actualizado");loadClientes();loadDashboard();loadCache();}
+  if(saved){closeMod("editar");toast("✅ Restaurante actualizado");loadClientes();loadDashboard();loadCache();}
 }
+
 
 async function cambiarEstado(id,est){
   await sb("PATCH","restaurantes?id=eq."+id,{estado:est});
