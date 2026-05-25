@@ -976,52 +976,37 @@ function copiarPanelUrl(){
 
 async function guardarEdicion(){
   var id=document.getElementById("eid").value;
-  // Solo los campos que definitivamente existen según el schema visto
+  var waVal=document.getElementById("e-wa").value.trim();
   var payload={
     nombre:document.getElementById("e-nom").value,
     estado:document.getElementById("e-est").value,
-    plan:document.getElementById("e-plan").value,
-    whatsapp:document.getElementById("e-wa").value||null,
-    whatsapp_phone_id:document.getElementById("e-pid").value||null
+    plan:document.getElementById("e-plan").value
   };
-  // Campos opcionales que pueden o no existir
-  var extras={
-    fecha_vencimiento:document.getElementById("e-vence").value||null,
-    pin:document.getElementById("e-pin").value||null,
-    nombre_luz:document.getElementById("e-nLuz").value||null,
-    personalidad_luz:document.getElementById("e-pers").value||null,
-    info_adicional:document.getElementById("e-info").value||null,
-    metodo_pago_nequi:document.getElementById("e-nequi").value||null,
-    metodo_pago_banco:document.getElementById("e-banco").value||null,
-    metodo_pago_nombre:document.getElementById("e-btit").value||null
-  };
-  // Quitar nulls de extras
-  Object.keys(extras).forEach(function(k){if(!extras[k])delete extras[k];});
+  if(waVal)payload.whatsapp=waVal;
+  var wpid=document.getElementById("e-pid").value.trim();
+  if(wpid)payload.whatsapp_phone_id=wpid;
+  var flds={fecha_vencimiento:"e-vence",pin:"e-pin",nombre_luz:"e-nLuz",
+    personalidad_luz:"e-pers",info_adicional:"e-info",
+    metodo_pago_nequi:"e-nequi",metodo_pago_banco:"e-banco",metodo_pago_nombre:"e-btit"};
+  var extras={};
+  Object.keys(flds).forEach(function(col){
+    var v=(document.getElementById(flds[col])||{value:""}).value.trim();
+    if(v)extras[col]=v;
+  });
+  console.log("[guardarEdicion] payload:",JSON.stringify(Object.assign({},payload,extras)));
   var saved=false;
-  // Intento 1: todo junto
   try{
     await sb("PATCH","restaurantes?id=eq."+id,Object.assign({},payload,extras));
     saved=true;
   }catch(e){
-    console.warn("[guardarEdicion] Full patch failed:",e.message);
-    // Intento 2: solo campos base
+    console.warn("[guardarEdicion] Full failed:",e.message);
     try{
       await sb("PATCH","restaurantes?id=eq."+id,payload);
       saved=true;
-      // Intentar extras uno por uno
-      for(var k in extras){
-        var single={};single[k]=extras[k];
-        await sb("PATCH","restaurantes?id=eq."+id,single).catch(function(){});
-      }
-    }catch(e2){
-      toast("❌ Error al guardar: "+e2.message,"#ef4444");return;
-    }
+      for(var k in extras){var single={};single[k]=extras[k];await sb("PATCH","restaurantes?id=eq."+id,single).catch(function(){});}
+    }catch(e2){toast("❌ Error: "+e2.message,"#ef4444");return;}
   }
-  if(saved){
-    closeMod("editar");
-    toast("✅ Restaurante actualizado");
-    loadClientes();loadDashboard();loadCache();
-  }
+  if(saved){closeMod("editar");toast("✅ Actualizado");loadClientes();loadDashboard();loadCache();}
 }
 
 async function cambiarEstado(id,est){
