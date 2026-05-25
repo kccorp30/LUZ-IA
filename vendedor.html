@@ -152,6 +152,110 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
 .dck{display:flex;align-items:center;gap:5px;padding:7px 12px;background:var(--s2);border:1px solid var(--bdr);border-radius:9px;font-size:11px;cursor:pointer;transition:all .15s;user-select:none}
 .dck:has(input:checked){background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.3);color:var(--p2)}
 .dck input{display:none}
+
+/* ── PREMIUM ANIMATIONS ── */
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.4)}50%{box-shadow:0 0 0 8px rgba(124,58,237,0)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes celebrate{0%{transform:scale(1)}50%{transform:scale(1.15) rotate(-3deg)}100%{transform:scale(1)}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(124,58,237,.3)}50%{box-shadow:0 0 40px rgba(124,58,237,.6),0 0 60px rgba(124,58,237,.2)}}
+@keyframes countUp{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+
+.page.on{animation:slideUp .3s cubic-bezier(.2,0,.2,1)}
+.rcard{animation:fadeIn .2s ease}
+.sc{transition:transform .2s,box-shadow .2s}
+.sc:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.acc-sec{animation:fadeIn .25s ease}
+.acc-save:active{transform:scale(.97)}
+
+/* ── TOPBAR PREMIUM ── */
+.topbar{background:linear-gradient(90deg,rgba(13,10,26,.98),rgba(19,16,42,.98));border-bottom:1px solid rgba(124,58,237,.2);box-shadow:0 1px 0 rgba(124,58,237,.1),0 4px 24px rgba(0,0,0,.4)}
+.tb-logo b{background:linear-gradient(135deg,#a78bfa,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.plan-tag{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.05em}
+.plan-basico{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#93c5fd}
+.plan-emprendedor{background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:#fcd34d}
+.plan-dominante{background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);color:#c4b5fd}
+.plan-empresarial{background:rgba(240,171,252,.15);border:1px solid rgba(240,171,252,.3);color:#f0abfc}
+
+/* ── STATS CARDS PREMIUM ── */
+.sc::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.03),transparent);pointer-events:none}
+.sc-v{transition:all .4s cubic-bezier(.2,0,.2,1)}
+.sc-v.updated{animation:countUp .4s cubic-bezier(.2,0,.2,1)}
+
+/* ── PIPELINE PREMIUM ── */
+.pcol{transition:box-shadow .2s}
+.pcol:hover{box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.rcard{border-left:3px solid transparent;transition:all .2s cubic-bezier(.2,0,.2,1)}
+.rcard.trial-card{border-left-color:#67e8f9}
+.rcard.activo-card{border-left-color:var(--g)}
+.rcard.vencido-card{border-left-color:var(--a)}
+.rcard.suspendido-card{border-left-color:var(--r)}
+.rcard:hover{transform:translateY(-2px) scale(1.01);box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.rcard:active{transform:scale(.98)}
+
+/* ── TABS PREMIUM ── */
+.tab{position:relative;overflow:hidden}
+.tab::before{content:'';position:absolute;bottom:0;left:50%;right:50%;height:2px;background:var(--p);transition:all .2s}
+.tab.on::before{left:0;right:0}
+.tab:hover::before{left:20%;right:20%}
+
+/* ── ACCORDION PREMIUM ── */
+.acc-sec{transition:all .2s cubic-bezier(.2,0,.2,1)}
+.acc-sec.open{box-shadow:0 4px 24px rgba(124,58,237,.15);border-color:rgba(124,58,237,.3)}
+.acc-sec.done{border-color:rgba(16,185,129,.25);background:linear-gradient(135deg,var(--s2),rgba(16,185,129,.03))}
+.acc-sec.done .acc-head{background:linear-gradient(90deg,rgba(16,185,129,.05),transparent)}
+.acc-ico{transition:all .3s cubic-bezier(.34,1.56,.64,1)}
+.acc-sec.done .acc-ico{animation:celebrate .4s ease}
+.acc-body{transition:all .2s ease}
+
+/* ── BLOCKED ACCORDION ── */
+.acc-sec.locked{opacity:.6;pointer-events:none;position:relative}
+.acc-sec.locked::after{content:'🔒';position:absolute;top:12px;right:14px;font-size:14px}
+.acc-sec.locked .acc-head{cursor:not-allowed}
+
+/* ── BUTTONS PREMIUM ── */
+.btn-p{position:relative;overflow:hidden}
+.btn-p::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.15),transparent);opacity:0;transition:opacity .2s}
+.btn-p:hover::after{opacity:1}
+.acc-save{position:relative;overflow:hidden}
+.acc-save::after{content:'';position:absolute;top:50%;left:50%;width:0;height:0;background:rgba(255,255,255,.2);border-radius:50%;transform:translate(-50%,-50%);transition:width .4s,height .4s,opacity .4s}
+.acc-save:active::after{width:200px;height:200px;opacity:0}
+
+/* ── PROGRESS BAR ── */
+.ob-prog-fill{transition:width .6s cubic-bezier(.2,0,.2,1)}
+
+/* ── NOTIFICATION POPUP ── */
+.notif-popup{position:fixed;top:70px;right:16px;z-index:999;max-width:300px;background:var(--s1);border:1px solid rgba(124,58,237,.4);border-radius:16px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.5);display:flex;align-items:flex-start;gap:10px;animation:slideUp .3s ease;pointer-events:none}
+.notif-popup.success{border-color:rgba(16,185,129,.4);background:linear-gradient(135deg,rgba(16,185,129,.1),var(--s1))}
+.notif-popup.error{border-color:rgba(239,68,68,.4);background:linear-gradient(135deg,rgba(239,68,68,.1),var(--s1))}
+
+/* ── MRR DISPLAY ── */
+.mrr-big{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;background:linear-gradient(135deg,var(--p2),var(--cy));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+
+/* ── ALERT PREMIUM ── */
+.alert{border-radius:12px;animation:slideUp .3s ease}
+.alert.show{display:flex;align-items:center;gap:8px}
+
+/* ── EMPTY STATE ── */
+.empty-pipeline{text-align:center;padding:24px 12px;color:var(--m)}
+.empty-pipeline-ico{font-size:32px;margin-bottom:8px;animation:bounce 2s ease-in-out infinite}
+/* ── ACCORDION ── */
+.acc-sec{background:var(--s2);border:1px solid var(--bdr);border-radius:14px;margin-bottom:8px;overflow:hidden;transition:all .2s}
+.acc-sec.done{border-color:rgba(16,185,129,.25)}
+.acc-head{display:flex;align-items:center;gap:10px;padding:13px 15px;cursor:pointer;user-select:none;-webkit-user-select:none}
+.acc-ico{width:28px;height:28px;border-radius:50%;border:2px solid var(--m);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;transition:all .2s}
+.acc-sec.done .acc-ico{background:var(--g);border-color:var(--g);color:#fff}
+.acc-sec.open .acc-ico{border-color:var(--p);color:var(--p2)}
+.acc-label{flex:1}<br>.acc-title{font-size:13px;font-weight:800}
+.acc-sub{font-size:10px;color:var(--m);margin-top:1px}
+.acc-arrow{color:var(--m);transition:transform .2s;font-size:14px}
+.acc-sec.open .acc-arrow{transform:rotate(180deg)}
+.acc-body{display:none;padding:0 15px 15px}
+.acc-sec.open .acc-body{display:block}
+.acc-save{width:100%;padding:11px;background:linear-gradient(135deg,var(--p),#4f46e5);border:none;border-radius:10px;color:#fff;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;margin-top:10px;transition:all .2s}
+.acc-save:hover{box-shadow:0 4px 16px rgba(124,58,237,.35)}
 </style>
 </head>
 <body>
@@ -172,8 +276,15 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
 <!-- APP -->
 <div id="app">
   <div class="topbar">
-    <div class="tb-logo">LUZ <b>IA</b> <span style="font-size:11px;color:var(--m);font-weight:600">— Vendedor</span></div>
-    <div class="tb-user"><div class="tb-av" id="uAv">V</div><span id="uNom">Vendedor</span></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="tb-logo">LUZ <b>IA</b></div>
+      <div style="width:1px;height:18px;background:rgba(255,255,255,.1)"></div>
+      <span style="font-size:11px;color:var(--m);font-weight:600">Panel Vendedor</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="planTagVend" style="display:none" class="plan-tag"></div>
+      <div class="tb-user"><div class="tb-av" id="uAv">V</div><span id="uNom">Cargando...</span></div>
+    </div>
   </div>
   <div class="tabs">
     <div class="tab on" onclick="showTab('pipeline',this)">📊 Pipeline</div>
@@ -186,12 +297,23 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
     <!-- PIPELINE -->
     <div class="page on" id="page-pipeline">
       <div class="alert" id="alertT"></div>
+      <!-- MRR Hero -->
+      <div style="background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(6,182,212,.08));border:1px solid rgba(124,58,237,.25);border-radius:16px;padding:18px 20px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;animation:glow 4s ease-in-out infinite">
+        <div>
+          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:rgba(167,139,250,.7);margin-bottom:6px">💰 MRR Gestionado</div>
+          <div class="mrr-big" id="sMRR">$0</div>
+          <div style="font-size:11px;color:var(--m);margin-top:4px" id="sMRRsub">—</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--m);margin-bottom:4px">Próx. cobro 15 días</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--a)" id="sProxCobro">$0</div>
+        </div>
+      </div>
       <div class="sg">
-        <div class="sc" style="--ac:var(--bl)"><div class="sc-l">Total</div><div class="sc-v" style="color:#93c5fd" id="sTotal">0</div></div>
-        <div class="sc" style="--ac:var(--g)"><div class="sc-l">Activos</div><div class="sc-v" style="color:var(--g)" id="sAct">0</div></div>
-        <div class="sc" style="--ac:var(--cy)"><div class="sc-l">En Trial</div><div class="sc-v" style="color:#67e8f9" id="sTrial">0</div></div>
-        <div class="sc" style="--ac:var(--a)"><div class="sc-l">Por vencer 3d</div><div class="sc-v" style="color:var(--a)" id="sVenc">0</div></div>
-        <div class="sc" style="--ac:var(--p2)"><div class="sc-l">MRR gestionado</div><div class="sc-v" style="color:var(--p2)" id="sMRR">$0</div></div>
+        <div class="sc" style="--ac:var(--bl)"><div class="sc-l">📊 Total</div><div class="sc-v" style="color:#93c5fd" id="sTotal">0</div><div style="font-size:9px;color:var(--m)">restaurantes</div></div>
+        <div class="sc" style="--ac:var(--g)"><div class="sc-l">✅ Activos</div><div class="sc-v" style="color:var(--g)" id="sAct">0</div><div style="font-size:9px;color:var(--m)">pagando</div></div>
+        <div class="sc" style="--ac:var(--cy)"><div class="sc-l">🧪 Trial</div><div class="sc-v" style="color:#67e8f9" id="sTrial">0</div><div style="font-size:9px;color:var(--m)">15 días gratis</div></div>
+        <div class="sc" style="--ac:var(--a)"><div class="sc-l">⚠️ Vence pronto</div><div class="sc-v" style="color:var(--a)" id="sVenc">0</div><div style="font-size:9px;color:var(--m)">en 3 días</div></div>
       </div>
       <div class="pipe">
         <div class="pcol"><div class="pc-head" style="color:#67e8f9">🧪 Trial <span class="pc-cnt" id="cTrial">0</span></div><div class="pc-body" id="pTrial"></div></div>
@@ -267,105 +389,182 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
       <div style="font-size:11px;color:var(--m);margin-bottom:14px">Configura el restaurante para que Luz funcione al 100%</div>
       <div class="fg" style="max-width:400px"><select class="fi" id="ob-sel" onchange="loadOnboarding()"><option value="">Selecciona un restaurante...</option></select></div>
       <div id="ob-panel" style="display:none">
+        <!-- Header con progreso -->
+        <div id="ob-progress" style="margin-bottom:14px"></div>
 
-        <!-- Checklist -->
-        <div id="ob-check" style="margin-bottom:20px"></div>
-
-        <!-- Menú por foto -->
-        <div class="sdiv">📸 Cargar menú desde foto</div>
-        <div style="font-size:10px;color:var(--m);margin-bottom:9px">Toma una foto del menú físico. Luz extrae los productos automáticamente con IA.</div>
-        <div class="upz" id="upz">
-          <div style="font-size:30px;margin-bottom:6px">📷</div>
-          <div style="font-size:13px;font-weight:700">Toca para subir foto del menú</div>
-          <div style="font-size:10px;color:var(--m);margin-top:3px">JPG, PNG — máx 10MB</div>
-          <input type="file" accept="image/*" onchange="handleMenuPhoto(this)">
-          <img id="menuPrev">
-        </div>
-        <div id="photoRes"></div>
-
-        <!-- Reglas -->
-        <div class="sdiv">🧠 Reglas de Luz</div>
-        <div style="display:flex;gap:7px;margin-bottom:9px">
-          <input class="fi" id="ob-regla" placeholder="Nueva regla para Luz..." style="flex:1" onkeydown="if(event.key==='Enter')addRegla()">
-          <button class="btn btn-p" onclick="addRegla()">+ Agregar</button>
-        </div>
-        <div id="ob-reglas"></div>
-
-        <!-- Zonas -->
-        <div class="sdiv">🗺️ Zonas de domicilio</div>
-        <div style="background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:13px;margin-bottom:9px">
-          <div class="fgrid" style="margin-bottom:8px">
-            <div class="fg"><label class="fl">Nombre de zona</label><input class="fi" id="ob-zn" placeholder="Centro, Norte..."></div>
-            <div class="fg"><label class="fl">Precio domicilio</label><input class="fi" type="number" id="ob-zp" placeholder="4000"></div>
+        <!-- ACORDEÓN 1: Info básica -->
+        <div class="acc-sec" id="acc-info">
+          <div class="acc-head" onclick="toggleAcc('info')">
+            <div class="acc-ico" id="acc-ico-info">1</div>
+            <div class="acc-label"><div class="acc-title">Información básica</div><div class="acc-sub" id="acc-sub-info">Nombre, dirección, ciudad, contacto</div></div>
+            <div class="acc-arrow">▾</div>
           </div>
-          <div class="fg" style="margin-bottom:8px"><label class="fl">Barrios (separados por coma)</label><textarea class="fi" id="ob-zb" rows="2" style="resize:none" placeholder="Canaveral, Granada, Santa Mónica..."></textarea></div>
-          <button class="btn btn-p" style="width:100%" onclick="addZona()">+ Agregar zona</button>
-        </div>
-        <div id="ob-zonas"></div>
-
-        <!-- Métodos de pago -->
-        <div class="sdiv">💳 Métodos de pago</div>
-        <div style="background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:13px">
-          <div class="fgrid" style="margin-bottom:8px">
-            <div class="fg"><label class="fl">Nequi (número)</label><input class="fi" id="ob-nequi" placeholder="3001234567"></div>
-            <div class="fg"><label class="fl">Bancolombia (llave)</label><input class="fi" id="ob-banco" placeholder="@NEQUI123"></div>
-          </div>
-          <div class="fg" style="margin-bottom:8px"><label class="fl">Titular de la cuenta</label><input class="fi" id="ob-tit" placeholder="José García"></div>
-          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ob-ef" checked> 💵 Efectivo</label>
-            <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ob-df"> 💳 Datáfono</label>
-          </div>
-          <button class="btn btn-p" style="width:100%" onclick="savePagos()">💾 Guardar métodos de pago</button>
-        </div>
-
-        <!-- Días y horario -->
-        <div class="sdiv">📅 Horario y días activos</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="ob-dias">
-          <label class="dck"><input type="checkbox" value="lunes" checked> Lun</label>
-          <label class="dck"><input type="checkbox" value="martes" checked> Mar</label>
-          <label class="dck"><input type="checkbox" value="miercoles" checked> Mié</label>
-          <label class="dck"><input type="checkbox" value="jueves" checked> Jue</label>
-          <label class="dck"><input type="checkbox" value="viernes" checked> Vie</label>
-          <label class="dck"><input type="checkbox" value="sabado" checked> Sáb</label>
-          <label class="dck"><input type="checkbox" value="domingo"> Dom</label>
-        </div>
-        <div class="fgrid" style="margin-bottom:9px">
-          <div class="fg"><label class="fl">Apertura</label><input class="fi" type="time" id="ob-ap" value="16:00"></div>
-          <div class="fg"><label class="fl">Cierre</label><input class="fi" type="time" id="ob-ci" value="00:00"></div>
-        </div>
-        <button class="btn btn-p" style="width:100%;margin-bottom:16px" onclick="saveHorario()">💾 Guardar horario y días</button>
-
-        <!-- Logo -->
-        <div class="sdiv">🖼️ Logo del restaurante</div>
-        <div class="upz" id="logoZone">
-          <div style="font-size:28px;margin-bottom:6px">🖼️</div>
-          <div style="font-size:13px;font-weight:700">Subir logo</div>
-          <div style="font-size:10px;color:var(--m);margin-top:3px">JPG, PNG — cuadrado recomendado</div>
-          <input type="file" accept="image/*" onchange="handleLogo(this)">
-          <img id="logoPrev">
-        </div>
-        <div id="logoRes"></div>
-
-        <!-- Producto manual -->
-        <div class="sdiv">➕ Agregar producto manual</div>
-        <div style="background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:13px">
-          <div class="fgrid" style="margin-bottom:8px">
-            <div class="fg"><label class="fl">Categoría</label><input class="fi" id="ob-pcat" placeholder="Hamburguesas"></div>
-            <div class="fg"><label class="fl">Nombre</label><input class="fi" id="ob-pnom" placeholder="La Especial"></div>
-          </div>
-          <div class="fg" style="margin-bottom:8px"><label class="fl">Descripción</label><input class="fi" id="ob-pdesc" placeholder="Ingredientes..."></div>
-          <div class="fgrid" style="margin-bottom:8px">
-            <div class="fg"><label class="fl">Precio</label><input class="fi" type="number" id="ob-pprecio" placeholder="18900"></div>
-            <div class="fg"><label class="fl">Tipo</label>
-              <select class="fi" id="ob-ptipo"><option value="comida">🍔 Comida</option><option value="bebida">🥤 Bebida</option><option value="arepa">🫓 Arepa</option></select>
+          <div class="acc-body">
+            <div class="fg"><label class="fl">Nombre del restaurante</label><input class="fi" id="ob-nom" placeholder="La Curva Street Food"></div>
+            <div class="fgrid">
+              <div class="fg"><label class="fl">Ciudad</label><input class="fi" id="ob-ciu" placeholder="Cali"></div>
+              <div class="fg"><label class="fl">Tipo de comida</label><input class="fi" id="ob-tipo" placeholder="Hamburguesas, Pollo..."></div>
             </div>
+            <div class="fg"><label class="fl">Dirección</label><input class="fi" id="ob-dir" placeholder="Cl. 16 #56-40"></div>
+            <div class="fgrid">
+              <div class="fg"><label class="fl">Contacto (dueño)</label><input class="fi" id="ob-ctc" placeholder="José García"></div>
+              <div class="fg"><label class="fl">Teléfono contacto</label><input class="fi" id="ob-ctel" placeholder="3001234567"></div>
+            </div>
+            <button class="acc-save" onclick="saveInfo()">💾 Guardar información</button>
           </div>
-          <button class="btn btn-p" style="width:100%" onclick="addProd()">+ Agregar producto</button>
         </div>
 
-        <!-- Menú actual -->
-        <div class="sdiv">📋 Menú actual</div>
-        <div id="ob-menu"></div>
+        <!-- ACORDEÓN 2: WhatsApp -->
+        <div class="acc-sec" id="acc-whatsapp">
+          <div class="acc-head" onclick="toggleAcc('whatsapp')">
+            <div class="acc-ico" id="acc-ico-whatsapp">2</div>
+            <div class="acc-label"><div class="acc-title">WhatsApp Business</div><div class="acc-sub" id="acc-sub-whatsapp">Número y Phone ID de Meta</div></div>
+            <div class="acc-arrow">▾</div>
+          </div>
+          <div class="acc-body">
+            <div class="fgrid">
+              <div class="fg"><label class="fl">Número WA (con 57)</label><input class="fi" id="ob-wa" placeholder="573001234567"></div>
+              <div class="fg"><label class="fl">Phone ID de Meta</label><input class="fi" id="ob-pid" placeholder="ID de Meta Business"></div>
+            </div>
+            <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:10px;font-size:10px;color:var(--a);margin-bottom:8px">
+              💡 developers.facebook.com/apps → WhatsApp → API Setup → Phone Number ID
+            </div>
+            <button class="acc-save" onclick="saveWhatsapp()">💾 Guardar WhatsApp</button>
+          </div>
+        </div>
+
+        <!-- ACORDEÓN 3: Horario -->
+        <div class="acc-sec" id="acc-horario">
+          <div class="acc-head" onclick="toggleAcc('horario')">
+            <div class="acc-ico" id="acc-ico-horario">3</div>
+            <div class="acc-label"><div class="acc-title">Horario y días activos</div><div class="acc-sub" id="acc-sub-horario">Apertura, cierre, días de servicio</div></div>
+            <div class="acc-arrow">▾</div>
+          </div>
+          <div class="acc-body">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="ob-dias">
+              <label class="dck"><input type="checkbox" value="lunes" checked> Lun</label>
+              <label class="dck"><input type="checkbox" value="martes" checked> Mar</label>
+              <label class="dck"><input type="checkbox" value="miercoles" checked> Mié</label>
+              <label class="dck"><input type="checkbox" value="jueves" checked> Jue</label>
+              <label class="dck"><input type="checkbox" value="viernes" checked> Vie</label>
+              <label class="dck"><input type="checkbox" value="sabado" checked> Sáb</label>
+              <label class="dck"><input type="checkbox" value="domingo"> Dom</label>
+            </div>
+            <div class="fgrid">
+              <div class="fg"><label class="fl">Apertura</label><input class="fi" type="time" id="ob-ap" value="16:00"></div>
+              <div class="fg"><label class="fl">Cierre</label><input class="fi" type="time" id="ob-ci" value="00:00"></div>
+            </div>
+            <button class="acc-save" onclick="saveHorario()">💾 Guardar horario</button>
+          </div>
+        </div>
+
+        <!-- ACORDEÓN 4: Menú -->
+        <div class="acc-sec" id="acc-menu">
+          <div class="acc-head" onclick="toggleAcc('menu')">
+            <div class="acc-ico" id="acc-ico-menu">4</div>
+            <div class="acc-label"><div class="acc-title">Menú de productos</div><div class="acc-sub" id="acc-sub-menu">Productos, precios y fotos</div></div>
+            <div class="acc-arrow">▾</div>
+          </div>
+          <div class="acc-body">
+            <div style="font-size:11px;font-weight:700;color:var(--p2);margin-bottom:8px">📸 Cargar desde foto (IA)</div>
+            <div class="upz" id="upz" style="margin-bottom:10px">
+              <div style="font-size:26px;margin-bottom:4px">📷</div>
+              <div style="font-size:12px;font-weight:700">Sube foto del menú físico</div>
+              <div style="font-size:10px;color:var(--m);margin-top:2px">Luz extrae los productos automáticamente</div>
+              <input type="file" accept="image/*" onchange="handleMenuPhoto(this)">
+              <img id="menuPrev">
+            </div>
+            <div id="photoRes"></div>
+            <div style="font-size:11px;font-weight:700;color:var(--p2);margin:12px 0 8px">➕ Agregar manualmente</div>
+            <div class="fgrid" style="margin-bottom:6px">
+              <div class="fg"><label class="fl">Categoría</label><input class="fi" id="ob-pcat" placeholder="Hamburguesas"></div>
+              <div class="fg"><label class="fl">Nombre</label><input class="fi" id="ob-pnom" placeholder="La Especial"></div>
+            </div>
+            <div class="fg" style="margin-bottom:6px"><label class="fl">Descripción / Ingredientes</label><input class="fi" id="ob-pdesc" placeholder="Ingredientes..."></div>
+            <div class="fgrid" style="margin-bottom:8px">
+              <div class="fg"><label class="fl">Precio</label><input class="fi" type="number" id="ob-pprecio" placeholder="18900"></div>
+              <div class="fg"><label class="fl">Tipo</label>
+                <select class="fi" id="ob-ptipo"><option value="comida">🍔 Comida</option><option value="bebida">🥤 Bebida</option><option value="arepa">🫓 Arepa</option></select>
+              </div>
+            </div>
+            <button class="btn btn-p" style="width:100%;margin-bottom:12px" onclick="addProd()">+ Agregar producto</button>
+            <div id="ob-menu"></div>
+          </div>
+        </div>
+
+        <!-- ACORDEÓN 5: Logo -->
+        <div class="acc-sec" id="acc-logo">
+          <div class="acc-head" onclick="toggleAcc('logo')">
+            <div class="acc-ico" id="acc-ico-logo">5</div>
+            <div class="acc-label"><div class="acc-title">Logo del restaurante</div><div class="acc-sub" id="acc-sub-logo">Identidad visual</div></div>
+            <div class="acc-arrow">▾</div>
+          </div>
+          <div class="acc-body">
+            <div class="upz" id="logoZone">
+              <div style="font-size:26px;margin-bottom:4px">🖼️</div>
+              <div style="font-size:12px;font-weight:700">Subir logo</div>
+              <div style="font-size:10px;color:var(--m);margin-top:2px">JPG, PNG — cuadrado recomendado</div>
+              <input type="file" accept="image/*" onchange="handleLogo(this)">
+              <img id="logoPrev">
+            </div>
+            <div id="logoRes"></div>
+          </div>
+        </div>
+
+        <!-- ACORDEÓN 6: Reglas Luz -->
+        <div class="acc-sec" id="acc-reglas">
+          <div class="acc-head" onclick="toggleAcc('reglas')">
+            <div class="acc-ico" id="acc-ico-reglas">6</div>
+            <div class="acc-label"><div class="acc-title">Reglas para Luz</div><div class="acc-sub" id="acc-sub-reglas">Comportamiento del asistente IA</div></div>
+            <div class="acc-arrow">▾</div>
+          </div>
+          <div class="acc-body">
+            <div style="display:flex;gap:7px;margin-bottom:8px">
+              <input class="fi" id="ob-regla" placeholder="Ej: No domicilio después de las 11pm..." style="flex:1" onkeydown="if(event.key==='Enter')addRegla()">
+              <button class="btn btn-p" onclick="addRegla()">+</button>
+            </div>
+            <div id="ob-reglas"></div>
+          </div>
+        </div>
+
+        <!-- ACORDEÓN 7: Zonas -->
+        <div class="acc-sec" id="acc-zonas">
+          <div class="acc-head" onclick="toggleAcc('zonas')">
+            <div class="acc-ico" id="acc-ico-zonas">7</div>
+            <div class="acc-label"><div class="acc-title">Zonas de domicilio</div><div class="acc-sub" id="acc-sub-zonas">Barrios y precios de envío</div></div>
+            <div class="acc-arrow">▾</div>
+          </div>
+          <div class="acc-body">
+            <div class="fgrid" style="margin-bottom:6px">
+              <div class="fg"><label class="fl">Nombre de zona</label><input class="fi" id="ob-zn" placeholder="Centro, Norte..."></div>
+              <div class="fg"><label class="fl">Precio</label><input class="fi" type="number" id="ob-zp" placeholder="4000"></div>
+            </div>
+            <div class="fg" style="margin-bottom:8px"><label class="fl">Barrios (separados por coma)</label><textarea class="fi" id="ob-zb" rows="2" style="resize:none" placeholder="Canaveral, Granada..."></textarea></div>
+            <button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="addZona()">+ Agregar zona</button>
+            <div id="ob-zonas"></div>
+          </div>
+        </div>
+
+        <!-- ACORDEÓN 8: Pagos -->
+        <div class="acc-sec" id="acc-pagos">
+          <div class="acc-head" onclick="toggleAcc('pagos')">
+            <div class="acc-ico" id="acc-ico-pagos">8</div>
+            <div class="acc-label"><div class="acc-title">Métodos de pago</div><div class="acc-sub" id="acc-sub-pagos">Nequi, Bancolombia, Efectivo</div></div>
+            <div class="acc-arrow">▾</div>
+          </div>
+          <div class="acc-body">
+            <div class="fgrid" style="margin-bottom:6px">
+              <div class="fg"><label class="fl">Nequi</label><input class="fi" id="ob-nequi" placeholder="3001234567"></div>
+              <div class="fg"><label class="fl">Bancolombia</label><input class="fi" id="ob-banco" placeholder="@NEQUI123"></div>
+            </div>
+            <div class="fg" style="margin-bottom:8px"><label class="fl">Titular</label><input class="fi" id="ob-tit" placeholder="José García"></div>
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+              <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ob-ef" checked> 💵 Efectivo</label>
+              <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer"><input type="checkbox" id="ob-df"> 💳 Datáfono</label>
+            </div>
+            <button class="acc-save" onclick="savePagos()">💾 Guardar métodos de pago</button>
+          </div>
+        </div>
 
       </div>
     </div>
@@ -397,7 +596,19 @@ var TOKEN=localStorage.getItem("luzia_vendor_token")||"";
 var ME=null,RESTS=[],obId=null;
 var PRECIOS={basico:159000,emprendedor:320000,dominante:460000,empresarial:760000};
 function authH(){return{"Authorization":"Bearer "+TOKEN,"Content-Type":"application/json"};}
-function toast(m,c){var t=document.getElementById("toast");t.textContent=m;t.style.background=c||"#10b981";t.classList.add("show");setTimeout(function(){t.classList.remove("show");},2500);}
+function toast(m,c,icon){
+  // Premium notification popup
+  var existing=document.querySelector('.notif-popup');
+  if(existing)existing.remove();
+  var isErr=c&&c.indexOf('ef4444')!==-1;
+  var isOk=!c||c.indexOf('10b981')!==-1;
+  var ico=icon||(isErr?'❌':(isOk?'✅':'ℹ️'));
+  var div=document.createElement('div');
+  div.className='notif-popup'+(isErr?' error':(isOk?' success':''));
+  div.innerHTML='<div style="font-size:22px;flex-shrink:0">'+ico+'</div><div><div style="font-size:13px;font-weight:800;color:#f0eeff">'+m+'</div></div>';
+  document.body.appendChild(div);
+  setTimeout(function(){if(div.parentNode){div.style.opacity='0';div.style.transform='translateY(-8px)';div.style.transition='all .3s';setTimeout(function(){div.remove();},300);}},2800);
+}
 function fmt(n){return"$"+Number(n||0).toLocaleString("es-CO");}
 function ago(d){if(!d)return"—";var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<1?"ahora":diff<60?diff+" min":diff<1440?Math.floor(diff/60)+"h":new Date(d).toLocaleDateString("es-CO");}
 
@@ -449,6 +660,13 @@ async function loadPipeline(){
     document.getElementById("sVenc").textContent=s.trialsPorVencer;
     var mrr=RESTS.filter(function(r){return r.estado==="activo";}).reduce(function(s,r){return s+(PRECIOS[r.plan_id||r.plan]||0);},0);
     document.getElementById("sMRR").textContent=fmt(mrr);
+    var mrrSub=document.getElementById("sMRRsub");
+    if(mrrSub)mrrSub.textContent=RESTS.filter(function(r){return r.estado==="activo";}).length+" activos · "+trials.length+" trials";
+    var proxCobro=RESTS.filter(function(r){return r.suscripcion_estado==="trial";}).reduce(function(s,r){return s+Math.round((PRECIOS[r.plan_id||r.plan]||0)/2);},0);
+    var pEl=document.getElementById("sProxCobro");
+    if(pEl)pEl.textContent=fmt(proxCobro);
+    // Plan tag in topbar
+    if(ME){var pt=document.getElementById("planTagVend");if(pt){pt.textContent=ME.rol==="superadmin"?"👑 Super Admin":"🏆 Vendedor";pt.className="plan-tag "+(ME.rol==="superadmin"?"plan-empresarial":"plan-emprendedor");pt.style.display="inline-flex";}}
     if(s.trialsPorVencer>0){document.getElementById("alertT").textContent="⚠️ "+s.trialsPorVencer+" trial(s) por vencer en 3 días — ¡haz seguimiento ya!";document.getElementById("alertT").classList.add("show");}
     else{document.getElementById("alertT").classList.remove("show");}
     var cols={trial:[],activo:[],vencido:[],suspendido:[]};
@@ -557,23 +775,123 @@ async function loadOnboarding(){
   document.getElementById("ob-panel").style.display="block";
   var r=RESTS.find(function(x){return x.id===obId;});if(!r)return;
   var ob=r._onboarding||{};
-  var items=[
-    {k:"info",l:"Información básica",d:"Nombre, dirección, ciudad",done:ob.info},
-    {k:"whatsapp",l:"WhatsApp conectado",d:"Phone ID de Meta",done:ob.whatsapp},
-    {k:"horario",l:"Horario y días",d:"Apertura, cierre, días activos",done:ob.horario},
-    {k:"menu",l:"Menú cargado",d:r._menuCount?r._menuCount+" productos":"Sin productos aún",done:ob.menu},
-    {k:"logo",l:"Logo subido",d:"Identidad visual",done:ob.logo},
-    {k:"reglas",l:"Reglas para Luz",d:r._reglasCount?r._reglasCount+" reglas activas":"Sin reglas",done:ob.reglas},
-    {k:"zonas",l:"Zonas de domicilio",d:"Barrios y precios",done:false},
-    {k:"pagos",l:"Métodos de pago",d:"Nequi, Bancolombia...",done:!!(r.metodo_pago_nequi||r.metodo_pago_banco)}
-  ];
-  var done=items.filter(function(i){return i.done;}).length;
-  document.getElementById("ob-check").innerHTML=
-    '<div style="font-size:13px;font-weight:800;margin-bottom:10px">'+r.nombre+' — <span style="color:var(--p2)">'+done+'/'+items.length+' completado</span></div>'+
-    '<ul class="clist">'+items.map(function(i){
-      return'<li class="ci'+(i.done?" done":"")+'"><div class="cdot2">'+(i.done?"✓":"")+'</div><div class="cl"><strong>'+i.l+'</strong><span>'+i.d+'</span></div>'+(i.done?'':"<span style='font-size:10px;color:var(--p2);font-weight:700'>Pendiente</span>")+'</li>';
-    }).join("")+'</ul>';
+  obRestPlan = r.plan_id||r.plan||"basico";
+  // Mark zonas as locked in UI for basic plan
+  var zonaSec=document.getElementById("acc-zonas");
+  if(zonaSec){
+    if(obRestPlan==="basico"){zonaSec.classList.add("locked");}
+    else{zonaSec.classList.remove("locked");}
+  }
+  // Actualizar estado de cada acordeón
+  var secs={info:ob.info,whatsapp:ob.whatsapp,horario:ob.horario,menu:ob.menu,logo:ob.logo,reglas:ob.reglas,zonas:false,pagos:!!(r.metodo_pago_nequi||r.metodo_pago_banco)};
+  var done=Object.values(secs).filter(Boolean).length;
+  var total=Object.keys(secs).length;
+  // Progreso
+  var pct=Math.round(done/total*100);
+  document.getElementById("ob-progress").innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+    '<div style="font-size:13px;font-weight:800">'+r.nombre+'</div>'+
+    '<div style="font-size:12px;color:var(--p2);font-weight:700">'+done+'/'+total+' completado</div></div>'+
+    '<div style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden">'+
+    '<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,var(--p),var(--g));border-radius:3px;transition:width .4s"></div></div>';
+  // Marcar secciones completadas
+  Object.keys(secs).forEach(function(k){
+    var sec=document.getElementById("acc-"+k);
+    var ico=document.getElementById("acc-ico-"+k);
+    if(!sec)return;
+    if(secs[k]){sec.classList.add("done");if(ico)ico.textContent="✓";}
+    else{sec.classList.remove("done");if(ico)ico.textContent=Object.keys(secs).indexOf(k)+1;}
+  });
+  // Pre-llenar info básica
+  if(r.nombre)(document.getElementById("ob-nom")||{}).value=r.nombre;
+  if(r.ciudad)(document.getElementById("ob-ciu")||{}).value=r.ciudad||r.ciudad_restaurante||"";
+  if(r.direccion)(document.getElementById("ob-dir")||{}).value=r.direccion||"";
+  if(r.contacto_nombre)(document.getElementById("ob-ctc")||{}).value=r.contacto_nombre||"";
+  if(r.contacto_telefono)(document.getElementById("ob-ctel")||{}).value=r.contacto_telefono||"";
+  if(r.tipo_comida)(document.getElementById("ob-tipo")||{}).value=r.tipo_comida||"";
+  if(r.whatsapp)(document.getElementById("ob-wa")||{}).value=r.whatsapp||"";
+  if(r.whatsapp_phone_id)(document.getElementById("ob-pid")||{}).value=r.whatsapp_phone_id||"";
+  // Abrir primera sección incompleta
+  var firstInc=Object.keys(secs).find(function(k){return !secs[k];});
+  if(firstInc)toggleAcc(firstInc);
   loadObMenu();loadObReglas();loadObZonas();loadObPagos();loadObHorario();
+}
+
+// Features por acordeón — qué plan se necesita para desbloquearlo (null = todos)
+var ACC_PLAN = {info:null,whatsapp:null,horario:null,menu:null,logo:null,reglas:null,zonas:"domiciliarios",pagos:null};
+
+function toggleAcc(key){
+  var sec=document.getElementById("acc-"+key);
+  if(!sec)return;
+  // Verificar si está bloqueado por plan
+  var planReq=ACC_PLAN[key];
+  if(planReq&&obRestPlan==="basico"){
+    showAccLocked(key,planReq);
+    return;
+  }
+  var isOpen=sec.classList.contains("open");
+  document.querySelectorAll(".acc-sec.open").forEach(function(s){s.classList.remove("open");});
+  if(!isOpen){
+    sec.classList.add("open");
+    // Micro-animación al abrir
+    var body=sec.querySelector(".acc-body");
+    if(body){body.style.opacity="0";body.style.transform="translateY(-6px)";setTimeout(function(){body.style.transition="all .2s";body.style.opacity="1";body.style.transform="translateY(0)";},10);}
+  }
+}
+
+var obRestPlan = "basico"; // se actualiza al cargar onboarding
+
+function showAccLocked(key,feature){
+  var names={domiciliarios:"Domiciliarios y Zonas"};
+  var ov=document.createElement("div");
+  ov.style.cssText="position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease";
+  ov.innerHTML='<div style="background:#13102a;border:1px solid rgba(124,58,237,.4);border-radius:22px;padding:28px;max-width:340px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6)">'
+    +'<div style="font-size:44px;margin-bottom:10px">🔒</div>'
+    +'<div style="font-size:18px;font-weight:900;margin-bottom:8px;color:#f0eeff">'+(names[feature]||feature)+'</div>'
+    +'<div style="font-size:12px;color:rgba(240,238,255,.5);line-height:1.6;margin-bottom:16px">Esta función no está disponible en el plan Básico de este restaurante.</div>'
+    +'<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:10px;margin-bottom:18px;font-size:11px;color:#fcd34d">📦 Disponible desde Plan Emprendedor · $320.000/mes</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="document.querySelectorAll(\".locked-ov\").forEach(function(x){x.remove()})" style="flex:1;padding:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:rgba(240,238,255,.6);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Cerrar</button>'
+    +'<button onclick="contactarUpgradeVend()" style="flex:2;padding:11px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:12px;color:white;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">💬 Hablar con soporte</button>'
+    +'</div></div>';
+  ov.className="locked-ov";
+  ov.onclick=function(e){if(e.target===ov)ov.remove();};
+  document.body.appendChild(ov);
+}
+
+function contactarUpgradeVend(){
+  document.querySelectorAll(".locked-ov").forEach(function(o){o.remove();});
+  toast("Conectando con soporte...","","💬");
+}
+
+async function saveInfo(){
+  if(!obId)return;
+  var nom=(document.getElementById("ob-nom")||{value:""}).value.trim();
+  if(!nom){toast("Nombre obligatorio","#ef4444");return;}
+  var waVal=(document.getElementById("ob-wa")||{value:""}).value.trim();
+  var data={nombre:nom,ciudad:(document.getElementById("ob-ciu")||{value:"Cali"}).value||"Cali",ciudad_restaurante:(document.getElementById("ob-ciu")||{value:"Cali"}).value||"Cali",direccion:(document.getElementById("ob-dir")||{value:""}).value.trim()||null,contacto_nombre:(document.getElementById("ob-ctc")||{value:""}).value.trim()||null,contacto_telefono:(document.getElementById("ob-ctel")||{value:""}).value.trim()||null};
+  if((document.getElementById("ob-tipo")||{value:""}).value.trim()) data.tipo_comida=(document.getElementById("ob-tipo")||{value:""}).value.trim();
+  if(waVal) data.whatsapp=waVal;
+  await fetch("/api/admin/sb/restaurantes?id=eq."+obId,{method:"PATCH",headers:authH(),body:JSON.stringify(data)});
+  toast("✅ Información guardada","","🏪");
+  // Pulse animation on saved section
+  var s=document.getElementById("acc-info");if(s){s.style.animation="none";void s.offsetWidth;s.style.animation="glow .6s ease";}
+  document.getElementById("acc-info").classList.add("done");
+  document.getElementById("acc-ico-info").textContent="✓";
+  toggleAcc("whatsapp");loadPipeline();
+}
+
+async function saveWhatsapp(){
+  if(!obId)return;
+  var wa=(document.getElementById("ob-wa")||{value:""}).value.trim();
+  var pid=(document.getElementById("ob-pid")||{value:""}).value.trim();
+  if(!wa){toast("Número WA obligatorio","#ef4444");return;}
+  await fetch("/api/admin/sb/restaurantes?id=eq."+obId,{method:"PATCH",headers:authH(),body:JSON.stringify({whatsapp:wa,whatsapp_phone_id:pid||null})});
+  toast("✅ WhatsApp conectado","","📱");
+  var s=document.getElementById("acc-whatsapp");if(s){s.style.animation="none";void s.offsetWidth;s.style.animation="glow .6s ease";}
+  document.getElementById("acc-whatsapp").classList.add("done");
+  document.getElementById("acc-ico-whatsapp").textContent="✓";
+  toggleAcc("horario");loadPipeline();
 }
 
 async function loadObMenu(){
@@ -614,7 +932,10 @@ async function addRegla(){
   var txt=document.getElementById("ob-regla").value.trim();
   if(!txt||!obId){toast("Escribe una regla","#ef4444");return;}
   await fetch("/api/aprendizajes",{method:"POST",headers:authH(),body:JSON.stringify({restaurante_id:obId,tipo:"regla_negocio",contenido:txt,fuente:"onboarding"})});
-  document.getElementById("ob-regla").value="";toast("🧠 Regla agregada");loadObReglas();loadPipeline();
+  document.getElementById("ob-regla").value="";toast("🧠 Regla agregada");
+  var sec=document.getElementById("acc-reglas");var ico=document.getElementById("acc-ico-reglas");
+  if(sec)sec.classList.add("done");if(ico)ico.textContent="✓";
+  loadObReglas();loadPipeline();
 }
 
 async function delRegla(id){await fetch("/api/aprendizajes/"+id,{method:"DELETE",headers:authH()});toast("Eliminada");loadObReglas();}
@@ -662,7 +983,11 @@ async function savePagos(){
     metodo_pago_banco:document.getElementById("ob-banco").value||null,
     metodo_pago_nombre:document.getElementById("ob-tit").value||null
   })});
-  toast("✅ Métodos de pago guardados");loadPipeline();
+  toast("✅ Métodos de pago guardados");
+  var sec=document.getElementById("acc-pagos");
+  var ico=document.getElementById("acc-ico-pagos");
+  if(sec)sec.classList.add("done");if(ico)ico.textContent="✓";
+  loadPipeline();
 }
 
 async function loadObHorario(){
@@ -681,7 +1006,11 @@ async function saveHorario(){
     hora_cierre:document.getElementById("ob-ci").value+":00",
     dias_activos:dias.join(",")
   })});
-  toast("✅ Horario guardado");loadPipeline();
+  toast("✅ Horario guardado","","🕐");
+  var sec=document.getElementById("acc-horario");
+  var ico=document.getElementById("acc-ico-horario");
+  if(sec)sec.classList.add("done");if(ico)ico.textContent="✓";
+  toggleAcc("menu");loadPipeline();
 }
 
 // ── MENÚ DESDE FOTO ──
@@ -721,6 +1050,8 @@ async function handleLogo(inp){
       var url="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/"+path;
       await fetch("/api/admin/sb/restaurantes?id=eq."+obId,{method:"PATCH",headers:authH(),body:JSON.stringify({logo_url:url})});
       res.innerHTML='<div style="color:var(--g);font-size:11px;font-weight:700;margin-top:6px">✅ Logo subido</div>';
+      var sec=document.getElementById("acc-logo");var ico=document.getElementById("acc-ico-logo");
+      if(sec)sec.classList.add("done");if(ico)ico.textContent="✓";
       toast("✅ Logo subido");loadPipeline();
     }catch(e){res.innerHTML='<div style="color:var(--r);font-size:11px;margin-top:6px">❌ '+e.message+'</div>';}
   };reader.readAsDataURL(f);
@@ -737,7 +1068,10 @@ async function addProd(){
     precio:precio,es_bebida:tipo==="bebida",es_arepa:tipo==="arepa",disponible:true
   })});
   ["ob-pnom","ob-pdesc","ob-pprecio"].forEach(function(id){document.getElementById(id).value="";});
-  toast("✅ Producto agregado");loadObMenu();loadPipeline();
+  toast("✅ Producto agregado");
+  var sec=document.getElementById("acc-menu");var ico=document.getElementById("acc-ico-menu");
+  if(sec)sec.classList.add("done");if(ico)ico.textContent="✓";
+  loadObMenu();loadPipeline();
 }
 
 // ── ACTIVIDAD ──
