@@ -3334,17 +3334,31 @@ function loadClientes(){
   fetch("/api/clientes-ranking?restaurante_id="+rest.id)
   .then(function(r){return r.json();})
   .then(function(d){
-    clientesData=d||[];
-    var oro=clientesData.filter(function(c){return c.nivel_fidelidad==="oro";}).length;
-    var plata=clientesData.filter(function(c){return c.nivel_fidelidad==="plata";}).length;
-    var dia=clientesData.filter(function(c){return c.nivel_fidelidad==="diamante";}).length;
-    var bronce=clientesData.filter(function(c){return !c.nivel_fidelidad||c.nivel_fidelidad==="bronce";}).length;
-    document.getElementById("crTotal").textContent=clientesData.length;
-    document.getElementById("crOro").textContent=oro;
-    document.getElementById("crPlata").textContent=plata;
-    document.getElementById("crBronce").textContent=bronce;
+    // Manejar respuesta: array directo o wrapper
+    if(Array.isArray(d))clientesData=d;
+    else if(d&&Array.isArray(d.clientes))clientesData=d.clientes;
+    else if(d&&Array.isArray(d.data))clientesData=d.data;
+    else clientesData=[];
+    actualizarResumenClientes();
+    if(!clientesData.length){
+      get("clientes_frecuentes","restaurante_id=eq."+rest.id+"&order=total_pedidos.desc&limit=500").then(function(rows){
+        clientesData=rows||[];actualizarResumenClientes();renderClientes();
+      }).catch(function(){renderClientes();});
+      return;
+    }
     renderClientes();
-  }).catch(function(e){document.getElementById("clientesLista").innerHTML='<div class="empty"><div class="et">Error: '+e.message+'</div></div>';});
+  }).catch(function(){
+    get("clientes_frecuentes","restaurante_id=eq."+rest.id+"&order=total_pedidos.desc&limit=500").then(function(rows){
+      clientesData=rows||[];actualizarResumenClientes();renderClientes();
+    }).catch(function(e2){document.getElementById("clientesLista").innerHTML='<div class="empty"><div class="et">Error: '+e2.message+'</div></div>';});
+  });
+}
+function actualizarResumenClientes(){
+  if(!Array.isArray(clientesData))clientesData=[];
+  document.getElementById("crTotal").textContent=clientesData.length;
+  document.getElementById("crOro").textContent=clientesData.filter(function(c){return c.nivel_fidelidad==="oro";}).length;
+  document.getElementById("crPlata").textContent=clientesData.filter(function(c){return c.nivel_fidelidad==="plata";}).length;
+  document.getElementById("crBronce").textContent=clientesData.filter(function(c){return !c.nivel_fidelidad||c.nivel_fidelidad==="bronce";}).length;
 }
 
 function renderClientes(){
