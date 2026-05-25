@@ -32,11 +32,6 @@ body{min-height:100vh;background:#0d0a1a;color:var(--text);font-family:'Plus Jak
 .blob-4{width:250px;height:250px;background:radial-gradient(circle,#10b981,transparent 70%);bottom:20%;right:20%;animation-delay:-2s;opacity:0.2}
 @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(20px,-30px) scale(1.05)}66%{transform:translate(-15px,20px) scale(0.95)}}
 #pinScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:1;}
-.pin-input-field{width:100%;padding:13px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:13px;color:#f0eeff;font-family:inherit;font-size:14px;outline:none;box-sizing:border-box;}
-.pin-input-field:focus{border-color:rgba(124,58,237,.5);background:rgba(124,58,237,.06);}
-.pin-input-field::placeholder{color:rgba(255,255,255,.3);}
-/* Hover states for country/type buttons */
-#stepPais button:hover,#stepTipo button:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.08);}
 .pin-box{width:100%;max-width:300px;background:rgba(255,255,255,0.08);border:1px solid var(--glass-border2);border-radius:32px;padding:36px 24px 32px;backdrop-filter:var(--blur2);-webkit-backdrop-filter:var(--blur2);box-shadow:var(--shadow2),inset 0 1px 0 rgba(255,255,255,0.15);}
 .pin-brand{text-align:center;margin-bottom:28px;}
 .pin-orb{width:68px;height:68px;border-radius:22px;margin:0 auto 14px;background:linear-gradient(135deg,#7c3aed,#4f46e5,#2563eb);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:white;box-shadow:0 8px 24px rgba(124,58,237,0.6),inset 0 1px 0 rgba(255,255,255,0.3);font-family:'JetBrains Mono',monospace;}
@@ -616,150 +611,24 @@ select.finput{cursor:pointer}
 <div class="blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div><div class="blob blob-4"></div></div>
 
 <!-- PIN -->
-<!-- PANTALLA SELECCIÓN PAÍS/MODO -->
-<div id="selectScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:1">
-  <div style="width:100%;max-width:360px">
-    <!-- Brand -->
-    <div style="text-align:center;margin-bottom:36px">
-      <div style="width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#fff;margin:0 auto 14px;box-shadow:0 8px 32px rgba(124,58,237,.4)">LZ</div>
-      <div style="font-size:28px;font-weight:900;letter-spacing:-.03em;color:#f0eeff">LUZ <span style="color:#a78bfa">IA</span></div>
-      <div style="font-size:13px;color:rgba(240,238,255,.4);margin-top:4px">¿Desde dónde te conectas?</div>
-    </div>
-
-    <!-- Selector de país -->
-    <div id="stepPais" style="animation:fadeUp .3s ease">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        <button onclick="selPais('co')" style="padding:20px 12px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:18px;cursor:pointer;font-family:inherit;transition:all .2s;text-align:center">
-          <div style="font-size:36px;margin-bottom:8px">🇨🇴</div>
-          <div style="font-size:14px;font-weight:800;color:#f0eeff">Colombia</div>
-          <div style="font-size:10px;color:rgba(240,238,255,.4);margin-top:3px">LUZ IA</div>
-        </button>
-        <button onclick="selPais('us')" style="padding:20px 12px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:18px;cursor:pointer;font-family:inherit;transition:all .2s;text-align:center">
-          <div style="font-size:36px;margin-bottom:8px">🇺🇸</div>
-          <div style="font-size:14px;font-weight:800;color:#f0eeff">USA</div>
-          <div style="font-size:10px;color:rgba(240,238,255,.4);margin-top:3px">CHARR TOWER</div>
-        </button>
-      </div>
-    </div>
-
-    <!-- Selector de modo (solo Colombia) -->
-    <div id="stepModo" style="display:none;animation:fadeUp .3s ease">
-      <div style="font-size:12px;color:rgba(240,238,255,.4);text-align:center;margin-bottom:16px">¿Qué eres?</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        <button onclick="selModo('restaurante')" style="padding:20px 12px;background:rgba(124,58,237,.08);border:1.5px solid rgba(124,58,237,.25);border-radius:18px;cursor:pointer;font-family:inherit;transition:all .2s;text-align:center">
-          <div style="font-size:36px;margin-bottom:8px">🍽️</div>
-          <div style="font-size:14px;font-weight:800;color:#f0eeff">Restaurante</div>
-          <div style="font-size:10px;color:rgba(240,238,255,.4);margin-top:3px">Ingresa tu PIN</div>
-        </button>
-        <button onclick="selModo('charr')" style="padding:20px 12px;background:rgba(245,158,11,.08);border:1.5px solid rgba(245,158,11,.25);border-radius:18px;cursor:pointer;font-family:inherit;transition:all .2s;text-align:center">
-          <div style="font-size:36px;margin-bottom:8px">🏮</div>
-          <div style="font-size:14px;font-weight:800;color:#fcd34d">CHARR Tower</div>
-          <div style="font-size:10px;color:rgba(240,238,255,.4);margin-top:3px">PIN CHARR</div>
-        </button>
-      </div>
-      <button onclick="volverPais()" style="width:100%;padding:10px;background:none;border:none;color:rgba(240,238,255,.3);font-size:12px;cursor:pointer;font-family:inherit">← Volver</button>
-    </div>
-
-    <!-- USA — próximamente -->
-    <div id="stepUSA" style="display:none;animation:fadeUp .3s ease;text-align:center">
-      <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:18px;padding:28px 20px;margin-bottom:16px">
-        <div style="font-size:40px;margin-bottom:12px">🏮</div>
-        <div style="font-size:18px;font-weight:900;color:#fcd34d;margin-bottom:8px">CHARR TOWER USA</div>
-        <div style="font-size:12px;color:rgba(240,238,255,.5);line-height:1.6;margin-bottom:16px">Sistema de mesas con menú digital y pagos integrados. $24.99/mes.</div>
-        <div style="font-size:11px;color:rgba(245,158,11,.6);font-weight:700">🚀 Lanzamiento próximo</div>
-      </div>
-      <a href="https://wa.me/573243387313?text=Hola,%20quiero%20información%20sobre%20CHARR%20TOWER%20USA" target="_blank" style="display:block;width:100%;padding:14px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:14px;color:#000;font-size:14px;font-weight:800;text-decoration:none;box-sizing:border-box;margin-bottom:10px">💬 Contactar por WhatsApp</a>
-      <button onclick="volverPais()" style="width:100%;padding:10px;background:none;border:none;color:rgba(240,238,255,.3);font-size:12px;cursor:pointer;font-family:inherit">← Volver</button>
-    </div>
-
-  </div>
-</div>
-
-<div id="pinScreen" style="display:none">
+<div id="pinScreen">
   <div class="pin-box">
-
-    <!-- PASO 1: Selección de país -->
-    <div id="stepPais">
-      <div class="pin-brand">
-        <div class="pin-orb">LZ</div>
-        <div class="pin-name">LUZ IA</div>
-        <div class="pin-sub">¿Desde dónde te conectas?</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px">
-        <button onclick="selPais('co')" style="padding:20px 12px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:18px;cursor:pointer;transition:all .2s;font-family:inherit">
-          <div style="font-size:32px;margin-bottom:8px">🇨🇴</div>
-          <div style="font-size:13px;font-weight:800;color:#f0eeff">Colombia</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">LUZ IA</div>
-        </button>
-        <button onclick="selPais('us')" style="padding:20px 12px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:18px;cursor:pointer;transition:all .2s;font-family:inherit">
-          <div style="font-size:32px;margin-bottom:8px">🇺🇸</div>
-          <div style="font-size:13px;font-weight:800;color:#f0eeff">USA</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">CHARR TOWER</div>
-        </button>
-      </div>
+    <div class="pin-brand">
+      <div class="pin-orb">LZ</div>
+      <div class="pin-name">LUZ IA</div>
+      <div class="pin-sub">Panel de Control</div>
     </div>
-
-    <!-- PASO 2 Colombia: Tipo de acceso -->
-    <div id="stepTipo" style="display:none">
-      <div class="pin-brand">
-        <div class="pin-orb">🇨🇴</div>
-        <div class="pin-name">Colombia</div>
-        <div class="pin-sub">¿Qué tipo de acceso?</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px">
-        <button onclick="selTipo('restaurante')" style="padding:20px 12px;background:rgba(124,58,237,.08);border:1.5px solid rgba(124,58,237,.25);border-radius:18px;cursor:pointer;transition:all .2s;font-family:inherit">
-          <div style="font-size:32px;margin-bottom:8px">🍽️</div>
-          <div style="font-size:13px;font-weight:800;color:#c4b5fd">Restaurante</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">Panel LUZ IA</div>
-        </button>
-        <button onclick="selTipo('charr')" style="padding:20px 12px;background:rgba(245,158,11,.08);border:1.5px solid rgba(245,158,11,.25);border-radius:18px;cursor:pointer;transition:all .2s;font-family:inherit">
-          <div style="font-size:32px;margin-bottom:8px">🏮</div>
-          <div style="font-size:13px;font-weight:800;color:#fcd34d">CHARR Tower</div>
-          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:3px">Panel mesas</div>
-        </button>
-      </div>
-      <button onclick="volverPais()" style="margin-top:16px;width:100%;padding:10px;background:none;border:1px solid rgba(255,255,255,.08);border-radius:12px;color:rgba(255,255,255,.4);font-size:12px;font-family:inherit;cursor:pointer">← Volver</button>
+    <div class="pin-dots">
+      <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
     </div>
-
-    <!-- PASO 3: PIN -->
-    <div id="stepPin" style="display:none">
-      <div class="pin-brand">
-        <div class="pin-orb" id="pinOrb">LZ</div>
-        <div class="pin-name" id="pinTitulo">LUZ IA</div>
-        <div class="pin-sub" id="pinSubtitulo">Ingresa tu PIN de 4 dígitos</div>
-      </div>
-      <div class="pin-dots">
-        <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
-        <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
-      </div>
-      <div class="pin-grid">
-        <div class="key" id="k1">1</div><div class="key" id="k2">2</div><div class="key" id="k3">3</div>
-        <div class="key" id="k4">4</div><div class="key" id="k5">5</div><div class="key" id="k6">6</div>
-        <div class="key" id="k7">7</div><div class="key" id="k8">8</div><div class="key" id="k9">9</div>
-        <div class="key empty"></div><div class="key" id="k0">0</div><div class="key del" id="kdel">&#9003;</div>
-      </div>
-      <div class="pin-err" id="pinErr"></div>
-      <button onclick="volverTipo()" style="margin-top:12px;width:100%;padding:10px;background:none;border:1px solid rgba(255,255,255,.08);border-radius:12px;color:rgba(255,255,255,.4);font-size:12px;font-family:inherit;cursor:pointer">← Volver</button>
+    <div class="pin-grid">
+      <div class="key" id="k1">1</div><div class="key" id="k2">2</div><div class="key" id="k3">3</div>
+      <div class="key" id="k4">4</div><div class="key" id="k5">5</div><div class="key" id="k6">6</div>
+      <div class="key" id="k7">7</div><div class="key" id="k8">8</div><div class="key" id="k9">9</div>
+      <div class="key empty"></div><div class="key" id="k0">0</div><div class="key del" id="kdel">&#9003;</div>
     </div>
-
-    <!-- PASO USA: Login/Registro CHARR -->
-    <div id="stepUSA" style="display:none">
-      <div class="pin-brand">
-        <div class="pin-orb">🇺🇸</div>
-        <div class="pin-name">CHARR TOWER</div>
-        <div class="pin-sub">USA · $24.99/month</div>
-      </div>
-      <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
-        <input id="usa-email" class="pin-input-field" type="email" placeholder="Email" autocomplete="email">
-        <input id="usa-pass" class="pin-input-field" type="password" placeholder="Password" autocomplete="current-password">
-        <div class="pin-err" id="usaErr"></div>
-        <button onclick="loginUSA()" style="padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:14px;color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;margin-top:4px">Sign In</button>
-        <div style="text-align:center;font-size:11px;color:rgba(255,255,255,.4)">Don't have an account?</div>
-        <button onclick="mostrarRegistroUSA()" style="padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;color:#c4b5fd;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Create CHARR account →</button>
-      </div>
-      <button onclick="volverPais()" style="margin-top:12px;width:100%;padding:10px;background:none;border:1px solid rgba(255,255,255,.08);border-radius:12px;color:rgba(255,255,255,.4);font-size:12px;font-family:inherit;cursor:pointer">← Back</button>
-    </div>
-
+    <div class="pin-err" id="pinErr"></div>
   </div>
 </div>
 
@@ -1965,110 +1834,15 @@ function ago(d){var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<
 function fmtHora(f){try{return new Date(f).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}catch(e){return "";}}
 
 // PIN
-// ── PANTALLA DE SELECCIÓN ────────────────────────────────────────────────────
-var paisActual = null;
-var tipoActual = "restaurante";
-
-function selPais(p){
-  paisActual = p;
-  if(p === "us"){
-    document.getElementById("stepPais").style.display="none";
-    document.getElementById("stepUSA").style.display="block";
-  } else {
-    document.getElementById("stepPais").style.display="none";
-    document.getElementById("stepTipo").style.display="block";
-  }
-}
-
-function selTipo(t){
-  tipoActual = t;
-  document.getElementById("stepTipo").style.display="none";
-  document.getElementById("stepPin").style.display="block";
-  var orb = document.getElementById("pinOrb");
-  var tit = document.getElementById("pinTitulo");
-  var sub = document.getElementById("pinSubtitulo");
-  if(t === "charr"){
-    if(orb) orb.textContent="🏮";
-    if(tit) tit.textContent="CHARR Tower";
-    if(sub) sub.textContent="Ingresa tu PIN CHARR";
-  } else {
-    if(orb) orb.textContent="LZ";
-    if(tit) tit.textContent="LUZ IA";
-    if(sub) sub.textContent="Ingresa tu PIN de restaurante";
-  }
-  pin=""; dots();
-}
-
-function volverPais(){
-  paisActual=null;
-  document.getElementById("stepUSA").style.display="none";
-  document.getElementById("stepTipo").style.display="none";
-  document.getElementById("stepPin").style.display="none";
-  document.getElementById("stepPais").style.display="block";
-}
-
-function volverTipo(){
-  pin=""; dots();
-  document.getElementById("stepPin").style.display="none";
-  document.getElementById("stepTipo").style.display="block";
-}
-
-async function loginUSA(){
-  var email=(document.getElementById("usa-email")||{value:""}).value.trim();
-  var pass=(document.getElementById("usa-pass")||{value:""}).value.trim();
-  var errEl=document.getElementById("usaErr");
-  if(!email||!pass){if(errEl)errEl.textContent="Enter email and password";return;}
-  if(errEl)errEl.textContent="Signing in...";
-  try{
-    var r=await fetch("/api/charr/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password:pass})});
-    var d=await r.json();
-    if(d.ok){
-      localStorage.setItem("charr_token",d.token);
-      localStorage.setItem("charr_account",JSON.stringify(d.account));
-      // Por ahora redirigir al panel CHARR (próximamente)
-      if(errEl)errEl.textContent="";
-      notif("✅ Welcome back, "+d.account.nombre_negocio+"!");
-    } else {
-      if(errEl)errEl.textContent=d.error||"Invalid credentials";
-    }
-  }catch(e){if(errEl)errEl.textContent="Connection error";}
-}
-
-function mostrarRegistroUSA(){
-  // Por ahora mostrar mensaje — el registro completo se construye con Stripe
-  var errEl=document.getElementById("usaErr");
-  if(errEl)errEl.textContent="";
-  notif("Registration coming soon! Contact us on WhatsApp to get started.","#f59e0b","🏮");
-  setTimeout(function(){
-    window.open("https://wa.me/573243387313?text=I+want+to+set+up+CHARR+TOWER","_blank");
-  },1500);
-}
-
 for(var _i=0;_i<=9;_i++){(function(n){var el=document.getElementById("k"+n);if(el)el.addEventListener("click",function(){pinKey(String(n));});}(_i));}
 document.getElementById("kdel").addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
-
-async function chkPin(){
-  var errEl=document.getElementById("pinErr");
-  if(tipoActual==="charr"){
-    try{
-      var r=await fetch("/api/charr/verify-pin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:pin})});
-      var d=await r.json();
-      if(d.ok){
-        localStorage.setItem("charr_account",JSON.stringify(d.account));
-        document.getElementById("pinScreen").style.display="none";
-        notif("✅ Bienvenido, "+d.account.nombre_negocio);
-      } else {
-        if(errEl)errEl.textContent="PIN incorrecto";
-        var b=document.querySelector(".pin-box");if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}
-        pin="";dots();
-      }
-    }catch(e){if(errEl)errEl.textContent="Error de conexión";pin="";dots();}
-  } else {
-    get("restaurantes","pin=eq."+pin+"&estado=eq.activo&select=*").then(function(d){
-      if(d&&d.length){enterApp(d[0]);}
-      else{if(errEl)errEl.textContent="PIN incorrecto";var b=document.querySelector(".pin-box");if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}pin="";dots();}
-    }).catch(function(){if(errEl)errEl.textContent="Error de conexion";pin="";dots();});
-  }
+function pinKey(k){if(pin.length>=4)return;pin+=k;dots();if(pin.length===4)setTimeout(chkPin,150);}
+function dots(){for(var i=0;i<4;i++){var d=document.getElementById("d"+i);if(d){i<pin.length?d.classList.add("filled"):d.classList.remove("filled");}}}
+function chkPin(){
+  get("restaurantes","pin=eq."+pin+"&estado=eq.activo&select=*").then(function(d){
+    if(d&&d.length>0){rest=d[0];goApp();}
+    else{document.getElementById("pinErr").textContent="PIN incorrecto";var b=document.querySelector(".pin-box");b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");document.getElementById("pinErr").textContent="";},500);pin="";dots();}
+  }).catch(function(){document.getElementById("pinErr").textContent="Error de conexion";pin="";dots();});
 }
 function goApp(){
   document.getElementById("pinScreen").style.display="none";
