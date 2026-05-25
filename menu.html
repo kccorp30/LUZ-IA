@@ -7,9 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="La Curva Menú">
+<meta name="apple-mobile-web-app-title" id="pwaTitle" content="Menú">
 <link rel="manifest" href="/manifest-menu.json">
-<title>La Curva Street Food</title>
+<title>Menú · LUZ IA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
@@ -133,6 +133,163 @@ body::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   opacity: 0.4;
   mix-blend-mode: overlay;
+}
+
+/* ═══ TEMA LUZ MORADO ═══ */
+[data-theme="luz"] {
+  --bg: #0d0a1a;
+  --bg-2: #13102a;
+  --bg-3: #1a1630;
+  --bg-elev: rgba(124,58,237,0.06);
+  --bg-elev-2: rgba(124,58,237,0.10);
+  --brand: #7c3aed;
+  --brand-2: #a78bfa;
+  --brand-dark: #4f46e5;
+  --brand-glow: rgba(124,58,237,0.45);
+  --hero-grad-1: #7c3aed;
+  --hero-grad-2: #4f46e5;
+  --hero-blob-1: rgba(124,58,237,0.25);
+  --hero-blob-2: rgba(79,70,229,0.15);
+}
+
+/* ═══ TEMA NARANJA STREET (default) ═══ */
+:root, [data-theme="street"] {
+  --hero-grad-1: #FF7A1A;
+  --hero-grad-2: #E65C0A;
+  --hero-blob-1: rgba(255,122,26,0.2);
+  --hero-blob-2: rgba(230,92,10,0.12);
+}
+
+/* ═══ HERO PREMIUM ═══ */
+.hero {
+  position: relative;
+  z-index: 1;
+  padding: 0;
+  overflow: hidden;
+}
+
+.hero-card {
+  position: relative;
+  margin: calc(60px + env(safe-area-inset-top)) 12px 0;
+  border-radius: 28px;
+  overflow: hidden;
+  background: linear-gradient(145deg, var(--bg-2), var(--bg-3));
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 20px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+  padding: 28px 22px 24px;
+  animation: heroIn 600ms var(--ease-smooth) backwards;
+}
+
+@keyframes heroIn {
+  from { opacity:0; transform:translateY(20px) scale(.97); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+
+/* Blobs decorativos dentro del hero */
+.hero-blob-a {
+  position: absolute;
+  width: 220px; height: 220px;
+  border-radius: 50%;
+  background: var(--hero-blob-1);
+  filter: blur(60px);
+  top: -60px; right: -40px;
+  pointer-events: none;
+  animation: blobFloat 6s ease-in-out infinite alternate;
+}
+.hero-blob-b {
+  position: absolute;
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: var(--hero-blob-2);
+  filter: blur(50px);
+  bottom: -40px; left: -20px;
+  pointer-events: none;
+  animation: blobFloat 8s ease-in-out infinite alternate-reverse;
+}
+@keyframes blobFloat {
+  from { transform: translate(0,0) scale(1); }
+  to   { transform: translate(10px,-10px) scale(1.08); }
+}
+
+/* Logo del restaurante en el hero */
+.hero-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+.hero-logo {
+  width: 60px; height: 60px;
+  border-radius: 18px;
+  object-fit: cover;
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 900; color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px var(--brand-glow), inset 0 1px 0 rgba(255,255,255,.2);
+  overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,.12);
+}
+.hero-logo img { width:100%; height:100%; object-fit:cover; border-radius:16px; }
+.hero-logo-info {}
+.hero-logo-name {
+  font-size: 20px; font-weight: 900;
+  letter-spacing: -.03em;
+  color: var(--text);
+  line-height: 1.1;
+}
+.hero-logo-tipo {
+  font-size: 11px; font-weight: 700;
+  color: var(--brand-2);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  margin-top: 3px;
+}
+
+/* Saludo */
+.hero-greet {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 20px;
+}
+.greet-label {
+  font-size: 11px;
+  color: var(--brand-2);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: 6px;
+}
+.greet-title {
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+.greet-sub {
+  font-size: 13px;
+  color: var(--t3);
+  margin-top: 5px;
+  font-weight: 500;
+}
+
+/* Tipo pedido dentro del hero card */
+.tipos {
+  position: relative;
+  z-index: 1;
+  margin-top: 0;
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(0,0,0,.25);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: fadeUp 400ms var(--ease-out) 200ms backwards;
 }
 
 /* ═══ Splash ═══ */
@@ -2490,13 +2647,14 @@ body::after {
 <body>
 
 <div id="splash">
-  <div class="splash-logo">LA CURVA</div>
+  <div class="splash-logo" id="splashLogo">●</div>
   <div class="splash-dot"></div>
 </div>
 
 <header class="hdr" id="hdr">
-  <div class="hdr-brand" id="hdrLogo">
-    <span class="p1">LA</span><span class="p2">CURVA</span>
+  <div class="hdr-brand" id="hdrLogo" style="display:flex;align-items:center;gap:8px">
+    <div id="restLogoTop" style="display:none;width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#f97316);flex-shrink:0;overflow:hidden;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff"></div>
+    <span id="restNombreTop" style="font-size:16px;font-weight:900;letter-spacing:-.01em">Menú</span>
   </div>
   <div class="hdr-actions">
     <button class="hdr-btn" onclick="abrirMisPedidos()" title="Mis pedidos">
@@ -2509,25 +2667,41 @@ body::after {
 </header>
 
 <section class="hero">
-  <div class="greet">
-    <div class="greet-label">La Curva · Street Food</div>
-    <h1 class="greet-title" id="heroGreet">Buenas 👋</h1>
-    <div class="greet-sub" id="heroSub">Pide tu favorito, llega rapidito</div>
+  <div class="hero-card" id="heroCard">
+    <div class="hero-blob-a"></div>
+    <div class="hero-blob-b"></div>
+
+    <!-- Logo + nombre del restaurante -->
+    <div class="hero-logo-wrap">
+      <div class="hero-logo" id="heroLogo">●</div>
+      <div class="hero-logo-info">
+        <div class="hero-logo-name" id="heroNombre">Cargando...</div>
+        <div class="hero-logo-tipo" id="heroTipo"></div>
+      </div>
+    </div>
+
+    <!-- Saludo personalizado -->
+    <div class="hero-greet">
+      <div class="greet-label" id="greetLabel">Cargando...</div>
+      <h1 class="greet-title" id="heroGreet">Buenas 👋</h1>
+      <div class="greet-sub" id="heroSub">Pide tu favorito, llega rapidito</div>
+    </div>
+
+    <!-- Tipo de pedido -->
+    <div class="tipos">
+      <button class="tipo-chip on" id="t-domi" onclick="setTipo('domicilio')">
+        <span class="ico">🛵</span> Domicilio
+      </button>
+      <button class="tipo-chip" id="t-rec" onclick="setTipo('recoger')">
+        <span class="ico">🏪</span> Recoger
+      </button>
+      <button class="tipo-chip hide" id="t-mesa" onclick="setTipo('mesa')">
+        <span class="ico">🍽️</span> Mesa
+      </button>
+    </div>
   </div>
 
-  <div class="tipos">
-    <button class="tipo-chip on" id="t-domi" onclick="setTipo('domicilio')">
-      <span class="ico">🛵</span> Domicilio
-    </button>
-    <button class="tipo-chip" id="t-rec" onclick="setTipo('recoger')">
-      <span class="ico">🏪</span> Recoger
-    </button>
-    <button class="tipo-chip hide" id="t-mesa" onclick="setTipo('mesa')">
-      <span class="ico">🍽️</span> Mesa
-    </button>
-  </div>
-
-  <div class="rew" onclick="abrirRewards()" id="rewBanner">
+  <div class="rew" onclick="abrirRewards()" id="rewBanner" style="margin:10px 12px 0">
     <div class="rew-ico">⭐</div>
     <div class="rew-info">
       <div class="rew-title" id="rewTitle">Acumula puntos con cada pedido</div>
@@ -2793,6 +2967,7 @@ var SK = "sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 // ── Estado global ──
 var tipoPedido = "domicilio";
 var rest = null;
+var restNomCorto = "nosotros";
 var menuItems = [];          // Productos desde Supabase
 var carrito = {};            // { id: { id, nombre, precio, qty, adic, salsa } }
 var catActiva = "todas";
@@ -2809,7 +2984,6 @@ var CLASICAS_FALLBACK = [
   { id:"cl_pollo", nombre:"La de Pollo", descripcion:"Pan brioche · ripio · lechuga · tomate · filete de pollo · tocineta · jamón", precio:19900, emoji:"🍗", imagen_url:null, categoria:"Hamburguesas Tradicionales" },
   { id:"cl_queso", nombre:"La Super Queso", descripcion:"Carne artesanal · pan brioche · lechuga · ripio · mucho queso fundido", precio:22900, emoji:"🧀", imagen_url:null, categoria:"Hamburguesas Tradicionales" },
   { id:"cl_doble", nombre:"La Doble Carne", descripcion:"Dos carnes · pan brioche · queso · tocinetas · jamón", precio:24900, emoji:"🍔", imagen_url:null, categoria:"Hamburguesas Tradicionales" },
-  { id:"cl_curva", nombre:"La Curva", descripcion:"Pan brioche · ripio · lechuga · carne · queso fundido · maicitos · tocineta", precio:29900, emoji:"🔥", imagen_url:null, categoria:"Hamburguesas Tradicionales" },
   { id:"cl_mega", nombre:"La Mega Especial", descripcion:"Carne artesanal · filetes de pollo · queso · lechuga · tomate · tocineta", precio:37900, emoji:"👑", imagen_url:null, categoria:"Hamburguesas Tradicionales" }
 ];
 var CLASICAS = [];
@@ -3093,7 +3267,7 @@ function renderDestacadosSection() {
   var h = '<section class="clasicas-section" id="sec-destacados">';
   h += '<div class="clasicas-header" style="background:linear-gradient(135deg,rgba(255,59,0,0.14) 0%,rgba(255,122,26,0.08) 100%);border-color:rgba(255,59,0,0.22)">';
   h += '<div class="clasicas-badge" style="background:linear-gradient(135deg,#FF3B00,#FF7A1A);">🔥 Más Vendidos</div>';
-  h += '<div class="clasicas-title">Los Favoritos de La Curva</div>';
+  h += '<div class="clasicas-title">Los Favoritos de '+restNomCorto+'</div>';
   h += '<div class="clasicas-sub">Lo que más piden nuestros clientes · ' + destacados.length + ' opción' + (destacados.length !== 1 ? 'es' : '') + '</div>';
   h += '</div>';
   h += '<div class="prods-grid">';
@@ -3109,7 +3283,7 @@ function renderClasicasSection() {
   var h = '<section class="clasicas-section" id="sec-clasicas">';
   h += '<div class="clasicas-header">';
   h += '<div class="clasicas-badge">🔥 Tradicionales</div>';
-  h += '<div class="clasicas-title">Las Clásicas de La Curva</div>';
+  h += '<div class="clasicas-title">Las Clásicas de '+restNomCorto+'</div>';
   h += '<div class="clasicas-sub">Las de toda la vida, hechas artesanales · ' + CLASICAS.length + ' opciones</div>';
   h += '</div>';
   h += '<div class="prods-grid">';
@@ -4789,8 +4963,62 @@ window.addEventListener("load", async function() {
     return;
   }
 
-  // Aplicar config del restaurante
-  if (rest.nombre) document.title = rest.nombre + " · Menú";
+  // ── Aplicar identidad del restaurante ────────────────────────────────────
+  var restNom = rest.nombre || "Menú";
+  var restNomCorto = restNom.split(" ").slice(0,2).join(" ");
+  window.restNomCorto = restNomCorto;
+  var logoUrl = rest.logo_url || null;
+
+  // ── Tema visual — "luz" = morado LUZ IA, "street" = naranja (default) ──
+  var tema = rest.menu_tema || "street";
+  document.documentElement.setAttribute("data-theme", tema);
+
+  // Título
+  document.title = restNom + " · Menú";
+
+  // ── Hero card — logo, nombre, tipo ──
+  var heroLogoEl = document.getElementById("heroLogo");
+  if (heroLogoEl) {
+    heroLogoEl.style.background = "linear-gradient(135deg, var(--brand), var(--brand-dark))";
+    if (logoUrl) {
+      heroLogoEl.innerHTML = '<img src="'+logoUrl+'" style="width:100%;height:100%;object-fit:cover;border-radius:16px" onerror="this.remove()">';
+    } else {
+      heroLogoEl.textContent = restNom.substring(0,2).toUpperCase();
+    }
+  }
+  var heroNomEl = document.getElementById("heroNombre");
+  if (heroNomEl) heroNomEl.textContent = restNom;
+  var heroTipoEl = document.getElementById("heroTipo");
+  if (heroTipoEl) heroTipoEl.textContent = rest.tipo_comida || "";
+
+  // Splash logo — muestra logo si existe, sino nombre en mayúsculas
+  var splashEl = document.getElementById("splashLogo");
+  if (splashEl) {
+    if (logoUrl) {
+      splashEl.innerHTML = '<img src="'+logoUrl+'" style="width:80px;height:80px;border-radius:18px;object-fit:cover;box-shadow:0 8px 32px rgba(0,0,0,.5)" onerror="this.parentNode.textContent=\''+restNom.toUpperCase().substring(0,8)+'\'">';
+    } else {
+      splashEl.textContent = restNom.toUpperCase().substring(0, 10);
+    }
+  }
+
+  // Greet label
+  var greetEl = document.getElementById("greetLabel");
+  if (greetEl) greetEl.textContent = restNom + (rest.tipo_comida ? " · " + rest.tipo_comida : "");
+
+  // Header topbar — logo + nombre
+  var logoTop = document.getElementById("restLogoTop");
+  var nomTop = document.getElementById("restNombreTop");
+  if (logoTop) {
+    if (logoUrl) {
+      logoTop.innerHTML = '<img src="'+logoUrl+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'">';
+    } else {
+      logoTop.textContent = restNom.substring(0,2).toUpperCase();
+    }
+    logoTop.style.display = "flex";
+  }
+  if (nomTop) nomTop.textContent = restNom;
+
+  // Hero slogan
   if (rest.hero_slogan) {
     var sub = document.getElementById("heroSub");
     if (sub) sub.textContent = rest.hero_slogan;
