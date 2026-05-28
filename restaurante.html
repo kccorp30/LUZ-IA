@@ -2023,7 +2023,7 @@ function mostrarRegistroUSA(){
 }
 
 // ── PIN FUNCTIONS ─────────────────────────────────────────────────────────────
-var pin = "";
+// (pin ya declarado como var rest=null,pin="" arriba — no redeclarar)
 function pinKey(k){if(pin.length>=4)return;pin+=k;dots();if(pin.length===4)setTimeout(chkPin,150);}
 function dots(){for(var i=0;i<4;i++){var d=document.getElementById("d"+i);if(d){i<pin.length?d.classList.add("filled"):d.classList.remove("filled");}}}
 
@@ -2047,10 +2047,27 @@ async function chkPin(){
       }
     }catch(e){if(errEl)errEl.textContent="Error de conexión";pin="";dots();}
   } else {
-    get("restaurantes","pin=eq."+pin+"&estado=eq.activo&select=*").then(function(d){
-      if(d&&d.length){enterApp(d[0]);}
-      else{if(errEl)errEl.textContent="PIN incorrecto";var b=document.querySelector(".pin-box");if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}pin="";dots();}
-    }).catch(function(){if(errEl)errEl.textContent="Error de conexion";pin="";dots();});
+    // Buscar por PIN — acepta activo O trial (no bloqueados)
+    get("restaurantes","pin=eq."+pin+"&select=*").then(function(d){
+      if(d&&d.length){
+        var r=d[0];
+        // Rechazar solo si está explícitamente suspendido
+        if(r.estado==="suspendido"){
+          if(errEl)errEl.textContent="Cuenta suspendida. Contacta a LUZ IA.";
+          pin="";dots();return;
+        }
+        enterApp(r);
+      } else {
+        if(errEl)errEl.textContent="PIN incorrecto";
+        var b=document.querySelector(".pin-box");
+        if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}
+        pin="";dots();
+      }
+    }).catch(function(e){
+      console.error("[chkPin] error:",e);
+      if(errEl)errEl.textContent="Error de conexión. Verifica tu internet.";
+      pin="";dots();
+    });
   }
 }
 // ── MOSTRAR PANTALLA AL CARGAR ───────────────────────────────────────────────
@@ -2061,6 +2078,12 @@ async function chkPin(){
   var step = document.getElementById("stepPais");
   if(step) step.style.display="block";
 })();
+
+// ── ENTER APP — setea el restaurante y abre el panel ─────────────────────────
+function enterApp(restauranteData){
+  rest = restauranteData;
+  goApp();
+}
 
 function goApp(){
   document.getElementById("pinScreen").style.display="none";
