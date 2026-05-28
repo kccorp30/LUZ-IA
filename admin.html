@@ -1323,18 +1323,25 @@ async function loadClientes(){
   var tbl=document.getElementById("cliTable");
   tbl.innerHTML='<div class="loading"><span class="spin">↺</span> Cargando restaurantes...</div>';
   try{
-    // Intentar con columnas mínimas que siempre existen
-    var res=await fetch("/api/admin/sb/restaurantes?select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,tipo_negocio,pin,whatsapp_phone_id&order=nombre",{headers:authH()});
-    if(res.status===401){logout();return;}
-    var txt=await res.text();
-    if(!res.ok){
-      // Si falla con tipo_negocio (columna no existe aún), reintentar sin ella
-      var res2=await fetch("/api/admin/sb/restaurantes?select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,pin,whatsapp_phone_id&order=nombre",{headers:authH()});
-      txt=await res2.text();
-      if(!res2.ok) throw new Error("HTTP "+res2.status+": "+txt.slice(0,120));
+    var queries=[
+      "select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,tipo_negocio,pin,whatsapp_phone_id&order=nombre",
+      "select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,pin,whatsapp_phone_id&order=nombre",
+      "select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,pin&order=nombre"
+    ];
+    var data=null;
+    for(var qi=0;qi<queries.length;qi++){
+      var res=await fetch("/api/admin/sb/restaurantes?"+queries[qi],{headers:authH()});
+      if(res.status===401){logout();return;}
+      var txt=await res.text();
+      if(res.ok){
+        try{data=JSON.parse(txt);}catch(pe){throw new Error("JSON inválido: "+txt.slice(0,80));}
+        break;
+      }
+      // si es el último intento, lanzar error
+      if(qi===queries.length-1) throw new Error("HTTP "+res.status+": "+txt.slice(0,120));
     }
-    todosC=txt?JSON.parse(txt):[];
-    if(!Array.isArray(todosC)) throw new Error("Respuesta inesperada: "+JSON.stringify(todosC).slice(0,80));
+    if(!Array.isArray(data)) throw new Error("Respuesta inesperada del servidor");
+    todosC=data;
     CACHE=todosC;
     renderCliTabla(todosC);
   }catch(e){
