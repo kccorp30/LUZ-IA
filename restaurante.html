@@ -2048,6 +2048,15 @@ async function chkPin(){
     }).catch(function(){if(errEl)errEl.textContent="Error de conexion";pin="";dots();});
   }
 }
+// ── MOSTRAR PANTALLA AL CARGAR ───────────────────────────────────────────────
+(function initPantalla(){
+  var ps = document.getElementById("pinScreen");
+  if(ps){ ps.style.display="flex"; }
+  // Pre-seleccionar paso 1
+  var step = document.getElementById("stepPais");
+  if(step) step.style.display="block";
+})();
+
 function goApp(){
   document.getElementById("pinScreen").style.display="none";
   document.getElementById("app").style.display="block";
