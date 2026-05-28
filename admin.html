@@ -1976,7 +1976,7 @@ document.querySelectorAll(".mov").forEach(function(o){o.addEventListener("click"
 </script>
 <button id="adminPwaBtn" onclick="instAdminPWA()" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9000;padding:10px 16px;border-radius:50px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;font-size:11px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 4px 16px rgba(124,58,237,.5)">📲 Instalar app</button>
 <script>
-if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){});}
+// Service Worker desactivado — causaba interceptación de API calls
 var _adPWA=null;
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();_adPWA=e;document.getElementById('adminPwaBtn').style.display='block';});
 function instAdminPWA(){if(!_adPWA)return;_adPWA.prompt();_adPWA.userChoice.then(function(){_adPWA=null;document.getElementById('adminPwaBtn').style.display='none';});}
