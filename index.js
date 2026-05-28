@@ -1470,7 +1470,7 @@ app.get("/api/plan-features", async function(req, res) {
   if (!restaurante_id) return res.json({ plan: "basico", features: PLAN_FEATURES.basico });
   try {
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-    var r = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=plan,estado,suscripcion_estado,fecha_vencimiento", {
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=plan,estado,suscripcion_estado,fecha_vencimiento,tipo_negocio", {
       headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey }
     });
     var rest = r.data && r.data[0];
@@ -1639,8 +1639,8 @@ function verifyToken(token) {
     var sig = crypto.createHmac("sha256", ADMIN_SECRET).update(payload).digest("hex");
     if (sig !== parts[1]) return null;
     var data = JSON.parse(payload);
-    // Token valid for 24h
-    if (Date.now() - data.ts > 24 * 60 * 60 * 1000) return null;
+    // Token valid for 7 days
+    if (Date.now() - data.ts > 7 * 24 * 60 * 60 * 1000) return null;
     return data;
   } catch (e) { return null; }
 }
@@ -1655,6 +1655,23 @@ function requireAdmin(req, res, next) {
   req.adminUser = user;
   next();
 }
+
+// ── REFRESH TOKEN ─────────────────────────────────────────────────────────────
+app.post("/api/admin/refresh-token", requireAdmin, function(req, res) {
+  var newToken = generateToken(req.adminUser.id, req.adminUser.rol);
+  res.json({ ok: true, token: newToken });
+});
+
+app.get("/api/admin/me", requireAdmin, async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/usuarios_sistema?id=eq." + req.adminUser.id + "&select=id,nombre,email,telefono,rol&limit=1",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    var user = r.data && r.data[0];
+    if (user) res.json({ ok: true, user: user });
+    else res.json({ ok: true, user: { id: req.adminUser.id, rol: req.adminUser.rol } });
+  } catch(e) { res.json({ ok: true, user: { id: req.adminUser.id, rol: req.adminUser.rol } }); }
+});
 
 app.post("/api/admin/login", async function(req, res) {
   var { email, password } = req.body;
