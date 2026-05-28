@@ -1416,6 +1416,111 @@ app.post("/api/admin/sistema-ia", requireAdmin, async function(req, res) {
 });
 
 // ── CHARR TOWER USA — Endpoints base ─────────────────────────────────────────
+
+// ── CHARR: Estado de mesa (consultado por el ESP32) ──────────────────────────
+app.get("/api/charr/estado", async function(req, res) {
+  try {
+    var pin = req.query.pin;
+    if (!pin) return res.json({ ok: false, error: "PIN requerido" });
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    // Buscar la mesa asociada al PIN del CHARR
+    try {
+      var r = await axios.get(
+        SUPABASE_URL + "/rest/v1/charr_mesas?pin=eq." + pin + "&select=estado,nombre,numero&limit=1",
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+      );
+      if (r.data && r.data.length) {
+        res.json({ ok: true, estado: r.data[0].estado || "libre", mesa: r.data[0].nombre });
+      } else {
+        // Si no existe tabla aún, devolver libre
+        res.json({ ok: true, estado: "libre" });
+      }
+    } catch(e) {
+      res.json({ ok: true, estado: "libre" }); // Tabla no existe aún
+    }
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── CHARR: TTS — genera audio vía ElevenLabs y devuelve URL ──────────────────
+app.post("/api/charr/tts", async function(req, res) {
+  try {
+    var { texto, pin } = req.body;
+    if (!texto) return res.status(400).json({ ok: false, error: "Texto requerido" });
+
+    var ELEVEN_KEY = process.env.ELEVENLABS_API_KEY;
+    if (!ELEVEN_KEY) {
+      // Sin ElevenLabs: devolver beep de fallback
+      return res.json({ ok: false, error: "ElevenLabs no configurado", fallback: true });
+    }
+
+    // Voice ID de Luz (configurable en Railway como CHARR_VOICE_ID)
+    var voiceId = process.env.CHARR_VOICE_ID || "EXAVITQu4vr4xnSDxMaL"; // Sarah (voz clara en español)
+
+    // Llamar a ElevenLabs API
+    var elevenRes = await axios.post(
+      "https://api.elevenlabs.io/v1/text-to-speech/" + voiceId + "/stream",
+      {
+        text: texto,
+        model_id: "eleven_multilingual_v2",
+        voice_settings: { stability: 0.5, similarity_boost: 0.85, style: 0.3, use_speaker_boost: true }
+      },
+      {
+        headers: {
+          "xi-api-key": ELEVEN_KEY,
+          "Content-Type": "application/json",
+          "Accept": "audio/mpeg"
+        },
+        responseType: "arraybuffer"
+      }
+    );
+
+    // Subir el audio a Supabase Storage y devolver URL pública
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var fileName = "charr-tts-" + Date.now() + ".mp3";
+
+    await axios.post(
+      SUPABASE_URL + "/storage/v1/object/media/charr-tts/" + fileName,
+      elevenRes.data,
+      {
+        headers: {
+          "apikey": svcKey,
+          "Authorization": "Bearer " + svcKey,
+          "Content-Type": "audio/mpeg",
+          "x-upsert": "true"
+        }
+      }
+    );
+
+    var audioUrl = SUPABASE_URL + "/storage/v1/object/public/media/charr-tts/" + fileName;
+    console.log("[CHARR TTS] ✅ Audio generado:", fileName);
+    res.json({ ok: true, audio_url: audioUrl });
+
+  } catch(e) {
+    console.error("[CHARR TTS]", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ── CHARR: Cambiar estado de mesa (desde el panel web) ───────────────────────
+app.post("/api/charr/set-estado", async function(req, res) {
+  try {
+    var { pin, estado } = req.body;
+    if (!pin || !estado) return res.status(400).json({ ok: false, error: "Faltan datos" });
+    var estadosValidos = ["libre","ocupada","preparando","listo","servido","cuenta","celebracion"];
+    if (!estadosValidos.includes(estado)) return res.status(400).json({ ok: false, error: "Estado inválido" });
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    try {
+      await axios.patch(
+        SUPABASE_URL + "/rest/v1/charr_mesas?pin=eq." + pin,
+        { estado: estado, updated_at: new Date().toISOString() },
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+      );
+      res.json({ ok: true });
+    } catch(e) { res.json({ ok: false, error: "Tabla no existe aún" }); }
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+
 app.post("/api/charr/verify-pin", async function(req, res) {
   try {
     var pin = req.body.pin;
@@ -1714,6 +1819,30 @@ app.get("/api/admin/verify", function(req, res) {
   var user = verifyToken(token);
   if (user) res.json({ ok: true, user: user });
   else res.json({ ok: false });
+});
+
+// ── RESTAURANTES DIRECTO (alternativa al proxy sb) ───────────────────────────
+app.get("/api/admin/restaurantes", requireAdmin, async function(req, res) {
+  try {
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/restaurantes?select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,tipo_negocio,pin&order=nombre",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    res.json(r.data || []);
+  } catch(e) {
+    // Intentar sin tipo_negocio si la columna no existe
+    try {
+      var svcKey2 = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+      var r2 = await axios.get(
+        SUPABASE_URL + "/rest/v1/restaurantes?select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,pin&order=nombre",
+        { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2 } }
+      );
+      res.json(r2.data || []);
+    } catch(e2) {
+      res.status(500).json({ error: e2.message });
+    }
+  }
 });
 
 app.get("/api/admin/dashboard", requireAdmin, async function(req, res) {
