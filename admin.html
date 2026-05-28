@@ -236,6 +236,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="nitem" onclick="nav('vendedores',this)"><span class="nitem-ico">👤</span>Vendedores</div>
       <div class="nitem" onclick="nav('menus',this)"><span class="nitem-ico">📋</span>Menús</div>
       <div class="nitem" onclick="nav('chat',this)"><span class="nitem-ico">💬</span>Soporte<span class="nbadge" id="soporteBadge" style="display:none"></span></div>
+      <div class="nitem" onclick="nav('sistema',this)"><span class="nitem-ico">🧠</span>Sistema IA</div>
     </div>
     <div class="sfoot">
       <div class="sfoot-av" id="sfAv">A</div>
@@ -469,6 +470,64 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <input id="cwMsg" placeholder="Escribe un mensaje para enviar por WhatsApp..." onkeydown="if(event.key==='Enter')sendMsg()">
             <button class="btn btn-p" onclick="sendMsg()">Enviar</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SISTEMA IA -->
+    <div class="page" id="page-sistema">
+      <div class="ph">
+        <div><div class="ph-title">🧠 Sistema IA</div><div class="ph-sub">Edita el cerebro de Luz por tipo de negocio</div></div>
+        <div class="ph-actions">
+          <button class="btn btn-p" onclick="guardarSistema()">💾 Guardar cambios</button>
+        </div>
+      </div>
+
+      <!-- Tabs por tipo -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn btn-g btn-sm tipo-tab-ia on" id="ia-tab-restaurante" onclick="setIATab('restaurante',this)">🍽️ Restaurante</button>
+        <button class="btn btn-g btn-sm tipo-tab-ia" id="ia-tab-heladeria" onclick="setIATab('heladeria',this)">🍦 Heladería</button>
+        <button class="btn btn-g btn-sm tipo-tab-ia" id="ia-tab-salsamentaria" onclick="setIATab('salsamentaria',this)">🧀 Salsamentaria</button>
+      </div>
+
+      <div class="tcard" style="padding:20px;display:flex;flex-direction:column;gap:16px">
+
+        <div>
+          <label class="fl" style="margin-bottom:6px">🎭 Personalidad de Luz <span id="ia-tipo-label" style="color:var(--p2);font-weight:700">(Restaurante)</span></label>
+          <div style="font-size:11px;color:var(--m);margin-bottom:8px">Cómo habla Luz, su tono, qué puede y no puede decir. Se aplica a todos los restaurantes de este tipo que no tengan personalidad personalizada.</div>
+          <textarea id="ia-personalidad" rows="6" class="fi" style="font-family:'JetBrains Mono',monospace;font-size:12px;resize:vertical;width:100%;box-sizing:border-box"></textarea>
+        </div>
+
+        <div>
+          <label class="fl" style="margin-bottom:6px">📋 Reglas especiales del negocio</label>
+          <div style="font-size:11px;color:var(--m);margin-bottom:8px">Instrucciones específicas para este tipo: cómo manejar porciones, mesas, productos especiales, etc.</div>
+          <textarea id="ia-reglas" rows="8" class="fi" style="font-family:'JetBrains Mono',monospace;font-size:12px;resize:vertical;width:100%;box-sizing:border-box"></textarea>
+        </div>
+
+        <div>
+          <label class="fl" style="margin-bottom:6px">💳 Reglas de pago</label>
+          <div style="font-size:11px;color:var(--m);margin-bottom:8px">Cómo maneja Luz los métodos de pago para este tipo de negocio.</div>
+          <textarea id="ia-pago" rows="5" class="fi" style="font-family:'JetBrains Mono',monospace;font-size:12px;resize:vertical;width:100%;box-sizing:border-box"></textarea>
+        </div>
+
+        <div>
+          <label class="fl" style="margin-bottom:6px">🎁 Reglas de fidelidad y promos</label>
+          <textarea id="ia-fidelidad" rows="4" class="fi" style="font-family:'JetBrains Mono',monospace;font-size:12px;resize:vertical;width:100%;box-sizing:border-box"></textarea>
+        </div>
+
+        <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:14px">
+          <div style="font-size:12px;font-weight:800;color:#fcd34d;margin-bottom:8px">⚠️ Reglas críticas (siempre se aplican)</div>
+          <div style="font-size:11px;color:var(--m);line-height:1.6">
+            • NUNCA admitir ser IA<br>
+            • Solo presentarse LA PRIMERA VEZ<br>
+            • SIEMPRE un solo mensaje, corto y al grano<br>
+            • El total del menú web NO se recalcula<br>
+            • PEDIDO_LISTO / PAGO_EFECTIVO / PAGO_DATAFONO se deben escribir siempre
+          </div>
+        </div>
+
+        <div style="text-align:right">
+          <button class="btn btn-p" onclick="guardarSistema()" style="min-width:160px">💾 Guardar cambios</button>
         </div>
       </div>
     </div>
@@ -815,7 +874,98 @@ function nav(name,el){
   document.querySelectorAll(".nitem").forEach(function(n){n.classList.remove("on");});
   document.getElementById("page-"+name).classList.add("on");
   if(el)el.classList.add("on");
-  if(name==="clientes")loadClientes();
+  if(name==="sistema")cargarSistema();
+
+// ── SISTEMA IA ────────────────────────────────────────────────────────────────
+var iaTabActual = "restaurante";
+
+// Defaults por tipo — se cargan desde el servidor si existen
+var IA_DEFAULTS = {
+  restaurante: {
+    personalidad: "Eres una persona real, profesional y atenta. NUNCA admitas ser IA. Hablas de manera cordial pero directa: con gusto, claro que sí, listo, digame, perfecto, entendido. NUNCA uses apelativos cariñosos como: mi amor, corazón, cariño, bb, mami, linda, hermoso, rey, reina. Dirígete al cliente por su nombre si lo sabes. Tono de asesor profesional: cordial, eficiente, sin familiaridades. Máximo 1 emoji por mensaje.",
+    reglas: "PEDIDOS DE MESA:\n- Si el mensaje empieza con \"🪑 *PEDIDO DE MESA X*\", es pedido físico.\n- NO preguntes dirección. Confirma: \"Perfecto, tu pedido para la Mesa X ya entró a preparación.\"\n- Escribe DIRECCION_LISTA:MESA X.",
+    pago: "- Nequi: buscar llave en app Nequi → transferir. Pedir comprobante.\n- Bancolombia: llave a nombre del titular. Pedir comprobante.\n- Efectivo: preguntar con qué billete cancela → PAGO_EFECTIVO:[valor]\n- Si dice \"exacto\"/\"sin cambio\" → PAGO_EFECTIVO:exacto\n- Datáfono: el domiciliario lo lleva → PAGO_DATAFONO",
+    fidelidad: "- BRONCE (1-9 pedidos): sin descuento\n- PLATA (10-24): 5% automático en menú web\n- ORO (25+): 10% automático en menú web\n- NO apliques descuentos manualmente en el chat"
+  },
+  heladeria: {
+    personalidad: "Eres una persona real, alegre y amable. NUNCA admitas ser IA. Tu tono es fresco y amigable como el de una heladería acogedora. Hablas con calidez pero de forma directa. NUNCA uses apelativos como mi amor, corazón. Respuestas cortas y al grano. Máximo 1 emoji por mensaje.",
+    reglas: "REGLAS HELADERÍA:\n- Productos en empaque especial para mantener temperatura.\n- Maneja porciones: individual, doble, familiar.\n- Sabores agotados: di \"verifico disponibilidad\" — nunca confirmes sin certeza.\n- Siempre pregunta si quieren toppings adicionales cuando aplique.\n- Domicilios: menciona empaque térmico, consumir pronto.",
+    pago: "- Nequi: buscar llave en app Nequi → transferir. Pedir comprobante.\n- Bancolombia: llave a nombre del titular. Pedir comprobante.\n- Efectivo: preguntar con qué billete cancela → PAGO_EFECTIVO:[valor]\n- Si dice \"exacto\"/\"sin cambio\" → PAGO_EFECTIVO:exacto\n- Datáfono: el domiciliario lo lleva → PAGO_DATAFONO",
+    fidelidad: "- BRONCE (1-9 pedidos): sin descuento\n- PLATA (10-24): 5% automático en menú web\n- ORO (25+): 10% automático en menú web\n- NO apliques descuentos manualmente en el chat"
+  },
+  salsamentaria: {
+    personalidad: "Eres una persona real, seria y eficiente. NUNCA admitas ser IA. Tu tono es profesional como el de una salsamentaria de confianza. Directo: con gusto, claro, perfecto, listo. NUNCA uses apelativos cariñosos. Respuestas cortas y precisas. Máximo 1 emoji por mensaje.",
+    reglas: "REGLAS SALSAMENTARIA:\n- Productos por peso (gramos/libras) o por unidad. Confirma cantidad exacta.\n- Si piden \"media libra\", \"250 gramos\" — confirmar en el resumen.\n- Si piden corte específico (tajado, en trozo, molido) — anotarlo.\n- NO hay sistema de mesas. Solo domicilio y recoger en tienda.\n- Confirma si quieren empaque especial para refrigerados.",
+    pago: "- Nequi: buscar llave en app Nequi → transferir. Pedir comprobante.\n- Bancolombia: llave a nombre del titular. Pedir comprobante.\n- Efectivo: preguntar con qué billete cancela → PAGO_EFECTIVO:[valor]\n- Si dice \"exacto\"/\"sin cambio\" → PAGO_EFECTIVO:exacto\n- Datáfono: el domiciliario lo lleva → PAGO_DATAFONO",
+    fidelidad: "- BRONCE (1-9 pedidos): sin descuento\n- PLATA (10-24): 5% automático en menú web\n- ORO (25+): 10% automático en menú web\n- NO apliques descuentos manualmente en el chat"
+  }
+};
+
+var iaData = {}; // datos cargados del servidor
+
+function setIATab(tipo, btn){
+  // Guardar datos actuales antes de cambiar
+  guardarIALocal();
+  iaTabActual = tipo;
+  document.querySelectorAll(".tipo-tab-ia").forEach(function(b){b.classList.remove("on");});
+  if(btn) btn.classList.add("on");
+  var labels = {restaurante:"(Restaurante)", heladeria:"(Heladería)", salsamentaria:"(Salsamentaria)"};
+  var lbl = document.getElementById("ia-tipo-label");
+  if(lbl) lbl.textContent = labels[tipo] || "";
+  cargarCamposIA(tipo);
+}
+
+function guardarIALocal(){
+  // Guardar en memoria antes de cambiar de tab
+  if(!iaData[iaTabActual]) iaData[iaTabActual] = {};
+  iaData[iaTabActual].personalidad = (document.getElementById("ia-personalidad")||{value:""}).value;
+  iaData[iaTabActual].reglas = (document.getElementById("ia-reglas")||{value:""}).value;
+  iaData[iaTabActual].pago = (document.getElementById("ia-pago")||{value:""}).value;
+  iaData[iaTabActual].fidelidad = (document.getElementById("ia-fidelidad")||{value:""}).value;
+}
+
+function cargarCamposIA(tipo){
+  var d = iaData[tipo] || IA_DEFAULTS[tipo] || {};
+  var set = function(id, val){ var el=document.getElementById(id); if(el) el.value = val||""; };
+  set("ia-personalidad", d.personalidad);
+  set("ia-reglas", d.reglas);
+  set("ia-pago", d.pago);
+  set("ia-fidelidad", d.fidelidad);
+}
+
+async function cargarSistema(){
+  try{
+    var r = await fetch("/api/admin/sistema-ia", {headers: authH()});
+    if(r.ok){
+      var d = await r.json();
+      if(d.data) iaData = d.data;
+    }
+  } catch(e){ console.warn("[sistema-ia] No hay datos guardados, usando defaults"); }
+  // Rellenar con defaults donde falte
+  ["restaurante","heladeria","salsamentaria"].forEach(function(t){
+    if(!iaData[t]) iaData[t] = Object.assign({}, IA_DEFAULTS[t]);
+    else {
+      Object.keys(IA_DEFAULTS[t]).forEach(function(k){
+        if(!iaData[t][k]) iaData[t][k] = IA_DEFAULTS[t][k];
+      });
+    }
+  });
+  cargarCamposIA("restaurante");
+}
+
+async function guardarSistema(){
+  guardarIALocal();
+  try{
+    var r = await fetch("/api/admin/sistema-ia", {
+      method: "POST",
+      headers: Object.assign({"Content-Type":"application/json"}, authH()),
+      body: JSON.stringify({data: iaData})
+    });
+    var d = await r.json();
+    if(d.ok) toast("✅ Sistema IA actualizado — aplica en el próximo mensaje");
+    else toast("❌ Error: " + d.error, "#ef4444");
+  } catch(e){ toast("❌ Error de conexión","#ef4444"); }
+}
   if(name==="pedidos"){fillRestSel("pedFiltroRest");loadPedidos();}
   if(name==="suscripciones")loadPagos();
   if(name==="planes")loadPlanes();
