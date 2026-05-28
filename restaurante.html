@@ -2022,6 +2022,11 @@ function mostrarRegistroUSA(){
   },1500);
 }
 
+// ── PIN FUNCTIONS ─────────────────────────────────────────────────────────────
+var pin = "";
+function pinKey(k){if(pin.length>=4)return;pin+=k;dots();if(pin.length===4)setTimeout(chkPin,150);}
+function dots(){for(var i=0;i<4;i++){var d=document.getElementById("d"+i);if(d){i<pin.length?d.classList.add("filled"):d.classList.remove("filled");}}}
+
 for(var _i=0;_i<=9;_i++){(function(n){var el=document.getElementById("k"+n);if(el)el.addEventListener("click",function(){pinKey(String(n));});}(_i));}
 document.getElementById("kdel").addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
 
