@@ -108,23 +108,47 @@ function procesarEnCola(from, tarea) {
 
 function nextOrderNumber() { return ++orderCounter; }
 
-// ── PLANES Y PRECIOS LUZ IA ────────────────────────────────────────────────
+// ── PLANES Y PRECIOS LUZ IA ─────────────────────────────────────────────────
+// Restaurante + Heladería (planes iguales con CHARR)
 var PLANES_LUZ = {
-  basico:       { nombre: "Básico",       precio: 159000, pago15: 79500,  charr: 0, sucursales: 1, tablets: 0 },
-  emprendedor:  { nombre: "Emprendedor",  precio: 320000, pago15: 160000, charr: 3, sucursales: 1, tablets: 0 },
-  dominante:    { nombre: "Dominante",    precio: 460000, pago15: 230000, charr: 5, sucursales: 1, tablets: 1 },
-  empresarial:  { nombre: "Empresarial",  precio: 760000, pago15: 380000, charr: 10,sucursales: 3, tablets: 2 }
+  basico:      { nombre:"Básico",      precio:230000,  pago15:115000,  charr:0,  sucursales:1, tablets:0 },
+  emprendedor: { nombre:"Emprendedor", precio:340000,  pago15:170000,  charr:3,  sucursales:1, tablets:0 },
+  dominante:   { nombre:"Dominante",   precio:560000,  pago15:280000,  charr:5,  sucursales:1, tablets:1 },
+  empresarial: { nombre:"Empresarial", precio:890000,  pago15:445000,  charr:10, sucursales:3, tablets:2 }
 };
-// Funciones por plan (qué está INCLUIDO)
+// Salsamentaria — sin CHARR, sin mesas, precios diferentes
+var PLANES_SALSA = {
+  basico:      { nombre:"Básico",      precio:230000,  pago15:115000, charr:0, sucursales:1 },
+  emprendedor: { nombre:"Emprendedor", precio:340000,  pago15:170000, charr:0, sucursales:1 },
+  empresarial: { nombre:"Empresarial", precio:890000,  pago15:445000, charr:0, sucursales:3 }
+};
+
+// Features por plan — restaurante y heladería
 var PLAN_FEATURES = {
   basico:      ["menu","whatsapp","pedidos"],
-  emprendedor: ["menu","whatsapp","pedidos","cocina","domiciliarios","meseros","charr"],
-  dominante:   ["menu","whatsapp","pedidos","cocina","domiciliarios","meseros","charr","tablet_cocina"],
-  empresarial: ["menu","whatsapp","pedidos","cocina","domiciliarios","meseros","charr","tablet_cocina","multi_sucursal","promos","fidelizacion","reportes"]
+  emprendedor: ["menu","whatsapp","pedidos","cocina","domiciliarios","meseros","charr","promos","fidelizacion"],
+  dominante:   ["menu","whatsapp","pedidos","cocina","domiciliarios","meseros","charr","promos","fidelizacion","tablet_cocina","reportes"],
+  empresarial: ["menu","whatsapp","pedidos","cocina","domiciliarios","meseros","charr","promos","fidelizacion","tablet_cocina","reportes","multi_sucursal"]
 };
-function planTieneFeature(plan, feature) {
-  var feats = PLAN_FEATURES[plan] || PLAN_FEATURES.basico;
-  return feats.includes(feature);
+// Features salsamentaria — sin mesas ni CHARR
+var PLAN_FEATURES_SALSA = {
+  basico:      ["menu","whatsapp","pedidos"],
+  emprendedor: ["menu","whatsapp","pedidos","cocina","domiciliarios","promos","fidelizacion"],
+  empresarial: ["menu","whatsapp","pedidos","cocina","domiciliarios","promos","fidelizacion","reportes","multi_sucursal"]
+};
+
+// Retorna los features según tipo de negocio
+function getPlanFeatures(plan, tipoNegocio) {
+  if (tipoNegocio === "salsamentaria") return PLAN_FEATURES_SALSA[plan] || PLAN_FEATURES_SALSA.basico;
+  return PLAN_FEATURES[plan] || PLAN_FEATURES.basico;
+}
+// Retorna los precios según tipo de negocio
+function getPlanesConfig(tipoNegocio) {
+  if (tipoNegocio === "salsamentaria") return PLANES_SALSA;
+  return PLANES_LUZ;
+}
+function planTieneFeature(plan, feature, tipoNegocio) {
+  return getPlanFeatures(plan, tipoNegocio).includes(feature);
 }
 
 function limpiarNumero(str) {
@@ -166,15 +190,28 @@ function sbH(svc) {
 var restCache = {};
 var REST_CACHE_TTL = 60000; // 1 min cache — refreshes on every new message after 1 min
 
-async function getRestaurante(phoneNumberId) {
+async function getRestaurante(phoneNumberId, channelId) {
   try {
-    var cacheKey = phoneNumberId || "_default";
+    var cacheKey = channelId || phoneNumberId || "_default";
     var now = Date.now();
     if (restCache[cacheKey] && (now - restCache[cacheKey].ts) < REST_CACHE_TTL) {
       return restCache[cacheKey].data;
     }
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
     var headers = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+
+    // 1. Buscar por whapi_channel_id
+    if (channelId) {
+      try {
+        var rW = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?whapi_channel_id=eq." + encodeURIComponent(channelId) + "&select=*", { headers: headers });
+        if (rW.data && rW.data.length > 0) {
+          restCache[cacheKey] = { data: rW.data[0], ts: now };
+          return rW.data[0];
+        }
+      } catch(e) { /* columna puede no existir aún */ }
+    }
+
+    // 2. Buscar por phone_number_id de Meta
     if (phoneNumberId) {
       var r = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?whatsapp_phone_id=eq." + phoneNumberId + "&select=*", { headers: headers });
       if (r.data && r.data.length > 0) {
@@ -182,6 +219,8 @@ async function getRestaurante(phoneNumberId) {
         return r.data[0];
       }
     }
+
+    // 3. Fallback — primer restaurante activo
     var fb = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=*&limit=1", { headers: headers });
     var result = fb.data && fb.data.length > 0 ? fb.data[0] : null;
     if (result) restCache[cacheKey] = { data: result, ts: now };
@@ -838,21 +877,38 @@ async function verificarComprobante(mediaId, totalEsperado) {
   }
 }
 
-async function sendWhatsAppMessage(to, message, phoneNumberId) {
+async function sendWhatsAppMessage(to, message, phoneNumberId, whapiToken) {
+  var toNum = to.replace(/[^0-9]/g, "");
+  if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
+
+  // ── Si tiene token de Whapi — usar Whapi ──────────────────────────────────
+  if (whapiToken) {
+    try {
+      var resp = await axios.post("https://gate.whapi.cloud/messages/text",
+        { to: toNum + "@s.whatsapp.net", body: message },
+        { headers: { "Authorization": "Bearer " + whapiToken, "Content-Type": "application/json" } }
+      );
+      console.log("[Whapi] Enviado a " + toNum + " OK - id:", resp.data?.sent?.id || "?");
+      return;
+    } catch(e) {
+      console.error("[Whapi] ERROR a " + toNum + ":", e.response ? JSON.stringify(e.response.data) : e.message);
+      return;
+    }
+  }
+
+  // ── Meta Cloud API (default) ──────────────────────────────────────────────
   var token = process.env.WHATSAPP_TOKEN;
   var pid   = phoneNumberId || process.env.WHATSAPP_PHONE_ID;
   if (!token || !pid) { console.error("Faltan WHATSAPP_TOKEN o PHONE_ID"); return; }
-  var toNum = to.replace(/[^0-9]/g, "");
-  if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
   try {
     var resp = await axios.post("https://graph.facebook.com/v20.0/" + pid + "/messages",
       { messaging_product: "whatsapp", to: toNum, type: "text", text: { body: message } },
       { headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } });
-    console.log("Enviado a " + toNum + " OK - id:", resp.data?.messages?.[0]?.id || "?");
+    console.log("[Meta] Enviado a " + toNum + " OK - id:", resp.data?.messages?.[0]?.id || "?");
   } catch (e) {
     var errData = e.response ? e.response.data : null;
-    console.error("sendWA ERROR a " + toNum + ":", JSON.stringify(errData) || e.message);
-    console.error("sendWA status:", e.response?.status, "| pid:", pid, "| token inicio:", token ? token.substring(0,10) : "null");
+    console.error("[Meta] sendWA ERROR a " + toNum + ":", JSON.stringify(errData) || e.message);
+    console.error("[Meta] status:", e.response?.status, "| pid:", pid);
   }
 }
 
@@ -1340,6 +1396,116 @@ app.get("/api/soporte-count", requireAdmin, async function(req, res) {
   }
 });
 
+// ── CAMBIAR PLAN DIRECTO — bypass proxy ──────────────────────────────────────
+app.post("/api/admin/cambiar-plan", requireAdmin, async function(req, res) {
+  try {
+    var { restaurante_id, plan } = req.body;
+    if (!restaurante_id || !plan) return res.status(400).json({ ok: false, error: "Faltan datos" });
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    // Obtener tipo_negocio del restaurante para validar planes permitidos
+    var rRest = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=tipo_negocio",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+    var tipoNegocio = (rRest.data && rRest.data[0] && rRest.data[0].tipo_negocio) || "restaurante";
+    var planesValidos = tipoNegocio === "salsamentaria"
+      ? ["basico","emprendedor","empresarial"]
+      : ["basico","emprendedor","dominante","empresarial"];
+    if (!planesValidos.includes(plan)) return res.status(400).json({ ok: false, error: "Plan '"+plan+"' no válido para "+tipoNegocio });
+    await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id,
+      { plan: plan },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+    invalidarCacheRestaurante();
+    console.log("[cambiar-plan] ✅", restaurante_id, "→", plan, "("+tipoNegocio+")");
+    res.json({ ok: true, plan: plan, tipo_negocio: tipoNegocio });
+  } catch(e) {
+    console.error("[cambiar-plan]", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ── WHATSAPP EMBEDDED SIGNUP — callback automático ────────────────────────────
+app.post("/api/whatsapp/embedded-signup", requireAdmin, async function(req, res) {
+  try {
+    var { code, restaurante_id } = req.body;
+    if (!code || !restaurante_id) return res.status(400).json({ ok: false, error: "Faltan datos" });
+
+    var META_APP_ID = "959419306767112";
+    var META_APP_SECRET = process.env.META_APP_SECRET;
+    if (!META_APP_SECRET) return res.status(500).json({ ok: false, error: "META_APP_SECRET no configurado en Railway" });
+
+    // 1. Intercambiar code por access_token
+    var tokenR = await axios.get("https://graph.facebook.com/v20.0/oauth/access_token", {
+      params: {
+        client_id: META_APP_ID,
+        client_secret: META_APP_SECRET,
+        code: code,
+        redirect_uri: "https://luz-ia-production-4cff.up.railway.app/restaurante"
+      }
+    });
+    var accessToken = tokenR.data.access_token;
+    if (!accessToken) return res.json({ ok: false, error: "No se pudo obtener access token de Meta" });
+
+    // 2. Obtener WhatsApp Business Account (WABA) del usuario
+    var wabaR = await axios.get("https://graph.facebook.com/v20.0/me/businesses", {
+      params: { access_token: accessToken, fields: "id,name,whatsapp_business_accounts" }
+    });
+    var businesses = wabaR.data.data || [];
+    if (!businesses.length) return res.json({ ok: false, error: "No se encontró cuenta de WhatsApp Business" });
+
+    var waba = null;
+    var phone = null;
+    // Buscar el WABA con números de teléfono
+    for (var b of businesses) {
+      if (b.whatsapp_business_accounts && b.whatsapp_business_accounts.data) {
+        for (var wa of b.whatsapp_business_accounts.data) {
+          // Obtener phone numbers de este WABA
+          try {
+            var phonesR = await axios.get("https://graph.facebook.com/v20.0/" + wa.id + "/phone_numbers", {
+              params: { access_token: accessToken, fields: "id,display_phone_number,verified_name" }
+            });
+            if (phonesR.data.data && phonesR.data.data.length) {
+              waba = wa;
+              phone = phonesR.data.data[0]; // tomar el primero
+              break;
+            }
+          } catch(e) { console.warn("[embedded-signup] Error phones:", e.message); }
+        }
+        if (phone) break;
+      }
+    }
+
+    if (!phone || !waba) return res.json({ ok: false, error: "No se encontró número de WhatsApp Business. Asegúrate de tener un número verificado." });
+
+    // 3. Suscribir el número al webhook de tu app
+    try {
+      await axios.post("https://graph.facebook.com/v20.0/" + waba.id + "/subscribed_apps",
+        { access_token: accessToken },
+        { headers: { "Content-Type": "application/json" } }
+      );
+    } catch(e) { console.warn("[embedded-signup] Webhook subscribe warning:", e.message); }
+
+    // 4. Guardar en Supabase
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var phoneNum = phone.display_phone_number.replace(/[^0-9]/g, "");
+    await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id,
+      {
+        whatsapp: phoneNum,
+        whatsapp_phone_id: phone.id,
+        waba_id: waba.id
+      },
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+
+    invalidarCacheRestaurante();
+    console.log("[embedded-signup] ✅ Conectado:", phone.display_phone_number, "phone_id:", phone.id, "waba:", waba.id);
+    res.json({ ok: true, phone_number: phone.display_phone_number, phone_number_id: phone.id, waba_id: waba.id });
+
+  } catch(e) {
+    console.error("[embedded-signup]", e.message, e.response && JSON.stringify(e.response.data));
+    res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message });
+  }
+});
+
 // ── CHARR TOWER USA — Endpoints base ─────────────────────────────────────────
 app.post("/api/charr/verify-pin", async function(req, res) {
   try {
@@ -1401,14 +1567,18 @@ app.get("/api/plan-features", async function(req, res) {
     var rest = r.data && r.data[0];
     if (!rest) return res.json({ plan: "basico", features: PLAN_FEATURES.basico });
     var plan = rest.plan || "basico";
-    // Normalizar — asegurarse que sea uno de los valores válidos
-    var planesValidos = ["basico","emprendedor","dominante","empresarial"];
+    var tipoNegocio = rest.tipo_negocio || "restaurante";
+    // Normalizar planes según tipo de negocio
+    var planesValidos = tipoNegocio === "salsamentaria"
+      ? ["basico","emprendedor","empresarial"]
+      : ["basico","emprendedor","dominante","empresarial"];
     if (!planesValidos.includes(plan)) plan = "basico";
-    // Si está suspendido o vencido, solo menú básico
     if (rest.estado === "suspendido" || rest.estado === "vencido") {
-      return res.json({ plan: plan, features: [], bloqueado: true, razon: "cuenta_suspendida" });
+      return res.json({ plan: plan, features: [], bloqueado: true, razon: "cuenta_suspendida", tipo_negocio: tipoNegocio });
     }
-    res.json({ plan: plan, features: PLAN_FEATURES[plan] || PLAN_FEATURES.basico, planes: PLANES_LUZ });
+    var features = getPlanFeatures(plan, tipoNegocio);
+    var planes = getPlanesConfig(tipoNegocio);
+    res.json({ plan: plan, features: features, planes: planes, tipo_negocio: tipoNegocio });
   } catch(e) {
     res.json({ plan: "basico", features: PLAN_FEATURES.basico });
   }
@@ -1800,7 +1970,8 @@ app.post("/api/vendedor/crear-restaurante", requireAdmin, async function(req, re
       { contacto_nombre: b.contacto_nombre || null },
       { contacto_telefono: b.contacto_telefono || null },
       { nombre_luz: b.nombre_luz || "Luz" },
-      { personalidad_luz: b.personalidad_luz || "Amable, caleña, servicial" }
+      { personalidad_luz: b.personalidad_luz || "Amable, caleña, servicial" },
+      { tipo_negocio: b.tipo_negocio || "restaurante" }
     ];
     // Si vendedor_id es UUID válido, agregarlo
     if (req.adminUser && req.adminUser.id && /^[0-9a-f-]{36}$/i.test(req.adminUser.id)) {
@@ -3941,8 +4112,75 @@ app.post("/webhook", function(req, res) {
     var msg = value.messages[0];
     var from = msg.from;
     var phoneNumberId = value.metadata?.phone_number_id;
-    procesarEnCola(from, function() { return procesarMensaje(msg, from, phoneNumberId); });
-  } catch (e) { console.error("Error webhook:", e.message); }
+    procesarEnCola(from, function() { return procesarMensaje(msg, from, phoneNumberId, null); });
+  } catch (e) { console.error("Error webhook Meta:", e.message); }
+});
+
+// ── WHAPI — Conectar número de restaurante ────────────────────────────────────
+app.post("/api/whapi/conectar", requireAdmin, async function(req, res) {
+  try {
+    var { restaurante_id, whapi_token } = req.body;
+    if (!restaurante_id || !whapi_token) return res.status(400).json({ ok: false, error: "Faltan datos" });
+
+    // Verificar el token con Whapi y obtener channel_id
+    var whapiR = await axios.get("https://gate.whapi.cloud/health",
+      { headers: { "Authorization": "Bearer " + whapi_token } }
+    );
+    var channelId = whapiR.data?.channel?.id || whapiR.data?.id || null;
+    var phoneNumber = whapiR.data?.channel?.phone || whapiR.data?.phone || null;
+
+    if (!channelId) return res.json({ ok: false, error: "Token de Whapi inválido o canal no conectado" });
+
+    // Guardar en Supabase
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var updateData = { whapi_token: whapi_token, whapi_channel_id: channelId };
+    if (phoneNumber) updateData.whatsapp = phoneNumber.replace(/[^0-9]/g, "");
+
+    await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id, updateData,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+    );
+
+    // Configurar webhook de Whapi apuntando a Railway
+    var webhookUrl = "https://luz-ia-production-4cff.up.railway.app/webhook/whapi";
+    await axios.patch("https://gate.whapi.cloud/settings",
+      { webhooks: [{ url: webhookUrl, events: [{ type: "messages", method: "post" }], mode: "method" }] },
+      { headers: { "Authorization": "Bearer " + whapi_token, "Content-Type": "application/json" } }
+    ).catch(function(e) { console.warn("[Whapi webhook config]", e.message); });
+
+    invalidarCacheRestaurante();
+    console.log("[Whapi] ✅ Conectado:", channelId, "número:", phoneNumber);
+    res.json({ ok: true, channel_id: channelId, phone: phoneNumber });
+  } catch(e) {
+    console.error("[Whapi/conectar]", e.message, e.response && JSON.stringify(e.response.data));
+    res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message });
+  }
+});
+
+// ── WHAPI — Webhook endpoint ──────────────────────────────────────────────────
+app.post("/webhook/whapi", function(req, res) {
+  res.sendStatus(200);
+  try {
+    var body = req.body;
+    if (!body.messages || !body.messages.length) return;
+    var channelId = body.channel_id;
+    var msg = body.messages[0];
+    if (msg.from_me) return;
+    var from = msg.from ? msg.from.replace("@s.whatsapp.net","").replace("@c.us","") : null;
+    if (!from) return;
+    var metaMsg = {
+      id: msg.id,
+      from: from,
+      timestamp: msg.timestamp,
+      type: msg.type || "text",
+      text: msg.text ? { body: typeof msg.text === "string" ? msg.text : msg.text.body } : undefined,
+      image: msg.image || undefined,
+      audio: msg.audio || msg.voice || undefined,
+      location: msg.location || undefined,
+      interactive: msg.interactive || undefined
+    };
+    console.log("[Whapi] Msg de", from, "canal:", channelId, "tipo:", metaMsg.type);
+    procesarEnCola(from, function() { return procesarMensaje(metaMsg, from, null, channelId); });
+  } catch(e) { console.error("Error webhook Whapi:", e.message); }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4185,12 +4423,12 @@ HORA COLOMBIA: ${getHoraColombia().toLocaleTimeString("es-CO")}`;
   }
 }
 
-async function procesarMensaje(msg, from, phoneNumberId) {
+async function procesarMensaje(msg, from, phoneNumberId, channelId) {
   try {
     var msgType = msg.type;
 
     if (msgType === "audio") {
-      await sendWhatsAppMessage(from, "Hola! Por favor escribeme tu pedido, no puedo escuchar audios. Con gusto te atiendo.", phoneNumberId);
+      await sendWhatsAppMessage(from, "Hola! Por favor escribeme tu pedido, no puedo escuchar audios. Con gusto te atiendo.", phoneNumberId, whapiToken);
       return;
     }
 
@@ -4217,7 +4455,8 @@ async function procesarMensaje(msg, from, phoneNumberId) {
     if (!userText) return;
 
     // ── DETECTAR SI ES EL DUEÑO ESCRIBIENDO ──────────────────────────────────
-    var restaurante = await getRestaurante(phoneNumberId);
+    var restaurante = await getRestaurante(phoneNumberId, channelId);
+    var whapiToken = restaurante ? restaurante.whapi_token : null;
     if (restaurante && restaurante.telefono_dueno) {
       var telDueno = stripCountryCode(restaurante.telefono_dueno);
       var telFrom  = stripCountryCode(from);
