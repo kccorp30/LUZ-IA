@@ -684,6 +684,257 @@ select.finput{cursor:pointer}
   0%,100%{transform:scale(1);opacity:0.6}
   50%{transform:scale(1.12);opacity:0.2}
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LUZ IA — PANEL UPGRADE v2 — Internal UI
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── TOPBAR ───────────────────────────────────────────────────── */
+.topbar{
+  background:rgba(8,7,16,0.88)!important;
+  border-bottom:1px solid rgba(124,58,237,0.15)!important;
+  box-shadow:0 1px 0 rgba(124,58,237,0.12),0 4px 24px rgba(0,0,0,0.4)!important;
+  backdrop-filter:blur(32px)!important;
+  -webkit-backdrop-filter:blur(32px)!important;
+}
+.tb-brand .tb-luz{
+  background:linear-gradient(135deg,#fff 30%,#c4b5fd 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.tb-brand .tb-ia{
+  background:linear-gradient(135deg,#a78bfa,#06b6d4);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.tb-rest{
+  font-size:11px;color:rgba(238,238,255,0.45);font-weight:600;margin-top:1px;
+}
+
+/* ── FLOAT NAV ────────────────────────────────────────────────── */
+.float-nav{
+  background:rgba(10,8,22,0.92)!important;
+  border:1px solid rgba(124,58,237,0.2)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.04),0 -4px 32px rgba(0,0,0,0.5),0 0 40px rgba(124,58,237,0.08)!important;
+  backdrop-filter:blur(32px)!important;
+  -webkit-backdrop-filter:blur(32px)!important;
+  border-radius:24px!important;
+}
+.fnav-btn{
+  transition:all .2s!important;
+  border-radius:14px!important;
+  position:relative;
+}
+.fnav-btn.on{
+  background:rgba(124,58,237,0.15)!important;
+  color:#c4b5fd!important;
+}
+.fnav-btn.on::after{
+  content:'';position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);
+  width:18px;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,#7c3aed,#06b6d4);
+}
+.fnav-btn:hover:not(.on){
+  background:rgba(255,255,255,0.05)!important;
+  color:rgba(238,238,255,0.8)!important;
+}
+
+/* ── STAT CARDS ───────────────────────────────────────────────── */
+.stat-card{
+  background:rgba(124,58,237,0.06)!important;
+  border:1px solid rgba(124,58,237,0.15)!important;
+  border-radius:20px!important;
+  box-shadow:0 2px 16px rgba(0,0,0,0.25)!important;
+  transition:all .2s!important;
+  overflow:hidden;
+  position:relative;
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1.5px;
+  background:linear-gradient(90deg,transparent,rgba(124,58,237,0.5),transparent);
+}
+.stat-card:hover{
+  border-color:rgba(124,58,237,0.3)!important;
+  transform:translateY(-2px);
+  box-shadow:0 6px 28px rgba(124,58,237,0.12),0 2px 12px rgba(0,0,0,0.3)!important;
+}
+.stat-val.purple{color:#c4b5fd!important;text-shadow:0 0 20px rgba(167,139,250,0.3)}
+.stat-val.green{color:#6ee7b7!important;text-shadow:0 0 20px rgba(110,231,183,0.3)}
+.stat-icon{font-size:22px!important;margin-bottom:6px!important;display:block}
+.stat-label{
+  font-size:10px!important;font-weight:700!important;
+  color:rgba(238,238,255,0.45)!important;
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;
+}
+.stat-sub{font-size:10px!important;color:rgba(238,238,255,0.3)!important;margin-top:4px}
+
+/* ── PEDIDO CARDS ─────────────────────────────────────────────── */
+.pedido-card{
+  background:rgba(255,255,255,0.04)!important;
+  border:1px solid rgba(255,255,255,0.08)!important;
+  border-radius:20px!important;
+  backdrop-filter:blur(20px)!important;
+  -webkit-backdrop-filter:blur(20px)!important;
+  transition:all .2s!important;
+  box-shadow:0 2px 12px rgba(0,0,0,0.2)!important;
+}
+.pedido-card:hover{
+  border-color:rgba(124,58,237,0.25)!important;
+  box-shadow:0 4px 24px rgba(124,58,237,0.08),0 2px 12px rgba(0,0,0,0.3)!important;
+}
+.ph{
+  background:rgba(124,58,237,0.08)!important;
+  border-bottom:1px solid rgba(124,58,237,0.12)!important;
+  padding:12px 14px!important;
+}
+.pnum{
+  font-weight:900!important;letter-spacing:-.02em!important;
+  color:#c4b5fd!important;
+}
+.etag{
+  font-size:10px!important;font-weight:800!important;
+  letter-spacing:.06em!important;text-transform:uppercase!important;
+}
+
+/* ── ESTADO BUTTONS ───────────────────────────────────────────── */
+.ebtn{
+  border-radius:12px!important;font-weight:700!important;
+  transition:all .15s!important;font-size:11px!important;
+}
+.ebtn:hover{transform:translateY(-1px)!important;box-shadow:0 4px 14px rgba(0,0,0,0.3)!important}
+.ebtn:active{transform:scale(.97)!important}
+
+/* ── CHAT PANEL ───────────────────────────────────────────────── */
+.chat-bubble{
+  border-radius:18px!important;
+  line-height:1.55!important;
+  box-shadow:0 1px 4px rgba(0,0,0,0.2)!important;
+}
+
+/* ── MENU ITEMS ───────────────────────────────────────────────── */
+.mitem{
+  background:rgba(255,255,255,0.03)!important;
+  border:1px solid rgba(255,255,255,0.06)!important;
+  border-radius:16px!important;
+  transition:all .15s!important;
+  margin-bottom:8px!important;
+}
+.mitem:hover{
+  border-color:rgba(124,58,237,0.2)!important;
+  background:rgba(124,58,237,0.05)!important;
+}
+.mcat{
+  font-weight:900!important;letter-spacing:-.01em!important;
+  font-size:13px!important;padding-bottom:8px!important;
+  border-bottom:1px solid rgba(124,58,237,0.12)!important;
+  margin-bottom:10px!important;color:rgba(238,238,255,0.9)!important;
+}
+
+/* ── FORM INPUTS ──────────────────────────────────────────────── */
+.finput{
+  background:rgba(255,255,255,0.04)!important;
+  border:1px solid rgba(255,255,255,0.1)!important;
+  border-radius:12px!important;
+  color:#eeeeff!important;
+  transition:border .2s,box-shadow .2s!important;
+}
+.finput:focus{
+  border-color:rgba(124,58,237,0.5)!important;
+  box-shadow:0 0 0 3px rgba(124,58,237,0.1)!important;
+  outline:none!important;
+}
+
+/* ── SECTION HEADERS ──────────────────────────────────────────── */
+.mct{
+  font-size:10px!important;font-weight:800!important;
+  text-transform:uppercase!important;letter-spacing:.1em!important;
+  color:rgba(238,238,255,0.35)!important;padding:14px 0 6px!important;
+}
+
+/* ── MESA CARDS ───────────────────────────────────────────────── */
+.mr-card{
+  border-radius:18px!important;transition:all .2s!important;
+  box-shadow:0 2px 12px rgba(0,0,0,0.25)!important;
+}
+.mr-card:hover{transform:translateY(-2px)!important;box-shadow:0 6px 24px rgba(0,0,0,0.35)!important}
+.mr-card.libre{
+  background:rgba(255,255,255,0.04)!important;
+  border:1px solid rgba(255,255,255,0.08)!important;
+}
+.mr-card.ocupada,.mr-card.confirmado{
+  border-color:rgba(239,68,68,0.3)!important;
+  box-shadow:0 0 20px rgba(239,68,68,0.1),0 2px 12px rgba(0,0,0,0.25)!important;
+}
+.mr-card.listo{
+  border-color:rgba(16,185,129,0.35)!important;
+  box-shadow:0 0 20px rgba(16,185,129,0.12),0 2px 12px rgba(0,0,0,0.25)!important;
+}
+
+/* ── LUZ ACTIVITY BAR ─────────────────────────────────────────── */
+#luzActivityBar{
+  background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(79,70,229,0.05))!important;
+  border:1px solid rgba(124,58,237,0.18)!important;
+  border-radius:18px!important;
+}
+
+/* ── ALERT BANNER ─────────────────────────────────────────────── */
+.alert-banner{
+  backdrop-filter:blur(20px)!important;
+  -webkit-backdrop-filter:blur(20px)!important;
+  border-radius:0 0 14px 14px!important;
+}
+
+/* ── GLASS OVERLAYS ───────────────────────────────────────────── */
+.glass{
+  background:rgba(8,7,16,0.85)!important;
+  border:1px solid rgba(124,58,237,0.15)!important;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.03),0 24px 60px rgba(0,0,0,0.6)!important;
+  backdrop-filter:blur(32px)!important;
+  -webkit-backdrop-filter:blur(32px)!important;
+}
+
+/* ── CHIP BADGES ──────────────────────────────────────────────── */
+.chip{
+  border-radius:8px!important;font-size:10px!important;
+  font-weight:700!important;padding:3px 8px!important;
+}
+.chip.recoger{
+  background:rgba(245,158,11,0.15)!important;
+  color:#fbbf24!important;border:1px solid rgba(245,158,11,0.25)!important;
+}
+
+/* ── LIVE PILL ────────────────────────────────────────────────── */
+.live-pill{
+  background:rgba(16,185,129,0.1)!important;
+  border:1px solid rgba(16,185,129,0.2)!important;
+  border-radius:20px!important;
+  font-size:9px!important;font-weight:800!important;
+  color:#6ee7b7!important;padding:4px 10px!important;
+  display:flex;align-items:center;gap:5px;letter-spacing:.08em;
+}
+
+/* ── CEREBRO / CONFIG ITEMS ───────────────────────────────────── */
+.cerebro-item{
+  background:rgba(255,255,255,0.03)!important;
+  border:1px solid rgba(255,255,255,0.07)!important;
+  border-radius:16px!important;transition:all .15s!important;
+}
+.cerebro-item:hover{border-color:rgba(124,58,237,0.2)!important}
+
+/* ── TOTAL ROW ────────────────────────────────────────────────── */
+.desglose-row.total{
+  border-top:1px solid rgba(124,58,237,0.2)!important;
+  padding-top:8px!important;margin-top:4px!important;
+}
+
+/* ── SCROLLBAR ────────────────────────────────────────────────── */
+.content::-webkit-scrollbar,.pedidos-pad::-webkit-scrollbar{width:3px}
+.content::-webkit-scrollbar-thumb,.pedidos-pad::-webkit-scrollbar-thumb{
+  background:rgba(124,58,237,0.2);border-radius:2px;
+}
+
+/* ── PAGE ENTER ANIMATION ─────────────────────────────────────── */
+.page.active{animation:pgIn .22s ease!important}
+@keyframes pgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" async></script>
