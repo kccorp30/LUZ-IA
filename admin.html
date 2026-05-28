@@ -1320,14 +1320,26 @@ async function loadDashboard(){
 // ── CLIENTES ──
 var todosC=[];
 async function loadClientes(){
-  document.getElementById("cliTable").innerHTML='<div class="loading"><span class="spin">↺</span> Cargando...</div>';
+  var tbl=document.getElementById("cliTable");
+  tbl.innerHTML='<div class="loading"><span class="spin">↺</span> Cargando restaurantes...</div>';
   try{
-    todosC=await sb("GET","restaurantes",null,"select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,tipo_negocio,pin,whatsapp_phone_id&order=nombre")||[];
+    // Intentar con columnas mínimas que siempre existen
+    var res=await fetch("/api/admin/sb/restaurantes?select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,tipo_negocio,pin,whatsapp_phone_id&order=nombre",{headers:authH()});
+    if(res.status===401){logout();return;}
+    var txt=await res.text();
+    if(!res.ok){
+      // Si falla con tipo_negocio (columna no existe aún), reintentar sin ella
+      var res2=await fetch("/api/admin/sb/restaurantes?select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,pin,whatsapp_phone_id&order=nombre",{headers:authH()});
+      txt=await res2.text();
+      if(!res2.ok) throw new Error("HTTP "+res2.status+": "+txt.slice(0,120));
+    }
+    todosC=txt?JSON.parse(txt):[];
+    if(!Array.isArray(todosC)) throw new Error("Respuesta inesperada: "+JSON.stringify(todosC).slice(0,80));
     CACHE=todosC;
     renderCliTabla(todosC);
   }catch(e){
-    console.error("[loadClientes]",e.message);
-    document.getElementById("cliTable").innerHTML='<div class="empty"><div class="empty-ico">⚠️</div><p>Error cargando: '+e.message+'</p><button class="btn btn-p" onclick="loadClientes()">Reintentar</button></div>';
+    console.error("[loadClientes]",e);
+    tbl.innerHTML='<div class="empty"><div class="empty-ico" style="font-size:28px">⚠️</div><p style="margin-bottom:12px;color:var(--r3)">'+escHtml(e.message)+'</p><button class="btn btn-p" onclick="loadClientes()">↺ Reintentar</button></div>';
   }
 }
 var filtroTipoActual = "";
@@ -1359,12 +1371,13 @@ function renderCliTable(rests,actions){
     var diasR=r.fecha_vencimiento?Math.floor((new Date(r.fecha_vencimiento)-new Date())/86400000):999;
     var vClr=diasR<=7&&r.estado==="activo"?"style='color:var(--r);font-weight:700'":"";
     var est=r.suscripcion_estado==="trial"?"trial":r.estado||"activo";
-    var tipoIco={restaurante:"🍽️",heladeria:"🍦",salsamentaria:"🧀"}[r.tipo_negocio||"restaurante"]||"🍽️";
-    return'<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="cdot '+est+'"></div><div><div style="font-weight:700">'+tipoIco+' '+r.nombre+'</div><div style="font-size:11px;color:var(--m)">'+(r.ciudad||r.ciudad_restaurante||"")+'</div></div></div></td>'+
-    '<td style="font-family:monospace;font-size:11px">'+(r.whatsapp||"—")+'</td>'+
-    '<td style="text-transform:capitalize;font-size:12px">'+(r.plan_id||r.plan||"—")+'</td>'+
+    var planLabel={basico:'Básico',emprendedor:'Emprendedor',dominante:'Dominante',empresarial:'Empresarial'}[r.plan]||(r.plan||'—');
+    var tipoIco={restaurante:'🍽️',heladeria:'🍦',salsamentaria:'🧀'}[r.tipo_negocio||'restaurante']||'🍽️';
+    return'<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="cdot '+est+'"></div><div><div style="font-weight:700">'+tipoIco+' '+r.nombre+'</div><div style="font-size:11px;color:var(--w4)">'+(r.ciudad||r.ciudad_restaurante||'')+'</div></div></div></td>'+
+    '<td style="font-family:monospace;font-size:11px">'+(r.whatsapp||'—')+'</td>'+
+    '<td style="font-size:12px">'+planLabel+'</td>'+
     '<td>'+badge(est)+'</td>'+
-    '<td '+vClr+'>'+(r.fecha_vencimiento||"—")+'</td>'+
+    '<td '+vClr+'>'+(r.fecha_vencimiento?r.fecha_vencimiento.split('T')[0]:'—')+'</td>'+
     (actions?'<td><div style="display:flex;gap:4px;flex-wrap:wrap">'+
       '<button class="btn btn-g btn-sm" data-id="'+r.id+'" onclick="verCliente(this.getAttribute(\'data-id\'))">👁</button>'+
       '<button class="btn btn-g btn-sm" data-id="'+r.id+'" onclick="editarCliente(this.getAttribute(\'data-id\'))">✏️</button>'+
@@ -1382,16 +1395,17 @@ async function verCliente(id){
   var peds=await sb("GET","pedidos",null,"restaurante_id=eq."+id+"&select=total")||[];
   var tvt=peds.reduce(function(s,p){return s+Number(p.total||0);},0);
   var est=r.suscripcion_estado==="trial"?"trial":r.estado||"activo";
+  var planNoms2={basico:"Básico",emprendedor:"Emprendedor",dominante:"Dominante",empresarial:"Empresarial"};
   document.getElementById("verBody").innerHTML=
     '<div class="dg">'+
     '<div class="di"><div class="di-l">Estado</div><div class="di-v">'+badge(est)+'</div></div>'+
-    '<div class="di"><div class="di-l">Plan</div><div class="di-v" style="text-transform:capitalize">'+(r.plan_id||r.plan||"—")+'</div></div>'+
+    '<div class="di"><div class="di-l">Plan</div><div class="di-v" style="text-transform:capitalize">'+(planNoms2[r.plan]||r.plan||"—")+'</div></div>'+
     '<div class="di"><div class="di-l">WhatsApp</div><div class="di-v" style="font-family:monospace;font-size:12px">'+(r.whatsapp||"—")+'</div></div>'+
     '<div class="di"><div class="di-l">Ciudad</div><div class="di-v">'+(r.ciudad||r.ciudad_restaurante||"—")+'</div></div>'+
     '<div class="di"><div class="di-l">Vencimiento</div><div class="di-v">'+(r.fecha_vencimiento||"—")+'</div></div>'+
     '<div class="di"><div class="di-l">Pedidos totales</div><div class="di-v" style="color:var(--p2)">'+peds.length+'</div></div>'+
     '<div class="di"><div class="di-l">Ventas totales</div><div class="di-v" style="color:var(--g)">'+fmt(tvt)+'</div></div>'+
-    '<div class="di"><div class="di-l">MRR aportado</div><div class="di-v" style="color:var(--a)">'+fmt(PRECIOS[r.plan_id||r.plan]||0)+'</div></div>'+
+    '<div class="di"><div class="di-l">MRR aportado</div><div class="di-v" style="color:var(--a2)">'+fmt(PRECIOS[r.plan]||0)+'</div></div>'+
     '</div>'+
     '<div style="font-size:11px;color:var(--m);margin-bottom:6px;font-weight:700">PIN de acceso</div>'+
     '<div class="pinbox">'+(r.pin||"—")+'</div>'+
