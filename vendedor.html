@@ -333,11 +333,18 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
         <div style="font-size:11px;color:var(--m);margin-bottom:18px">Trial de 7 días · Plan Crecimiento por defecto</div>
 
         <div class="sdiv">Información del restaurante</div>
-        <div class="fg"><label class="fl">Nombre del restaurante *</label><input class="fi" id="nr-nom" placeholder="La Curva Street Food"></div>
+        <div class="fg"><label class="fl">Nombre del negocio *</label><input class="fi" id="nr-nom" placeholder="La Curva Street Food"></div>
         <div class="fgrid">
           <div class="fg"><label class="fl">Ciudad</label><input class="fi" id="nr-ciu" value="Cali"></div>
-          <div class="fg"><label class="fl">Tipo de comida</label><input class="fi" id="nr-tipo" placeholder="Hamburguesas, Pollo..."></div>
+          <div class="fg"><label class="fl">Tipo de negocio *</label>
+            <select class="fi" id="nr-tipo-negocio" onchange="actualizarPlanesNuevo(this.value)">
+              <option value="restaurante">🍽️ Restaurante</option>
+              <option value="heladeria">🍦 Heladería</option>
+              <option value="salsamentaria">🧀 Salsamentaria</option>
+            </select>
+          </div>
         </div>
+        <div class="fg"><label class="fl">Tipo de comida / especialidad</label><input class="fi" id="nr-tipo" placeholder="Hamburguesas, Helados artesanales..."></div>
         <div class="fg"><label class="fl">Dirección</label><input class="fi" id="nr-dir" placeholder="Cl. 16 #56-40, Canaveral"></div>
 
         <div class="sdiv">Dueño / Contacto</div>
@@ -365,10 +372,10 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
           <div class="fg"><label class="fl">Nombre de la IA</label><input class="fi" id="nr-nLuz" value="Luz"></div>
           <div class="fg"><label class="fl">Plan inicial</label>
             <select class="fi" id="nr-plan">
-              <option value="basico">⚡ Básico — $159.000/mes</option>
-              <option value="emprendedor" selected>🥈 Emprendedor — $320.000/mes</option>
-              <option value="dominante">🥇 Dominante — $460.000/mes</option>
-              <option value="empresarial">💎 Empresarial — $760.000/mes</option>
+              <option value="basico">⚡ Básico — $280.000/mes</option>
+              <option value="emprendedor" selected>🥈 Emprendedor — $340.000/mes</option>
+              <option value="dominante">🥇 Dominante — $560.000/mes</option>
+              <option value="empresarial">💎 Empresarial — $890.000/mes</option>
             </select>
           </div>
         </div>
@@ -422,14 +429,53 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
             <div class="acc-arrow">▾</div>
           </div>
           <div class="acc-body">
+            <!-- OPCIÓN 1: Embedded Signup automático -->
+            <div style="background:linear-gradient(135deg,rgba(37,211,102,.08),rgba(37,211,102,.04));border:1px solid rgba(37,211,102,.2);border-radius:14px;padding:16px;margin-bottom:14px">
+              <div style="font-size:12px;font-weight:800;color:#4ade80;margin-bottom:6px">✨ Conexión automática (recomendado)</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:12px;line-height:1.5">El dueño conecta su número de WhatsApp Business directamente desde Meta. Sin copiar IDs manualmente.</div>
+              <button onclick="iniciarEmbeddedSignup()" id="btnEmbedSignup" style="width:100%;padding:13px;background:linear-gradient(135deg,#25D366,#128C7E);border:none;border-radius:12px;color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+                <span style="font-size:18px">📱</span> Conectar WhatsApp Business
+              </button>
+              <div id="embedStatus" style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.4);text-align:center;min-height:16px"></div>
+            </div>
+
+            <!-- SEPARADOR -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+              <div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div>
+              <span style="font-size:10px;color:rgba(255,255,255,.3);font-weight:700">O CONECTA VÍA WHAPI (recomendado)</span>
+              <div style="flex:1;height:1px;background:rgba(255,255,255,.08)"></div>
+            </div>
+
+            <!-- Whapi -->
+            <div style="background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(124,58,237,.04));border:1px solid rgba(124,58,237,.2);border-radius:14px;padding:16px;margin-bottom:14px">
+              <div style="font-size:12px;font-weight:800;color:#c4b5fd;margin-bottom:6px">🔌 Conectar vía Whapi.Cloud</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:12px;line-height:1.5">
+                El restaurante conecta su número existente en <strong style="color:#c4b5fd">whapi.cloud</strong> y pega el token aquí. Sin verificación de Meta. Sin perder el número.
+              </div>
+              <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);margin-bottom:4px">TOKEN DE WHAPI</div>
+              <div style="display:flex;gap:8px;margin-bottom:8px">
+                <input class="fi" id="ob-whapi-token" placeholder="Pega el token del canal de Whapi..." style="flex:1;font-family:'JetBrains Mono',monospace;font-size:11px">
+                <button onclick="conectarWhapi()" style="padding:10px 14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:10px;color:#fff;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">Conectar</button>
+              </div>
+              <div id="whapiStatus" style="font-size:11px;color:rgba(255,255,255,.4);min-height:16px"></div>
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,58,237,.15);font-size:10px;color:rgba(255,255,255,.35);line-height:1.6">
+                📋 <strong>Cómo obtener el token:</strong><br>
+                1. El dueño va a <span style="color:#c4b5fd">whapi.cloud</span> → crea canal<br>
+                2. Conecta su número (escanea QR como WhatsApp Web)<br>
+                3. Copia el token del canal → lo pega aquí
+              </div>
+            </div>
+
+            <!-- OPCIÓN 2: Manual -->
             <div class="fgrid">
               <div class="fg"><label class="fl">Número WA (con 57)</label><input class="fi" id="ob-wa" placeholder="573001234567"></div>
               <div class="fg"><label class="fl">Phone ID de Meta</label><input class="fi" id="ob-pid" placeholder="ID de Meta Business"></div>
             </div>
-            <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:10px;font-size:10px;color:var(--a);margin-bottom:8px">
-              💡 developers.facebook.com/apps → WhatsApp → API Setup → Phone Number ID
+            <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:9px;padding:10px;font-size:10px;color:var(--a);margin-bottom:8px;line-height:1.5">
+              💡 <strong>¿Dónde encuentro el Phone ID?</strong><br>
+              developers.facebook.com/apps → WhatsApp → API Setup → Phone Number ID
             </div>
-            <button class="acc-save" onclick="saveWhatsapp()">💾 Guardar WhatsApp</button>
+            <button class="acc-save" onclick="saveWhatsapp()">💾 Guardar manualmente</button>
           </div>
         </div>
 
@@ -594,7 +640,7 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
 <script>
 var TOKEN=localStorage.getItem("luzia_vendor_token")||"";
 var ME=null,RESTS=[],obId=null;
-var PRECIOS={basico:159000,emprendedor:320000,dominante:460000,empresarial:760000};
+var PRECIOS={basico:230000,emprendedor:340000,dominante:560000,empresarial:890000};
 function authH(){return{"Authorization":"Bearer "+TOKEN,"Content-Type":"application/json"};}
 function toast(m,c,icon){
   // Premium notification popup
@@ -708,6 +754,17 @@ function irOnboarding(id){
 }
 
 // ── CREAR RESTAURANTE ──
+function actualizarPlanesNuevo(tipo){
+  var sel=document.getElementById("nr-plan");if(!sel)return;
+  var planesPorTipo={
+    restaurante:[{v:"basico",l:"⚡ Básico — $280.000"},{v:"emprendedor",l:"🥈 Emprendedor — $340.000",sel:true},{v:"dominante",l:"🥇 Dominante — $560.000"},{v:"empresarial",l:"💎 Empresarial — $890.000"}],
+    heladeria:  [{v:"basico",l:"⚡ Básico — $280.000"},{v:"emprendedor",l:"🥈 Emprendedor — $340.000",sel:true},{v:"dominante",l:"🥇 Dominante — $560.000"},{v:"empresarial",l:"💎 Empresarial — $890.000"}],
+    salsamentaria:[{v:"basico",l:"⚡ Básico — $280.000"},{v:"emprendedor",l:"🥈 Emprendedor — $340.000",sel:true},{v:"empresarial",l:"💎 Empresarial — $890.000"}]
+  };
+  var planes=planesPorTipo[tipo]||planesPorTipo.restaurante;
+  sel.innerHTML=planes.map(function(p){return'<option value="'+p.v+'"'+(p.sel?' selected':'')+'>'+p.l+'</option>';}).join("");
+}
+
 async function crearRestaurante(){
   var nom=document.getElementById("nr-nom").value.trim();
   var tel=document.getElementById("nr-tel").value.trim();
@@ -716,6 +773,7 @@ async function crearRestaurante(){
     var body={
       nombre:nom,ciudad:document.getElementById("nr-ciu").value||"Cali",
       tipo_comida:document.getElementById("nr-tipo").value||null,
+      tipo_negocio:(document.getElementById("nr-tipo-negocio")||{value:"restaurante"}).value||"restaurante",
       direccion:document.getElementById("nr-dir").value||null,
       contacto_nombre:document.getElementById("nr-ctc").value||null,
       contacto_telefono:tel||null,
@@ -849,7 +907,7 @@ function showAccLocked(key,feature){
     +'<div style="font-size:44px;margin-bottom:10px">🔒</div>'
     +'<div style="font-size:18px;font-weight:900;margin-bottom:8px;color:#f0eeff">'+(names[feature]||feature)+'</div>'
     +'<div style="font-size:12px;color:rgba(240,238,255,.5);line-height:1.6;margin-bottom:16px">Esta función no está disponible en el plan Básico de este restaurante.</div>'
-    +'<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:10px;margin-bottom:18px;font-size:11px;color:#fcd34d">📦 Disponible desde Plan Emprendedor · $320.000/mes</div>'
+    +'<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:10px;margin-bottom:18px;font-size:11px;color:#fcd34d">📦 Disponible desde Plan Emprendedor · $340.000/mes</div>'
     +'<div style="display:flex;gap:8px">'
     +'<button onclick="document.querySelectorAll(\".locked-ov\").forEach(function(x){x.remove()})" style="flex:1;padding:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:rgba(240,238,255,.6);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Cerrar</button>'
     +'<button onclick="contactarUpgradeVend()" style="flex:2;padding:11px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:12px;color:white;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer">💬 Hablar con soporte</button>'
@@ -879,6 +937,108 @@ async function saveInfo(){
   document.getElementById("acc-info").classList.add("done");
   document.getElementById("acc-ico-info").textContent="✓";
   toggleAcc("whatsapp");loadPipeline();
+}
+
+// ── META EMBEDDED SIGNUP ──────────────────────────────────────────────────────
+var META_APP_ID = "959419306767112";
+var embedSignupDone = false;
+
+// Cargar Meta SDK dinámicamente
+function cargarMetaSDK(callback){
+  if(window.FB){callback();return;}
+  window.fbAsyncInit=function(){
+    FB.init({appId:META_APP_ID,autoLogAppEvents:true,xfbml:true,version:"v20.0"});
+    if(callback)callback();
+  };
+  var s=document.createElement("script");
+  s.src="https://connect.facebook.net/en_US/sdk.js";
+  s.async=true;s.defer=true;
+  document.head.appendChild(s);
+}
+
+function iniciarEmbeddedSignup(){
+  var btn=document.getElementById("btnEmbedSignup");
+  var status=document.getElementById("embedStatus");
+  if(btn)btn.disabled=true;
+  if(status)status.textContent="Cargando SDK de Meta...";
+  cargarMetaSDK(function(){
+    if(status)status.textContent="Conectando con Meta...";
+    FB.login(function(response){
+      if(response.authResponse){
+        var code=response.authResponse.code;
+        if(status)status.textContent="⏳ Procesando conexión...";
+        // Enviar code al backend para obtener phone_number_id y waba_id
+        fetch("/api/whatsapp/embedded-signup",{
+          method:"POST",
+          headers:Object.assign({"Content-Type":"application/json"},authH()),
+          body:JSON.stringify({code:code,restaurante_id:obId})
+        })
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(d.ok){
+            // Actualizar campos manuales con los datos recibidos
+            var waEl=document.getElementById("ob-wa");
+            var pidEl=document.getElementById("ob-pid");
+            if(waEl&&d.phone_number)waEl.value=d.phone_number;
+            if(pidEl&&d.phone_number_id)pidEl.value=d.phone_number_id;
+            embedSignupDone=true;
+            if(status)status.innerHTML='<span style="color:#4ade80;font-weight:800">✅ WhatsApp conectado: '+d.phone_number+'</span>';
+            // Marcar acordeón como completo
+            var sec=document.getElementById("acc-whatsapp");
+            var ico=document.getElementById("acc-ico-whatsapp");
+            if(sec)sec.classList.add("done");if(ico)ico.textContent="✓";
+            toast("✅ WhatsApp Business conectado automáticamente","","📱");
+            setTimeout(function(){toggleAcc("horario");},800);
+          }else{
+            if(status)status.innerHTML='<span style="color:#fca5a5">❌ '+d.error+'</span>';
+            if(btn)btn.disabled=false;
+          }
+        })
+        .catch(function(e){
+          if(status)status.innerHTML='<span style="color:#fca5a5">❌ Error de conexión</span>';
+          if(btn)btn.disabled=false;
+        });
+      }else{
+        if(status)status.textContent="Cancelado por el usuario";
+        if(btn)btn.disabled=false;
+      }
+    },{
+      config_id:"LUZIA_EMBEDDED_CONFIG", // se configura en Meta Developers
+      response_type:"code",
+      override_default_response_type:true,
+      extras:{
+        setup:{},
+        featureType:"",
+        sessionInfoVersion:"3"
+      }
+    });
+  });
+}
+
+async function conectarWhapi(){
+  var token=(document.getElementById("ob-whapi-token")||{value:""}).value.trim();
+  var status=document.getElementById("whapiStatus");
+  if(!token){if(status)status.innerHTML='<span style="color:#fca5a5">Pega el token de Whapi primero</span>';return;}
+  if(!obId){if(status)status.innerHTML='<span style="color:#fca5a5">Selecciona un restaurante primero</span>';return;}
+  if(status)status.innerHTML='<span style="color:#c4b5fd">⏳ Conectando...</span>';
+  try{
+    var r=await fetch("/api/whapi/conectar",{method:"POST",headers:authH(),body:JSON.stringify({restaurante_id:obId,whapi_token:token})});
+    var d=await r.json();
+    if(d.ok){
+      if(status)status.innerHTML='<span style="color:#4ade80;font-weight:800">✅ Conectado — número: '+d.phone+'</span>';
+      var waEl=document.getElementById("ob-wa");var pidEl=document.getElementById("ob-pid");
+      if(waEl&&d.phone)waEl.value=d.phone;
+      if(pidEl)pidEl.value="whapi:"+d.channel_id;
+      var sec=document.getElementById("acc-whatsapp");var ico=document.getElementById("acc-ico-whatsapp");
+      if(sec)sec.classList.add("done");if(ico)ico.textContent="✓";
+      toast("✅ WhatsApp conectado vía Whapi","","📱");
+      setTimeout(function(){toggleAcc("horario");},800);
+    }else{
+      if(status)status.innerHTML='<span style="color:#fca5a5">❌ '+d.error+'</span>';
+    }
+  }catch(e){
+    if(status)status.innerHTML='<span style="color:#fca5a5">❌ Error de conexión</span>';
+  }
 }
 
 async function saveWhatsapp(){
@@ -944,20 +1104,31 @@ async function delObItem(id){if(!confirm("¿Eliminar?"))return;await fetch("/api
 async function loadObZonas(){
   if(!obId)return;
   try{
-    var r=await fetch("/api/zonas?restaurante_id="+obId,{headers:authH()});
+    var r=await fetch("/api/admin/sb/zonas_domicilio?restaurante_id=eq."+obId+"&order=nombre",{headers:authH()});
     var z=await r.json()||[];
+    if(!Array.isArray(z))z=[];
     var COLS=["#7c3aed","#10b981","#f59e0b","#3b82f6","#ef4444","#06b6d4"];
-    document.getElementById("ob-zonas").innerHTML=!z.length?'<div style="color:var(--m);font-size:11px;padding:6px 0">Sin zonas</div>':
-    z.map(function(z,i){
-      var c=z.color||COLS[i%COLS.length];
-      var b=Array.isArray(z.barrios)?z.barrios.join(", "):(z.barrios||"");
-      return'<div style="display:flex;align-items:center;gap:9px;padding:9px 11px;background:var(--s2);border:1px solid var(--bdr);border-radius:9px;margin-bottom:5px">'+
-      '<div style="width:8px;height:8px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';flex-shrink:0"></div>'+
-      '<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700">'+z.nombre+'</div><div style="font-size:9px;color:var(--m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+b+'</div></div>'+
-      '<div style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:var(--g);font-weight:700">'+fmt(z.precio_domicilio)+'</div>'+
-      '<button class="btn btn-r" style="padding:2px 7px;font-size:10px" data-id="'+z.id+'" onclick="delZona(this.getAttribute(\'data-id\'))">✕</button></div>';
+    var el=document.getElementById("ob-zonas");
+    if(!el)return;
+    el.innerHTML=!z.length?'<div style="color:var(--m);font-size:11px;padding:6px 0">Sin zonas — agrega la primera arriba ↑</div>':
+    z.map(function(zona,i){
+      var c=zona.color||COLS[i%COLS.length];
+      var b=Array.isArray(zona.barrios)?zona.barrios.join(", "):(zona.barrios||"");
+      return'<div style="display:flex;align-items:center;gap:9px;padding:9px 11px;background:rgba(255,255,255,.04);border:1px solid var(--bdr);border-radius:9px;margin-bottom:5px">'+
+        '<div style="width:8px;height:8px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';flex-shrink:0"></div>'+
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700">'+zona.nombre+'</div>'+
+        (b?'<div style="font-size:10px;color:var(--m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+b+'</div>':'')+
+        '</div>'+
+        '<div style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--g);font-weight:700;flex-shrink:0">'+fmt(zona.precio_domicilio)+'</div>'+
+        '<button class="btn btn-r" style="padding:3px 8px;font-size:10px;flex-shrink:0" data-id="'+zona.id+'" onclick="delZona(this.getAttribute(\'data-id\'))">✕</button>'+
+      '</div>';
     }).join("");
-  }catch(e){}
+    // Mark zonas done if there are zones
+    if(z.length>0){
+      var sec=document.getElementById("acc-zonas");var ico=document.getElementById("acc-ico-zonas");
+      if(sec)sec.classList.add("done");if(ico)ico.textContent="✓";
+    }
+  }catch(e){console.error("[loadObZonas]",e.message);}
 }
 
 async function addZona(){
