@@ -301,14 +301,21 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <!-- CLIENTES -->
     <div class="page" id="page-clientes">
       <div class="ph">
-        <div><div class="ph-title">Restaurantes</div><div class="ph-sub">Gestión de clientes LUZ IA</div></div>
+        <div><div class="ph-title">Negocios</div><div class="ph-sub">Gestión de clientes LUZ IA</div></div>
         <div class="ph-actions">
-          <select class="sinp" id="filtroEstado" style="width:140px" onchange="filterClientes()">
+          <select class="sinp" id="filtroEstado" style="width:130px" onchange="filterClientes()">
             <option value="">Todos</option><option value="activo">Activos</option>
             <option value="trial">Trial</option><option value="suspendido">Suspendidos</option><option value="vencido">Vencidos</option>
           </select>
           <button class="btn btn-p" onclick="openMod('nuevo')">+ Nuevo cliente</button>
         </div>
+      </div>
+      <!-- Filtro por tipo de negocio -->
+      <div style="display:flex;gap:6px;padding:0 0 12px;flex-wrap:wrap">
+        <button class="btn btn-g btn-sm tipo-tab on" id="tab-tipo-all" onclick="setFiltroTipo('',this)">🏢 Todos</button>
+        <button class="btn btn-g btn-sm tipo-tab" id="tab-tipo-restaurante" onclick="setFiltroTipo('restaurante',this)">🍽️ Restaurantes</button>
+        <button class="btn btn-g btn-sm tipo-tab" id="tab-tipo-heladeria" onclick="setFiltroTipo('heladeria',this)">🍦 Heladerías</button>
+        <button class="btn btn-g btn-sm tipo-tab" id="tab-tipo-salsamentaria" onclick="setFiltroTipo('salsamentaria',this)">🧀 Salsamentarias</button>
       </div>
       <div class="sbar"><input class="sinp" id="busqClientes" placeholder="🔍 Buscar por nombre, ciudad o plan..." oninput="filterClientes()"></div>
       <div class="tcard"><div id="cliTable"><div class="loading"><span class="spin">⟳</span> Cargando...</div></div></div>
@@ -897,13 +904,22 @@ async function loadClientes(){
   CACHE=todosC;
   renderCliTabla(todosC);
 }
+var filtroTipoActual = "";
+function setFiltroTipo(tipo, btn){
+  filtroTipoActual = tipo;
+  document.querySelectorAll(".tipo-tab").forEach(function(b){b.classList.remove("on");});
+  if(btn) btn.classList.add("on");
+  filterClientes();
+}
+
 function filterClientes(){
   var q=(document.getElementById("busqClientes").value||"").toLowerCase();
   var est=document.getElementById("filtroEstado").value;
   var r=todosC.filter(function(x){
     var matchQ=!q||(x.nombre||"").toLowerCase().includes(q)||(x.ciudad||"").toLowerCase().includes(q)||(x.plan||"").toLowerCase().includes(q);
     var matchE=!est||x.estado===est||(est==="trial"&&x.suscripcion_estado==="trial");
-    return matchQ&&matchE;
+    var matchT=!filtroTipoActual||(x.tipo_negocio||"restaurante")===filtroTipoActual;
+    return matchQ&&matchE&&matchT;
   });
   renderCliTabla(r);
 }
@@ -912,12 +928,13 @@ function renderCliTabla(rests){
 }
 function renderCliTable(rests,actions){
   if(!rests||!rests.length) return'<div class="empty"><div class="empty-ico">🏪</div><p>Sin clientes</p></div>';
-  return'<table><thead><tr><th>Restaurante</th><th>WhatsApp</th><th>Plan</th><th>Estado</th><th>Vence</th>'+(actions?'<th>Acciones</th>':'')+
+  return'<table><thead><tr><th>Negocio</th><th>WhatsApp</th><th>Plan</th><th>Estado</th><th>Vence</th>'+(actions?'<th>Acciones</th>':'')+
   '</tr></thead><tbody>'+rests.map(function(r){
     var diasR=r.fecha_vencimiento?Math.floor((new Date(r.fecha_vencimiento)-new Date())/86400000):999;
     var vClr=diasR<=7&&r.estado==="activo"?"style='color:var(--r);font-weight:700'":"";
     var est=r.suscripcion_estado==="trial"?"trial":r.estado||"activo";
-    return'<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="cdot '+est+'"></div><div><div style="font-weight:700">'+r.nombre+'</div><div style="font-size:11px;color:var(--m)">'+(r.ciudad||r.ciudad_restaurante||"")+'</div></div></div></td>'+
+    var tipoIco={restaurante:"🍽️",heladeria:"🍦",salsamentaria:"🧀"}[r.tipo_negocio||"restaurante"]||"🍽️";
+    return'<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="cdot '+est+'"></div><div><div style="font-weight:700">'+tipoIco+' '+r.nombre+'</div><div style="font-size:11px;color:var(--m)">'+(r.ciudad||r.ciudad_restaurante||"")+'</div></div></div></td>'+
     '<td style="font-family:monospace;font-size:11px">'+(r.whatsapp||"—")+'</td>'+
     '<td style="text-transform:capitalize;font-size:12px">'+(r.plan_id||r.plan||"—")+'</td>'+
     '<td>'+badge(est)+'</td>'+
