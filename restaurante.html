@@ -2558,13 +2558,7 @@ function imprimirTicket(btn){
   t+="<h3>LA CURVA STREET FOOD</h3><h3>Canaveral - Cali</h3><hr><div class='r'><span>Pedido #"+num+"</span><span>"+tel+"</span></div><hr><b>PRODUCTOS:</b><br>";
   items.forEach(function(i){t+="* "+i+"<br>";});
   t+="<hr><div class='r'><span>Subtotal</span><span>"+fmt(total-des-dom)+"</span></div><div class='r'><span>Desechables</span><span>"+fmt(des)+"</span></div><div class='r'><span>Domicilio</span><span>"+fmt(dom)+"</span></div><hr><div class='r b'><span>TOTAL</span><span>"+fmt(total)+"</span></div><hr><div>Direcc: "+dir+"</div><div>Pago: "+met+"</div><hr><h3>GRACIAS POR SU PEDIDO</h3>";
-  t+="<sc"+"ript>window.onload=function(){window.print();window.close();}<\/sc"+"ript>
-<script>
-(function(){var c=document.getElementById('canvasGrid');if(!c)return;var ctx=c.getContext('2d');function resize(){c.width=window.innerWidth;c.height=window.innerHeight;draw();}function draw(){ctx.clearRect(0,0,c.width,c.height);var size=44;ctx.strokeStyle='rgba(139,92,246,0.05)';ctx.lineWidth=0.5;for(var x=0;x<c.width;x+=size){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}for(var y=0;y<c.height;y+=size){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}}window.addEventListener('resize',resize);resize();})();
-document.addEventListener('click',function(e){var btn=e.target.closest('button');if(!btn||btn.disabled)return;var r=document.createElement('span');var rect=btn.getBoundingClientRect();var size=Math.max(rect.width,rect.height)*2;r.style.cssText='position:absolute;width:'+size+'px;height:'+size+'px;border-radius:50%;background:rgba(255,255,255,.1);transform:translate(-50%,-50%) scale(0);animation:ripple .5s ease;pointer-events:none;left:'+(e.clientX-rect.left)+'px;top:'+(e.clientY-rect.top)+'px;z-index:100';btn.style.position='relative';btn.style.overflow='hidden';btn.appendChild(r);setTimeout(function(){r.remove();},500);});
-var rs2=document.createElement('style');rs2.textContent='@keyframes ripple{to{transform:translate(-50%,-50%) scale(1);opacity:0}}';document.head.appendChild(rs2);
-</script>
-</body></html>";
+  t+="<sc"+"ript>window.onload=function(){window.print();window.close();}<\/sc"+"ript></html>";
   v.document.write(t);v.document.close();
 }
 document.getElementById("imgOverlayClose").addEventListener("click",function(){document.getElementById("imgOverlay").classList.remove("open");});
@@ -4041,7 +4035,7 @@ function animNuevoDispositivo(d){
         @keyframes newDevIn{from{transform:scale(.5) translateY(30px);opacity:0}to{transform:none;opacity:1}}
         @keyframes scanLine{0%{top:0}100%{top:100%}}
         @keyframes pulse3d{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.8)}50%{box-shadow:0 0 0 30px rgba(124,58,237,0)}}
-      </style>
+      <\/style>
       <div style="position:relative;width:120px;height:120px;margin:0 auto 20px;border-radius:24px;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;animation:pulse3d 1s ease infinite;overflow:hidden">
         <div style="position:absolute;width:100%;height:3px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.6),transparent);animation:scanLine .8s linear infinite"></div>
         <span style="font-size:48px">📡</span>
@@ -6067,9 +6061,38 @@ function instalarRPWA(){
 </div>
 
 <script>
-(function(){var c=document.getElementById('canvasGrid');if(!c)return;var ctx=c.getContext('2d');function resize(){c.width=window.innerWidth;c.height=window.innerHeight;draw();}function draw(){ctx.clearRect(0,0,c.width,c.height);var size=44;ctx.strokeStyle='rgba(139,92,246,0.05)';ctx.lineWidth=0.5;for(var x=0;x<c.width;x+=size){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}for(var y=0;y<c.height;y+=size){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}}window.addEventListener('resize',resize);resize();})();
-document.addEventListener('click',function(e){var btn=e.target.closest('button');if(!btn||btn.disabled)return;var r=document.createElement('span');var rect=btn.getBoundingClientRect();var size=Math.max(rect.width,rect.height)*2;r.style.cssText='position:absolute;width:'+size+'px;height:'+size+'px;border-radius:50%;background:rgba(255,255,255,.1);transform:translate(-50%,-50%) scale(0);animation:ripple .5s ease;pointer-events:none;left:'+(e.clientX-rect.left)+'px;top:'+(e.clientY-rect.top)+'px;z-index:100';btn.style.position='relative';btn.style.overflow='hidden';btn.appendChild(r);setTimeout(function(){r.remove();},500);});
-var rs2=document.createElement('style');rs2.textContent='@keyframes ripple{to{transform:translate(-50%,-50%) scale(1);opacity:0}}';document.head.appendChild(rs2);
+// Canvas grid background
+(function(){
+  var c=document.getElementById('canvasGrid');
+  if(!c)return;
+  var ctx=c.getContext('2d');
+  function resize(){
+    c.width=window.innerWidth;c.height=window.innerHeight;draw();
+  }
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    var size=44;
+    ctx.strokeStyle='rgba(139,92,246,0.05)';
+    ctx.lineWidth=0.5;
+    for(var x=0;x<c.width;x+=size){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}
+    for(var y=0;y<c.height;y+=size){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}
+  }
+  window.addEventListener('resize',resize);
+  resize();
+})();
+// Button ripple
+document.addEventListener('click',function(e){
+  var btn=e.target.closest('button');
+  if(!btn||btn.disabled)return;
+  var r=document.createElement('span');
+  var rect=btn.getBoundingClientRect();
+  var size=Math.max(rect.width,rect.height)*2;
+  r.style.cssText='position:absolute;width:'+size+'px;height:'+size+'px;border-radius:50%;background:rgba(255,255,255,.1);transform:translate(-50%,-50%) scale(0);animation:ripple .5s ease;pointer-events:none;left:'+(e.clientX-rect.left)+'px;top:'+(e.clientY-rect.top)+'px;z-index:100';
+  btn.style.position='relative';btn.style.overflow='hidden';
+  btn.appendChild(r);
+  setTimeout(function(){r.remove();},500);
+});
+var rs2=document.createElement('style');rs2.textContent='@keyframes ripple{to{transform:translate(-50%,-50%) scale(1);opacity:0}}';
+document.head.appendChild(rs2);
 </script>
-</body>
 </html>
