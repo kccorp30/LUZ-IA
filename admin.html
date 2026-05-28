@@ -1065,7 +1065,13 @@ function fmt(n){return"$"+Number(n||0).toLocaleString("es-CO");}
 function ago(d){if(!d)return"—";var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<1?"ahora":diff<60?diff+" min":diff<1440?Math.floor(diff/60)+"h":new Date(d).toLocaleDateString("es-CO");}
 function badge(e){var m={activo:"activo",trial:"trial",suspendido:"suspendido",vencido:"vencido"};return'<span class="badge '+(m[e]||"")+'">'+e+'</span>';}
 function toast(msg,clr){var t=document.getElementById("toast");t.textContent=msg;t.style.background=clr||"#10b981";t.classList.add("show");setTimeout(function(){t.classList.remove("show");},2600);}
-function logout(){localStorage.removeItem("luzia_admin_token");location.reload();}
+function logout(){
+  localStorage.removeItem("luzia_admin_token");
+  TOKEN=""; ME=null;
+  document.getElementById("app").style.display="none";
+  document.getElementById("loginScreen").style.display="flex";
+  document.getElementById("lerr").textContent="Sesión expirada. Vuelve a iniciar sesión.";
+}
 
 // Cargar badge de soporte sin leer
 async function checkSoporteBadge(){
@@ -1109,13 +1115,7 @@ async function doLogin(){
     else{document.getElementById("lerr").textContent=d.error||"Credenciales incorrectas";}
   }catch(e){document.getElementById("lerr").textContent="Error de conexión";}
 }
-(async function(){
-  if(TOKEN){try{
-    var r=await fetch("/api/admin/verify",{headers:{"Authorization":"Bearer "+TOKEN}});
-    var d=await r.json();
-    if(d.ok){ME=d.user;enterApp();return;}
-  }catch(e){}localStorage.removeItem("luzia_admin_token");TOKEN="";}
-})();
+// auto-login handled by autoLogin() at bottom of file
 
 async function enterApp(){
   document.getElementById("loginScreen").style.display="none";
@@ -1322,31 +1322,41 @@ var todosC=[];
 async function loadClientes(){
   var tbl=document.getElementById("cliTable");
   tbl.innerHTML='<div class="loading"><span class="spin">↺</span> Cargando restaurantes...</div>';
+  
+  // Si no hay token, mostrar error directo
+  if(!TOKEN){
+    tbl.innerHTML='<div class="empty"><p style="color:var(--r3)">Sin sesión activa.</p><button class="btn btn-p" onclick="logout()">Iniciar sesión</button></div>';
+    return;
+  }
+
   try{
     var queries=[
-      "select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,tipo_negocio,pin,whatsapp_phone_id&order=nombre",
-      "select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,pin,whatsapp_phone_id&order=nombre",
-      "select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,pin&order=nombre"
+      {url:"/api/admin/restaurantes", direct:true},
+      {url:"/api/admin/sb/restaurantes?select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,tipo_negocio,pin&order=nombre", direct:false},
+      {url:"/api/admin/sb/restaurantes?select=id,nombre,plan,estado&order=nombre", direct:false}
     ];
     var data=null;
     for(var qi=0;qi<queries.length;qi++){
-      var res=await fetch("/api/admin/sb/restaurantes?"+queries[qi],{headers:authH()});
-      if(res.status===401){logout();return;}
+      var res=await fetch(queries[qi].url,{headers:authH()});
       var txt=await res.text();
+      if(res.status===401){
+        // Token inválido — pedir login de nuevo sin recargar
+        tbl.innerHTML='<div class="empty"><p style="color:var(--r3)">Sesión expirada. Vuelve a iniciar sesión.</p><button class="btn btn-p" onclick="logout()">Iniciar sesión</button></div>';
+        return;
+      }
       if(res.ok){
         try{data=JSON.parse(txt);}catch(pe){throw new Error("JSON inválido: "+txt.slice(0,80));}
-        break;
+        if(Array.isArray(data)) break;
+        throw new Error("Respuesta inesperada: "+txt.slice(0,80));
       }
-      // si es el último intento, lanzar error
-      if(qi===queries.length-1) throw new Error("HTTP "+res.status+": "+txt.slice(0,120));
+      if(qi===queries.length-1) throw new Error("Error "+res.status+": "+txt.slice(0,120));
     }
-    if(!Array.isArray(data)) throw new Error("Respuesta inesperada del servidor");
-    todosC=data;
+    todosC=data||[];
     CACHE=todosC;
     renderCliTabla(todosC);
   }catch(e){
     console.error("[loadClientes]",e);
-    tbl.innerHTML='<div class="empty"><div class="empty-ico" style="font-size:28px">⚠️</div><p style="margin-bottom:12px;color:var(--r3)">'+escHtml(e.message)+'</p><button class="btn btn-p" onclick="loadClientes()">↺ Reintentar</button></div>';
+    tbl.innerHTML='<div class="empty"><div style="font-size:28px;margin-bottom:10px">⚠️</div><p style="margin-bottom:12px;color:var(--r3);font-size:12px">'+escHtml(e.message)+'</p><button class="btn btn-p btn-sm" onclick="loadClientes()">↺ Reintentar</button></div>';
   }
 }
 var filtroTipoActual = "";
