@@ -1035,8 +1035,6 @@ app.get("/menu",        function(req, res) { res.sendFile(path.join(__dirname, "
 app.get("/admin",       function(req, res) { res.sendFile(path.join(__dirname, "admin.html")); });
 app.get("/vendedor",    function(req, res) { res.sendFile(path.join(__dirname, "vendedor.html")); });
 app.get("/mapa",        function(req, res) { res.sendFile(path.join(__dirname, "mapa_zonas.html")); });
-app.get("/admin",       function(req, res) { res.sendFile(path.join(__dirname, "admin.html")); });
-app.get("/vendedor",   function(req, res) { res.sendFile(path.join(__dirname, "vendedor.html")); });
 app.get("/restaurante", function(req, res) { res.sendFile(path.join(__dirname, "restaurante.html")); });
 
 // ═══════════════════════════════════════════════════════════
@@ -1204,17 +1202,20 @@ app.post("/api/esp32-registro", async function(req, res) {
 app.get("/sw.js", function(req, res) {
   res.setHeader("Content-Type", "application/javascript");
   res.setHeader("Cache-Control", "no-cache");
+  // SW mínimo — se auto-desregistra para evitar interceptación de API calls
   res.send(`
-const CACHE = 'luz-ia-v1';
 self.addEventListener('install', function(e) { self.skipWaiting(); });
-self.addEventListener('activate', function(e) { e.waitUntil(self.clients.claim()); });
+self.addEventListener('activate', function(e) {
+  // Limpiar todos los caches viejos
+  e.waitUntil(
+    caches.keys().then(function(keys) {
+      return Promise.all(keys.map(function(k) { return caches.delete(k); }));
+    }).then(function() { return self.clients.claim(); })
+  );
+});
 self.addEventListener('fetch', function(e) {
-  // Solo cachear GET, no API calls
-  if (e.request.method !== 'GET') return;
-  if (e.request.url.includes('/api/')) return;
-  e.respondWith(fetch(e.request).catch(function() {
-    return caches.match(e.request);
-  }));
+  // No interceptar nada — dejar pasar todo al servidor
+  return;
 });
   `.trim());
 });
