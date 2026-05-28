@@ -1237,6 +1237,7 @@ async function guardarSistema(){
     else toast("❌ Error: " + d.error, "#ef4444");
   } catch(e){ toast("❌ Error de conexión","#ef4444"); }
 }
+  if(name==="clientes")loadClientes();
   if(name==="pedidos"){fillRestSel("pedFiltroRest");loadPedidos();}
   if(name==="suscripciones")loadPagos();
   if(name==="planes")loadPlanes();
