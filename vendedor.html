@@ -10,17 +10,24 @@
 <link rel="manifest" href="/manifest-vendedor.json">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>LUZ IA — Panel Vendedor</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@900,800,700,600,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0d0a1a;--s1:#13102a;--s2:#1a1630;--s3:#211d3a;
-  --bdr:rgba(255,255,255,.07);--bdr2:rgba(255,255,255,.13);
-  --p:#7c3aed;--p2:#a78bfa;--g:#10b981;--r:#ef4444;--a:#f59e0b;--bl:#3b82f6;--cy:#06b6d4;
-  --w:#f0eeff;--w2:rgba(240,238,255,.65);--m:rgba(240,238,255,.35);
-  --blur:blur(20px);--rad:14px;
+  --bg:#080810;--s1:#0e0d1c;--s2:#12111f;--s3:#181728;--s4:#1e1d2e;
+  --bdr:rgba(255,255,255,.05);--bdr2:rgba(255,255,255,.09);--bdr3:rgba(255,255,255,.14);
+  --p:#6d28d9;--p2:#8b5cf6;--p3:#a78bfa;--p4:#c4b5fd;
+  --cy:#0891b2;--cy2:#06b6d4;--cy3:#67e8f9;
+  --g:#059669;--g2:#10b981;--g3:#6ee7b7;
+  --r:#dc2626;--r2:#ef4444;--r3:#fca5a5;
+  --a:#b45309;--a2:#d97706;--a3:#fbbf24;
+  --w:#eeeeff;--w2:rgba(238,238,255,.7);--w3:rgba(238,238,255,.4);--w4:rgba(238,238,255,.2);
+  --glow-p:rgba(109,40,217,.35);--glow-cy:rgba(6,182,212,.3);--glow-g:rgba(16,185,129,.3);
+  --blur:blur(24px);--rad:14px;--rad2:20px;--rad3:10px;
+  
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--w);font-family:'Satoshi',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:rgba(124,58,237,.3);border-radius:2px}
 .blobs{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.2}
@@ -67,7 +74,7 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
 .pcol{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rad);min-height:180px}
 .pc-head{padding:10px 13px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
 .pc-cnt{font-family:'JetBrains Mono',monospace;font-size:11px;background:rgba(255,255,255,.06);padding:2px 7px;border-radius:20px}
-.pc-body{padding:7px}
+.pc-body{padding:7pxfont-family:'Satoshi',sans-serif;}
 .rcard{background:var(--s3);border:1px solid var(--bdr);border-radius:10px;padding:9px 11px;margin-bottom:6px;cursor:pointer;transition:all .15s}
 .rcard:hover{border-color:var(--bdr2);transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
 .rcard-n{font-size:12px;font-weight:700;margin-bottom:2px}
@@ -208,7 +215,7 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
 .acc-sec.done .acc-head{background:linear-gradient(90deg,rgba(16,185,129,.05),transparent)}
 .acc-ico{transition:all .3s cubic-bezier(.34,1.56,.64,1)}
 .acc-sec.done .acc-ico{animation:celebrate .4s ease}
-.acc-body{transition:all .2s ease}
+.acc-body{transition:all .2s easefont-family:'Satoshi',sans-serif;}
 
 /* ── BLOCKED ACCORDION ── */
 .acc-sec.locked{opacity:.6;pointer-events:none;position:relative}
@@ -252,19 +259,19 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
 .acc-sub{font-size:10px;color:var(--m);margin-top:1px}
 .acc-arrow{color:var(--m);transition:transform .2s;font-size:14px}
 .acc-sec.open .acc-arrow{transform:rotate(180deg)}
-.acc-body{display:none;padding:0 15px 15px}
-.acc-sec.open .acc-body{display:block}
+.acc-body{display:none;padding:0 15px 15pxfont-family:'Satoshi',sans-serif;}
+.acc-sec.open .acc-body{display:blockfont-family:'Satoshi',sans-serif;}
 .acc-save{width:100%;padding:11px;background:linear-gradient(135deg,var(--p),#4f46e5);border:none;border-radius:10px;color:#fff;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;margin-top:10px;transition:all .2s}
 .acc-save:hover{box-shadow:0 4px 16px rgba(124,58,237,.35)}
 </style>
 </head>
 <body>
-<div class="blobs"><div class="blob b1"></div><div class="blob b2"></div></div>
+<canvas id="canvasGrid"></canvas><div id="mouseGlow"></div>
 
 <!-- LOGIN -->
 <div id="ls">
   <div class="lbox">
-    <div class="llogo">LUZ <b>IA</b></div>
+    <div class="llogo">LUZ <em>IA</em></div>
     <div class="lsub">Panel Vendedor</div>
     <input class="inp" type="text" id="lu" placeholder="Celular o email" autocomplete="username">
     <input class="inp" type="password" id="lp" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
@@ -277,7 +284,7 @@ body{background:var(--bg);color:var(--w);font-family:'Plus Jakarta Sans',sans-se
 <div id="app">
   <div class="topbar">
     <div style="display:flex;align-items:center;gap:10px">
-      <div class="tb-logo">LUZ <b>IA</b></div>
+      <div class="tb-logo">LUZ <em>IA</em></div>
       <div style="width:1px;height:18px;background:rgba(255,255,255,.1)"></div>
       <span style="font-size:11px;color:var(--m);font-weight:600">Panel Vendedor</span>
     </div>
@@ -1270,12 +1277,17 @@ async function regAct(){
   document.getElementById("act-notas").value="";toast("✅ Actividad registrada");loadAct();
 }
 </script>
-<button id="vendPwaBtn" onclick="instVendPWA()" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9000;padding:10px 16px;border-radius:50px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;font-size:11px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 4px 16px rgba(124,58,237,.5)">📲 Instalar app</button>
+<button id="vendPwaBtn" onclick="instVendPWA()" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9000;padding:10px 16px;border-radius:50px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(124,58,237,.5)">📲 Instalar app</button>
 <script>
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){});}
 var _vdPWA=null;
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();_vdPWA=e;document.getElementById('vendPwaBtn').style.display='block';});
 function instVendPWA(){if(!_vdPWA)return;_vdPWA.prompt();_vdPWA.userChoice.then(function(){_vdPWA=null;document.getElementById('vendPwaBtn').style.display='none';});}
+</script>
+
+<script>
+(function(){var c=document.getElementById('canvasGrid');if(!c)return;var ctx=c.getContext('2d');function resize(){c.width=window.innerWidth;c.height=window.innerHeight;draw();}function draw(){ctx.clearRect(0,0,c.width,c.height);var size=40;ctx.strokeStyle='rgba(139,92,246,0.05)';ctx.lineWidth=0.5;for(var x=0;x<c.width;x+=size){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke();}for(var y=0;y<c.height;y+=size){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke();}}window.addEventListener('resize',resize);resize();})();
+(function(){var g=document.getElementById('mouseGlow');if(!g)return;document.addEventListener('mousemove',function(e){g.style.left=e.clientX+'px';g.style.top=e.clientY+'px';});})();
 </script>
 </body>
 </html>
