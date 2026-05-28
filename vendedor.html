@@ -25,9 +25,12 @@
   --glow-p:rgba(109,40,217,.35);--glow-cy:rgba(6,182,212,.3);--glow-g:rgba(16,185,129,.3);
   --blur:blur(24px);--rad:14px;--rad2:20px;--rad3:10px;
   
+
+  --w:#eeeeff;--w2:rgba(238,238,255,.7);--m:rgba(238,238,255,.35);
+  --cy:#06b6d4;--bl:#3b82f6;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{background:var(--bg);color:var(--w);font-family:'Satoshi',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
+body{background:#080810;background-image:radial-gradient(ellipse 80% 60% at 15% 0%,rgba(124,58,237,0.15) 0%,transparent 55%),radial-gradient(ellipse 60% 50% at 85% 100%,rgba(79,70,229,0.1) 0%,transparent 50%);color:#eeeeff;font-family:'Satoshi',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
 ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-thumb{background:rgba(124,58,237,.3);border-radius:2px}
 .blobs{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.2}
@@ -263,10 +266,15 @@ body{background:var(--bg);color:var(--w);font-family:'Satoshi',sans-serif;min-he
 .acc-sec.open .acc-body{display:blockfont-family:'Satoshi',sans-serif;}
 .acc-save{width:100%;padding:11px;background:linear-gradient(135deg,var(--p),#4f46e5);border:none;border-radius:10px;color:#fff;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer;margin-top:10px;transition:all .2s}
 .acc-save:hover{box-shadow:0 4px 16px rgba(124,58,237,.35)}
+
+/* ── Vendedor background fix ── */
+#ls,#app{position:relative;z-index:1}
+.topbar,.tabs{position:relative;z-index:10}
+.content,.page{position:relative;z-index:1}
 </style>
 </head>
 <body>
-<canvas id="canvasGrid"></canvas><div id="mouseGlow"></div>
+<div id="mouseGlow" style="position:fixed;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(124,58,237,0.06) 0%,transparent 70%);pointer-events:none;z-index:0;transform:translate(-50%,-50%);left:-999px;top:-999px"></div>
 
 <!-- LOGIN -->
 <div id="ls">
@@ -711,11 +719,11 @@ async function loadPipeline(){
     document.getElementById("sAct").textContent=s.activos;
     document.getElementById("sTrial").textContent=s.trials;
     document.getElementById("sVenc").textContent=s.trialsPorVencer;
-    var mrr=RESTS.filter(function(r){return r.estado==="activo";}).reduce(function(s,r){return s+(PRECIOS[r.plan_id||r.plan]||0);},0);
+    var mrr=RESTS.filter(function(r){return r.estado==="activo";}).reduce(function(acc,r){return acc+(PRECIOS[r.plan]||0);},0);
     document.getElementById("sMRR").textContent=fmt(mrr);
     var mrrSub=document.getElementById("sMRRsub");
-    if(mrrSub)mrrSub.textContent=RESTS.filter(function(r){return r.estado==="activo";}).length+" activos · "+trials.length+" trials";
-    var proxCobro=RESTS.filter(function(r){return r.suscripcion_estado==="trial";}).reduce(function(s,r){return s+Math.round((PRECIOS[r.plan_id||r.plan]||0)/2);},0);
+    if(mrrSub)mrrSub.textContent=RESTS.filter(function(r){return r.estado==="activo";}).length+" activos · "+s.trials+" trials";
+    var proxCobro=RESTS.filter(function(r){return r.suscripcion_estado==="trial";}).reduce(function(acc,r){return acc+Math.round((PRECIOS[r.plan]||0)/2);},0);
     var pEl=document.getElementById("sProxCobro");
     if(pEl)pEl.textContent=fmt(proxCobro);
     // Plan tag in topbar
@@ -840,7 +848,7 @@ async function loadOnboarding(){
   document.getElementById("ob-panel").style.display="block";
   var r=RESTS.find(function(x){return x.id===obId;});if(!r)return;
   var ob=r._onboarding||{};
-  obRestPlan = r.plan_id||r.plan||"basico";
+  obRestPlan = r.plan||"basico";
   // Mark zonas as locked in UI for basic plan
   var zonaSec=document.getElementById("acc-zonas");
   if(zonaSec){
