@@ -1287,7 +1287,7 @@ async function regAct(){
 </script>
 <button id="vendPwaBtn" onclick="instVendPWA()" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9000;padding:10px 16px;border-radius:50px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(124,58,237,.5)">📲 Instalar app</button>
 <script>
-if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){});}
+// Service Worker desactivado — causaba interceptación de API calls
 var _vdPWA=null;
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();_vdPWA=e;document.getElementById('vendPwaBtn').style.display='block';});
 function instVendPWA(){if(!_vdPWA)return;_vdPWA.prompt();_vdPWA.userChoice.then(function(){_vdPWA=null;document.getElementById('vendPwaBtn').style.display='none';});}
