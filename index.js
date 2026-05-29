@@ -1202,20 +1202,20 @@ app.post("/api/esp32-registro", async function(req, res) {
 app.get("/sw.js", function(req, res) {
   res.setHeader("Content-Type", "application/javascript");
   res.setHeader("Cache-Control", "no-cache");
-  // SW mínimo — se auto-desregistra para evitar interceptación de API calls
   res.send(`
 self.addEventListener('install', function(e) { self.skipWaiting(); });
 self.addEventListener('activate', function(e) {
-  // Limpiar todos los caches viejos
   e.waitUntil(
     caches.keys().then(function(keys) {
       return Promise.all(keys.map(function(k) { return caches.delete(k); }));
-    }).then(function() { return self.clients.claim(); })
+    }).then(function() {
+      return self.registration.unregister();
+    }).then(function() {
+      return self.clients.matchAll();
+    }).then(function(clients) {
+      clients.forEach(function(c) { c.navigate(c.url); });
+    })
   );
-});
-self.addEventListener('fetch', function(e) {
-  // No interceptar nada — dejar pasar todo al servidor
-  return;
 });
   `.trim());
 });
@@ -1267,26 +1267,29 @@ app.get("/api/soporte-count", requireAdmin, async function(req, res) {
 app.post("/api/admin/cambiar-plan", requireAdmin, async function(req, res) {
   try {
     var { restaurante_id, plan } = req.body;
-    if (!restaurante_id || !plan) return res.status(400).json({ ok: false, error: "Faltan datos" });
+    if (!restaurante_id || !plan) return res.status(400).json({ ok: false, error: "Faltan datos: restaurante_id="+restaurante_id+" plan="+plan });
+    var planesValidos = ["basico","emprendedor","dominante","empresarial"];
+    if (!planesValidos.includes(plan)) return res.status(400).json({ ok: false, error: "Plan '"+plan+"' no válido" });
     var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-    // Obtener tipo_negocio del restaurante para validar planes permitidos
-    var rRest = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=tipo_negocio",
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
-    var tipoNegocio = (rRest.data && rRest.data[0] && rRest.data[0].tipo_negocio) || "restaurante";
-    var planesValidos = tipoNegocio === "salsamentaria"
-      ? ["basico","emprendedor","empresarial"]
-      : ["basico","emprendedor","dominante","empresarial"];
-    if (!planesValidos.includes(plan)) return res.status(400).json({ ok: false, error: "Plan '"+plan+"' no válido para "+tipoNegocio });
-    await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id,
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" };
+    // Patch con return=representation para ver el resultado real
+    var r = await axios.patch(
+      SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id,
       { plan: plan },
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+      { headers: h }
     );
-    invalidarCacheRestaurante();
-    console.log("[cambiar-plan] ✅", restaurante_id, "→", plan, "("+tipoNegocio+")");
-    res.json({ ok: true, plan: plan, tipo_negocio: tipoNegocio });
+    // Invalidar cache del restaurante
+    if (restCache) {
+      Object.keys(restCache).forEach(function(k) { delete restCache[k]; });
+    }
+    if (menuCache) {
+      Object.keys(menuCache).forEach(function(k) { delete menuCache[k]; });
+    }
+    console.log("[cambiar-plan] ✅", restaurante_id, "→", plan, "| rows:", r.data ? r.data.length : 0);
+    res.json({ ok: true, plan: plan, updated: r.data });
   } catch(e) {
-    console.error("[cambiar-plan]", e.message);
-    res.status(500).json({ ok: false, error: e.message });
+    console.error("[cambiar-plan]", e.response ? JSON.stringify(e.response.data) : e.message);
+    res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message });
   }
 });
 
