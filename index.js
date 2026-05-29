@@ -390,9 +390,78 @@ function buildSystemPrompt(restaurante) {
   if (customPrompts && customPrompts.reglas) {
     reglasEspecificas = customPrompts.reglas;
   } else if (tipoNegocio === "heladeria") {
-    reglasEspecificas = "REGLAS HELADERÍA:\n- Productos en empaque especial para mantener temperatura.\n- Porciones: individual, doble, familiar — aclara contenido si preguntan.\n- Sabores agotados: di \"verifico disponibilidad\" — nunca confirmes sin certeza.\n- Siempre pregunta si quieren toppings adicionales cuando aplique.\n- Domicilios: menciona empaque térmico, consumir pronto.";
+    reglasEspecificas = `REGLAS HELADERÍA:
+
+PRODUCTOS Y PORCIONES:
+- Helados: vienen en cono, vaso, o copa. Porciones: individual (1 sabor), doble (2 sabores), triple (3 sabores), familiar (4+ sabores).
+- Toppings: chispas de chocolate, crema chantilly, nueces, galleta, sirope, fruta. Preguntar siempre si desean toppings adicionales.
+- Malteadas y batidos: aclarar tamaño (pequeño/mediano/grande) si no lo especifican.
+- Conos waffle, cono normal, o vaso — preguntar preferencia si no lo dicen.
+
+TEMPERATURA Y EMPAQUE:
+- Domicilios: siempre mencionar "viene en empaque térmico para mantener temperatura. Consumir pronto al recibirlo."
+- Nunca prometer que llegará perfectamente sólido si el destino está muy lejos — ser honesto.
+
+SABORES:
+- NUNCA confirmes la disponibilidad de un sabor sin verificar primero. Responde: "Verifico si tenemos ese sabor disponible."
+- Si el cliente pide un sabor agotado: "Ese sabor no está disponible hoy. Tenemos [alternativas del menú]."
+
+OPCIONES DE ENTREGA — preguntar siempre:
+- Domicilio (pedir dirección) 
+- Recoger en tienda
+- El domicilio puede tomar más tiempo — avisarlo.
+
+COMBOS Y PROMOCIONES:
+- Si hay combo, explicar qué incluye claramente.
+- Calcular bien los totales con toppings adicionales.`;
   } else if (tipoNegocio === "salsamentaria") {
-    reglasEspecificas = "REGLAS SALSAMENTARIA:\n- Productos por peso (gramos/libras) o por unidad. Confirma cantidad exacta.\n- Corte específico (tajado, en trozo, molido) — anotarlo en el pedido.\n- NO hay sistema de mesas. Solo domicilio y recoger en tienda.\n- Confirma si quieren empaque especial para refrigerados.";
+    reglasEspecificas = customPrompts && customPrompts.reglas ? customPrompts.reglas :
+`REGLAS SALSAMENTARIA:
+
+TIPOS DE PEDIDO — Luz debe identificar y separar claramente:
+1. PEDIDO LOCAL: tiene dirección en la ciudad. Confirmar con domicilio normal.
+2. PEDIDO NACIONAL: destino es otra ciudad (Guapi, Pizarro, Iscuandé, Charco, etc.) → va a transportadora.
+3. PEDIDO PROGRAMADO: el cliente dice "para mañana", "para el otro día", o llega fuera del horario de despacho → registrar con fecha de entrega.
+
+PARA PEDIDOS NACIONALES incluir siempre:
+- Ciudad de destino
+- Nombre del destinatario
+- Teléfono del destinatario
+- Lista de productos con cantidades exactas
+- Total
+- Saldo pendiente si el cliente menciona que "solo debe X"
+- Instrucciones de empaque (cajas, regalos, etc.)
+- "Llevar a transportadora" o nombre de la transportadora
+
+PRODUCTOS POR PESO: cuando pidan "media libra", "un cuarto", "8 libras" — confirmar cantidad exacta.
+TIPOS DE CORTE: si piden "tajado", "en trozo", "molido", "natural", "ahumado" — anotarlo en el pedido.
+NO hay sistema de mesas. Solo domicilio local, recoger en tienda, o envío nacional.
+
+CAJAS DE EMPAQUE:
+- Si el pedido es grande o el cliente lo solicita, preguntar: "¿Necesita empaque en caja?"
+- Si dice que sí: preguntar cuántas cajas y si llevan regalo o mensaje.
+- El cobro de caja lo define el negocio — preguntar si no lo sabe: "¿Con cuántas cajas necesita el pedido?"
+- Incluir el valor de las cajas en el total si aplica.
+
+PEDIDOS PROGRAMADOS:
+- Si el cliente pide fuera de horario de despacho, confirmar: "Perfecto, queda programado para mañana."
+- Registrar: PEDIDO_PROGRAMADO:FECHA con la fecha de entrega.
+- Luz debe avisar: "Su pedido queda programado para [fecha/hora]. Le confirmamos cuando esté listo para despacho."
+
+OPCIONES DE ENTREGA — preguntar siempre:
+- Domicilio local (pedir dirección)
+- Recoger en tienda
+- Envío nacional a transportadora (pedir ciudad y datos del destinatario)
+- Programado para fecha específica
+
+FORMATO RESUMEN PEDIDO NACIONAL:
+Destino: [Ciudad]
+Destinatario: [Nombre] - [Teléfono]
+Productos: [Lista]
+Total: [Valor]
+Saldo: [Si aplica]
+Empaque: [Cajas / instrucciones]
+Envío: [Nombre transportadora]`;
   } else {
     reglasEspecificas = "IMPORTANTE - PEDIDOS DE MESA:\n- Si el mensaje empieza con \"🪑 *PEDIDO DE MESA X*\", es un pedido físico de la mesa X del restaurante.\n- Para pedidos de mesa: NO preguntes dirección ni domicilio. El cliente está en el local.\n- Confirma el pedido y di: \"Perfecto, tu pedido para la Mesa X ya entró a preparación. Te lo llevamos enseguida.\"\n- Escribe DIRECCION_LISTA:MESA X (con el número de mesa correspondiente).\n- El pago se hace en el local, no pidas comprobante de transferencia salvo que digan Nequi.";
   }
@@ -536,10 +605,31 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
       headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
     });
     console.log("Pedido #" + pedidoData.orderNumber + " guardado. ID:", response.data[0]?.id || "?");
+    // Notificar al dueño por WhatsApp
+    try {
+      var restInfo = restCache ? Object.values(restCache).find(function(r){ return r && r.id === restauranteId; }) : null;
+      if (!restInfo) {
+        var restResp = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restauranteId + "&select=telefono_dueno,whatsapp_phone_id,whapi_token,nombre", { headers: sbH(true) });
+        restInfo = restResp.data && restResp.data[0];
+      }
+      if (restInfo && restInfo.telefono_dueno) {
+        var telDuenoNotif = "57" + String(restInfo.telefono_dueno).replace(/^57/,"");
+        var esDomicilio = pedidoData.address && !pedidoData.address.toUpperCase().startsWith("MESA") && !pedidoData.address.toUpperCase().startsWith("RECOGER");
+        var tipoIcono = esDomicilio ? "🛵" : pedidoData.address && pedidoData.address.toUpperCase().startsWith("MESA") ? "🪑" : "🏂";
+        var msgDueno = tipoIcono + " *Nuevo pedido #" + pedidoData.orderNumber + "*\n"
+          + "📍 " + (pedidoData.address || "Sin dirección") + "\n"
+          + "💰 Total: $" + Number(pedidoData.total || 0).toLocaleString("es-CO") + "\n"
+          + "💳 Pago: " + (pedidoData.paymentMethod || "sin definir") + "\n"
+          + "📋 " + (pedidoData.items || []).slice(0,3).join(", ");
+        await sendWhatsAppMessage(telDuenoNotif, msgDueno, restInfo.whatsapp_phone_id, restInfo.whapi_token).catch(function(){});
+      }
+    } catch(eDueno) { console.warn("[notif-dueno]", eDueno.message); }
     // Auto-actualizar LED de mesa si es pedido de mesa
     if (pedidoData.address) {
       actualizarEstadoMesa(restauranteId, pedidoData.address, "confirmado").catch(function(){});
     }
+    // Descontar inventario si es salsamentaria
+    descontarInventario(restauranteId, pedidoData.items || []).catch(function(){});
     if (pedidoData.address && pedidoData.address !== "Por confirmar") {
       guardarDireccionFrecuente(restauranteId, pedidoData.phone, pedidoData.address);
     }
@@ -1059,6 +1149,17 @@ function parseReply(reply, from) {
     cleanReply = cleanReply.replace("PAGO_CONFIRMADO", "").trim();
   }
 
+  // ── PEDIDO PROGRAMADO (salsamentaria) ────────────────────────────────────
+  if (reply.indexOf("PEDIDO_PROGRAMADO:") !== -1) {
+    var progMatch = reply.match(/PEDIDO_PROGRAMADO:([^\n]+)/);
+    if (progMatch && orderState[from]) {
+      orderState[from].programado = progMatch[1].trim();
+      orderState[from].status = "programado";
+      sideEffect = "pedido_programado";
+    }
+    cleanReply = cleanReply.replace(/PEDIDO_PROGRAMADO:[^\n]+/g, "").trim();
+  }
+
   return { cleanReply, sideEffect };
 }
 
@@ -1336,7 +1437,133 @@ app.get("/api/admin/diagnostico", requireAdmin, async function(req, res) {
   }
 });
 
-// ── CAMBIAR PLAN — via RPC SQL para bypassar RLS ─────────────────────────────
+
+// ── INVENTARIO VISION — analiza foto y crea productos ────────────────────────
+app.post("/api/inventario-vision", async function(req, res) {
+  try {
+    var { restaurante_id, imagen, mime } = req.body;
+    if (!restaurante_id || !imagen) return res.status(400).json({ ok: false, error: "Faltan datos" });
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    // Llamar a Claude Vision para extraer productos
+    var claudeRes = await axios.post("https://api.anthropic.com/v1/messages", {
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2000,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: mime || "image/jpeg", data: imagen } },
+          { type: "text", text: "Analiza esta imagen de productos/inventario de una salsamentaria. Extrae cada producto con nombre, categoria, unidad (paquete/libra/kg/unidad/caja), precio numerico sin simbolo (0 si no se ve). Responde SOLO con JSON array sin markdown. Ejemplo: [{nombre:Santarosano,categoria:Embutidos,unidad:paquete,precio:5900}]" }
+        ]
+      }]
+    }, { headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" } });
+
+    var rawText = claudeRes.data.content[0].text;
+    var clean = rawText.replace(/```json|```/g, "").trim();
+    var productos = JSON.parse(clean);
+    if (!Array.isArray(productos)) throw new Error("Respuesta inesperada de Claude");
+
+    // Insertar en inventario
+    var insertados = 0;
+    for (var p of productos) {
+      try {
+        await axios.post(SUPABASE_URL + "/rest/v1/inventario",
+          { restaurante_id, nombre: p.nombre, categoria: p.categoria||"General",
+            unidad: p.unidad||"unidad", precio_venta: Number(p.precio)||0,
+            stock: 0, stock_minimo: 10, activo: true },
+          { headers: { "apikey": svcKey, "Authorization": "Bearer "+svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+        );
+        insertados++;
+      } catch(e) { console.warn("[inv-vision] skip:", p.nombre, e.message); }
+    }
+    res.json({ ok: true, productos, insertados });
+  } catch(e) {
+    console.error("[inv-vision]", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ── DESCONTAR STOCK al confirmar pedido ───────────────────────────────────────
+async function descontarInventario(restauranteId, items) {
+  if (!restauranteId || !items || !items.length) return;
+  try {
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    // Obtener inventario del restaurante
+    var invResp = await axios.get(
+      SUPABASE_URL + "/rest/v1/inventario?restaurante_id=eq." + restauranteId + "&activo=eq.true&select=id,nombre,stock,stock_minimo,unidad",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    var inventario = invResp.data || [];
+    if (!inventario.length) return;
+    for (var item of items) {
+      var itemLower = (typeof item === "string" ? item : "").toLowerCase();
+      // Extraer cantidad del item (ej: "2x Santarosano" → 2)
+      var cantMatch = itemLower.match(/^(\d+)[x×\s]/);
+      var cantidad = cantMatch ? parseInt(cantMatch[1]) : 1;
+      // Buscar en inventario por nombre similar
+      var prod = inventario.find(function(p){
+        return itemLower.indexOf((p.nombre||"").toLowerCase().substring(0,8)) !== -1;
+      });
+      if (prod && prod.stock > 0) {
+        var nuevoStock = Math.max(0, prod.stock - cantidad);
+        await axios.patch(
+          SUPABASE_URL + "/rest/v1/inventario?id=eq." + prod.id,
+          { stock: nuevoStock, activo: nuevoStock > 0, updated_at: new Date().toISOString() },
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+        );
+        console.log("[inv] " + prod.nombre + ": " + prod.stock + " → " + nuevoStock);
+        // Alerta si stock bajo
+        if (nuevoStock <= prod.stock_minimo && nuevoStock > 0) {
+          console.log("[inv] ⚠️ Stock bajo: " + prod.nombre + " = " + nuevoStock + " " + prod.unidad);
+        }
+        // Desactivar en menu si llega a 0
+        if (nuevoStock <= 0) {
+          await axios.patch(
+            SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restauranteId + "&nombre=eq." + encodeURIComponent(prod.nombre),
+            { disponible: false },
+            { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+          ).catch(function(){});
+        }
+      }
+    }
+  } catch(e) { console.warn("[descontarInventario]", e.message); }
+}
+
+// ── ASIGNAR DOMICILIARIO — notifica al dueño ──────────────────────────────────
+app.post("/api/asignar-domiciliario", async function(req, res) {
+  try {
+    var { pedido_id, domiciliario_id, domiciliario_nombre, restaurante_id } = req.body;
+    if (!pedido_id || !domiciliario_id) return res.status(400).json({ ok: false, error: "Faltan datos" });
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" };
+    // Asignar en BD
+    await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + pedido_id,
+      { domiciliario_id: domiciliario_id, domiciliario_nombre: domiciliario_nombre },
+      { headers: h }
+    );
+    // Notificar al dueño
+    if (restaurante_id) {
+      try {
+        var rResp = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=telefono_dueno,whatsapp_phone_id,whapi_token", { headers: sbH(true) });
+        var rInfo = rResp.data && rResp.data[0];
+        // Get pedido info
+        var pResp = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + pedido_id + "&select=numero_pedido,direccion,total", { headers: sbH(true) });
+        var pInfo = pResp.data && pResp.data[0];
+        if (rInfo && rInfo.telefono_dueno && pInfo) {
+          var telD = "57" + String(rInfo.telefono_dueno).replace(/^57/,"");
+          var msg = "🛵 *Pedido #" + pInfo.numero_pedido + " asignado a " + domiciliario_nombre + "*\n"
+            + "📍 " + (pInfo.direccion || "Sin dir") + "\n"
+            + "💰 $" + Number(pInfo.total||0).toLocaleString("es-CO");
+          await sendWhatsAppMessage(telD, msg, rInfo.whatsapp_phone_id, rInfo.whapi_token).catch(function(){});
+        }
+      } catch(eN) { console.warn("[asignar-domi notif]", eN.message); }
+    }
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message });
+  }
+});
+
+
 app.post("/api/admin/cambiar-plan", requireAdmin, async function(req, res) {
   var restaurante_id = req.body.restaurante_id;
   var plan = req.body.plan;
@@ -2469,21 +2696,50 @@ app.post("/api/restaurante-config", async function(req, res) {
   if (!req.body.restaurante_id || !req.body.config) return res.status(400).json({ error: "Faltan datos" });
   try {
     var config = Object.assign({}, req.body.config);
-    // Intentar con config completo
+    var restaurante_id = req.body.restaurante_id;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var headers = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" };
+
+    // Columnas que pueden no existir — intentar de una en una si el batch falla
+    var colsOpcionales = ["menu_tema","hora_dia_inicio","hora_dia_fin","color_primario","color_secundario",
+                          "tipo_negocio","telefono_dueno","whapi_token","whapi_channel_id","waba_id"];
+
+    // Intentar con config completo primero
     try {
-      await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id, config,
-        { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+      await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id, config, { headers });
+      invalidarCacheRestaurante();
+      return res.json({ ok: true });
     } catch(ePatch) {
-      // Si falla (columna no existe), quitar campos opcionales nuevos e intentar de nuevo
-      console.warn("[restaurante-config] full patch failed, retrying without new cols:", ePatch.response && ePatch.response.data);
-      var safeConfig = Object.assign({}, config);
-      ["menu_tema","hora_dia_inicio","hora_dia_fin","color_primario","color_secundario"].forEach(function(k){ delete safeConfig[k]; });
-      await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id, safeConfig,
-        { headers: { ...sbH(true), "Content-Type": "application/json", "Prefer": "return=minimal" } });
+      console.warn("[restaurante-config] full patch failed:", ePatch.response && JSON.stringify(ePatch.response.data).substring(0,100));
     }
+
+    // Fallback: separar en campos base (siempre existen) + opcionales
+    var configBase = Object.assign({}, config);
+    var configOpcional = {};
+    colsOpcionales.forEach(function(k){
+      if(k in configBase){ configOpcional[k] = configBase[k]; delete configBase[k]; }
+    });
+
+    // Guardar campos base
+    if(Object.keys(configBase).length > 0){
+      await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id, configBase, { headers });
+    }
+
+    // Guardar opcionales de a uno (ignorar errores por columna no existente)
+    for(var col in configOpcional){
+      try {
+        var patch = {}; patch[col] = configOpcional[col];
+        await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id, patch, { headers });
+      } catch(eCol) {
+        console.warn("[restaurante-config] col", col, "no existe aún:", eCol.response && eCol.response.data && eCol.response.data.message);
+      }
+    }
+
     invalidarCacheRestaurante();
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message }); }
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message });
+  }
 });
 
 app.post("/enviar-imagen-cliente", async function(req, res) {
@@ -3512,6 +3768,34 @@ Usa esto para: alergias, quejas, pedidos especiales, cliente frustrado. NO para 
 // ═══════════════════════════════════════════════════════════════════════════
 // COCINA — Endpoints dedicados
 // ═══════════════════════════════════════════════════════════════════════════
+// ── DOMI FOTO PERFIL ──────────────────────────────────────────────────────────
+app.post("/api/domi-foto-perfil", async function(req, res) {
+  try {
+    var { domiciliario_id, foto_base64, mime } = req.body;
+    if(!domiciliario_id||!foto_base64) return res.status(400).json({ok:false,error:"Faltan datos"});
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var buf = Buffer.from(foto_base64.replace(/^data:[^;]+;base64,/,""), "base64");
+    var fileName = "domi-"+domiciliario_id+"-"+Date.now()+".jpg";
+    // Subir a Supabase Storage
+    await axios.post(
+      SUPABASE_URL+"/storage/v1/object/media/domiciliarios/"+fileName,
+      buf,
+      { headers: {"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":mime||"image/jpeg","x-upsert":"true"} }
+    );
+    var fotoUrl = SUPABASE_URL+"/storage/v1/object/public/media/domiciliarios/"+fileName;
+    // Guardar en BD
+    await axios.patch(
+      SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+domiciliario_id,
+      { foto_url: fotoUrl },
+      { headers: {"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"} }
+    );
+    res.json({ok:true, foto_url: fotoUrl});
+  } catch(e) {
+    console.error("[domi-foto]",e.message);
+    res.status(500).json({ok:false,error:e.message});
+  }
+});
+
 app.get("/api/domi-login", async function(req, res) {
   var {restaurante_id, telefono, nombre} = req.query;
   if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
@@ -3560,12 +3844,13 @@ app.get("/api/domi-historial", async function(req, res) {
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
-    var hace8h = new Date(Date.now()-8*60*60*1000).toISOString();
+    var hoy = new Date();
+    hoy.setHours(0,0,0,0);
     var r = await axios.get(
       SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
       "&domiciliario_id=eq."+encodeURIComponent(domiciliario_id)+
-      "&estado=eq.entregado&created_at=gte."+hace8h+
-      "&order=created_at.desc&limit=15&select=numero_pedido,total,direccion,created_at",
+      "&estado=eq.entregado&created_at=gte."+hoy.toISOString()+
+      "&order=created_at.desc&limit=50&select=id,numero_pedido,total,domicilio,direccion,created_at,updated_at,comprobante_media_id,comprobante_url,items,notas_especiales,metodo_pago,cliente_tel",
       {headers:h}
     );
     res.json(r.data||[]);
@@ -4742,15 +5027,50 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
         esComprobante = true;
         userText = "[El cliente envio una imagen mientras espera pagar. Probablemente es su comprobante.]";
       } else {
-        // Any other state: browsing, asking, confirmed, etc.
-        // Just tell Luz an image was sent and let her respond naturally
         esComprobante = false;
-        userText = "[El cliente envio una imagen. Puede ser una foto del menu, un producto, o referencia visual. Responde con naturalidad segun el contexto de la conversacion.]";
+        userText = "[El cliente envio una imagen]";
       }
     }
 
     if (!conversations[from]) conversations[from] = [];
-    conversations[from].push({ role: "user", content: userText });
+
+    // ── Si hay imagen, descargarla y pasarla a Claude Vision ─────────────────
+    if (esImagen && mediaId && !esComprobante) {
+      var imgData = null;
+      try {
+        imgData = await descargarImagenMeta(mediaId);
+      } catch(eImg) {
+        console.warn("[vision] No se pudo descargar imagen:", eImg.message);
+      }
+
+      if (imgData && imgData.startsWith("data:")) {
+        var mimeMatch = imgData.match(/^data:([^;]+);base64,(.+)$/);
+        if (mimeMatch) {
+          var mimeType = mimeMatch[1];
+          var b64Data = mimeMatch[2];
+          // Pasar imagen + texto a Claude con formato multimodal
+          var captionText = msg.image?.caption || msg.document?.caption || "";
+          var userContent = [
+            { type: "image", source: { type: "base64", media_type: mimeType, data: b64Data } }
+          ];
+          if (captionText) {
+            userContent.push({ type: "text", text: captionText });
+          } else {
+            userContent.push({ type: "text", text: "El cliente envió esta imagen. Responde con naturalidad según el contexto." });
+          }
+          conversations[from].push({ role: "user", content: userContent });
+          console.log("[vision] ✅ Imagen enviada a Claude, mime:", mimeType, "size:", b64Data.length);
+        } else {
+          conversations[from].push({ role: "user", content: userText });
+        }
+      } else {
+        // No se pudo descargar, usar texto descriptivo
+        conversations[from].push({ role: "user", content: userText });
+      }
+    } else {
+      conversations[from].push({ role: "user", content: userText });
+    }
+
     if (conversations[from].length > 20) conversations[from] = conversations[from].slice(-20);
 
     var menuParaPrompt;
@@ -5520,6 +5840,29 @@ async function luzAgentTick() {
           await alertarDueno(reporteMsg);
         } catch(eRep) {}
       }
+
+      // ── ALERTA INVENTARIO BAJO (salsamentaria) ────────────────────────────
+      try {
+        var restFull = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restId + "&select=tipo_negocio", { headers: h });
+        if (restFull.data && restFull.data[0] && restFull.data[0].tipo_negocio === "salsamentaria") {
+          var invLow = await axios.get(
+            SUPABASE_URL + "/rest/v1/inventario?restaurante_id=eq." + restId + "&activo=eq.true&select=nombre,stock,stock_minimo,unidad",
+            { headers: h }
+          );
+          var bajos = (invLow.data || []).filter(function(p){ return p.stock > 0 && p.stock <= p.stock_minimo; });
+          var agotados = (invLow.data || []).filter(function(p){ return p.stock <= 0; });
+          if ((bajos.length + agotados.length) > 0) {
+            var alertKey = "inv_" + restId + "_" + new Date().toISOString().split("T")[0];
+            if (!agentState.alertasEnviadas.has(alertKey)) {
+              var invMsg = "📦 *Inventario — Alerta diaria*\n";
+              if (agotados.length) invMsg += "\n🔴 *Agotados:*\n" + agotados.map(function(p){ return "• " + p.nombre; }).join("\n");
+              if (bajos.length) invMsg += "\n⚠️ *Stock bajo:*\n" + bajos.map(function(p){ return "• " + p.nombre + ": " + p.stock + " " + p.unidad; }).join("\n");
+              await alertarDueno(invMsg, alertKey);
+              agentState.alertasEnviadas.add(alertKey);
+            }
+          }
+        }
+      } catch(eInv) { console.warn("[inv-alerta]", eInv.message); }
     }
 
     // Reset a las 4am
