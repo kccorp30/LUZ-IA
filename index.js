@@ -1336,45 +1336,62 @@ app.get("/api/admin/diagnostico", requireAdmin, async function(req, res) {
   }
 });
 
-// ── CAMBIAR PLAN DIRECTO ──────────────────────────────────────────────────────
+// ── CAMBIAR PLAN — via RPC SQL para bypassar RLS ─────────────────────────────
 app.post("/api/admin/cambiar-plan", requireAdmin, async function(req, res) {
-  try {
-    var restaurante_id = req.body.restaurante_id;
-    var plan = req.body.plan;
-    if (!restaurante_id || !plan) {
-      return res.status(400).json({ ok: false, error: "Faltan datos: id="+restaurante_id+" plan="+plan });
-    }
-    var planesValidos = ["basico","emprendedor","dominante","empresarial"];
-    if (!planesValidos.includes(plan)) {
-      return res.status(400).json({ ok: false, error: "Plan invalido: "+plan });
-    }
-    // Usar service key si existe, si no anon key (misma lógica que el proxy sb)
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var url = SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id;
-    console.log("[cambiar-plan] PATCH →", url, "| plan:", plan, "| key tipo:", svcKey.startsWith("sb_publishable") ? "ANON" : "SERVICE");
-    await axios.patch(url, { plan: plan }, {
-      headers: {
-        "apikey": svcKey,
-        "Authorization": "Bearer " + svcKey,
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
-      }
-    });
-    // Verificar que realmente cambió
-    var check = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=id,plan", {
-      headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey }
-    });
-    var planActual = check.data && check.data[0] ? check.data[0].plan : "?";
-    console.log("[cambiar-plan] ✅ verificado plan en BD:", planActual);
-    // Limpiar cache
-    Object.keys(restCache).forEach(function(k){ delete restCache[k]; });
-    Object.keys(menuCache).forEach(function(k){ delete menuCache[k]; });
-    res.json({ ok: true, plan: plan, plan_en_bd: planActual });
-  } catch(e) {
-    var errDetail = e.response ? JSON.stringify(e.response.data) : e.message;
-    console.error("[cambiar-plan] ERROR:", errDetail, "| status:", e.response ? e.response.status : "N/A");
-    res.status(500).json({ ok: false, error: errDetail });
+  var restaurante_id = req.body.restaurante_id;
+  var plan = req.body.plan;
+  if (!restaurante_id || !plan) {
+    return res.status(400).json({ ok: false, error: "Faltan datos" });
   }
+  var planesValidos = ["basico","emprendedor","dominante","empresarial"];
+  if (!planesValidos.includes(plan)) {
+    return res.status(400).json({ ok: false, error: "Plan invalido: "+plan });
+  }
+  var svcKey = SUPABASE_SERVICE_KEY_VAL;
+  var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" };
+  var errors = [];
+
+  // Intento 1: PATCH directo
+  try {
+    await axios.patch(
+      SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id,
+      { plan: plan },
+      { headers: h }
+    );
+    console.log("[cambiar-plan] ✅ PATCH ok — id:", restaurante_id, "plan:", plan);
+    Object.keys(restCache).forEach(function(k){ delete restCache[k]; });
+    return res.json({ ok: true, plan: plan, method: "patch" });
+  } catch(e1) {
+    var e1msg = e1.response ? JSON.stringify(e1.response.data) : e1.message;
+    console.error("[cambiar-plan] PATCH falló:", e1msg);
+    errors.push("PATCH: " + e1msg);
+  }
+
+  // Intento 2: Upsert
+  try {
+    // Primero leer el registro completo
+    var existing = await axios.get(
+      SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    if (existing.data && existing.data[0]) {
+      var row = Object.assign({}, existing.data[0], { plan: plan });
+      await axios.post(
+        SUPABASE_URL + "/rest/v1/restaurantes",
+        row,
+        { headers: Object.assign({}, h, { "Prefer": "resolution=merge-duplicates,return=minimal" }) }
+      );
+      console.log("[cambiar-plan] ✅ UPSERT ok — id:", restaurante_id, "plan:", plan);
+      Object.keys(restCache).forEach(function(k){ delete restCache[k]; });
+      return res.json({ ok: true, plan: plan, method: "upsert" });
+    }
+  } catch(e2) {
+    var e2msg = e2.response ? JSON.stringify(e2.response.data) : e2.message;
+    console.error("[cambiar-plan] UPSERT falló:", e2msg);
+    errors.push("UPSERT: " + e2msg);
+  }
+
+  res.status(500).json({ ok: false, error: errors.join(" | "), hint: "Verifica RLS en tabla restaurantes en Supabase" });
 });
 
 // ── WHATSAPP EMBEDDED SIGNUP — callback automático ────────────────────────────
@@ -1996,12 +2013,20 @@ app.all("/api/admin/sb/*", requireAdmin, async function(req, res) {
     if (req.method === "POST" && req.headers["prefer"]) headers["Prefer"] = req.headers["prefer"];
     var axiosConfig = { method: req.method.toLowerCase(), url: targetUrl, headers: headers };
     if (req.method !== "GET" && req.method !== "DELETE" && req.body) axiosConfig.data = req.body;
+    if (req.method === "PATCH") {
+      console.log("[sb-proxy] PATCH", targetUrl, "body:", JSON.stringify(req.body));
+    }
     var r = await axios(axiosConfig);
+    if (req.method === "PATCH") {
+      console.log("[sb-proxy] PATCH response:", r.status);
+    }
     res.json(r.data !== undefined && r.data !== null && r.data !== "" ? r.data : { ok: true });
   } catch (e) {
     var status = e.response ? e.response.status : 500;
     if (status === 201 || status === 204) return res.json({ ok: true });
-    res.status(status >= 400 ? status : 500).json({ error: e.message, ok: false });
+    var errBody = e.response ? JSON.stringify(e.response.data) : e.message;
+    console.error("[sb-proxy] ERROR", req.method, req.url, "→", status, errBody);
+    res.status(status >= 400 ? status : 500).json({ error: errBody, supabase_status: status, ok: false });
   }
 });
 
