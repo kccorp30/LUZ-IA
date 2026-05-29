@@ -36,7 +36,7 @@ async function enviarPushSuscripcion(sub, payload) {
 async function enviarPushPorRol(restauranteId, rol, payload) {
   if (!VAPID_PUBLIC) return;
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/push_subscriptions?restaurante_id=eq." + restauranteId + "&rol=eq." + rol + "&activo=eq.true&select=*",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
@@ -72,7 +72,7 @@ let   orderCounter  = 100;
 // Inicializar orderCounter desde el máximo en Supabase para evitar duplicados al redeployar
 async function initOrderCounter() {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/pedidos?select=numero_pedido&order=numero_pedido.desc&limit=1",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
@@ -180,9 +180,20 @@ function getMedionocheColombiaISO() {
 
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://vbxuwzcfzfjwhllkppkg.supabase.co";
 const SUPABASE_KEY = process.env.SUPABASE_KEY || "sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
+// Service key — buscar en múltiples nombres posibles
+const SUPABASE_SERVICE_KEY_VAL =
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_SECRET_KEY ||
+  SUPABASE_KEY;
+console.log("[Supabase] URL:", SUPABASE_URL);
+console.log("[Supabase] KEY tipo:", SUPABASE_KEY.startsWith("sb_publishable") ? "anon/publishable" : "service_role");
+console.log("[Supabase] SERVICE KEY tipo:", SUPABASE_SERVICE_KEY_VAL.startsWith("sb_publishable") ? "anon/publishable (igual que KEY)" : "service_role ✅");
+console.log("[Supabase] Env vars disponibles con SUPABASE:", Object.keys(process.env).filter(k=>k.includes("SUPABASE")));
 
 function sbH(svc) {
-  var k = svc ? (process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY) : SUPABASE_KEY;
+  var k = svc ? (SUPABASE_SERVICE_KEY_VAL) : SUPABASE_KEY;
   return { "apikey": k, "Authorization": "Bearer " + k };
 }
 
@@ -197,7 +208,7 @@ async function getRestaurante(phoneNumberId, channelId) {
     if (restCache[cacheKey] && (now - restCache[cacheKey].ts) < REST_CACHE_TTL) {
       return restCache[cacheKey].data;
     }
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var headers = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
 
     // 1. Buscar por whapi_channel_id
@@ -237,7 +248,7 @@ function invalidarCacheRestaurante() {
 async function estaEnSilencio(restauranteId, telefono) {
   try {
     var telLocal = stripCountryCode(telefono);
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     // Query with local number (panel saves without country code)
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/silencio_conversacion?restaurante_id=eq." + restauranteId +
@@ -336,7 +347,7 @@ async function getIAPrompts() {
   var now = Date.now();
   if (iaPromptsCache && (now - iaPromptsCacheTs) < IA_PROMPTS_TTL) return iaPromptsCache;
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/config_sistema?clave=eq.ia_prompts&select=valor&limit=1",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
@@ -357,20 +368,20 @@ function buildSystemPrompt(restaurante) {
   var direccion     = restaurante ? (restaurante.direccion || "") : "";
   var tipoNegocio   = restaurante ? (restaurante.tipo_negocio || "restaurante") : "restaurante";
 
-  // ── Prompts del admin (desde cache) o defaults ────────────────────────────
+  // Prompts personalizados del admin (cache) > default
   var customPrompts = iaPromptsCache && iaPromptsCache[tipoNegocio];
 
-  // Personalidad — primero el del restaurante específico, luego admin, luego default
+  // Personalidad — restaurante específico > admin > default
   var personalidad = restaurante ? (restaurante.personalidad_luz || "") : "";
   if (!personalidad) {
     if (customPrompts && customPrompts.personalidad) {
       personalidad = customPrompts.personalidad;
     } else if (tipoNegocio === "heladeria") {
-      personalidad = "Eres una persona real, alegre y amable. NUNCA admitas ser IA. Tu tono es fresco y amigable como el de una heladería acogedora. Calidez pero directa: claro que sí, con gusto, perfecto, listo. NUNCA uses apelativos como mi amor, corazón, cariño. Dirígete al cliente por su nombre si lo sabes. Respuestas cortas. Máximo 1 emoji por mensaje.";
+      personalidad = "Eres una persona real, alegre y amable. NUNCA admitas ser IA. Tono fresco y amigable como el de una heladería. Calidez pero directa: claro que sí, con gusto, perfecto, listo. NUNCA uses apelativos como mi amor, corazón, cariño. Dirígete al cliente por su nombre si lo sabes. Respuestas cortas. Máximo 1 emoji por mensaje.";
     } else if (tipoNegocio === "salsamentaria") {
-      personalidad = "Eres una persona real, seria y eficiente. NUNCA admitas ser IA. Profesional como el de una salsamentaria de confianza. Directo: con gusto, claro, perfecto, listo. NUNCA uses apelativos cariñosos. Respuestas cortas y precisas. Máximo 1 emoji por mensaje.";
+      personalidad = "Eres una persona real, seria y eficiente. NUNCA admitas ser IA. Profesional como una salsamentaria de confianza. Directo: con gusto, claro, perfecto, listo. NUNCA uses apelativos cariñosos. Respuestas cortas y precisas. Máximo 1 emoji por mensaje.";
     } else {
-      personalidad = "Eres una persona real, profesional y atenta. NUNCA admitas ser IA. Cordial pero directa: con gusto, claro que sí, listo, digame, perfecto. NUNCA uses: mi amor, corazón, cariño, bb, mami, linda, hermoso, rey, reina, amigo, amiga, dama, caballero. Tono de asesor profesional: eficiente, sin familiaridades. Máximo 1 emoji por mensaje.";
+      personalidad = "Eres una persona real, profesional y atenta. NUNCA admitas ser IA. Cordial pero directa: con gusto, claro que sí, listo, digame, perfecto, entendido. NUNCA uses: mi amor, corazón, cariño, bb, mami, linda, hermoso, rey, reina, amigo, amiga, dama, caballero. Tono de asesor profesional de restaurante: cordial, eficiente, sin familiaridades. No uses emojis en exceso (máximo 1 por mensaje). No uses signos de admiración dobles. Mantén respuestas cortas y al grano.";
     }
   }
 
@@ -383,36 +394,41 @@ function buildSystemPrompt(restaurante) {
   } else if (tipoNegocio === "salsamentaria") {
     reglasEspecificas = "REGLAS SALSAMENTARIA:\n- Productos por peso (gramos/libras) o por unidad. Confirma cantidad exacta.\n- Corte específico (tajado, en trozo, molido) — anotarlo en el pedido.\n- NO hay sistema de mesas. Solo domicilio y recoger en tienda.\n- Confirma si quieren empaque especial para refrigerados.";
   } else {
-    reglasEspecificas = "PEDIDOS DE MESA:\n- Si el mensaje empieza con \"🪑 *PEDIDO DE MESA X*\", es pedido físico.\n- NO preguntes dirección. Confirma: \"Perfecto, tu pedido para la Mesa X ya entró.\"\n- Escribe DIRECCION_LISTA:MESA X. Pago en el local.";
+    reglasEspecificas = "IMPORTANTE - PEDIDOS DE MESA:\n- Si el mensaje empieza con \"🪑 *PEDIDO DE MESA X*\", es un pedido físico de la mesa X del restaurante.\n- Para pedidos de mesa: NO preguntes dirección ni domicilio. El cliente está en el local.\n- Confirma el pedido y di: \"Perfecto, tu pedido para la Mesa X ya entró a preparación. Te lo llevamos enseguida.\"\n- Escribe DIRECCION_LISTA:MESA X (con el número de mesa correspondiente).\n- El pago se hace en el local, no pidas comprobante de transferencia salvo que digan Nequi.";
   }
 
-  // Reglas de pago — admin > default
+  // Pago — admin > default
   var reglasPago = customPrompts && customPrompts.pago
     ? customPrompts.pago
-    : "- Nequi: buscar llave en app Nequi → transferir. Pedir comprobante.\n- Bancolombia: llave a nombre del titular. Pedir comprobante.\n- Efectivo: preguntar con qué billete cancela → PAGO_EFECTIVO:[valor]\n- Si dice \"exacto\"/\"sin cambio\"/\"con lo justo\" → PAGO_EFECTIVO:exacto\n- Datáfono: el domiciliario lo lleva → PAGO_DATAFONO\n- NUNCA esperes a que el cliente pida datos de pago. Dálos siempre primero.";
+    : "- NUNCA esperes a que el cliente pida los datos. Dálos SIEMPRE primero.\n- Nequi: buscar la llave en app Nequi → transferir → llave. Pedir comprobante.\n- Bancolombia: llave a nombre del titular. Pedir comprobante.\n- Efectivo: preguntar con qué billete cancela → PAGO_EFECTIVO:[valor]\n- Si dice \"sencilla\", \"exacto\", \"con lo justo\", \"sin cambio\" → PAGO_EFECTIVO:exacto\n- Datáfono: el domiciliario lo lleva → PAGO_DATAFONO\n- Pago mixto: acepta parte digital + parte efectivo.";
 
   // Fidelidad — admin > default
   var reglasFidelidad = customPrompts && customPrompts.fidelidad
     ? customPrompts.fidelidad
-    : "- BRONCE (1-9 pedidos): sin descuento. PLATA (10-24): 5% automático. ORO (25+): 10% automático.\n- Descuentos se aplican SOLOS en el menú web. NO apliques descuentos manualmente.";
+    : "- Este sistema se implementó el FECHA_INICIO_PLACEHOLDER. Los pedidos cuentan desde esa fecha.\n- BRONCE (1-9 pedidos): acceso al menú completo, sin descuento adicional.\n- PLATA (10-24 pedidos): 5% de descuento automático en el menú web.\n- ORO (25+ pedidos): 10% de descuento automático en el menú web.\n- Los descuentos se aplican AUTOMÁTICAMENTE en el menú web. NO apliques descuentos manualmente en el chat.\n- Si un cliente menciona su nivel en el chat: NO apliques descuento. El descuento ya fue aplicado en el menú antes de que enviara el pedido, o no le corresponde.";
 
   var nequi       = restaurante ? (restaurante.metodo_pago_nequi  || "@NEQUIJOS126") : "@NEQUIJOS126";
   var banco       = restaurante ? (restaurante.metodo_pago_banco  || "0089102980")   : "0089102980";
   var bancoNombre = restaurante ? (restaurante.metodo_pago_nombre || "Jose Gregorio Charris") : "Jose Gregorio Charris";
-  var zonasText   = restaurante ? (restaurante.zonas_domicilio || "El domiciliario confirma el valor según la distancia.") : "";
-  var promosText  = restaurante ? (restaurante.promos_semanales || "No hay promociones activas.") : "No hay promociones activas.";
+  var zonasText   = restaurante ? (restaurante.zonas_domicilio || "El domiciliario confirma el valor del domicilio según la distancia.") : "";
+  var promosText  = restaurante ? (restaurante.promos_semanales || "No hay promociones activas en este momento.") : "No hay promociones activas en este momento.";
   var infoAdicional = restaurante ? (restaurante.info_adicional || "") : "";
 
-  return `Eres ${nombreLuz}, encargada de atención al cliente de ${nombreRest} en ${ciudad}.${direccion ? " Dirección: " + direccion + "." : ""}
+  return `Eres ${nombreLuz}, la encargada de atención al cliente de ${nombreRest} en ${ciudad}.${direccion ? " Dirección: " + direccion + "." : ""}
 Tipo de negocio: ${tipoNegocio === "heladeria" ? "Heladería" : tipoNegocio === "salsamentaria" ? "Salsamentaria" : "Restaurante"}.
 
 PERSONALIDAD:
 ${personalidad}
-- Solo preséntate LA PRIMERA VEZ. Si ya hubo mensajes anteriores, NO te presentes de nuevo.
-- SIEMPRE un solo mensaje corto y al grano. NUNCA mandes el link del menú dos veces seguidas.
-- MENSAJES DE VOZ: "Hola! Por favor escríbeme tu pedido, no puedo escuchar audios."
+- Solo preséntate LA PRIMERA VEZ. Si ya hubo mensajes anteriores en esta conversación, NO te presentes de nuevo.
+- SIEMPRE un solo mensaje. Corto y al grano.
+- NUNCA mandes el link del menú dos veces seguidas en la misma conversación.
+- Si el cliente pide el menú, manda SOLO el link: MENU_URL_PLACEHOLDER
 
-${infoAdicional ? "INFORMACIÓN ADICIONAL:\n" + infoAdicional + "\n" : ""}PROGRAMA DE FIDELIDAD:
+MENSAJES DE VOZ: responde "Hola! Por favor escríbeme tu pedido, no puedo escuchar audios. Con gusto te atiendo."
+
+${infoAdicional ? "INFORMACIÓN ADICIONAL DEL NEGOCIO:\n" + infoAdicional + "\n" : ""}CLIENTE: NOMBRE_CLIENTE_PLACEHOLDER NIVEL_CLIENTE_PLACEHOLDER
+
+PROGRAMA DE FIDELIDAD:
 ${reglasFidelidad}
 
 HORARIO_PLACEHOLDER
@@ -424,18 +440,34 @@ ${reglasPago}
 
 ${reglasEspecificas}
 
-MÉTODO DE PAGO DESDE MENÚ WEB:
-- Si el mensaje incluye "Metodo de pago elegido:", NO preguntes cómo pagar.
-- El total que el cliente envía ES correcto. NO recalcules.
-- Nequi → llave ${nequi}. Bancolombia → llave ${banco} a nombre de ${bancoNombre}.
+IMPORTANTE - MÉTODO DE PAGO DESDE EL MENÚ WEB:
+- Si el cliente llega con un mensaje que incluye "Metodo de pago elegido:" al inicio, ya eligió su método desde el menú.
+- En ese caso NO preguntes cómo quiere pagar. Procede directamente según el método indicado.
+- CRÍTICO: El total que el cliente envía ES el total correcto. NO recalcules precios.
+- Si dijo Nequi: llave ${nequi}. Pide comprobante.
+- Si dijo Bancolombia: llave ${banco} a nombre de ${bancoNombre}. Pide comprobante.
+- Si dijo Efectivo: pregunta con qué billete cancela y escribe PAGO_EFECTIVO:[valor].
+- Si el cliente dice "exacto", "con lo justo", "sin cambio": escribe PAGO_EFECTIVO:exacto.
+- Si dijo Datáfono: confirma que el domiciliario lo lleva y escribe PAGO_DATAFONO.
 
 PROMOCIONES (hoy es DIA_PLACEHOLDER):
+IMPORTANTE: Si hay promoción activa HOY debes mencionarla proactivamente cuando el cliente pida ese producto.
 ${promosText}
-- "Pague 2 lleve 3": cobra precio de 2 unidades, cliente recibe 3.
-- "Pague 1 lleve 2": cobra precio de 1 unidad, cliente recibe 2.
+REGLAS DE CÁLCULO DE PROMOS:
+- "Pague 2 lleve 3": el cliente PAGA 2 unidades y RECIBE 3. Cobras el precio de 2 unidades, NO de 3.
+- "Pague 1 lleve 2": el cliente PAGA 1 unidad y RECIBE 2. Cobras el precio de 1 sola unidad.
+- "Combo especial a precio fijo": cobras exactamente el precio del combo.
+
+CUPONES_PLACEHOLDER
 
 ZONAS DE DOMICILIO:
-${zonasText}`;
+${zonasText}
+
+MENÚ DISPONIBLE HOY:
+MENU_PLACEHOLDER
+
+PEDIDO ACTIVO DEL CLIENTE (si existe):
+`;
 }
 
 // ── GUARDAR PEDIDO ────────────────────────────────────────────────────────────
@@ -458,7 +490,7 @@ async function actualizarEstadoMesa(restauranteId, direccion, estadoPedido) {
     "cancelado":     "libre"
   }[estadoPedido] || "ocupada";
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
     // Actualizar memoria
     if (!mesaEstados[restauranteId]) mesaEstados[restauranteId] = {};
@@ -475,7 +507,7 @@ async function actualizarEstadoMesa(restauranteId, direccion, estadoPedido) {
 
 async function guardarPedidoSupabase(restauranteId, pedidoData) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var subtotal = Number(pedidoData.total) - Number(pedidoData.desechables||0) - Number(pedidoData.domicilio||0);
     // Buscar nombre y nivel del cliente
     var nombreClientePedido = null, nivelClientePedido = null;
@@ -513,7 +545,7 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
     }
     // Actualizar conteo de pedidos en clientes_frecuentes
     try {
-      var svcKey2 = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+      var svcKey2 = SUPABASE_SERVICE_KEY_VAL;
       // Contar pedidos reales de este cliente
       var countResp = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId + "&cliente_tel=eq." + encodeURIComponent(pedidoData.phone) + "&select=id", { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2 } });
       var totalPedidos = (countResp.data || []).length;
@@ -536,7 +568,7 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
 
 async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo, comprobanteMediaId) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     // Truncar a 2000 chars para evitar errores de columna
     var mensajeSafe = String(mensaje||"").substring(0, 2000);
     await axios.post(SUPABASE_URL + "/rest/v1/mensajes",
@@ -559,7 +591,7 @@ async function cargarAprendizajes(restauranteId) {
     return aprendizajesCache[restauranteId].data;
   }
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/luz_aprendizajes?restaurante_id=eq." + restauranteId +
       "&activo=eq.true&order=created_at.desc&limit=50&select=tipo,contenido,fuente",
@@ -593,7 +625,7 @@ function formatearAprendizajes(aprendizajes) {
 
 async function guardarAprendizaje(restauranteId, tipo, contenido, fuente) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.post(SUPABASE_URL + "/rest/v1/luz_aprendizajes",
       { restaurante_id: restauranteId, tipo: tipo, contenido: contenido, fuente: fuente || "auto", activo: true },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
@@ -630,7 +662,7 @@ async function getOrderState(telefono) {
 }
 async function setOrderState(telefono, estado) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.post(SUPABASE_URL + "/rest/v1/order_state?on_conflict=telefono",
       { telefono, estado, updated_at: new Date().toISOString() },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" } });
@@ -638,7 +670,7 @@ async function setOrderState(telefono, estado) {
 }
 async function deleteOrderState(telefono) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.delete(SUPABASE_URL + "/rest/v1/order_state?telefono=eq." + encodeURIComponent(telefono), { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
   } catch (e) { console.error("deleteOrderState:", e.message); }
 }
@@ -1084,7 +1116,7 @@ app.get("/api/esp32-asignacion", async function(req, res) {
   var { mac, restaurante_id } = req.query;
   if (!mac || !restaurante_id) return res.status(400).json({ error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     var macClean = mac.toUpperCase().trim();
     var r = await axios.get(
@@ -1104,7 +1136,7 @@ app.post("/api/esp32-asignar", async function(req, res) {
   var { restaurante_id, mac, mesa } = req.body;
   if (!restaurante_id || !mac) return res.status(400).json({ error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
     var macClean = mac.toUpperCase().trim();
     var mesaNum = parseInt(mesa)||0;
@@ -1129,7 +1161,7 @@ app.get("/api/esp32-dispositivos", async function(req, res) {
   var restaurante_id = req.query.restaurante_id;
   if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/esp32_dispositivos?restaurante_id=eq." + restaurante_id + "&order=mesa",
@@ -1166,7 +1198,7 @@ app.post("/api/esp32-registro", async function(req, res) {
   var { restaurante_id, mesa, mac, ip, num_leds } = req.body;
   if (!restaurante_id || !mac) return res.status(400).json({ error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
     var macClean = mac.toUpperCase().trim();
     console.log("[ESP32 registro] MAC recibida:", macClean, "IP:", ip, "Mesa:", mesa);
@@ -1240,7 +1272,7 @@ app.post("/api/admin/reset-password", requireAdmin, async function(req, res) {
   try {
     var { id, password } = req.body;
     if (!id || !password) return res.status(400).json({ ok: false, error: "Faltan datos" });
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.patch(SUPABASE_URL + "/rest/v1/usuarios_sistema?id=eq." + id,
       { password_hash: hashPassword(password) },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
@@ -1252,7 +1284,7 @@ app.post("/api/admin/reset-password", requireAdmin, async function(req, res) {
 // ── SOPORTE COUNT — badge en admin ───────────────────────────────────────────
 app.get("/api/soporte-count", requireAdmin, async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/mensajes?telefono=like.SOPORTE_%25&select=id&limit=99",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
@@ -1263,33 +1295,85 @@ app.get("/api/soporte-count", requireAdmin, async function(req, res) {
   }
 });
 
-// ── CAMBIAR PLAN DIRECTO — bypass proxy ──────────────────────────────────────
+// ── DIAGNÓSTICO — probar permisos de escritura en Supabase ───────────────────
+app.get("/api/admin/diagnostico", requireAdmin, async function(req, res) {
+  try {
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var tipoKey = svcKey.startsWith("sb_publishable") ? "ANON_KEY ⚠️ (no tiene permisos de escritura)" : "SERVICE_KEY ✅";
+    // Test de lectura
+    var read = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?select=id,nombre,plan&limit=3", {
+      headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey }
+    });
+    // Test de escritura (update de un campo inofensivo)
+    var testId = read.data && read.data[0] ? read.data[0].id : null;
+    var writeOk = false;
+    var writeError = null;
+    if (testId) {
+      try {
+        await axios.patch(
+          SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + testId,
+          { plan: read.data[0].plan }, // mismo valor, no cambia nada
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+        );
+        writeOk = true;
+      } catch(we) {
+        writeError = we.response ? JSON.stringify(we.response.data) : we.message;
+      }
+    }
+    res.json({
+      ok: true,
+      key_type: tipoKey,
+      has_service_key: !!process.env.SUPABASE_SERVICE_KEY,
+      env_vars_supabase: Object.keys(process.env).filter(function(k){return k.includes("SUPABASE");}),
+      read_ok: true,
+      restaurantes_count: read.data.length,
+      write_ok: writeOk,
+      write_error: writeError,
+      sample: read.data.slice(0,2)
+    });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── CAMBIAR PLAN DIRECTO ──────────────────────────────────────────────────────
 app.post("/api/admin/cambiar-plan", requireAdmin, async function(req, res) {
   try {
-    var { restaurante_id, plan } = req.body;
-    if (!restaurante_id || !plan) return res.status(400).json({ ok: false, error: "Faltan datos: restaurante_id="+restaurante_id+" plan="+plan });
+    var restaurante_id = req.body.restaurante_id;
+    var plan = req.body.plan;
+    if (!restaurante_id || !plan) {
+      return res.status(400).json({ ok: false, error: "Faltan datos: id="+restaurante_id+" plan="+plan });
+    }
     var planesValidos = ["basico","emprendedor","dominante","empresarial"];
-    if (!planesValidos.includes(plan)) return res.status(400).json({ ok: false, error: "Plan '"+plan+"' no válido" });
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
-    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" };
-    // Patch con return=representation para ver el resultado real
-    var r = await axios.patch(
-      SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id,
-      { plan: plan },
-      { headers: h }
-    );
-    // Invalidar cache del restaurante
-    if (restCache) {
-      Object.keys(restCache).forEach(function(k) { delete restCache[k]; });
+    if (!planesValidos.includes(plan)) {
+      return res.status(400).json({ ok: false, error: "Plan invalido: "+plan });
     }
-    if (menuCache) {
-      Object.keys(menuCache).forEach(function(k) { delete menuCache[k]; });
-    }
-    console.log("[cambiar-plan] ✅", restaurante_id, "→", plan, "| rows:", r.data ? r.data.length : 0);
-    res.json({ ok: true, plan: plan, updated: r.data });
+    // Usar service key si existe, si no anon key (misma lógica que el proxy sb)
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var url = SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id;
+    console.log("[cambiar-plan] PATCH →", url, "| plan:", plan, "| key tipo:", svcKey.startsWith("sb_publishable") ? "ANON" : "SERVICE");
+    await axios.patch(url, { plan: plan }, {
+      headers: {
+        "apikey": svcKey,
+        "Authorization": "Bearer " + svcKey,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      }
+    });
+    // Verificar que realmente cambió
+    var check = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=id,plan", {
+      headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey }
+    });
+    var planActual = check.data && check.data[0] ? check.data[0].plan : "?";
+    console.log("[cambiar-plan] ✅ verificado plan en BD:", planActual);
+    // Limpiar cache
+    Object.keys(restCache).forEach(function(k){ delete restCache[k]; });
+    Object.keys(menuCache).forEach(function(k){ delete menuCache[k]; });
+    res.json({ ok: true, plan: plan, plan_en_bd: planActual });
   } catch(e) {
-    console.error("[cambiar-plan]", e.response ? JSON.stringify(e.response.data) : e.message);
-    res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message });
+    var errDetail = e.response ? JSON.stringify(e.response.data) : e.message;
+    console.error("[cambiar-plan] ERROR:", errDetail, "| status:", e.response ? e.response.status : "N/A");
+    res.status(500).json({ ok: false, error: errDetail });
   }
 });
 
@@ -1355,7 +1439,7 @@ app.post("/api/whatsapp/embedded-signup", requireAdmin, async function(req, res)
     } catch(e) { console.warn("[embedded-signup] Webhook subscribe warning:", e.message); }
 
     // 4. Guardar en Supabase
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var phoneNum = phone.display_phone_number.replace(/[^0-9]/g, "");
     await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id,
       {
@@ -1379,7 +1463,7 @@ app.post("/api/whatsapp/embedded-signup", requireAdmin, async function(req, res)
 // ── SISTEMA IA — editor de prompts por tipo de negocio ────────────────────────
 app.get("/api/admin/sistema-ia", requireAdmin, async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/config_sistema?clave=eq.ia_prompts&select=valor&limit=1",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
@@ -1396,7 +1480,7 @@ app.post("/api/admin/sistema-ia", requireAdmin, async function(req, res) {
   try {
     var { data } = req.body;
     if (!data) return res.status(400).json({ ok: false, error: "Faltan datos" });
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var valor = JSON.stringify(data);
     // Upsert en tabla config_sistema
     await axios.post(
@@ -1426,7 +1510,7 @@ app.get("/api/charr/estado", async function(req, res) {
   try {
     var pin = req.query.pin;
     if (!pin) return res.json({ ok: false, error: "PIN requerido" });
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     // Buscar la mesa asociada al PIN del CHARR
     try {
       var r = await axios.get(
@@ -1479,7 +1563,7 @@ app.post("/api/charr/tts", async function(req, res) {
     );
 
     // Subir el audio a Supabase Storage y devolver URL pública
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var fileName = "charr-tts-" + Date.now() + ".mp3";
 
     await axios.post(
@@ -1512,7 +1596,7 @@ app.post("/api/charr/set-estado", async function(req, res) {
     if (!pin || !estado) return res.status(400).json({ ok: false, error: "Faltan datos" });
     var estadosValidos = ["libre","ocupada","preparando","listo","servido","cuenta","celebracion"];
     if (!estadosValidos.includes(estado)) return res.status(400).json({ ok: false, error: "Estado inválido" });
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     try {
       await axios.patch(
         SUPABASE_URL + "/rest/v1/charr_mesas?pin=eq." + pin,
@@ -1529,7 +1613,7 @@ app.post("/api/charr/verify-pin", async function(req, res) {
   try {
     var pin = req.body.pin;
     if (!pin) return res.json({ ok: false, error: "PIN requerido" });
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     try {
       var r = await axios.get(SUPABASE_URL + "/rest/v1/charr_accounts?pin=eq." + pin + "&select=*&limit=1",
         { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
@@ -1546,7 +1630,7 @@ app.post("/api/charr/login", async function(req, res) {
   try {
     var email = req.body.email, password = req.body.password;
     if (!email || !password) return res.json({ ok: false, error: "Email and password required" });
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     try {
       var r = await axios.get(SUPABASE_URL + "/rest/v1/charr_accounts?email=eq." + encodeURIComponent(email) + "&select=*&limit=1",
         { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
@@ -1564,7 +1648,7 @@ app.post("/api/soporte-mensaje", async function(req, res) {
   try {
     var { restaurante_id, restaurante_nombre, mensaje, tipo } = req.body;
     if (!restaurante_id || !mensaje) return res.status(400).json({ ok: false });
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.post(SUPABASE_URL + "/rest/v1/mensajes",
       { restaurante_id, telefono: "SOPORTE_" + restaurante_id, mensaje: "[" + (tipo||"soporte").toUpperCase() + "] " + mensaje, tipo: "alerta_pregunta" },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
@@ -1578,7 +1662,7 @@ app.get("/api/plan-features", async function(req, res) {
   var restaurante_id = req.query.restaurante_id;
   if (!restaurante_id) return res.json({ plan: "basico", features: PLAN_FEATURES.basico });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=plan,estado,suscripcion_estado,fecha_vencimiento,tipo_negocio", {
       headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey }
     });
@@ -1647,7 +1731,7 @@ app.get("/api/mesas-estado", async function(req, res) {
   var restaurante_id = req.query.restaurante_id;
   if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     // Leer estado de mesas de la tabla
     var r = await axios.get(
@@ -1691,7 +1775,7 @@ app.post("/api/mesa-estado", async function(req, res) {
   var { restaurante_id, mesa, estado } = req.body;
   if (!restaurante_id || !mesa || !estado) return res.status(400).json({ error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
     // ── Actualizar memoria inmediatamente — CHARR TOWER lo lee en 3s
     if (!mesaEstados[restaurante_id]) mesaEstados[restaurante_id] = {};
@@ -1773,7 +1857,7 @@ app.post("/api/admin/refresh-token", requireAdmin, function(req, res) {
 
 app.get("/api/admin/me", requireAdmin, async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(SUPABASE_URL + "/rest/v1/usuarios_sistema?id=eq." + req.adminUser.id + "&select=id,nombre,email,telefono,rol&limit=1",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
     var user = r.data && r.data[0];
@@ -1786,7 +1870,7 @@ app.post("/api/admin/login", async function(req, res) {
   var { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ ok: false, error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     // Buscar por email O por teléfono
     var query = email.includes("@")
       ? "email=eq." + encodeURIComponent(email)
@@ -1828,7 +1912,7 @@ app.get("/api/admin/verify", function(req, res) {
 // ── RESTAURANTES DIRECTO (alternativa al proxy sb) ───────────────────────────
 app.get("/api/admin/restaurantes", requireAdmin, async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/restaurantes?select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,tipo_negocio,pin&order=nombre",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
@@ -1837,7 +1921,7 @@ app.get("/api/admin/restaurantes", requireAdmin, async function(req, res) {
   } catch(e) {
     // Intentar sin tipo_negocio si la columna no existe
     try {
-      var svcKey2 = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+      var svcKey2 = SUPABASE_SERVICE_KEY_VAL;
       var r2 = await axios.get(
         SUPABASE_URL + "/rest/v1/restaurantes?select=id,nombre,whatsapp,plan,estado,suscripcion_estado,fecha_vencimiento,ciudad,ciudad_restaurante,pin&order=nombre",
         { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2 } }
@@ -1851,7 +1935,7 @@ app.get("/api/admin/restaurantes", requireAdmin, async function(req, res) {
 
 app.get("/api/admin/dashboard", requireAdmin, async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     // Restaurantes
     var rests = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?select=id,nombre,estado,plan,fecha_vencimiento,suscripcion_estado,ciudad_restaurante,created_at&order=created_at.desc", { headers: h });
@@ -1901,7 +1985,7 @@ app.get("/api/admin/dashboard", requireAdmin, async function(req, res) {
 // Admin Supabase proxy (same as restaurante proxy)
 app.all("/api/admin/sb/*", requireAdmin, async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var restPath = req.params[0];
     if (!restPath || restPath.indexOf("..") !== -1) return res.status(400).json({ error: "Invalid path" });
     var targetUrl = SUPABASE_URL + "/rest/v1/" + restPath;
@@ -1926,7 +2010,7 @@ app.all("/api/admin/sb/*", requireAdmin, async function(req, res) {
 // ═══════════════════════════════════════════════════════════
 app.get("/api/vendedor/dashboard", requireAdmin, async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     var vendedorId = req.adminUser.id;
     // All restaurants (for superadmin) or assigned to vendedor
@@ -1983,7 +2067,7 @@ app.get("/api/vendedor/dashboard", requireAdmin, async function(req, res) {
 
 app.post("/api/vendedor/crear-restaurante", requireAdmin, async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var b = req.body;
     var pin = Math.floor(1000 + Math.random() * 9000).toString();
     var trialFin = new Date(); trialFin.setDate(trialFin.getDate() + 15);
@@ -2079,7 +2163,7 @@ app.post("/api/admin/crear-usuario", requireAdmin, async function(req, res) {
   try {
     var { nombre, email, password, telefono, rol } = req.body;
     if (!email || !password) return res.status(400).json({ ok: false, error: "Email y contraseña requeridos" });
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     // Verificar si ya existe
     var check = await axios.get(SUPABASE_URL + "/rest/v1/usuarios_sistema?email=eq." + encodeURIComponent(email) + "&select=id",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
@@ -2101,7 +2185,7 @@ app.post("/api/vendedor/notificar-creacion", requireAdmin, async function(req, r
     if (!telefono || !pin) return res.json({ ok: false });
     var tel = "57" + String(telefono).replace(/^57/, "").replace(/[^0-9]/g, "");
     var pid = process.env.WHATSAPP_PHONE_ID;
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     try {
       var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=whatsapp_phone_id",
         { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
@@ -2120,7 +2204,7 @@ app.post("/api/vendedor/notificar-creacion", requireAdmin, async function(req, r
 
 app.post("/api/vendedor/actividad", requireAdmin, async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.post(SUPABASE_URL + "/rest/v1/actividad_vendedor",
       { vendedor_id: req.adminUser.id, tipo: req.body.tipo, restaurante_id: req.body.restaurante_id || null, restaurante_nombre: req.body.restaurante_nombre || null, notas: req.body.notas || null },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
@@ -2156,7 +2240,7 @@ app.post("/api/menu-from-photo", requireAdmin, async function(req, res) {
     var items = JSON.parse(content);
     if (!Array.isArray(items)) throw new Error("Respuesta no es un array");
     // Insert into menu_items
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var inserted = 0;
     for (var i = 0; i < items.length; i++) {
       var item = items[i];
@@ -2181,7 +2265,7 @@ app.post("/api/push-subscribe", async function(req, res) {
   nombre = telefono || nombre || rol;
   if (!restaurante_id || !rol || !subscription) return res.status(400).json({ error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.post(
       SUPABASE_URL + "/rest/v1/push_subscriptions?on_conflict=restaurante_id,endpoint",
       { restaurante_id, rol, nombre: nombre || rol, subscription: JSON.stringify(subscription), endpoint: subscription.endpoint, activo: true, updated_at: new Date().toISOString() },
@@ -2206,7 +2290,7 @@ app.post("/api/push-test", async function(req, res) {
 app.post("/api/pedido-estado", async function(req, res) {
   var { id, estado, telefono_cliente, numero_pedido, restaurante_id } = req.body;
   if (!id || !estado) return res.status(400).json({ error: "Faltan datos" });
-  var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+  var svcKey = SUPABASE_SERVICE_KEY_VAL;
   var estadoReal = estado === "listo_entrega" ? "listo_entrega" : estado;
   // Auto-actualizar LED de mesa si viene la dirección
   if (restaurante_id && req.body.direccion) {
@@ -2419,7 +2503,7 @@ app.post("/enviar-mensaje-cliente", async function(req, res) {
     var pid = process.env.WHATSAPP_PHONE_ID;
     if (req.body.restaurante_id) {
       try {
-        var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        var svcKey = SUPABASE_SERVICE_KEY_VAL;
         var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + req.body.restaurante_id + "&select=whatsapp_phone_id", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
         if (rr.data?.length && rr.data[0].whatsapp_phone_id) pid = rr.data[0].whatsapp_phone_id;
       } catch(e) {}
@@ -2441,7 +2525,7 @@ app.post("/api/domi-ubicacion", async function(req, res) {
   var { pedido_id, restaurante_id, domiciliario_id, lat, lng } = req.body;
   if(!domiciliario_id || !lat || !lng) return res.status(400).json({error:"Faltan datos"});
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var headers = {"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"};
     var body = { domiciliario_id, restaurante_id: restaurante_id||null, lat, lng, pedido_id: pedido_id||null, updated_at: new Date().toISOString() };
     await axios.post(SUPABASE_URL+"/rest/v1/domiciliario_ubicacion?on_conflict=domiciliario_id", body, {headers}).catch(async function(){
@@ -2455,7 +2539,7 @@ app.post("/api/ubicacion-domiciliario", async function(req, res) {
   try {
     var { pedido_id, restaurante_id, domiciliario_id, lat, lng } = req.body;
     if (!lat || !lng || !domiciliario_id) return res.status(400).json({ error: "Faltan datos" });
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var headers = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" };
     // Guardar/actualizar ubicación — upsert por domiciliario_id
     var body = { domiciliario_id, restaurante_id: restaurante_id || null, lat, lng, updated_at: new Date().toISOString() };
@@ -2478,7 +2562,7 @@ app.get("/api/domi-ubicaciones", async function(req, res) {
   var { restaurante_id } = req.query;
   if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     // Ubicaciones actualizadas en los últimos 30 minutos
     var hace30 = new Date(Date.now() - 30*60*1000).toISOString();
@@ -2512,7 +2596,7 @@ app.get("/api/domi-stats", async function(req, res) {
   var { domiciliario_id, restaurante_id } = req.query;
   if (!domiciliario_id || !restaurante_id) return res.json({ entregas: 0, hoy: 0, semana: 0, total_ganado: 0, pedidos_activos: [] });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     var hoy = new Date(); hoy.setHours(0,0,0,0);
     var semana = new Date(Date.now() - 7*24*60*60*1000);
@@ -2549,7 +2633,7 @@ app.post("/api/foto-entrega", async function(req, res) {
     var ext = mimeType.includes("png") ? "png" : "jpg";
     var fileName = "entrega_" + pedido_id + "_" + Date.now() + "." + ext;
     var filePath = (restaurante_id || "general") + "/" + fileName;
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     // Subir foto a Supabase Storage bucket 'entregas'
     await axios.post(
       SUPABASE_URL + "/storage/v1/object/media/" + filePath,
@@ -2587,7 +2671,7 @@ app.post("/api/subir-comprobante", async function(req, res) {
     var fileName = "comprobante_" + Date.now() + "_" + Math.random().toString(36).substr(2,6) + "." + ext;
     var filePath = (restaurante_id || "general") + "/" + fileName;
     
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     
     console.log("[subir-comp] Subiendo", (buffer.length/1024).toFixed(1) + "KB a comprobantes/" + filePath);
     
@@ -2647,7 +2731,7 @@ app.post("/api/pedido-manual", async function(req, res) {
   try {
     var num = ++orderCounter;
     var subtotal = req.body.subtotal || (Number(total) - Number(desechables) - Number(domicilio) + Number(descuento));
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var itemsArr = Array.isArray(items) ? items : items.split("\n").filter(function(l){return l.trim();});
     var payload = {
       restaurante_id: restaurante_id,
@@ -2746,7 +2830,7 @@ app.post("/notificar-cliente", async function(req, res) {
 app.post("/api/enviar-promo", async function(req, res) {
   if (!req.body.restaurante_id || !req.body.mensaje) return res.status(400).json({ ok: false, error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     var telefonos = [];
 
@@ -2875,7 +2959,7 @@ app.get("/api/comprobante/:mediaId", async function(req, res) {
 app.get("/api/chat/:telefono", async function(req, res) {
   if (!req.query.restaurante_id) return res.json({ ok: true, mensajes: [] });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + req.query.restaurante_id + "&telefono=eq." + encodeURIComponent(req.params.telefono) + "&order=created_at.asc&limit=150",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
@@ -2886,7 +2970,7 @@ app.get("/api/chat/:telefono", async function(req, res) {
 app.get("/api/mis-pedidos/:telefono", async function(req, res) {
   if (!req.query.restaurante_id) return res.json({ ok: true, pedidos: [] });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var tel = req.params.telefono.replace(/[^0-9]/g,"");
     if(tel.startsWith("57") && tel.length===12) tel=tel.slice(2);
     var r = await axios.get(
@@ -2909,7 +2993,7 @@ app.get("/api/cliente/:telefono", async function(req, res) {
 });
 
 app.delete("/api/pedido/:id", async function(req, res) {
-  var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+  var svcKey = SUPABASE_SERVICE_KEY_VAL;
   try {
     await axios.delete(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + req.params.id, { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
     res.json({ ok: true });
@@ -2920,7 +3004,7 @@ app.post("/api/alerta-pregunta", async function(req, res) {
   var { restaurante_id, telefono, pregunta } = req.body;
   if (!restaurante_id || !pregunta) return res.status(400).json({ error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.post(SUPABASE_URL + "/rest/v1/mensajes",
       { restaurante_id, telefono, mensaje: "ALERTA_PREGUNTA: " + pregunta, tipo: "alerta_pregunta" },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
@@ -2938,7 +3022,7 @@ app.post("/api/luz-panel-agent", async function(req, res) {
   var { restaurante_id, mensaje, historial } = req.body;
   if(!restaurante_id||!mensaje) return res.status(400).json({ok:false,error:"Faltan datos"});
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
 
     // Cargar contexto completo en paralelo — incluyendo canjes y mensajes
@@ -3198,7 +3282,7 @@ app.post("/api/luz-menu-chat", async function(req, res) {
   var { restaurante_id, mensaje, telefono, historial, pedido_activo } = req.body;
   if (!restaurante_id || !mensaje) return res.status(400).json({ ok: false, error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
 
     // ── CARGAR TODO DESDE LA DB EN PARALELO ────────────────────────────────
@@ -3407,7 +3491,7 @@ app.get("/api/domi-login", async function(req, res) {
   var {restaurante_id, telefono, nombre} = req.query;
   if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
     var url;
     if(nombre) {
@@ -3431,7 +3515,7 @@ app.get("/api/domi-pedido-activo", async function(req, res) {
   var {restaurante_id, domiciliario_id, telefono} = req.query;
   if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
     // Buscar por domiciliario_id
     var r = await axios.get(
@@ -3449,7 +3533,7 @@ app.get("/api/domi-historial", async function(req, res) {
   var {restaurante_id, domiciliario_id} = req.query;
   if(!restaurante_id||!domiciliario_id) return res.status(400).json({error:"Faltan datos"});
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
     var hace8h = new Date(Date.now()-8*60*60*1000).toISOString();
     var r = await axios.get(
@@ -3467,7 +3551,7 @@ app.get("/api/cocina-pedidos", async function(req, res) {
   var restaurante_id = req.query.restaurante_id;
   if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
     // Solo pedidos de las últimas 18 horas — evita mostrar pedidos viejos atascados
     var hace18h = new Date(Date.now() - 18*60*60*1000).toISOString();
@@ -3489,7 +3573,7 @@ app.get("/api/cocina-stats", async function(req, res) {
   var restaurante_id = req.query.restaurante_id;
   if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
     // Medianoche en Colombia (UTC-5)
     var hoy = new Date();
@@ -3515,7 +3599,7 @@ app.get("/api/cocina-stats", async function(req, res) {
 app.get("/api/menu", async function(req, res) {
   if (!req.query.restaurante_id) return res.json([]);
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + req.query.restaurante_id +
       "&order=categoria,orden&select=*",
@@ -3534,7 +3618,7 @@ app.get("/api/menu", async function(req, res) {
 
 app.delete("/api/menu-item/:id", async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.delete(SUPABASE_URL + "/rest/v1/menu_items?id=eq." + req.params.id,
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
     res.json({ ok: true });
@@ -3543,7 +3627,7 @@ app.delete("/api/menu-item/:id", async function(req, res) {
 
 app.patch("/api/menu-item/:id", async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.patch(SUPABASE_URL + "/rest/v1/menu_items?id=eq." + req.params.id,
       req.body,
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
@@ -3561,7 +3645,7 @@ app.patch("/api/menu-item/:id", async function(req, res) {
 app.get("/api/destacados", async function(req, res) {
   if (!req.query.restaurante_id) return res.json({ top_vendidos: [], manuales: [] });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var restId = req.query.restaurante_id;
 
     // 1. Obtener top vendidos (máx 3)
@@ -3607,7 +3691,7 @@ app.get("/api/destacados", async function(req, res) {
 app.get("/api/clasicas", async function(req, res) {
   if (!req.query.restaurante_id) return res.json([]);
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     // Search both possible category names
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + req.query.restaurante_id +
@@ -3628,7 +3712,7 @@ app.get("/api/clasicas", async function(req, res) {
 app.get("/api/aprendizajes", async function(req, res) {
   if (!req.query.restaurante_id) return res.json([]);
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/luz_aprendizajes?restaurante_id=eq." + req.query.restaurante_id +
       "&order=created_at.desc&limit=100&select=*",
@@ -3641,7 +3725,7 @@ app.get("/api/aprendizajes", async function(req, res) {
 app.post("/api/aprendizajes", async function(req, res) {
   if (!req.body.restaurante_id || !req.body.contenido) return res.status(400).json({ ok: false, error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.post(SUPABASE_URL + "/rest/v1/luz_aprendizajes",
       { restaurante_id: req.body.restaurante_id, tipo: req.body.tipo || "regla_negocio", contenido: req.body.contenido, fuente: req.body.fuente || "admin", activo: true },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
@@ -3653,7 +3737,7 @@ app.post("/api/aprendizajes", async function(req, res) {
 
 app.patch("/api/aprendizajes/:id", async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var patch = {};
     if (req.body.contenido !== undefined) patch.contenido = req.body.contenido;
     if (req.body.activo !== undefined) patch.activo = req.body.activo;
@@ -3668,7 +3752,7 @@ app.patch("/api/aprendizajes/:id", async function(req, res) {
 
 app.delete("/api/aprendizajes/:id", async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.delete(SUPABASE_URL + "/rest/v1/luz_aprendizajes?id=eq." + req.params.id,
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
     );
@@ -3682,7 +3766,7 @@ app.delete("/api/aprendizajes/:id", async function(req, res) {
 app.get("/api/zonas", async function(req, res) {
   if (!req.query.restaurante_id) return res.json([]);
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/zonas_domicilio?restaurante_id=eq." + req.query.restaurante_id +
       "&order=precio_domicilio.asc&select=*",
@@ -3694,7 +3778,7 @@ app.get("/api/zonas", async function(req, res) {
 
 app.patch("/api/zonas/:id", async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var patch = {};
     if (req.body.nombre !== undefined) patch.nombre = req.body.nombre;
     if (req.body.precio_domicilio !== undefined) patch.precio_domicilio = Number(req.body.precio_domicilio);
@@ -3721,7 +3805,7 @@ app.patch("/api/zonas/:id", async function(req, res) {
 app.get("/api/productos-canje", async function(req, res) {
   if (!req.query.restaurante_id) return res.json([]);
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/productos_canje?restaurante_id=eq." + req.query.restaurante_id +
       "&activo=eq.true&order=puntos_requeridos.asc&select=*",
@@ -3734,7 +3818,7 @@ app.get("/api/productos-canje", async function(req, res) {
 app.post("/api/productos-canje", async function(req, res) {
   if (!req.body.restaurante_id || !req.body.nombre || !req.body.puntos_requeridos) return res.status(400).json({ ok: false, error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.post(SUPABASE_URL + "/rest/v1/productos_canje",
       { restaurante_id: req.body.restaurante_id, nombre: req.body.nombre, descripcion: req.body.descripcion || null, emoji: req.body.emoji || "🎁", puntos_requeridos: Number(req.body.puntos_requeridos), activo: true, stock: req.body.stock || null },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
@@ -3745,7 +3829,7 @@ app.post("/api/productos-canje", async function(req, res) {
 
 app.delete("/api/productos-canje/:id", async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     await axios.delete(SUPABASE_URL + "/rest/v1/productos_canje?id=eq." + req.params.id,
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
     );
@@ -3758,7 +3842,7 @@ app.get("/api/clientes-ranking", async function(req, res) {
   var restaurante_id = req.query.restaurante_id;
   if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante_id +
@@ -3774,7 +3858,7 @@ app.get("/api/clientes-canjes", async function(req, res) {
   var telefono = req.query.telefono;
   if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     var q = SUPABASE_URL + "/rest/v1/canjes?restaurante_id=eq." + restaurante_id;
     if (telefono) q += "&telefono=eq." + encodeURIComponent(telefono);
@@ -3788,7 +3872,7 @@ app.post("/api/ajustar-puntos", async function(req, res) {
   var { restaurante_id, telefono, puntos_delta, motivo } = req.body;
   if (!restaurante_id || !telefono || puntos_delta === undefined) return res.status(400).json({ error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     var telLocal = stripCountryCode(telefono);
     var cliR = await axios.get(
@@ -3819,7 +3903,7 @@ app.get("/api/pedidos-con-descuento", async function(req, res) {
   var restaurante_id = req.query.restaurante_id;
   if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     // Pedidos que tienen descuento (notas_especiales contiene DESCUENTO o items con precio_original)
     var r = await axios.get(
@@ -3835,7 +3919,7 @@ app.post("/api/canjear", async function(req, res) {
   var { restaurante_id, telefono, producto_canje_id } = req.body;
   if (!restaurante_id || !telefono || !producto_canje_id) return res.status(400).json({ ok: false, error: "Faltan datos" });
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     var telLocal = stripCountryCode(telefono);
     var telWA = "57" + telLocal;
@@ -3945,7 +4029,7 @@ app.post("/api/canjear", async function(req, res) {
 app.get("/api/upsell", async function(req, res) {
   if (!req.query.restaurante_id) return res.json([]);
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var restId = req.query.restaurante_id;
 
     // Items que ya están en el carrito (ignorar estos)
@@ -4016,7 +4100,7 @@ app.get("/api/upsell", async function(req, res) {
 // Endpoint para registrar eventos de upsell (analytics)
 app.post("/api/upsell-event", async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var payload = {
       restaurante_id: req.body.restaurante_id,
       pedido_id: req.body.pedido_id || null,
@@ -4039,7 +4123,7 @@ app.post("/api/upsell-event", async function(req, res) {
 app.get("/api/zonas", async function(req, res) {
   if (!req.query.restaurante_id) return res.json([]);
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/zonas_domicilio?restaurante_id=eq." + req.query.restaurante_id + "&order=precio_domicilio.asc",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
@@ -4050,7 +4134,7 @@ app.get("/api/zonas", async function(req, res) {
 
 app.get("/api/restaurante", async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var q = req.query.id ? "id=eq."+req.query.id : "estado=eq.activo&limit=1";
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/restaurantes?" + q + "&select=*",
@@ -4066,7 +4150,7 @@ app.get("/api/restaurante", async function(req, res) {
 // ═══════════════════════════════════════════════════════════
 app.all("/api/supabase/*", async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var restPath = req.params[0]; // everything after /api/supabase/
     if (!restPath || restPath.indexOf("..") !== -1) return res.status(400).json({ error: "Invalid path" });
     var targetUrl = SUPABASE_URL + "/rest/v1/" + restPath;
@@ -4112,7 +4196,7 @@ app.all("/api/supabase/*", async function(req, res) {
 // Legacy proxy-db for get() function
 app.get("/api/proxy-db", async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var q = decodeURIComponent(req.query.q || "");
     if (!q) return res.json([]);
     if (q.indexOf("..") !== -1) return res.status(400).json({ error: "Invalid query" });
@@ -4130,7 +4214,7 @@ app.get("/api/proxy-db", async function(req, res) {
 // Storage proxy for image uploads
 app.post("/api/storage-upload/:path(*)", async function(req, res) {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var filePath = req.params.path;
     if (!filePath || filePath.indexOf("..") !== -1) return res.status(400).json({ error: "Invalid path" });
     var r = await axios.post(
@@ -4191,7 +4275,7 @@ app.post("/api/whapi/conectar", requireAdmin, async function(req, res) {
     if (!channelId) return res.json({ ok: false, error: "Token de Whapi inválido o canal no conectado" });
 
     // Guardar en Supabase
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var updateData = { whapi_token: whapi_token, whapi_channel_id: channelId };
     if (phoneNumber) updateData.whatsapp = phoneNumber.replace(/[^0-9]/g, "");
 
@@ -4249,7 +4333,7 @@ var historialDueno = {}; // { restaurante_id: [{role, content}] }
 
 async function procesarMensajeDueno(texto, from, phoneNumberId, restaurante) {
   var restId = restaurante.id;
-  var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+  var svcKey = SUPABASE_SERVICE_KEY_VAL;
   var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
 
   // Indicador de "procesando"
@@ -4531,7 +4615,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     var trimmedText = userText.trim();
     if (/^[1-5]$/.test(trimmedText)) {
       try {
-        var svcRating = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        var svcRating = SUPABASE_SERVICE_KEY_VAL;
         var telRating = stripCountryCode(from);
         var restauranteRating = await getRestaurante(phoneNumberId);
         if (restauranteRating) {
@@ -4589,7 +4673,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
           // Also check Supabase for active orders
           try {
             var telCheck = stripCountryCode(from);
-            var svcCheck = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+            var svcCheck = SUPABASE_SERVICE_KEY_VAL;
             var actCheck = await axios.get(
               SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id +
               "&cliente_tel=eq." + encodeURIComponent(telCheck) +
@@ -4778,7 +4862,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     if (!pedidoActivoTexto && restaurante) {
       try {
         var telBuscar = stripCountryCode(from);
-        var svcPA = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        var svcPA = SUPABASE_SERVICE_KEY_VAL;
         var pedActResp = await axios.get(
           SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id +
           "&cliente_tel=eq." + encodeURIComponent(telBuscar) +
@@ -4821,7 +4905,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     if (conversations[from].length <= 1 && restaurante) {
       try {
         var telHist = stripCountryCode(from);
-        var svcHist = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        var svcHist = SUPABASE_SERVICE_KEY_VAL;
         var histResp = await axios.get(
           SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + restaurante.id +
           "&telefono=eq." + encodeURIComponent(telHist) +
@@ -4912,7 +4996,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       }
       if (mod) {
       try {
-        var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        var svcKey = SUPABASE_SERVICE_KEY_VAL;
         var pedResp = await axios.get(
           SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id + "&numero_pedido=eq." + mod.numero + "&select=id,items,total,subtotal,desechables,domicilio",
           { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
@@ -4998,7 +5082,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     // If pago_confirmado but no orderState, try to recover from Supabase
     if (sideEffect === "pago_confirmado" && !orderState[from] && restaurante) {
       try {
-        var svcRec = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+        var svcRec = SUPABASE_SERVICE_KEY_VAL;
         var telBuscar = stripCountryCode(from);
         var recResp = await axios.get(
           SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id +
@@ -5049,7 +5133,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       var restId = restaurante?.id || null;
       if (!restId) {
         try {
-          var svcKey2 = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+          var svcKey2 = SUPABASE_SERVICE_KEY_VAL;
           var rf = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=id&limit=1",
             { headers: { "apikey": svcKey2, "Authorization": "Bearer " + svcKey2 } });
           if (rf.data?.length) restId = rf.data[0].id;
@@ -5080,7 +5164,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       if (restId && state.total) {
         try {
           var telPuntos = stripCountryCode(from);
-          var svcPuntos = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+          var svcPuntos = SUPABASE_SERVICE_KEY_VAL;
           var hPuntos = { "apikey": svcPuntos, "Authorization": "Bearer " + svcPuntos };
           var countPR = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restId +
             "&or=(cliente_tel.eq." + encodeURIComponent(telPuntos) + ",cliente_tel.eq." + encodeURIComponent(from) + ")&select=id", { headers: hPuntos });
@@ -5208,7 +5292,7 @@ async function enviarPushClientePorTel(restauranteId, telefono, payload) {
   try {
     var tel = (telefono||"").replace(/[^0-9]/g,"");
     if (tel.startsWith("57") && tel.length===12) tel=tel.slice(2);
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/push_subscriptions?restaurante_id=eq." + restauranteId +
       "&nombre=eq." + encodeURIComponent(tel) + "&activo=eq.true&select=*",
@@ -5237,7 +5321,7 @@ var agentState = {
 
 async function luzAgentTick() {
   try {
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
     var desde = agentState.ultimoChequeo;
     agentState.ultimoChequeo = new Date().toISOString();
@@ -5444,7 +5528,7 @@ app.listen(PORT, function() {
     var hora = col.getHours();
     if (hora === 6 && dia !== ultimoResetDia) {
       ultimoResetDia = dia;
-      var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+      var svcKey = SUPABASE_SERVICE_KEY_VAL;
       axios.patch(SUPABASE_URL + "/rest/v1/silencio_conversacion?activo=eq.true",
         { activo: false, updated_at: new Date().toISOString() },
         { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
@@ -5464,7 +5548,7 @@ app.listen(PORT, function() {
       if (hora !== 10 || dia === ultimoRecordatorioDia) return;
       ultimoRecordatorioDia = dia;
       console.log("[recordatorios] ▶ Revisando trials vencidos/por vencer...");
-      var svcKey = process.env.SUPABASE_SERVICE_KEY || SUPABASE_KEY;
+      var svcKey = SUPABASE_SERVICE_KEY_VAL;
       var r = await axios.get(
         SUPABASE_URL + "/rest/v1/restaurantes?suscripcion_estado=eq.trial&estado=eq.activo&select=id,nombre,whatsapp,fecha_vencimiento,whatsapp_phone_id",
         { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
