@@ -1490,13 +1490,14 @@ async function guardarEdicion(){
   var planVal=document.getElementById("e-plan").value;
   if(!planVal){toast("❌ Selecciona un plan","#ef4444");return;}
 
-  // PASO 1: Cambiar plan
+  // PASO 1: Cambiar plan — usando el proxy sb que ya funciona
   try{
-    var rPlan=await fetch("/api/admin/cambiar-plan",{method:"POST",headers:authH(),body:JSON.stringify({restaurante_id:id,plan:planVal})});
-    var dPlan=await rPlan.json();
-    if(!dPlan.ok) toast("⚠️ Plan: "+(dPlan.error||"error"),"#f59e0b");
-    else console.log("[plan] ✅ cambiado a:",planVal);
-  }catch(e){console.warn("[plan] error:",e.message);}
+    await sb("PATCH","restaurantes?id=eq."+id,{plan:planVal});
+    console.log("[plan] ✅ cambiado a:",planVal);
+  }catch(e){
+    toast("⚠️ Error cambiando plan: "+e.message,"#f59e0b");
+    console.warn("[plan] error:",e.message);
+  }
 
   // PASO 2: Guardar resto de campos
   var payload={nombre:document.getElementById("e-nom").value,estado:document.getElementById("e-est").value};
