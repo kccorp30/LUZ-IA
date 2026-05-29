@@ -1432,17 +1432,27 @@ async function verCliente(id){
 }
 
 async function editarCliente(id){
-  var rs=await sb("GET","restaurantes",null,"id=eq."+id+"&select=*");
-  var r=rs&&rs[0];if(!r)return;
+  // Buscar primero en cache local (ya cargado), si no va al servidor
+  var r = todosC.find(function(x){return x.id===id;});
+  if(!r){
+    // Fallback al servidor con columnas básicas que siempre existen
+    var rs=await sb("GET","restaurantes",null,"id=eq."+id+"&select=id,nombre,estado,plan,fecha_vencimiento,pin,whatsapp,whatsapp_phone_id,tipo_negocio,nombre_luz,personalidad_luz,info_adicional,metodo_pago_nequi,metodo_pago_banco,metodo_pago_nombre,ciudad,ciudad_restaurante");
+    r=rs&&rs[0];
+    if(!r){toast("❌ No se encontró el restaurante","#ef4444");return;}
+  }
   document.getElementById("eid").value=r.id;
   document.getElementById("e-nom").value=r.nombre||"";
   document.getElementById("e-est").value=r.estado||"activo";
-  // Tipo de negocio — actualizar planes disponibles
   var tipoEl=document.getElementById("e-tipo-negocio");
   if(tipoEl)tipoEl.value=r.tipo_negocio||"restaurante";
+  // Actualizar opciones del select de plan ANTES de asignar el valor
   actualizarPlanesModal(r.tipo_negocio||"restaurante");
-  document.getElementById("e-plan").value=r.plan||"basico";
-  document.getElementById("e-vence").value=r.fecha_vencimiento||"";
+  // Asignar plan DESPUÉS de que las opciones estén actualizadas
+  setTimeout(function(){
+    var planEl=document.getElementById("e-plan");
+    if(planEl) planEl.value=r.plan||"basico";
+  },50);
+  document.getElementById("e-vence").value=r.fecha_vencimiento?r.fecha_vencimiento.split("T")[0]:"";
   document.getElementById("e-pin").value=r.pin||"";
   document.getElementById("e-wa").value=r.whatsapp||"";
   document.getElementById("e-pid").value=r.whatsapp_phone_id||"";
@@ -1452,8 +1462,8 @@ async function editarCliente(id){
   document.getElementById("e-nequi").value=r.metodo_pago_nequi||"";
   document.getElementById("e-banco").value=r.metodo_pago_banco||"";
   document.getElementById("e-btit").value=r.metodo_pago_nombre||"";
-  document.getElementById("e-notas").value=r.notas||"";
-  document.getElementById("ePanelUrl").textContent=location.origin+"/restaurante";
+  if(document.getElementById("e-notas"))document.getElementById("e-notas").value=r.notas||"";
+  if(document.getElementById("ePanelUrl"))document.getElementById("ePanelUrl").textContent=location.origin+"/restaurante";
   openMod("editar");
 }
 
@@ -1475,16 +1485,18 @@ function copiarPanelUrl(){
 
 async function guardarEdicion(){
   var id=document.getElementById("eid").value;
+  if(!id){toast("❌ Error: ID vacío","#ef4444");return;}
   var waVal=document.getElementById("e-wa").value.trim();
   var planVal=document.getElementById("e-plan").value;
+  if(!planVal){toast("❌ Selecciona un plan","#ef4444");return;}
 
-  // PASO 1: Cambiar plan con endpoint dedicado (más confiable)
+  // PASO 1: Cambiar plan
   try{
     var rPlan=await fetch("/api/admin/cambiar-plan",{method:"POST",headers:authH(),body:JSON.stringify({restaurante_id:id,plan:planVal})});
     var dPlan=await rPlan.json();
-    if(!dPlan.ok)console.warn("[plan] Error:",dPlan.error);
-    else console.log("[plan] ✅ Plan cambiado a:",planVal);
-  }catch(e){console.warn("[plan] fetch error:",e.message);}
+    if(!dPlan.ok) toast("⚠️ Plan: "+(dPlan.error||"error"),"#f59e0b");
+    else console.log("[plan] ✅ cambiado a:",planVal);
+  }catch(e){console.warn("[plan] error:",e.message);}
 
   // PASO 2: Guardar resto de campos
   var payload={nombre:document.getElementById("e-nom").value,estado:document.getElementById("e-est").value};
