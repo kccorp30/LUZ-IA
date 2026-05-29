@@ -2464,8 +2464,9 @@ function goApp(){
   setTimeout(function(){loadMenuEditor();},1500);
   timer=setInterval(function(){loadPedidos();loadStats();checkNuevosMensajes();checkProgsAutomaticas();checkResetSilencios();},8000);
   setTimeout(checkNuevosMensajes,2000);setTimeout(checkProgsAutomaticas,3000);
-  // Verificar plan y bloquear funciones no incluidas
+  // Verificar plan al inicio y cada 5 minutos (por si admin lo cambia)
   setTimeout(function(){verificarPlan();},500);
+  setInterval(function(){verificarPlan();}, 5 * 60 * 1000);
 }
 
 // ── PLAN Y BLOQUEO DE FUNCIONES ──────────────────────────────────────────────
