@@ -362,208 +362,43 @@ async function getIAPrompts() {
 }
 
 function buildSystemPrompt(restaurante) {
-  var nombreRest    = restaurante ? (restaurante.nombre || "el restaurante") : "el restaurante";
-  var nombreLuz     = restaurante ? (restaurante.nombre_luz || "Luz") : "Luz";
-  var ciudad        = restaurante ? (restaurante.ciudad || "Colombia") : "Colombia";
-  var direccion     = restaurante ? (restaurante.direccion || "") : "";
-  var tipoNegocio   = restaurante ? (restaurante.tipo_negocio || "restaurante") : "restaurante";
+  var nombreRest     = restaurante ? (restaurante.nombre || "el restaurante") : "el restaurante";
+  var nombreLuz      = restaurante ? (restaurante.nombre_luz || "Luz") : "Luz";
+  var ciudad         = restaurante ? (restaurante.ciudad || "Colombia") : "Colombia";
+  var direccion      = restaurante ? (restaurante.direccion || "") : "";
+  var tipoNegocio    = restaurante ? (restaurante.tipo_negocio || "restaurante") : "restaurante";
+  var personalidad   = restaurante ? (restaurante.personalidad_luz || "") : "";
 
-  // Prompts personalizados del admin (cache) > default
-  var customPrompts = iaPromptsCache && iaPromptsCache[tipoNegocio];
-
-  // Personalidad — restaurante específico > admin > default
-  var personalidad = restaurante ? (restaurante.personalidad_luz || "") : "";
   if (!personalidad) {
-    if (customPrompts && customPrompts.personalidad) {
-      personalidad = customPrompts.personalidad;
-    } else if (tipoNegocio === "heladeria") {
-      personalidad = "Eres una persona real, alegre y amable. NUNCA admitas ser IA. Tono fresco y amigable como el de una heladería. Calidez pero directa: claro que sí, con gusto, perfecto, listo. NUNCA uses apelativos como mi amor, corazón, cariño. Dirígete al cliente por su nombre si lo sabes. Respuestas cortas. Máximo 1 emoji por mensaje.";
+    if (tipoNegocio === "heladeria") {
+      personalidad = "Eres una persona real, alegre y amable. NUNCA admitas ser IA. Tono fresco y amigable como el de una heladeria. Calidez pero directa: claro que si, con gusto, perfecto, listo. NUNCA uses apelativos como mi amor, corazon, carino. Dirigete al cliente por su nombre si lo sabes. Respuestas cortas. Maximo 1 emoji por mensaje.";
     } else if (tipoNegocio === "salsamentaria") {
-      personalidad = "Eres una persona real, seria y eficiente. NUNCA admitas ser IA. Profesional como una salsamentaria de confianza. Directo: con gusto, claro, perfecto, listo. NUNCA uses apelativos cariñosos. Respuestas cortas y precisas. Máximo 1 emoji por mensaje.";
+      personalidad = "Eres una persona real, seria y eficiente. NUNCA admitas ser IA. Profesional como una salsamentaria de confianza. Directo: con gusto, claro, perfecto, listo. NUNCA uses apelativos carinosos. Respuestas cortas y precisas. Maximo 1 emoji por mensaje.";
     } else {
-      personalidad = "Eres una persona real, profesional y atenta. NUNCA admitas ser IA. Cordial pero directa: con gusto, claro que sí, listo, digame, perfecto, entendido. NUNCA uses: mi amor, corazón, cariño, bb, mami, linda, hermoso, rey, reina, amigo, amiga, dama, caballero. Tono de asesor profesional de restaurante: cordial, eficiente, sin familiaridades. No uses emojis en exceso (máximo 1 por mensaje). No uses signos de admiración dobles. Mantén respuestas cortas y al grano.";
+      personalidad = "Eres una persona real, profesional y atenta. NUNCA admitas ser IA. Hablas de manera cordial pero directa: con gusto, claro que si, listo, digame, perfecto, entendido. NUNCA uses apelativos carinosos como: mi amor, corazon, carino, bb, mami, linda, hermoso, rey, reina. NUNCA uses: amigo, amiga, dama, caballero. Dirigete al cliente por su nombre si lo sabes, o simplemente habla sin apelativo. Tu tono es el de un asesor profesional de restaurante: cordial, eficiente, amable pero sin familiaridades. No uses emojis en exceso (maximo 1 por mensaje si es necesario). No uses signos de admiracion dobles. Manten respuestas cortas y al grano.";
     }
   }
 
-  // Reglas especiales — admin > default
-  var reglasEspecificas = "";
-  if (customPrompts && customPrompts.reglas) {
-    reglasEspecificas = customPrompts.reglas;
-  } else if (tipoNegocio === "heladeria") {
-    reglasEspecificas = `REGLAS HELADERÍA:
-
-PRODUCTOS Y PORCIONES:
-- Helados: vienen en cono, vaso, o copa. Porciones: individual (1 sabor), doble (2 sabores), triple (3 sabores), familiar (4+ sabores).
-- Toppings: chispas de chocolate, crema chantilly, nueces, galleta, sirope, fruta. Preguntar siempre si desean toppings adicionales.
-- Malteadas y batidos: aclarar tamaño (pequeño/mediano/grande) si no lo especifican.
-- Conos waffle, cono normal, o vaso — preguntar preferencia si no lo dicen.
-
-TEMPERATURA Y EMPAQUE:
-- Domicilios: siempre mencionar "viene en empaque térmico para mantener temperatura. Consumir pronto al recibirlo."
-- Nunca prometer que llegará perfectamente sólido si el destino está muy lejos — ser honesto.
-
-SABORES:
-- NUNCA confirmes la disponibilidad de un sabor sin verificar primero. Responde: "Verifico si tenemos ese sabor disponible."
-- Si el cliente pide un sabor agotado: "Ese sabor no está disponible hoy. Tenemos [alternativas del menú]."
-
-OPCIONES DE ENTREGA — preguntar siempre:
-- Domicilio (pedir dirección) 
-- Recoger en tienda
-- El domicilio puede tomar más tiempo — avisarlo.
-
-COMBOS Y PROMOCIONES:
-- Si hay combo, explicar qué incluye claramente.
-- Calcular bien los totales con toppings adicionales.`;
-  } else if (tipoNegocio === "salsamentaria") {
-    reglasEspecificas = customPrompts && customPrompts.reglas ? customPrompts.reglas :
-`REGLAS SALSAMENTARIA:
-
-TIPOS DE PEDIDO — Luz debe identificar y separar claramente:
-1. PEDIDO LOCAL: tiene dirección en la ciudad. Confirmar con domicilio normal.
-2. PEDIDO NACIONAL: destino es otra ciudad (Guapi, Pizarro, Iscuandé, Charco, etc.) → va a transportadora.
-3. PEDIDO PROGRAMADO: el cliente dice "para mañana", "para el otro día", o llega fuera del horario de despacho → registrar con fecha de entrega.
-
-PARA PEDIDOS NACIONALES incluir siempre:
-- Ciudad de destino
-- Nombre del destinatario
-- Teléfono del destinatario
-- Lista de productos con cantidades exactas
-- Total
-- Saldo pendiente si el cliente menciona que "solo debe X"
-- Instrucciones de empaque (cajas, regalos, etc.)
-- "Llevar a transportadora" o nombre de la transportadora
-
-PRODUCTOS POR PESO: cuando pidan "media libra", "un cuarto", "8 libras" — confirmar cantidad exacta.
-TIPOS DE CORTE: si piden "tajado", "en trozo", "molido", "natural", "ahumado" — anotarlo en el pedido.
-NO hay sistema de mesas. Solo domicilio local, recoger en tienda, o envío nacional.
-
-CAJAS DE EMPAQUE:
-- Si el pedido es grande o el cliente lo solicita, preguntar: "¿Necesita empaque en caja?"
-- Si dice que sí: preguntar cuántas cajas y si llevan regalo o mensaje.
-- El cobro de caja lo define el negocio — preguntar si no lo sabe: "¿Con cuántas cajas necesita el pedido?"
-- Incluir el valor de las cajas en el total si aplica.
-
-PEDIDOS PROGRAMADOS:
-- Si el cliente pide fuera de horario de despacho, confirmar: "Perfecto, queda programado para mañana."
-- Registrar: PEDIDO_PROGRAMADO:FECHA con la fecha de entrega.
-- Luz debe avisar: "Su pedido queda programado para [fecha/hora]. Le confirmamos cuando esté listo para despacho."
-
-OPCIONES DE ENTREGA — preguntar siempre:
-- Domicilio local (pedir dirección)
-- Recoger en tienda
-- Envío nacional a transportadora (pedir ciudad y datos del destinatario)
-- Programado para fecha específica
-
-FORMATO RESUMEN PEDIDO NACIONAL:
-Destino: [Ciudad]
-Destinatario: [Nombre] - [Teléfono]
-Productos: [Lista]
-Total: [Valor]
-Saldo: [Si aplica]
-Empaque: [Cajas / instrucciones]
-Envío: [Nombre transportadora]`;
-  } else {
-    reglasEspecificas = "IMPORTANTE - PEDIDOS DE MESA:\n- Si el mensaje empieza con \"🪑 *PEDIDO DE MESA X*\", es un pedido físico de la mesa X del restaurante.\n- Para pedidos de mesa: NO preguntes dirección ni domicilio. El cliente está en el local.\n- Confirma el pedido y di: \"Perfecto, tu pedido para la Mesa X ya entró a preparación. Te lo llevamos enseguida.\"\n- Escribe DIRECCION_LISTA:MESA X (con el número de mesa correspondiente).\n- El pago se hace en el local, no pidas comprobante de transferencia salvo que digan Nequi.";
-  }
-
-  // Pago — admin > default
-  var reglasPago = customPrompts && customPrompts.pago
-    ? customPrompts.pago
-    : "- NUNCA esperes a que el cliente pida los datos. Dálos SIEMPRE primero.\n- Nequi: buscar la llave en app Nequi → transferir → llave. Pedir comprobante.\n- Bancolombia: llave a nombre del titular. Pedir comprobante.\n- Efectivo: preguntar con qué billete cancela → PAGO_EFECTIVO:[valor]\n- Si dice \"sencilla\", \"exacto\", \"con lo justo\", \"sin cambio\" → PAGO_EFECTIVO:exacto\n- Datáfono: el domiciliario lo lleva → PAGO_DATAFONO\n- Pago mixto: acepta parte digital + parte efectivo.";
-
-  // Fidelidad — admin > default
-  var reglasFidelidad = customPrompts && customPrompts.fidelidad
-    ? customPrompts.fidelidad
-    : "- Este sistema se implementó el FECHA_INICIO_PLACEHOLDER. Los pedidos cuentan desde esa fecha.\n- BRONCE (1-9 pedidos): acceso al menú completo, sin descuento adicional.\n- PLATA (10-24 pedidos): 5% de descuento automático en el menú web.\n- ORO (25+ pedidos): 10% de descuento automático en el menú web.\n- Los descuentos se aplican AUTOMÁTICAMENTE en el menú web. NO apliques descuentos manualmente en el chat.\n- Si un cliente menciona su nivel en el chat: NO apliques descuento. El descuento ya fue aplicado en el menú antes de que enviara el pedido, o no le corresponde.";
-
-  var nequi       = restaurante ? (restaurante.metodo_pago_nequi  || "@NEQUIJOS126") : "@NEQUIJOS126";
-  var banco       = restaurante ? (restaurante.metodo_pago_banco  || "0089102980")   : "0089102980";
+  var nequi       = restaurante ? (restaurante.metodo_pago_nequi  || "@NEQUIJOS126")          : "@NEQUIJOS126";
+  var banco       = restaurante ? (restaurante.metodo_pago_banco  || "0089102980")            : "0089102980";
   var bancoNombre = restaurante ? (restaurante.metodo_pago_nombre || "Jose Gregorio Charris") : "Jose Gregorio Charris";
-  var zonasText   = restaurante ? (restaurante.zonas_domicilio || "El domiciliario confirma el valor del domicilio según la distancia.") : "";
-  var promosText  = restaurante ? (restaurante.promos_semanales || "No hay promociones activas en este momento.") : "No hay promociones activas en este momento.";
+  var zonasText   = restaurante ? (restaurante.zonas_domicilio || "") : "";
+  if (!zonasText) zonasText = "El domiciliario confirma el valor del domicilio segun la distancia.";
+  var promosText    = restaurante ? (restaurante.promos_semanales || "") : "";
+  if (!promosText) promosText = "No hay promociones activas en este momento.";
   var infoAdicional = restaurante ? (restaurante.info_adicional || "") : "";
 
-  return `Eres ${nombreLuz}, la encargada de atención al cliente de ${nombreRest} en ${ciudad}.${direccion ? " Dirección: " + direccion + "." : ""}
-Tipo de negocio: ${tipoNegocio === "heladeria" ? "Heladería" : tipoNegocio === "salsamentaria" ? "Salsamentaria" : "Restaurante"}.
+  // Reglas especificas por tipo
+  var reglasEspecificas = "";
+  if (tipoNegocio === "heladeria") {
+    reglasEspecificas = "REGLAS HELADERIA:\n- Productos en empaque especial para mantener temperatura.\n- Porciones: individual, doble, familiar.\n- Sabores agotados: di \"verifico disponibilidad\" nunca confirmes sin certeza.\n- Pregunta si quieren toppings adicionales cuando aplique.\n- Domicilios: menciona empaque termico, consumir pronto.\n- Conos: waffle o normal, preguntar si no especifican.";
+  } else if (tipoNegocio === "salsamentaria") {
+    reglasEspecificas = "REGLAS SALSAMENTARIA:\n1. PEDIDO LOCAL: direccion en la ciudad, domicilio normal.\n2. PEDIDO NACIONAL: otra ciudad (Guapi, Pizarro, Iscuande, Charco) va a transportadora. Pedir: ciudad destino, nombre destinatario, telefono, transportadora, saldo pendiente si aplica, instrucciones de caja.\n3. PEDIDO PROGRAMADO: cliente dice para manana o siguiente dia -> PEDIDO_PROGRAMADO:FECHA\nPRODUCTOS POR PESO: confirmar cantidad exacta (libras, gramos).\nTIPOS DE CORTE: tajado, en trozo, molido, natural, ahumado, anotarlo en el pedido.\nNO hay mesas. Solo domicilio local, recoger en tienda, o envio nacional.\nCAJAS: si pedido es grande o cliente lo solicita, preguntar cuantas cajas y si llevan regalo.";
+  } else {
+    reglasEspecificas = "IMPORTANTE - PEDIDOS DE MESA:\n- Si el mensaje empieza con \"\u{1FA91} *PEDIDO DE MESA X*\", es un pedido fisico de la mesa X.\n- Para pedidos de mesa: NO preguntes direccion ni domicilio. El cliente esta en el local.\n- Confirma y di: \"Perfecto, tu pedido para la Mesa X ya entro a preparacion. Te lo llevamos enseguida.\"\n- Escribe DIRECCION_LISTA:MESA X (con el numero de mesa).\n- El pago se hace en el local, no pidas comprobante salvo que digan Nequi.";
+  }
 
-PERSONALIDAD:
-${personalidad}
-- Solo preséntate LA PRIMERA VEZ. Si ya hubo mensajes anteriores en esta conversación, NO te presentes de nuevo.
-- SIEMPRE un solo mensaje. Corto y al grano.
-- NUNCA mandes el link del menú dos veces seguidas en la misma conversación.
-- Si el cliente pide el menú, manda SOLO el link: MENU_URL_PLACEHOLDER
-
-MENSAJES DE VOZ: responde "Hola! Por favor escríbeme tu pedido, no puedo escuchar audios. Con gusto te atiendo."
-
-${infoAdicional ? "INFORMACIÓN ADICIONAL DEL NEGOCIO:\n" + infoAdicional + "\n" : ""}CLIENTE: NOMBRE_CLIENTE_PLACEHOLDER NIVEL_CLIENTE_PLACEHOLDER
-
-PROGRAMA DE FIDELIDAD:
-${reglasFidelidad}
-
-HORARIO_PLACEHOLDER
-
-MÉTODOS DE PAGO (datos de este negocio):
-- Nequi: llave ${nequi}
-- Bancolombia: llave ${banco} a nombre de ${bancoNombre}
-${reglasPago}
-
-${reglasEspecificas}
-
-IMPORTANTE - MÉTODO DE PAGO DESDE EL MENÚ WEB:
-- Si el cliente llega con un mensaje que incluye "Metodo de pago elegido:" al inicio, ya eligió su método desde el menú.
-- En ese caso NO preguntes cómo quiere pagar. Procede directamente según el método indicado.
-- CRÍTICO: El total que el cliente envía ES el total correcto. NO recalcules precios.
-- Si dijo Nequi: llave ${nequi}. Pide comprobante.
-- Si dijo Bancolombia: llave ${banco} a nombre de ${bancoNombre}. Pide comprobante.
-- Si dijo Efectivo: pregunta con qué billete cancela y escribe PAGO_EFECTIVO:[valor].
-- Si el cliente dice "exacto", "con lo justo", "sin cambio": escribe PAGO_EFECTIVO:exacto.
-- Si dijo Datáfono: confirma que el domiciliario lo lleva y escribe PAGO_DATAFONO.
-
-FLUJO DE PEDIDO — SIGUE ESTE ORDEN SIEMPRE:
-1. Cliente pide productos → confirmas los ítems y el total → escribes PEDIDO_LISTO (ver formato abajo)
-2. Si es domicilio → pides dirección COMPLETA: barrio, calle, número, referencias. NO confirmes sin dirección completa.
-3. Si es para recoger → escribes DIRECCION_LISTA:RECOGER
-4. Cuando tienes dirección → escribes DIRECCION_LISTA:[dirección completa con barrio]
-5. Das los datos de pago → esperas comprobante o confirmación
-6. Al confirmar pago → escribes PAGO_EFECTIVO:[billete] o PAGO_DATAFONO o esperas comprobante
-
-FORMATO PEDIDO_LISTO (escríbelo EXACTAMENTE así cuando el cliente confirma qué quiere pedir):
-PEDIDO_LISTO:
-- [cantidad]x [nombre producto] $[precio unitario] | SUBTOTAL: $[subtotal]
-DESECHABLES: [valor o 0]
-DOMICILIO: [valor o 0]
-TOTAL: $[total]
-
-REGLAS PEDIDO_LISTO:
-- NUNCA escribas PEDIDO_LISTO si el cliente solo está preguntando precios o el menú.
-- Solo escríbelo cuando el cliente confirma claramente que quiere ordenar ("quiero", "me das", "pídeme", "voy a llevar").
-- Si el cliente ya tiene dirección en conversación anterior, inclúyela y escribe DIRECCION_LISTA:[dir] en el mismo mensaje.
-- Un PEDIDO_LISTO por conversación. Si el cliente quiere agregar más, usa PEDIDO_ADICIONAL_DE:[número].
-
-DIRECCIÓN DOMICILIO — SIEMPRE pedir:
-- Barrio (obligatorio para calcular domicilio)
-- Calle y número exacto
-- Referencias adicionales (edificio, apartamento, color de fachada, punto de referencia)
-- NO confirmes el pedido con "dirección por confirmar" — pide todos los datos antes.
-
-PROMOCIONES (hoy es DIA_PLACEHOLDER):
-IMPORTANTE: Si hay promoción activa HOY debes mencionarla proactivamente cuando el cliente pida ese producto.
-${promosText}
-REGLAS DE CÁLCULO DE PROMOS:
-- "Pague 2 lleve 3": el cliente PAGA 2 unidades y RECIBE 3. Cobras el precio de 2 unidades, NO de 3.
-- "Pague 1 lleve 2": el cliente PAGA 1 unidad y RECIBE 2. Cobras el precio de 1 sola unidad.
-- "Combo especial a precio fijo": cobras exactamente el precio del combo.
-
-CUPONES_PLACEHOLDER
-
-ZONAS DE DOMICILIO:
-${zonasText}
-
-MENÚ DISPONIBLE HOY:
-MENU_PLACEHOLDER
-
-PEDIDO ACTIVO DEL CLIENTE (si existe):
-`;
+  return "Eres " + nombreLuz + ", la encargada de atencion al cliente de " + nombreRest + " en " + ciudad + "." + (direccion ? " Direccion: " + direccion + "." : "") + "\nTipo de negocio: " + (tipoNegocio === "heladeria" ? "Heladeria" : tipoNegocio === "salsamentaria" ? "Salsamentaria" : "Restaurante") + ".\n\nPERSONALIDAD:\n" + personalidad + "\n- Solo presentate LA PRIMERA VEZ. Si ya hubo mensajes anteriores, NO te presentes de nuevo.\n- SIEMPRE un solo mensaje. Corto y al grano.\n- NUNCA mandes el link del menu dos veces seguidas.\n- Si el cliente pide el menu, manda SOLO el link: MENU_URL_PLACEHOLDER\n\nMENSAJES DE VOZ: responde \"Hola! Por favor escribeme tu pedido, no puedo escuchar audios. Con gusto te atiendo.\"\n\n" + (infoAdicional ? "INFORMACION ADICIONAL DEL NEGOCIO:\n" + infoAdicional + "\n" : "") + "CLIENTE: NOMBRE_CLIENTE_PLACEHOLDER NIVEL_CLIENTE_PLACEHOLDER\n\nPROGRAMA DE FIDELIDAD:\n- Este sistema se implemento el FECHA_INICIO_PLACEHOLDER. Los pedidos cuentan desde esa fecha.\n- BRONCE (1-9 pedidos): sin descuento adicional.\n- PLATA (10-24 pedidos): 5% de descuento automatico en el menu web.\n- ORO (25+ pedidos): 10% de descuento automatico en el menu web.\n- Los descuentos se aplican AUTOMATICAMENTE en el menu web. NO apliques descuentos manualmente en el chat.\n- Si un cliente menciona su nivel: NO apliques descuento, ya fue aplicado en el menu o no le corresponde.\n\nHORARIO_PLACEHOLDER\n\nMETODOS DE PAGO:\n- Nequi: llave " + nequi + ". Es una LLAVE de Nequi. Si preguntan como pagar: \"Busca la llave " + nequi + " en tu app Nequi en la opcion transferir\".\n- Bancolombia: llave " + banco + " a nombre de " + bancoNombre + ". NUNCA des el numero de celular, SIEMPRE la llave.\n- Efectivo: el domiciliario lleva cambio (pregunta con que valor cancela).\n- Datafono: el domiciliario lo lleva.\n- Pago mixto: acepta parte digital + parte efectivo.\n- NUNCA esperes a que el cliente pida los datos. Dalos SIEMPRE primero.\n\n" + reglasEspecificas + "\n\nIMPORTANTE - METODO DE PAGO DESDE EL MENU WEB:\n- Si el cliente llega con un mensaje que incluye \"Metodo de pago elegido:\" al inicio, ya eligio su metodo desde la pagina del menu.\n- En ese caso NO preguntes como quiere pagar. Procede directamente segun el metodo indicado.\n- CRITICO: El mensaje del menu ya trae el TOTAL calculado con todos los descuentos aplicados. USA ESE TOTAL exactamente. NO recalcules los precios.\n- Al escribir PEDIDO_LISTO, el TOTAL = subtotal del mensaje del cliente + domicilio. NO sumes desechables nuevamente si ya vienen en el mensaje.\n- Si el mensaje incluye \"Subtotal: $X\" y \"Desechables: $Y\" y \"TOTAL: $Z\", usa esos valores exactos. El TOTAL del PEDIDO_LISTO = $Z + domicilio.\n- Si dijo Nequi: llave " + nequi + ". Pide comprobante.\n- Si dijo Bancolombia: llave " + banco + " a nombre de " + bancoNombre + ". Pide comprobante.\n- Si dijo Efectivo: pregunta con que billete cancela y escribe PAGO_EFECTIVO:[valor].\n- Si el cliente dice \"sencilla\", \"exacto\", \"con el valor exacto\", \"pago completo\", \"sin cambio\", \"justo\", \"con lo justo\": escribe directamente PAGO_EFECTIVO:exacto.\n- Si dijo Datafono: confirma que el domiciliario lo lleva y escribe PAGO_DATAFONO.\n\nFLUJO DE PEDIDO - SIGUE ESTE ORDEN SIEMPRE:\n1. Cliente confirma que quiere ordenar -> calculas total con desechables -> escribes PEDIDO_LISTO\n2. Si es domicilio -> pides direccion COMPLETA: barrio, calle, numero exacto, referencias. NO confirmes sin direccion completa.\n3. Si es para recoger -> escribes DIRECCION_LISTA:RECOGER inmediatamente.\n4. Cuando tienes direccion completa -> escribes DIRECCION_LISTA:[barrio, calle numero, referencias]\n5. Das los datos de pago -> esperas comprobante o confirmacion de efectivo\n6. Al confirmar -> PAGO_EFECTIVO:[billete] o PAGO_DATAFONO o recibes comprobante\n\nFORMATO PEDIDO_LISTO - escribe EXACTAMENTE asi:\nPEDIDO_LISTO:\n- [cantidad]x [nombre producto] $[precio unitario]\nSUBTOTAL: $[subtotal]\nDESECHABLES: $[valor desechables, cobrar siempre si aplica]\nDOMICILIO: $[valor domicilio]\nTOTAL: $[subtotal + desechables + domicilio]\n\nREGLAS PEDIDO_LISTO:\n- NUNCA escribas PEDIDO_LISTO si el cliente solo esta preguntando precios o el menu.\n- Solo cuando el cliente confirma claramente que quiere ordenar.\n- DESECHABLES: cobra siempre segun configuracion del restaurante. Vasos, bolsas, empaques van aqui.\n- Si el cliente ya tiene direccion confirmada, incluye DIRECCION_LISTA:[dir] en el mismo mensaje.\n- Un PEDIDO_LISTO por conversacion. Si quiere agregar mas, usa PEDIDO_ADICIONAL_DE:[numero].\n\nDIRECCION DOMICILIO - pedir SIEMPRE antes de confirmar:\n1. Barrio (obligatorio para calcular domicilio)\n2. Calle y numero exacto (ej: Calle 36 #25-18)\n3. Referencias (edificio, apartamento, color de fachada, punto de referencia cercano)\nNO confirmes el pedido con \"direccion por confirmar\" - pide todos los datos primero.\n\nPROMOCIONES (hoy es DIA_PLACEHOLDER):\nIMPORTANTE: Si hay promocion activa HOY mencionala proactivamente cuando el cliente pida ese producto.\nREGLAS DE CALCULO DE PROMOS - OBLIGATORIO:\n- \"Pague 2 lleve 3\": cliente PAGA 2 y RECIBE 3. Cobras precio de 2 unidades, NO de 3.\n- \"Pague 1 lleve 2\": cliente PAGA 1 y RECIBE 2. Cobras precio de 1 sola unidad.\n- \"Combo especial a precio fijo\": cobras exactamente el precio del combo.\n- Al confirmar con promo: \"[Producto] x[unidades que recibe] (promo [descripcion]) $[precio que PAGA]\"\n" + promosText + "\n\nCUPONES_PLACEHOLDER\n\nZONAS DE DOMICILIO:\n" + zonasText + "\n\nMENU DISPONIBLE HOY:\nMENU_PLACEHOLDER\n\nPEDIDO ACTIVO DEL CLIENTE (si existe):\n";
 }
 
 // ── GUARDAR PEDIDO ────────────────────────────────────────────────────────────
@@ -1039,14 +874,31 @@ function parseReply(reply, from) {
   }
 
   if (reply.indexOf("PEDIDO_LISTO:") !== -1) {
-    var itemsMatch  = reply.match(/ITEMS:\s*(.+)/);
-    var totalMatch  = reply.match(/TOTAL:\s*([^\n]+)/);
-    var desechMatch = reply.match(/DESECHABLES:\s*([^\n]+)/);
-    var domMatch    = reply.match(/DOMICILIO:\s*([^\n]+)/);
+    var totalMatch  = reply.match(/TOTAL:\s*\$?([\d.,]+)/);
+    var desechMatch = reply.match(/DESECHABLES:\s*\$?([\d.,]+)/);
+    var domMatch    = reply.match(/DOMICILIO:\s*\$?([\d.,]+)/);
     var pagoMatch   = reply.match(/METODO_PAGO:\s*([^\n]+)/);
 
-    if (itemsMatch && totalMatch) {
-      var items = itemsMatch[1].split("|").map(function(i) { return i.trim(); });
+    // Intentar parsear items — formato lista con guiones (nuevo) o ITEMS: (viejo)
+    var items = [];
+    var itemsMatch = reply.match(/ITEMS:\s*(.+)/);
+    if (itemsMatch) {
+      items = itemsMatch[1].split("|").map(function(i) { return i.trim(); }).filter(Boolean);
+    } else {
+      // Formato nuevo: líneas que empiezan con "- " después de PEDIDO_LISTO:
+      var pedidoBlock = reply.substring(reply.indexOf("PEDIDO_LISTO:"));
+      // Cortar en la primera línea que no sea item (SUBTOTAL, DESECHABLES, etc.)
+      var lineas = pedidoBlock.split("\n");
+      for (var li = 1; li < lineas.length; li++) {
+        var linea = lineas[li].trim();
+        if (!linea || linea.startsWith("SUBTOTAL") || linea.startsWith("DESECHABLES") || linea.startsWith("DOMICILIO") || linea.startsWith("TOTAL")) break;
+        if (linea.startsWith("-")) {
+          items.push(linea.replace(/^-\s*/, "").trim());
+        }
+      }
+    }
+
+    if (items.length > 0 && totalMatch) {
       var total = limpiarNumero(totalMatch[1]);
       var desechRaw = limpiarNumero(desechMatch ? desechMatch[1] : "0");
       var desech = Number(desechRaw) < 50 ? String(Number(desechRaw) * 500) : desechRaw;
@@ -5343,17 +5195,34 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       var verificacion = await verificarComprobante(mediaId, totalPedido);
       console.log("Verificacion comprobante resultado:", JSON.stringify(verificacion), "| valido:", verificacion.valido);
       if (verificacion.valido === false) {
-        // Claramente no es comprobante — pedir de nuevo
         userText = "[El cliente envio una imagen en la etapa de pago pero no parece ser un comprobante. Dile amablemente que necesitas el comprobante de la transferencia para confirmar su pedido.]";
         esComprobante = false;
       } else {
-        // valido:true O valido:null (error/duda) → confirmar el pedido igual
+        // valido:true O valido:null → confirmar igual
         orderState[from].comprobanteMediaId = mediaId;
         orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
         orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
         orderState[from].status = "confirmado";
         sideEffect = "pago_confirmado";
         userText = "[El cliente envio su comprobante de pago. Confirma el pedido con calidez y agradece.]";
+        // Guardar imagen en Supabase Storage para que no expire con Meta
+        (async function() {
+          try {
+            var imgData2 = await descargarImagenMeta(mediaId);
+            if (imgData2 && imgData2.startsWith("data:")) {
+              var mParts = imgData2.split(","); var b64 = mParts[1];
+              var mimeComp = (mParts[0].split(":")[1]||"image/jpeg").split(";")[0];
+              var buf = Buffer.from(b64, "base64");
+              var fname2 = "comprobantes/" + mediaId + ".jpg";
+              var svcK2 = SUPABASE_SERVICE_KEY_VAL;
+              await axios.post(SUPABASE_URL + "/storage/v1/object/media/" + fname2, buf,
+                { headers: { "apikey": svcK2, "Authorization": "Bearer " + svcK2, "Content-Type": mimeComp, "x-upsert": "true" } });
+              var publicUrl = SUPABASE_URL + "/storage/v1/object/public/media/" + fname2;
+              if (orderState[from]) orderState[from].comprobanteUrl = publicUrl;
+              console.log("[comprobante] ✅ Guardado en Supabase Storage:", publicUrl);
+            }
+          } catch(eSave) { console.warn("[comprobante] No se pudo guardar en Storage:", eSave.message); }
+        })();
       }
     }
 
