@@ -519,6 +519,33 @@ IMPORTANTE - MÉTODO DE PAGO DESDE EL MENÚ WEB:
 - Si el cliente dice "exacto", "con lo justo", "sin cambio": escribe PAGO_EFECTIVO:exacto.
 - Si dijo Datáfono: confirma que el domiciliario lo lleva y escribe PAGO_DATAFONO.
 
+FLUJO DE PEDIDO — SIGUE ESTE ORDEN SIEMPRE:
+1. Cliente pide productos → confirmas los ítems y el total → escribes PEDIDO_LISTO (ver formato abajo)
+2. Si es domicilio → pides dirección COMPLETA: barrio, calle, número, referencias. NO confirmes sin dirección completa.
+3. Si es para recoger → escribes DIRECCION_LISTA:RECOGER
+4. Cuando tienes dirección → escribes DIRECCION_LISTA:[dirección completa con barrio]
+5. Das los datos de pago → esperas comprobante o confirmación
+6. Al confirmar pago → escribes PAGO_EFECTIVO:[billete] o PAGO_DATAFONO o esperas comprobante
+
+FORMATO PEDIDO_LISTO (escríbelo EXACTAMENTE así cuando el cliente confirma qué quiere pedir):
+PEDIDO_LISTO:
+- [cantidad]x [nombre producto] $[precio unitario] | SUBTOTAL: $[subtotal]
+DESECHABLES: [valor o 0]
+DOMICILIO: [valor o 0]
+TOTAL: $[total]
+
+REGLAS PEDIDO_LISTO:
+- NUNCA escribas PEDIDO_LISTO si el cliente solo está preguntando precios o el menú.
+- Solo escríbelo cuando el cliente confirma claramente que quiere ordenar ("quiero", "me das", "pídeme", "voy a llevar").
+- Si el cliente ya tiene dirección en conversación anterior, inclúyela y escribe DIRECCION_LISTA:[dir] en el mismo mensaje.
+- Un PEDIDO_LISTO por conversación. Si el cliente quiere agregar más, usa PEDIDO_ADICIONAL_DE:[número].
+
+DIRECCIÓN DOMICILIO — SIEMPRE pedir:
+- Barrio (obligatorio para calcular domicilio)
+- Calle y número exacto
+- Referencias adicionales (edificio, apartamento, color de fachada, punto de referencia)
+- NO confirmes el pedido con "dirección por confirmar" — pide todos los datos antes.
+
 PROMOCIONES (hoy es DIA_PLACEHOLDER):
 IMPORTANTE: Si hay promoción activa HOY debes mencionarla proactivamente cuando el cliente pida ese producto.
 ${promosText}
@@ -4152,13 +4179,27 @@ app.get("/api/clientes-ranking", async function(req, res) {
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
-    var r = await axios.get(
-      SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante_id +
-      "&order=puntos.desc&limit=200&select=id,telefono,nombre_cliente,puntos,nivel_fidelidad,total_pedidos,ultimo_pedido,created_at",
-      { headers: h }
-    );
+    // Try with full columns first
+    var r;
+    try {
+      r = await axios.get(
+        SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante_id +
+        "&order=puntos.desc&limit=200&select=id,telefono,nombre_cliente,puntos,nivel_fidelidad,total_pedidos,ultimo_pedido,created_at",
+        { headers: h }
+      );
+    } catch(e1) {
+      // Fallback with fewer columns
+      r = await axios.get(
+        SUPABASE_URL + "/rest/v1/clientes_frecuentes?restaurante_id=eq." + restaurante_id +
+        "&order=total_pedidos.desc&limit=200&select=*",
+        { headers: h }
+      );
+    }
     res.json(r.data || []);
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) {
+    console.error("[clientes-ranking]", e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get("/api/clientes-canjes", async function(req, res) {
