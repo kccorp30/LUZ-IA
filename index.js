@@ -518,13 +518,13 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
   }
 }
 
-async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo, comprobanteMediaId) {
+async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo, comprobanteMediaId, comprobanteUrl) {
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    // Truncar a 2000 chars para evitar errores de columna
     var mensajeSafe = String(mensaje||"").substring(0, 2000);
-    await axios.post(SUPABASE_URL + "/rest/v1/mensajes",
-      { restaurante_id: restauranteId, telefono, mensaje: mensajeSafe, tipo, comprobante_media_id: comprobanteMediaId || null },
+    var payload = { restaurante_id: restauranteId, telefono, mensaje: mensajeSafe, tipo, comprobante_media_id: comprobanteMediaId || null };
+    if (comprobanteUrl) payload.comprobante_url = comprobanteUrl;
+    await axios.post(SUPABASE_URL + "/rest/v1/mensajes", payload,
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
   } catch (e) { console.error("guardarMensaje:", e.message); }
 }
@@ -873,30 +873,55 @@ function parseReply(reply, from) {
     if (preDir) preParsedDir = preDir[1].trim();
   }
 
-  if (reply.indexOf("PEDIDO_LISTO:") !== -1) {
-    var totalMatch  = reply.match(/TOTAL:\s*\$?([\d.,]+)/);
-    var desechMatch = reply.match(/DESECHABLES:\s*\$?([\d.,]+)/);
-    var domMatch    = reply.match(/DOMICILIO:\s*\$?([\d.,]+)/);
-    var pagoMatch   = reply.match(/METODO_PAGO:\s*([^\n]+)/);
+  if (reply.indexOf("PEDIDO_LISTO") !== -1) {
+    // Normalizar: quitar markdown bold/italic, quitar asteriscos
+    var replyNorm = reply.replace(/\*\*/g,"").replace(/\*/g,"").replace(/__/g,"").replace(/_/g,"");
 
-    // Intentar parsear items — formato lista con guiones (nuevo) o ITEMS: (viejo)
+    var totalMatch  = replyNorm.match(/TOTAL[:\s]+\$?([\d.,]+)/i);
+    var desechMatch = replyNorm.match(/DESECHABLES[:\s]+\$?([\d.,]+)/i);
+    var domMatch    = replyNorm.match(/DOMICILIO[:\s]+\$?([\d.,]+)/i);
+    var subtotalMatch = replyNorm.match(/SUBTOTAL[:\s]+\$?([\d.,]+)/i);
+
+    // Parsear items — formato lista con guiones o ITEMS:
     var items = [];
-    var itemsMatch = reply.match(/ITEMS:\s*(.+)/);
+    var itemsMatch = replyNorm.match(/ITEMS:\s*(.+)/i);
     if (itemsMatch) {
-      items = itemsMatch[1].split("|").map(function(i) { return i.trim(); }).filter(Boolean);
+      items = itemsMatch[1].split("|").map(function(i){ return i.trim(); }).filter(Boolean);
     } else {
-      // Formato nuevo: líneas que empiezan con "- " después de PEDIDO_LISTO:
-      var pedidoBlock = reply.substring(reply.indexOf("PEDIDO_LISTO:"));
-      // Cortar en la primera línea que no sea item (SUBTOTAL, DESECHABLES, etc.)
-      var lineas = pedidoBlock.split("\n");
+      var pedBlock = replyNorm.substring(replyNorm.indexOf("PEDIDO_LISTO"));
+      var lineas = pedBlock.split("\n");
       for (var li = 1; li < lineas.length; li++) {
         var linea = lineas[li].trim();
-        if (!linea || linea.startsWith("SUBTOTAL") || linea.startsWith("DESECHABLES") || linea.startsWith("DOMICILIO") || linea.startsWith("TOTAL")) break;
-        if (linea.startsWith("-")) {
-          items.push(linea.replace(/^-\s*/, "").trim());
+        if (!linea) continue;
+        if (/^(SUBTOTAL|DESECHABLES|DOMICILIO|TOTAL|METODO_PAGO)/i.test(linea)) break;
+        if (linea.startsWith("-") || linea.match(/^\d+[xX×]/)) {
+          items.push(linea.replace(/^[-•]\s*/, "").trim());
         }
       }
     }
+
+    // Si no hay items pero hay PEDIDO_LISTO, intentar extraer líneas con $ del bloque
+    if (!items.length) {
+      var pedBlock2 = replyNorm.substring(replyNorm.indexOf("PEDIDO_LISTO"));
+      var lineas2 = pedBlock2.split("\n").slice(1,10);
+      lineas2.forEach(function(l){
+        var lt = l.trim();
+        if (lt && !lt.startsWith("SUBTOTAL") && !lt.startsWith("DESECHABLES") && !lt.startsWith("DOMICILIO") && !lt.startsWith("TOTAL") && lt.indexOf("$")!==-1){
+          items.push(lt);
+        }
+      });
+    }
+
+    // Si no hay TOTAL pero hay SUBTOTAL, calcular TOTAL
+    if (!totalMatch && subtotalMatch) {
+      var st = limpiarNumero(subtotalMatch[1]);
+      var desEst = desechMatch ? limpiarNumero(desechMatch[1]) : "0";
+      var domEst = domMatch ? limpiarNumero(domMatch[1]) : "0";
+      var totalCalc = Number(st) + Number(desEst) + Number(domEst);
+      totalMatch = [null, String(totalCalc)];
+    }
+
+    console.log("[parseReply] PEDIDO_LISTO items:", items.length, "| total:", totalMatch?.[1], "| desech:", desechMatch?.[1]);
 
     if (items.length > 0 && totalMatch) {
       var total = limpiarNumero(totalMatch[1]);
@@ -915,15 +940,17 @@ function parseReply(reply, from) {
       orderState[from] = {
         status: prevAddress ? "esperando_pago" : "esperando_direccion",
         orderNumber: nextOrderNumber(),
-        items, desechables: desech, domicilio, total,
+        items: items, desechables: desech, domicilio: domicilio, total: total,
         notasEspeciales: notasArr.length > 0 ? notasArr.join(" | ") : null,
         address: prevAddress || null,
         paymentMethod: prevPayment || null
       };
-      console.log("orderState #" + orderState[from].orderNumber + " creado para:", from);
+      console.log("[parseReply] ✅ orderState #" + orderState[from].orderNumber + " creado para:", from, "| total:", total, "| desech:", desech);
       sideEffect = "pedido_registrado";
+    } else {
+      console.warn("[parseReply] ⚠️ PEDIDO_LISTO sin items("+items.length+") o sin total("+totalMatch+") — no se creó orderState");
     }
-    cleanReply = cleanReply.replace(/PEDIDO_LISTO:[\s\S]*?(?=DIRECCION_LISTA:|TELEFONO_ADICIONAL:|PAGO_|PEDIDO_ADICIONAL_DE:|ALERTA_PREGUNTA:|$)/g, "").trim();
+    cleanReply = cleanReply.replace(/PEDIDO_LISTO[\s\S]*?(?=DIRECCION_LISTA:|TELEFONO_ADICIONAL:|PAGO_|PEDIDO_ADICIONAL_DE:|ALERTA_PREGUNTA:|$)/g, "").trim();
   }
 
   if (reply.indexOf("DIRECCION_LISTA:") !== -1) {
@@ -5318,7 +5345,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     console.log("Luz: " + cleanReply.substring(0, 100));
 
     if (restaurante) {
-      guardarMensajeSupabase(restaurante.id, stripCountryCode(from), esComprobante ? "📎 Comprobante de pago" : userText, "cliente", esImagen ? mediaId : null).catch(function(){});
+      guardarMensajeSupabase(restaurante.id, stripCountryCode(from), esComprobante ? "📎 Comprobante de pago" : userText, "cliente", esImagen ? mediaId : null, esComprobante && orderState[from] ? orderState[from].comprobanteUrl : null).catch(function(){});
       guardarMensajeSupabase(restaurante.id, stripCountryCode(from), cleanReply, "restaurante", null).catch(function(){});
     }
 
