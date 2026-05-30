@@ -68,8 +68,44 @@ app.use((req, res, next) => {
 
 const conversations = {};
 const orderState    = {};
-let   orderCounter  = 100;
-// Inicializar orderCounter desde el máximo en Supabase para evitar duplicados al redeployar
+// ── CONTADOR DE PEDIDOS POR RESTAURANTE ──────────────────────────────────────
+// En lugar de un contador global, cada restaurante tiene su propio número
+// obtenido desde Supabase en tiempo real para evitar duplicados y reinicios
+
+var orderCounterCache = {}; // { restaurante_id: lastNumber }
+
+async function getNextOrderNumber(restauranteId) {
+  try {
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    // Obtener el máximo actual del restaurante
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId +
+      "&select=numero_pedido&order=numero_pedido.desc&limit=1",
+      { headers: h }
+    );
+    var maxNum = 0;
+    if (r.data && r.data.length && r.data[0].numero_pedido) {
+      maxNum = parseInt(r.data[0].numero_pedido) || 0;
+    }
+    // También considerar el cache local (por si hay pedidos en vuelo)
+    var cached = orderCounterCache[restauranteId] || 0;
+    var next = Math.max(maxNum, cached) + 1;
+    orderCounterCache[restauranteId] = next;
+    console.log("[orderNum] Restaurante", restauranteId.substring(0,8), "→ #" + next, "(max DB:", maxNum, "cache:", cached + ")");
+    return next;
+  } catch(e) {
+    // Fallback: usar cache local + 1
+    var cached2 = orderCounterCache[restauranteId] || 100;
+    var next2 = cached2 + 1;
+    orderCounterCache[restauranteId] = next2;
+    console.warn("[orderNum] Error Supabase, usando cache:", next2, e.message);
+    return next2;
+  }
+}
+
+// Compatibilidad — nextOrderNumber() sin restauranteId usa el viejo sistema
+let orderCounter = 100;
 async function initOrderCounter() {
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
@@ -78,16 +114,16 @@ async function initOrderCounter() {
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
     );
     if (r.data && r.data.length && r.data[0].numero_pedido) {
-      var maxNum = parseInt(r.data[0].numero_pedido) || 100;
-      orderCounter = maxNum;
-      console.log("[init] orderCounter iniciado desde Supabase: " + orderCounter);
+      orderCounter = parseInt(r.data[0].numero_pedido) || 100;
+      console.log("[init] orderCounter global: " + orderCounter);
     }
   } catch(e) {
-    console.warn("[init] No se pudo leer max numero_pedido, usando 100:", e.message);
+    console.warn("[init] No se pudo leer max numero_pedido:", e.message);
   }
 }
-// Llamar al iniciar — no bloqueante
 initOrderCounter();
+function nextOrderNumber() { return ++orderCounter; }
+
 
 // ── COLA PARALELA ─────────────────────────────────────────────────────────────
 const colasPorCliente = new Map();
@@ -105,8 +141,6 @@ function procesarEnCola(from, tarea) {
   nueva.then(function() { if (colasPorCliente.get(from) === nueva) colasPorCliente.delete(from); });
   return nueva;
 }
-
-function nextOrderNumber() { return ++orderCounter; }
 
 // ── PLANES Y PRECIOS LUZ IA ─────────────────────────────────────────────────
 // Restaurante + Heladería (planes iguales con CHARR)
@@ -939,13 +973,13 @@ function parseReply(reply, from) {
       var prevPayment = orderState[from] ? orderState[from].paymentMethod : null;
       orderState[from] = {
         status: prevAddress ? "esperando_pago" : "esperando_direccion",
-        orderNumber: nextOrderNumber(),
+        orderNumber: 0, // Se asigna el número real cuando se guarda en Supabase
         items: items, desechables: desech, domicilio: domicilio, total: total,
         notasEspeciales: notasArr.length > 0 ? notasArr.join(" | ") : null,
         address: prevAddress || null,
         paymentMethod: prevPayment || null
       };
-      console.log("[parseReply] ✅ orderState #" + orderState[from].orderNumber + " creado para:", from, "| total:", total, "| desech:", desech);
+      console.log("[parseReply] ✅ orderState creado para:", from, "| total:", total, "| desech:", desech);
       sideEffect = "pedido_registrado";
     } else {
       console.warn("[parseReply] ⚠️ PEDIDO_LISTO sin items("+items.length+") o sin total("+totalMatch+") — no se creó orderState");
@@ -2914,7 +2948,7 @@ app.post("/api/pedido-manual", async function(req, res) {
 
   if (!restaurante_id || !telefono || !items || !total) return res.status(400).json({ ok: false, error: "Faltan datos: restaurante_id, telefono, items, total" });
   try {
-    var num = ++orderCounter;
+    var num = await getNextOrderNumber(restaurante_id);
     var subtotal = req.body.subtotal || (Number(total) - Number(desechables) - Number(domicilio) + Number(descuento));
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var itemsArr = Array.isArray(items) ? items : items.split("\n").filter(function(l){return l.trim();});
@@ -5212,10 +5246,16 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     }
 
     var rawReply = claudeResponse.data.content[0].text;
-    console.log("RAW:", rawReply.substring(0, 400));
+    console.log("RAW:", rawReply.substring(0, 600));
+    console.log("[parse] tienePEDIDO_LISTO:", rawReply.indexOf("PEDIDO_LISTO") !== -1);
+    console.log("[parse] tieneDIRECCION_LISTA:", rawReply.indexOf("DIRECCION_LISTA:") !== -1);
+    console.log("[parse] tienePAGO_EFECTIVO:", rawReply.indexOf("PAGO_EFECTIVO:") !== -1);
+    console.log("[parse] tienePAGO_DATAFONO:", rawReply.indexOf("PAGO_DATAFONO") !== -1);
+    console.log("[parse] orderState antes:", from, JSON.stringify(orderState[from]||null).substring(0,100));
     var parsed = parseReply(rawReply, from);
     var cleanReply = parsed.cleanReply;
     var sideEffect = parsed.sideEffect;
+    console.log("[parse] sideEffect:", sideEffect, "| orderState despues:", JSON.stringify(orderState[from]||null).substring(0,100));
 
     if (esComprobante && mediaId && orderState[from]) {
       var totalPedido = orderState[from].total || 0;
@@ -5392,6 +5432,11 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     if (sideEffect === "pago_confirmado" && orderState[from]) {
       var state = orderState[from];
       var timestamp = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+
+      // Asignar número de pedido por restaurante (secuencial, sin huecos)
+      if (!state.orderNumber || state.orderNumber === 0) {
+        state.orderNumber = await getNextOrderNumber(restaurante ? restaurante.id : "global");
+      }
 
       await printTicket({
         orderNumber: state.orderNumber, items: state.items,
