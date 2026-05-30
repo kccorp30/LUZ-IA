@@ -3211,8 +3211,10 @@ function loadPedidos(){
       h+='</div>';
       h+='<div class="desglose"><div class="desglose-row"><span>Subtotal</span><span>'+fmt(subtotal)+'</span></div><div class="desglose-row"><span>Desechables</span><span>'+fmt(desechables)+'</span></div><div class="desglose-row"><span>Domicilio</span><span>'+fmt(domicilio)+'</span></div><div class="desglose-row total"><span>TOTAL</span><span>'+fmt(total)+'</span></div></div>';
       // Comprobante: puede venir por WhatsApp (media_id) o por menu web (url directa)
-      if(p.comprobante_media_id)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante de pago</div><img class="comprobante-img" src="/api/comprobante/'+p.comprobante_media_id+'" onerror="compImgErr(this)"></div>';
-      else if(p.comprobante_url)h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante de pago</div><img class="comprobante-img" src="'+escHtml(p.comprobante_url)+'" onerror="compImgErr(this)"></div>';
+      if(p.comprobante_media_id||p.comprobante_url){
+        var cpSrc = p.comprobante_url && !p.comprobante_url.startsWith("/api/") ? p.comprobante_url : (p.comprobante_media_id ? "/api/comprobante/"+p.comprobante_media_id : "");
+        if(cpSrc) h+='<div class="comprobante-box"><div class="comprobante-header">🧾 Comprobante de pago</div><img class="comprobante-img" src="'+cpSrc+'" onerror="compImgErr(this)"></div>';
+      }
       h+='<div class="ebtns">';
       var bEstado=cfg.n,bLabel=cfg.bl,bClass=cfg.bc;
       // Mesa en estado LISTO: botón azul Servido + botón Cobrar
@@ -3630,9 +3632,11 @@ function renderMensajesChat(msgs, forzar){
     var esImagenCliente = mediaIdComp && !esComprobanteBurbuja;
 
     if(m.tipo==="cliente" && esComprobanteBurbuja){
-      h += '<div class="chat-comp-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+mediaIdComp+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
+      // Usar URL de Supabase Storage si existe (permanente), si no usar proxy Meta (puede expirar)
+      var compSrc = m.comprobante_url && !m.comprobante_url.startsWith("/api/") ? m.comprobante_url : ("/api/comprobante/"+mediaIdComp);
+      h += '<div class="chat-comp-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\''+compSrc+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
       h += '<div class="chat-comp-label">📎 Comprobante de pago — <span style="font-weight:400;opacity:0.7">Toca para ampliar</span></div>';
-      h += '<img src="/api/comprobante/'+mediaIdComp+'" onerror="compImgErr(this)" loading="lazy" style="min-height:60px;width:100%;object-fit:contain;border-radius:8px">⏳ Comprobante recibido — cargando imagen...</div>\'" loading="lazy" style="min-height:60px;width:100%;object-fit:contain;border-radius:8px">';
+      h += '<img src="'+compSrc+'" onerror="compImgErr(this)" loading="lazy" style="min-height:60px;width:100%;object-fit:contain;border-radius:8px">';
       h += '<div class="chat-comp-time">'+horaStr+'</div></div>';
     }
     else if(m.tipo==="cliente" && esImagenCliente){
