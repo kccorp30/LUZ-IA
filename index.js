@@ -2632,52 +2632,28 @@ app.post("/api/menu-add", async function(req, res) {
 
 app.post("/api/restaurante-config", async function(req, res) {
   if (!req.body.restaurante_id || !req.body.config) return res.status(400).json({ error: "Faltan datos" });
-  try {
-    var config = Object.assign({}, req.body.config);
-    var restaurante_id = req.body.restaurante_id;
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var headers = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" };
+  var restaurante_id = req.body.restaurante_id;
+  var config = req.body.config;
+  var svcKey = SUPABASE_SERVICE_KEY_VAL;
+  var headers = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" };
+  var saved = []; var failed = [];
 
-    // Columnas que pueden no existir — intentar de una en una si el batch falla
-    var colsOpcionales = ["menu_tema","hora_dia_inicio","hora_dia_fin","color_primario","color_secundario",
-                          "tipo_negocio","telefono_dueno","whapi_token","whapi_channel_id","waba_id"];
-
-    // Intentar con config completo primero
+  // Guardar campo por campo — nunca falla todo si un campo no existe
+  for (var col in config) {
     try {
-      await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id, config, { headers });
-      invalidarCacheRestaurante();
-      return res.json({ ok: true });
-    } catch(ePatch) {
-      console.warn("[restaurante-config] full patch failed:", ePatch.response && JSON.stringify(ePatch.response.data).substring(0,100));
+      var patch = {}; patch[col] = config[col];
+      await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id, patch, { headers });
+      saved.push(col);
+    } catch(e) {
+      var errMsg = e.response ? JSON.stringify(e.response.data).substring(0,80) : e.message;
+      console.warn("[restaurante-config] campo '" + col + "' falló:", errMsg);
+      failed.push(col);
     }
-
-    // Fallback: separar en campos base (siempre existen) + opcionales
-    var configBase = Object.assign({}, config);
-    var configOpcional = {};
-    colsOpcionales.forEach(function(k){
-      if(k in configBase){ configOpcional[k] = configBase[k]; delete configBase[k]; }
-    });
-
-    // Guardar campos base
-    if(Object.keys(configBase).length > 0){
-      await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id, configBase, { headers });
-    }
-
-    // Guardar opcionales de a uno (ignorar errores por columna no existente)
-    for(var col in configOpcional){
-      try {
-        var patch = {}; patch[col] = configOpcional[col];
-        await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id, patch, { headers });
-      } catch(eCol) {
-        console.warn("[restaurante-config] col", col, "no existe aún:", eCol.response && eCol.response.data && eCol.response.data.message);
-      }
-    }
-
-    invalidarCacheRestaurante();
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message });
   }
+
+  invalidarCacheRestaurante();
+  console.log("[restaurante-config] saved:", saved.length, "| failed:", failed);
+  res.json({ ok: true, saved, failed });
 });
 
 app.post("/enviar-imagen-cliente", async function(req, res) {
@@ -3133,45 +3109,69 @@ app.post("/api/enviar-promo", async function(req, res) {
   }
 });
 
-// Cache en memoria para comprobantes — evita re-descargar de Meta cuando expira el URL
+// Cache en memoria para comprobantes
 var comprobanteCache = {};
 
 app.get("/api/comprobante/:mediaId", async function(req, res) {
   var mediaId = req.params.mediaId;
+  if (!mediaId || mediaId === "undefined" || mediaId === "null") {
+    return res.status(404).send("ID inválido");
+  }
   try {
-    // Servir desde cache si existe
+    // 1. Servir desde cache de memoria
     if (comprobanteCache[mediaId]) {
       var cached = comprobanteCache[mediaId];
       res.setHeader("Content-Type", cached.mime);
-      res.setHeader("Cache-Control", "public, max-age=604800"); // 7 días
+      res.setHeader("Cache-Control", "public, max-age=604800");
       return res.send(cached.buffer);
     }
-    // Descargar de Meta
+
+    // 2. Buscar en Supabase Storage (guardado cuando llegó el comprobante)
+    try {
+      var svcKey = SUPABASE_SERVICE_KEY_VAL;
+      var storagePath = "comprobantes/" + mediaId + ".jpg";
+      var storageUrl = SUPABASE_URL + "/storage/v1/object/public/media/" + storagePath;
+      var sResp = await axios.get(storageUrl, { responseType: "arraybuffer", timeout: 5000 });
+      if (sResp.status === 200 && sResp.data) {
+        var buf2 = Buffer.from(sResp.data);
+        comprobanteCache[mediaId] = { mime: "image/jpeg", buffer: buf2, ts: Date.now() };
+        res.setHeader("Content-Type", "image/jpeg");
+        res.setHeader("Cache-Control", "public, max-age=604800");
+        return res.send(buf2);
+      }
+    } catch(eStorage) {
+      // No está en Storage, intentar Meta
+    }
+
+    // 3. Descargar de Meta API
     var imgData = await descargarImagenMeta(mediaId);
-    if (!imgData) return res.status(404).send("Imagen no encontrada");
+    if (!imgData) return res.status(404).send("Imagen no disponible — puede haber expirado");
     var matches = imgData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches) return res.status(500).send("Formato inválido");
     var mime = matches[1];
     var buffer = Buffer.from(matches[2], "base64");
-    // Guardar en cache
-    comprobanteCache[mediaId] = { mime: mime, buffer: buffer, ts: Date.now() };
-    // Limpiar cache > 200 entradas
+    comprobanteCache[mediaId] = { mime, buffer, ts: Date.now() };
     var keys = Object.keys(comprobanteCache);
     if (keys.length > 200) {
       keys.sort(function(a,b){ return comprobanteCache[a].ts - comprobanteCache[b].ts; });
       keys.slice(0,50).forEach(function(k){ delete comprobanteCache[k]; });
     }
+    // También guardar en Supabase Storage para persistencia
+    try {
+      var svcKeyS = SUPABASE_SERVICE_KEY_VAL;
+      await axios.post(SUPABASE_URL + "/storage/v1/object/media/comprobantes/" + mediaId + ".jpg", buffer,
+        { headers: { "apikey": svcKeyS, "Authorization": "Bearer " + svcKeyS, "Content-Type": mime, "x-upsert": "true" } });
+    } catch(eSave) { /* no crítico */ }
     res.setHeader("Content-Type", mime);
     res.setHeader("Cache-Control", "public, max-age=604800");
     res.send(buffer);
   } catch(e) {
-    // Si Meta expiró y tenemos cache, servir cache aunque sea vieja
     if (comprobanteCache[mediaId]) {
-      var cached = comprobanteCache[mediaId];
-      res.setHeader("Content-Type", cached.mime);
-      return res.send(cached.buffer);
+      res.setHeader("Content-Type", comprobanteCache[mediaId].mime);
+      return res.send(comprobanteCache[mediaId].buffer);
     }
-    res.status(500).send("Error: " + e.message);
+    console.error("[comprobante] Error:", mediaId, e.message);
+    res.status(404).send("Imagen no disponible");
   }
 });
 
@@ -4954,8 +4954,9 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
           var horaAp = (restaurante.hora_apertura||"16:00:00").substring(0,5);
           var horaCi = (restaurante.hora_cierre||"00:00:00").substring(0,5);
           var diasAct = (restaurante.dias_activos||"lunes a domingo").replace(/,/g," | ");
+          function to12h(t){var p=(t||"").split(":");var h=parseInt(p[0]||0);var m=p[1]||"00";var ampm=h>=12?"pm":"am";h=h%12||12;return h+":"+m+" "+ampm;}
           var msgFuera = getMensaje(restaurante, "msg_fuera_horario",
-            "Hola! En este momento estamos cerrados. Nuestro horario de atencion es de " + horaAp + " a " + horaCi + " (" + diasAct + "). Con mucho gusto te atendemos en ese horario!");
+            "Hola! En este momento estamos cerrados. Nuestro horario es de " + to12h(horaAp) + " a " + to12h(horaCi) + " (" + diasAct + "). Con gusto te atendemos en ese horario!");
           await sendWhatsAppMessage(from, msgFuera, phoneNumberId);
           if (restaurante) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), userText, "cliente", null).catch(function(){});
           if (restaurante) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), msgFuera, "restaurante", null).catch(function(){});
@@ -5083,8 +5084,9 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       bienvenidaExtra = "\n\nMENSAJE DE BIENVENIDA PERSONALIZADO:\n" + msgBienvenida;
     }
 
-    // Check if closing soon (within 20 minutes)
+    var horaStr = getHoraColombia().toLocaleTimeString("es-CO", {hour:"2-digit",minute:"2-digit"});
   var cierreProximo = false;
+  function to12hStr(t) { var p=(t||"").split(":"); var h=parseInt(p[0]||0); var m=p[1]||"00"; var ampm=h>=12?"pm":"am"; h=h%12||12; return h+":"+m+" "+ampm; }
   try {
     var horaColNow = getHoraColombia();
     var horaActMin = horaColNow.getHours() * 60 + horaColNow.getMinutes();
@@ -5094,8 +5096,10 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     if (diff < 0) diff += 1440;
     cierreProximo = diff <= 20 && diff >= 0;
   } catch(e) {}
+  var apStr = to12hStr((restaurante.hora_apertura||"16:00").substring(0,5));
+  var ciStr = to12hStr((restaurante.hora_cierre||"00:00").substring(0,5));
   var horarioInfo = restaurante
-      ? "Atiendes de " + (restaurante.hora_apertura||"16:00").substring(0,5) + " a " + (restaurante.hora_cierre||"00:00").substring(0,5) + ". Hora actual en Colombia: " + horaStr + "." + (cierreProximo ? " IMPORTANTE: Cierras en menos de 20 minutos. Si el cliente esta pidiendo, avisale amablemente que cierras pronto y que su pedido debe confirmarse rapido para alcanzar. Si ya no es posible tomar el pedido, disculpate y di el horario de manana." : " Estas en horario activo.")
+      ? "Atiendes de " + apStr + " a " + ciStr + ". Hora actual en Colombia: " + horaStr + "." + (cierreProximo ? " IMPORTANTE: Cierras en menos de 20 minutos. Avisale al cliente que su pedido debe confirmarse rapido." : " Estas en horario activo.")
       : "Hora actual: " + horaStr;
     // After-hours with active order - override horarioInfo
     var fueraConOrden = !estaEnHorario(restaurante) && (orderState[from] || (conversations[from] && conversations[from].length > 0));
