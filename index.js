@@ -237,9 +237,9 @@ function sbH(svc) {
 var restCache = {};
 var REST_CACHE_TTL = 60000; // 1 min cache — refreshes on every new message after 1 min
 
-async function getRestaurante(phoneNumberId, channelId) {
+async function getRestaurante(phoneNumberId) {
   try {
-    var cacheKey = channelId || phoneNumberId || "_default";
+    var cacheKey = phoneNumberId || "_default";
     var now = Date.now();
     if (restCache[cacheKey] && (now - restCache[cacheKey].ts) < REST_CACHE_TTL) {
       return restCache[cacheKey].data;
@@ -247,18 +247,7 @@ async function getRestaurante(phoneNumberId, channelId) {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var headers = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
 
-    // 1. Buscar por whapi_channel_id
-    if (channelId) {
-      try {
-        var rW = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?whapi_channel_id=eq." + encodeURIComponent(channelId) + "&select=*", { headers: headers });
-        if (rW.data && rW.data.length > 0) {
-          restCache[cacheKey] = { data: rW.data[0], ts: now };
-          return rW.data[0];
-        }
-      } catch(e) { /* columna puede no existir aún */ }
-    }
-
-    // 2. Buscar por phone_number_id de Meta
+    // Buscar por phone_number_id de Meta
     if (phoneNumberId) {
       var r = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?whatsapp_phone_id=eq." + phoneNumberId + "&select=*", { headers: headers });
       if (r.data && r.data.length > 0) {
@@ -909,84 +898,37 @@ function parseReply(reply, from) {
     if (preDir) preParsedDir = preDir[1].trim();
   }
 
-  if (reply.indexOf("PEDIDO_LISTO") !== -1) {
-    // Normalizar: quitar markdown bold/italic, quitar asteriscos
-    var replyNorm = reply.replace(/\*\*/g,"").replace(/\*/g,"").replace(/__/g,"").replace(/_/g,"");
-
-    var totalMatch  = replyNorm.match(/TOTAL[:\s]+\$?([\d.,]+)/i);
-    var desechMatch = replyNorm.match(/DESECHABLES[:\s]+\$?([\d.,]+)/i);
-    var domMatch    = replyNorm.match(/DOMICILIO[:\s]+\$?([\d.,]+)/i);
-    var subtotalMatch = replyNorm.match(/SUBTOTAL[:\s]+\$?([\d.,]+)/i);
-
-    // Parsear items — formato lista con guiones o ITEMS:
-    var items = [];
-    var itemsMatch = replyNorm.match(/ITEMS:\s*(.+)/i);
-    if (itemsMatch) {
-      items = itemsMatch[1].split("|").map(function(i){ return i.trim(); }).filter(Boolean);
-    } else {
-      var pedBlock = replyNorm.substring(replyNorm.indexOf("PEDIDO_LISTO"));
-      var lineas = pedBlock.split("\n");
-      for (var li = 1; li < lineas.length; li++) {
-        var linea = lineas[li].trim();
-        if (!linea) continue;
-        if (/^(SUBTOTAL|DESECHABLES|DOMICILIO|TOTAL|METODO_PAGO)/i.test(linea)) break;
-        if (linea.startsWith("-") || linea.match(/^\d+[xX×]/)) {
-          items.push(linea.replace(/^[-•]\s*/, "").trim());
-        }
-      }
-    }
-
-    // Si no hay items pero hay PEDIDO_LISTO, intentar extraer líneas con $ del bloque
-    if (!items.length) {
-      var pedBlock2 = replyNorm.substring(replyNorm.indexOf("PEDIDO_LISTO"));
-      var lineas2 = pedBlock2.split("\n").slice(1,10);
-      lineas2.forEach(function(l){
-        var lt = l.trim();
-        if (lt && !lt.startsWith("SUBTOTAL") && !lt.startsWith("DESECHABLES") && !lt.startsWith("DOMICILIO") && !lt.startsWith("TOTAL") && lt.indexOf("$")!==-1){
-          items.push(lt);
-        }
-      });
-    }
-
-    // Si no hay TOTAL pero hay SUBTOTAL, calcular TOTAL
-    if (!totalMatch && subtotalMatch) {
-      var st = limpiarNumero(subtotalMatch[1]);
-      var desEst = desechMatch ? limpiarNumero(desechMatch[1]) : "0";
-      var domEst = domMatch ? limpiarNumero(domMatch[1]) : "0";
-      var totalCalc = Number(st) + Number(desEst) + Number(domEst);
-      totalMatch = [null, String(totalCalc)];
-    }
-
-    console.log("[parseReply] PEDIDO_LISTO items:", items.length, "| total:", totalMatch?.[1], "| desech:", desechMatch?.[1]);
-
-    if (items.length > 0 && totalMatch) {
+  if (reply.indexOf("PEDIDO_LISTO:") !== -1) {
+    var itemsMatch  = reply.match(/ITEMS:\s*(.+)/);
+    var totalMatch  = reply.match(/TOTAL:\s*([^\n]+)/);
+    var desechMatch = reply.match(/DESECHABLES:\s*([^\n]+)/);
+    var domMatch    = reply.match(/DOMICILIO:\s*([^\n]+)/);
+    var pagoMatch   = reply.match(/METODO_PAGO:\s*([^\n]+)/);
+    if (itemsMatch && totalMatch) {
+      var items = itemsMatch[1].split("|").map(function(i) { return i.trim(); });
       var total = limpiarNumero(totalMatch[1]);
       var desechRaw = limpiarNumero(desechMatch ? desechMatch[1] : "0");
       var desech = Number(desechRaw) < 50 ? String(Number(desechRaw) * 500) : desechRaw;
       var domicilio = limpiarNumero(domMatch ? domMatch[1] : "0");
-
       var notasArr = [];
       items.forEach(function(item) {
         var m = item.match(/\(([^)]+)\)/);
         if (m) notasArr.push(m[1]);
       });
-
       var prevAddress = (orderState[from] ? orderState[from].address : null) || preParsedDir;
       var prevPayment = orderState[from] ? orderState[from].paymentMethod : null;
       orderState[from] = {
         status: prevAddress ? "esperando_pago" : "esperando_direccion",
-        orderNumber: 0, // Se asigna el número real cuando se guarda en Supabase
-        items: items, desechables: desech, domicilio: domicilio, total: total,
+        orderNumber: nextOrderNumber(),
+        items, desechables: desech, domicilio, total,
         notasEspeciales: notasArr.length > 0 ? notasArr.join(" | ") : null,
         address: prevAddress || null,
         paymentMethod: prevPayment || null
       };
-      console.log("[parseReply] ✅ orderState creado para:", from, "| total:", total, "| desech:", desech);
+      console.log("orderState #" + orderState[from].orderNumber + " creado para:", from);
       sideEffect = "pedido_registrado";
-    } else {
-      console.warn("[parseReply] ⚠️ PEDIDO_LISTO sin items("+items.length+") o sin total("+totalMatch+") — no se creó orderState");
     }
-    cleanReply = cleanReply.replace(/PEDIDO_LISTO[\s\S]*?(?=DIRECCION_LISTA:|TELEFONO_ADICIONAL:|PAGO_|PEDIDO_ADICIONAL_DE:|ALERTA_PREGUNTA:|$)/g, "").trim();
+    cleanReply = cleanReply.replace(/PEDIDO_LISTO:[\s\S]*?(?=DIRECCION_LISTA:|TELEFONO_ADICIONAL:|PAGO_|PEDIDO_ADICIONAL_DE:|ALERTA_PREGUNTA:|$)/g, "").trim();
   }
 
   if (reply.indexOf("DIRECCION_LISTA:") !== -1) {
@@ -3560,7 +3502,24 @@ INFORMACIÓN DEL RESTAURANTE:
 - Domicilio base (mínimo): $${Number(restInfo.domicilio_base||0).toLocaleString("es-CO")}
 - Pagos: Nequi ${restInfo.metodo_pago_nequi||""}, Bancolombia ${restInfo.metodo_pago_banco||""}, titular: ${restInfo.metodo_pago_nombre||""}
 
-REGLA DOMICILIO — MUY IMPORTANTE:
+REGLA DOMICILIO — OBLIGATORIO - escribe estos tags al final de tu respuesta (el cliente NO los ve):
+Al confirmar productos:
+PEDIDO_LISTO:
+ITEMS: [categoria producto1 $precio (notas)|categoria producto2 $precio] — SIEMPRE incluye la categoria antes del nombre. Ejemplo: 'Hamburguesa La Especial $18.900|Bebida Gaseosa $3.000'
+DESECHABLES: [valor total en pesos, ej: 500 si hay 1 comida, 1000 si hay 2]
+DOMICILIO: [numero sin puntos ni signos, o 0]
+TOTAL: [numero sin puntos ni signos]
+METODO_PAGO: [nequi|bancolombia|efectivo|datafono — el que el cliente menciono, o "pendiente" si no ha dicho]
+Al confirmar direccion: DIRECCION_LISTA:[direccion completa]
+Telefono adicional: TELEFONO_ADICIONAL:[numero]
+Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
+Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
+Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
+Cancelar pedido: CANCELAR_PEDIDO:[numero_pedido]
+PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
+- Cliente MANDA UNA IMAGEN (comprobante de transferencia): PAGO_CONFIRMADO
+- Cliente dice que va a pagar en EFECTIVO y da el valor del billete: PAGO_EFECTIVO:[valor]
+- Cliente dice que va a pagar con DATAFONO o paga al recibir: PAGO_DATAFONO\nMUY IMPORTANTE:
 - Si el cliente da su barrio y está en una zona: cobra el precio de esa zona.
 - Si el cliente NO da barrio o el barrio NO está en ninguna zona: cobra el domicilio base de $${Number(restInfo.domicilio_base||0).toLocaleString("es-CO")} y dile "El domicilio son $${Number(restInfo.domicilio_base||0).toLocaleString("es-CO")} para tu zona".
 - NUNCA cierres un pedido con domicilio $0 si es a domicilio. Si no sabes el barrio, usa el mínimo.
@@ -4519,7 +4478,7 @@ app.post("/webhook", function(req, res) {
     var msg = value.messages[0];
     var from = msg.from;
     var phoneNumberId = value.metadata?.phone_number_id;
-    procesarEnCola(from, function() { return procesarMensaje(msg, from, phoneNumberId, null); });
+    procesarEnCola(from, function() { return procesarMensaje(msg, from, phoneNumberId); });
   } catch (e) { console.error("Error webhook Meta:", e.message); }
 });
 
@@ -4830,7 +4789,7 @@ HORA COLOMBIA: ${getHoraColombia().toLocaleTimeString("es-CO")}`;
   }
 }
 
-async function procesarMensaje(msg, from, phoneNumberId, channelId) {
+async function procesarMensaje(msg, from, phoneNumberId) {
   try {
     var msgType = msg.type;
 
