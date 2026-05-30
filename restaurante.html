@@ -4288,7 +4288,7 @@ function loadDomiPanel(){
     }
     var filtro="restaurante_id=eq."+rest.id+"&domiciliario_id=not.is.null";
     if(desde) filtro+="&created_at=gte."+desde;
-    get("pedidos",filtro+"&select=id,numero_pedido,domiciliario_id,domiciliario_nombre,estado,direccion,created_at,updated_at,total,domicilio,items,notas_especiales,metodo_pago,comprobante_media_id,comprobante_url").then(function(pedidos){
+    get("pedidos",filtro+"&select=id,numero_pedido,domiciliario_id,estado,direccion,created_at,updated_at,total,domicilio,items,notas_especiales,metodo_pago,comprobante_media_id,comprobante_url").then(function(pedidos){
       var entregadosHoy=pedidos.filter(function(p){return p.estado==="entregado";});
       var enRuta=pedidos.filter(function(p){return p.estado==="en_camino";});
       var tiemposGlobal=entregadosHoy.map(function(p){
@@ -4413,7 +4413,7 @@ function loadDomiPanel(){
             if(p.comprobante_media_id){
               h+='<div style="margin-top:8px">';
               h+='<div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">📷 Foto entrega</div>';
-              h+="<img src=\"/api/comprobante/"+p.comprobante_media_id+" style=\"width:100%;border-radius:10px;max-height:140px;object-fit:cover\" loading=\"lazy\">";
+              if(p.comprobante_media_id) h+="<img src=\"/api/comprobante/"+p.comprobante_media_id+"\" style=\"width:100%;border-radius:10px;max-height:140px;object-fit:cover\" loading=\"lazy\">";
               h+='</div>';
             } else if(p.comprobante_url){
               h+="<div style=\"margin-top:8px\"><img src=\""+escHtml(p.comprobante_url)+"\" style=\"width:100%;border-radius:10px;max-height:140px;object-fit:cover\" loading=\"lazy\"></div>";
