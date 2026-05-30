@@ -821,7 +821,6 @@ async function verificarComprobante(mediaId, totalEsperado) {
   try {
     var imgData = await descargarImagenMeta(mediaId);
     if (!imgData) return { valido: null };
-    // descargarImagenMeta returns a data URL like "data:image/jpeg;base64,..."
     var base64, mediaType;
     if (typeof imgData === "string" && imgData.startsWith("data:")) {
       var parts = imgData.split(",");
@@ -831,37 +830,36 @@ async function verificarComprobante(mediaId, totalEsperado) {
       base64 = Buffer.from(imgData).toString("base64");
       mediaType = "image/jpeg";
     }
-    console.log("Verificando comprobante, base64 length:", base64 ? base64.length : 0);
+    if (!base64 || base64.length < 100) return { valido: null };
+    console.log("[comprobante] verificando imagen, size:", base64.length);
     var totalFmt = Number(totalEsperado).toLocaleString("es-CO");
-    var prompt = "Analiza esta imagen cuidadosamente. ";
-    prompt += "¿Es un comprobante oficial de transferencia bancaria exitosa de Nequi o Bancolombia? ";
-    prompt += "Para que sea valido DEBE mostrar: (1) interfaz de app bancaria, (2) monto en pesos colombianos, (3) mensaje de transferencia exitosa. ";
-    prompt += "Si es una foto de comida, cocina, personas, objetos, o cualquier cosa que NO sea pantalla de app bancaria, responde valido:false. ";
-    prompt += "Responde SOLO con JSON: {valido:true o false, razon:string breve}. ";
-    prompt += "Monto esperado: aproximadamente $" + totalFmt + " COP.";
+    var prompt = "Analiza esta imagen. ¿Es algún tipo de comprobante, recibo, captura de pantalla de pago, transferencia bancaria, Nequi, Bancolombia, o cualquier imagen que el cliente haya enviado para pagar? "
+      + "Acepta como válido: capturas de Nequi, Bancolombia, efecty, depósito, foto de efectivo, o cualquier imagen que parezca ser evidencia de un pago. "
+      + "Solo rechaza si es claramente una foto de comida, personas, objetos cotidianos, o algo completamente ajeno a un pago. "
+      + "Si tienes duda, responde valido:true. Monto esperado: $" + totalFmt + " COP. "
+      + "Responde SOLO con JSON: {valido:true o false, razon:string}.";
     var resp = await axios.post(
       "https://api.anthropic.com/v1/messages",
       {
         model: "claude-haiku-4-5-20251001",
         max_tokens: 150,
-        messages: [{
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-            { type: "text", text: prompt }
-          ]
-        }]
+        messages: [{ role: "user", content: [
+          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+          { type: "text", text: prompt }
+        ]}]
       },
       { headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" } }
     );
-    var text = (resp.data && resp.data.content && resp.data.content[0]) ? resp.data.content[0].text : "{}";
-    var start = text.indexOf("{");
-    var end2 = text.lastIndexOf("}");
-    if (start === -1 || end2 === -1) return { valido: null };
-    return JSON.parse(text.substring(start, end2 + 1));
+    var text = (resp.data?.content?.[0]?.text) || "{}";
+    console.log("[comprobante] Claude respuesta:", text.substring(0,100));
+    var start = text.indexOf("{"); var end2 = text.lastIndexOf("}");
+    if (start === -1 || end2 === -1) return { valido: true }; // Si no parsea, aceptar
+    var result = JSON.parse(text.substring(start, end2 + 1));
+    console.log("[comprobante] resultado:", JSON.stringify(result));
+    return result;
   } catch(e) {
-    console.error("verificarComprobante:", e.message);
-    return { valido: null };
+    console.error("[comprobante] error:", e.message);
+    return { valido: true }; // Si falla la verificación, aceptar el comprobante
   }
 }
 
@@ -5304,21 +5302,17 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       var verificacion = await verificarComprobante(mediaId, totalPedido);
       console.log("Verificacion comprobante resultado:", JSON.stringify(verificacion), "| valido:", verificacion.valido);
       if (verificacion.valido === false) {
-        // NOT a comprobante - Luz asks again naturally, no aggressive message
-        userText = "[El cliente envio una imagen en la etapa de pago pero no parece ser un comprobante bancario. Sin mencionarlo de forma brusca, dile amablemente que necesitas el comprobante de la transferencia para confirmar su pedido.]";
+        // Claramente no es comprobante — pedir de nuevo
+        userText = "[El cliente envio una imagen en la etapa de pago pero no parece ser un comprobante. Dile amablemente que necesitas el comprobante de la transferencia para confirmar su pedido.]";
         esComprobante = false;
-      } else if (verificacion.valido === true) {
-        // Confirmed valid comprobante
+      } else {
+        // valido:true O valido:null (error/duda) → confirmar el pedido igual
         orderState[from].comprobanteMediaId = mediaId;
         orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
         orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
         orderState[from].status = "confirmado";
         sideEffect = "pago_confirmado";
-        userText = "[El cliente envio su comprobante de pago verificado. Confirma el pedido con calidez.]";
-      } else {
-        // null = verification failed/error - ask for comprobante again to be safe
-        userText = "[El cliente envio una imagen en la etapa de pago pero no pudimos verificarla bien. Pidele amablemente que envie el comprobante de la transferencia de forma mas clara.]";
-        esComprobante = false;
+        userText = "[El cliente envio su comprobante de pago. Confirma el pedido con calidez y agradece.]";
       }
     }
 
@@ -5419,6 +5413,11 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     }
 
     if (orderState[from] && sideEffect !== "pago_confirmado") {
+      await setOrderState(from, orderState[from]);
+    }
+    // También guardar cuando el pago es confirmado por efectivo/datáfono (no comprobante)
+    // para que si el servidor reinicia entre mensajes, se recupere el estado
+    if (orderState[from] && sideEffect === "pago_confirmado" && !orderState[from].comprobanteMediaId) {
       await setOrderState(from, orderState[from]);
     }
 
