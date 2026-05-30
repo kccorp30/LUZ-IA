@@ -2513,7 +2513,7 @@ function notif(m,color){var e=document.getElementById("notif");e.textContent=m;e
 function fmt(n){return"$"+Number(n||0).toLocaleString("es-CO");}
 function getHoraColombia(){var a=new Date();return new Date(a.getTime()+a.getTimezoneOffset()*60000-(5*60*60*1000));}
 function ago(d){var diff=Math.floor((Date.now()-new Date(d))/60000);return diff<1?"ahora":diff<60?diff+" min":Math.floor(diff/60)+"h";}
-function fmtHora(f){try{return new Date(f).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}catch(e){return "";}}
+function fmtHora(f){try{var d=new Date(f);var col=new Date(d.getTime()-5*60*60000);return col.toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}catch(e){return "";}}
 
 // PIN
 // ── PANTALLA DE SELECCIÓN ────────────────────────────────────────────────────
@@ -4292,7 +4292,7 @@ function loadDomiPanel(){
     }
     var filtro="restaurante_id=eq."+rest.id+"&domiciliario_id=not.is.null";
     if(desde) filtro+="&created_at=gte."+desde;
-    get("pedidos",filtro+"&select=id,numero_pedido,domiciliario_id,estado,direccion,created_at,updated_at,total,domicilio,items,notas_especiales,metodo_pago,comprobante_media_id,comprobante_url").then(function(pedidos){
+    get("pedidos",filtro+"&select=id,numero_pedido,domiciliario_id,estado,direccion,created_at,updated_at,total,domicilio,items,notas_especiales,metodo_pago,comprobante_media_id,comprobante_url&limit=100").then(function(pedidos){
       var entregadosHoy=pedidos.filter(function(p){return p.estado==="entregado";});
       var enRuta=pedidos.filter(function(p){return p.estado==="en_camino";});
       var tiemposGlobal=entregadosHoy.map(function(p){
