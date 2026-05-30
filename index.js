@@ -108,9 +108,11 @@ async function getNextOrderNumber(restauranteId) {
 let orderCounter = 100;
 async function initOrderCounter() {
   try {
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    // Usar process.env directamente para evitar usar SUPABASE_SERVICE_KEY_VAL antes de su declaración
+    var svcKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || "";
+    var url = process.env.SUPABASE_URL || "https://vbxuwzcfzfjwhllkppkg.supabase.co";
     var r = await axios.get(
-      SUPABASE_URL + "/rest/v1/pedidos?select=numero_pedido&order=numero_pedido.desc&limit=1",
+      url + "/rest/v1/pedidos?select=numero_pedido&order=numero_pedido.desc&limit=1",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
     );
     if (r.data && r.data.length && r.data[0].numero_pedido) {
@@ -118,7 +120,7 @@ async function initOrderCounter() {
       console.log("[init] orderCounter global: " + orderCounter);
     }
   } catch(e) {
-    console.warn("[init] No se pudo leer max numero_pedido:", e.message);
+    console.warn("[init] orderCounter usando 100:", e.message);
   }
 }
 initOrderCounter();
