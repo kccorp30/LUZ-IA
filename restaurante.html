@@ -3698,7 +3698,7 @@ document.getElementById("toggleSilencio").addEventListener("click",function(){
   this.className="big-toggle "+(silencioPorTel[tel]?"on":"off");
   notif(silencioPorTel[tel]?"🔕 Luz en silencio":"🔔 Luz reactivada",silencioPorTel[tel]?"rgba(168,85,247,0.9)":"rgba(34,197,94,0.9)");
   if(rest){
-    fetch("/api/supabase/silencio_conversacion",{
+    fetch("/api/supabase/silencio_conversacion?on_conflict=restaurante_id,telefono",{
       method:"POST",
       headers:{"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"},
       body:JSON.stringify({restaurante_id:rest.id,telefono:tel,activo:silencioPorTel[tel],updated_at:new Date().toISOString()})
@@ -4072,7 +4072,12 @@ function guardarTelefonoDueno(){
     body:JSON.stringify({restaurante_id:rest.id, config:{telefono_dueno:tel}})
   }).then(function(r){return r.json();})
   .then(function(d){
-    if(d.ok||d.ok===undefined){
+    if(d.ok){
+      // Verificar si telefono_dueno quedó en los campos guardados exitosamente
+      if(d.failed && d.failed.indexOf("telefono_dueno") !== -1){
+        notif("⚠️ La columna telefono_dueno no existe en la BD. Pide al admin que la cree.");
+        return;
+      }
       rest.telefono_dueno = tel;
       notif("✅ Número del dueño guardado");
       var st=document.getElementById("cfg-dueno-status");
@@ -7329,4 +7334,55 @@ async function confirmarPOS(){
   } catch(e){ notif("Error de conexión"); }
   finally{ if(btn){ btn.disabled=false; btn.textContent="✅ Confirmar pedido"; } }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LUZ ALIVE — Sistema de Luz proactiva en el panel
+// ═══════════════════════════════════════════════════════════════════════════════
+(function(){
+  var css=document.createElement("style");
+  css.textContent=".luz-alive-bar{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);z-index:200;width:calc(100% - 28px);max-width:500px;background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(79,70,229,.1));border:1px solid rgba(124,58,237,.3);border-radius:18px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.04);opacity:0;transform:translateX(-50%) translateY(10px);transition:all .35s ease;pointer-events:none}.luz-alive-bar.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}.luz-alive-avatar{width:34px;height:34px;border-radius:10px;flex-shrink:0;overflow:hidden;border:1.5px solid rgba(124,58,237,.4);box-shadow:0 0 12px rgba(124,58,237,.4)}.luz-alive-avatar img{width:100%;height:100%;object-fit:cover}.luz-alive-txt{flex:1;font-size:12px;color:rgba(241,240,255,.85);font-weight:500;line-height:1.4}.luz-alive-close{width:24px;height:24px;border-radius:8px;border:none;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);font-size:14px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}.luz-alive-wave{display:flex;align-items:center;gap:2px;height:16px;flex-shrink:0}.luz-alive-wv{width:2.5px;background:#a78bfa;border-radius:2px;animation:luzWv 1.2s ease-in-out infinite}.luz-alive-wv:nth-child(1){height:4px;animation-delay:0s}.luz-alive-wv:nth-child(2){height:9px;animation-delay:.1s}.luz-alive-wv:nth-child(3){height:14px;animation-delay:.2s}.luz-alive-wv:nth-child(4){height:8px;animation-delay:.3s}.luz-alive-wv:nth-child(5){height:5px;animation-delay:.4s}@keyframes luzWv{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}.luz-alive-wave:not(.on) .luz-alive-wv{animation:none;height:3px;opacity:.2}.luz-alive-alert{position:fixed;top:68px;right:14px;z-index:201;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:14px;padding:8px 14px;backdrop-filter:blur(12px);font-size:11px;color:#fca5a5;font-weight:600;opacity:0;transform:translateY(-8px);transition:all .3s;pointer-events:none;max-width:260px}.luz-alive-alert.show{opacity:1;transform:translateY(0);pointer-events:auto}";
+  document.head.appendChild(css);
+  var bar=document.createElement("div");bar.className="luz-alive-bar";
+  bar.innerHTML='<div class="luz-alive-avatar"><img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" onerror="this.parentElement.innerHTML=\'✨\'"></div><div class="luz-alive-txt" id="luzAliveTxt">Iniciando...</div><div class="luz-alive-wave" id="luzAliveWave"><div class="luz-alive-wv"></div><div class="luz-alive-wv"></div><div class="luz-alive-wv"></div><div class="luz-alive-wv"></div><div class="luz-alive-wv"></div></div><button class="luz-alive-close" onclick="this.parentElement.classList.remove(\'show\')">✕</button>';
+  document.body.appendChild(bar);
+  var alertEl=document.createElement("div");alertEl.className="luz-alive-alert";alertEl.id="luzAliveAlert";document.body.appendChild(alertEl);
+  var currentTab="pedidos",luzVozBusy=false,lastFrase="";
+  var origShowTab=window.showTab;
+  if(origShowTab){window.showTab=function(n){currentTab=n;origShowTab(n);fetchLuzAlive(n);};}
+  function fetchLuzAlive(tab){
+    if(!window.rest||!window.rest.id) return;
+    fetch("/api/luz-alive?restaurante_id="+rest.id+"&tab="+(tab||currentTab))
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(!d.ok) return;
+        var txt=document.getElementById("luzAliveTxt");
+        if(txt&&d.frase&&d.frase!==lastFrase){
+          lastFrase=d.frase;txt.textContent=d.frase;bar.classList.add("show");
+          luzAliveVoz(d.frase);
+          clearTimeout(bar._hideTimer);
+          bar._hideTimer=setTimeout(function(){bar.classList.remove("show");},12000);
+        }
+        if(d.alertas&&d.alertas.length){
+          alertEl.textContent=(d.alertas[0].tipo==="alert"?"⚠️ ":"📢 ")+d.alertas[0].msg;
+          alertEl.classList.add("show");
+          setTimeout(function(){alertEl.classList.remove("show");},8000);
+        }
+      }).catch(function(){});
+  }
+  function luzAliveVoz(texto){
+    if(luzVozBusy||!texto) return; luzVozBusy=true;
+    var wave=document.getElementById("luzAliveWave");
+    fetch("/api/luz-voz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({texto:texto})})
+      .then(function(r){if(!r.ok)throw new Error();return r.blob();})
+      .then(function(blob){
+        var audio=new Audio(URL.createObjectURL(blob));
+        if(wave)wave.classList.add("on");
+        audio.onended=function(){luzVozBusy=false;if(wave)wave.classList.remove("on");};
+        audio.onerror=function(){luzVozBusy=false;if(wave)wave.classList.remove("on");};
+        audio.play().catch(function(){luzVozBusy=false;});
+      }).catch(function(){luzVozBusy=false;});
+  }
+  setTimeout(function(){fetchLuzAlive("pedidos");},3000);
+  setInterval(function(){fetchLuzAlive(currentTab);},45000);
+})();
 </script>
