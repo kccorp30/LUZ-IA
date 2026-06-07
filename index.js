@@ -122,19 +122,20 @@ async function getNextOrderNumber(restauranteId) {
 let orderCounter = 100;
 async function initOrderCounter() {
   try {
-    // Usar process.env directamente para evitar usar SUPABASE_SERVICE_KEY_VAL antes de su declaración
-    var svcKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || "";
-    var url = process.env.SUPABASE_URL || "https://vbxuwzcfzfjwhllkppkg.supabase.co";
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
-      url + "/rest/v1/pedidos?select=numero_pedido&order=numero_pedido.desc&limit=1",
+      SUPABASE_URL + "/rest/v1/pedidos?select=numero_pedido&order=numero_pedido.desc&limit=1",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
     );
     if (r.data && r.data.length && r.data[0].numero_pedido) {
       orderCounter = parseInt(r.data[0].numero_pedido) || 100;
-      console.log("[init] orderCounter global: " + orderCounter);
+      console.log("[init] ✅ orderCounter desde Supabase: " + orderCounter + " → próximo será #" + (orderCounter + 1));
+    } else {
+      orderCounter = 99; // primer pedido será #100
+      console.log("[init] Sin pedidos en BD — empezando desde #100");
     }
   } catch(e) {
-    console.warn("[init] orderCounter usando 100:", e.message);
+    console.warn("[init] ⚠️ orderCounter fallback 100:", e.message);
   }
 }
 initOrderCounter();
@@ -797,13 +798,218 @@ async function autoAprendizajeDePregunta(restauranteId, pregunta) {
 // Auto-detectar cuando el admin interviene en un chat (respuesta tipo "restaurante_manual")
 async function autoAprendizajeDeCorreccion(restauranteId, mensajeAdmin, contextoCliente) {
   if (!mensajeAdmin || mensajeAdmin.length < 5) return;
-  // Solo guardar si parece una corrección o info nueva (no saludos genéricos)
   var lower = mensajeAdmin.toLowerCase();
   var esChatNormal = ["hola","ok","listo","gracias","perfecto","dale","ya","si","no"].some(function(p) { return lower === p || lower === p + "!"; });
   if (esChatNormal) return;
-  // Guardar como posible corrección/regla
   await guardarAprendizaje(restauranteId, "correccion", "El admin le dijo al cliente: \"" + mensajeAdmin.substring(0, 200) + "\"" + (contextoCliente ? " (contexto: " + contextoCliente.substring(0, 100) + ")" : ""), "chat_admin");
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LUZ NIVEL 1 — APRENDIZAJE AUTOMÁTICO POST-PEDIDO
+// Después de cada pedido exitoso, Luz analiza la conversación y extrae:
+// - Preferencias del cliente (sin cebolla, siempre pide X, alérgico a Y)
+// - Patrones de producto (combos populares, adicionales frecuentes)
+// - Preguntas frecuentes que se repiten
+// - Correcciones a cómo Luz manejó la conversación
+// Todo se guarda en luz_aprendizajes y se inyecta en el prompt automáticamente
+// ═══════════════════════════════════════════════════════════════════════════════
+async function luzAprendizajePostPedido(restauranteId, telefono, conversacion, pedidoData) {
+  try {
+    if (!restauranteId || !conversacion || conversacion.length < 4) return;
+    var CLAUDE_KEY = process.env.ANTHROPIC_API_KEY;
+    if (!CLAUDE_KEY) return;
+
+    // Construir resumen de la conversación (máx últimos 16 mensajes)
+    var msgs = conversacion.slice(-16).map(function(m) {
+      return (m.role === "user" ? "CLIENTE" : "LUZ") + ": " + (m.content || "").substring(0, 200);
+    }).join("\n");
+
+    var telLocal = stripCountryCode(telefono);
+    var itemsStr = Array.isArray(pedidoData.items) ? pedidoData.items.join(", ") : "";
+
+    // Cargar aprendizajes existentes para evitar duplicados
+    var existentes = [];
+    try {
+      var exR = await axios.get(
+        SUPABASE_URL + "/rest/v1/luz_aprendizajes?restaurante_id=eq." + restauranteId +
+        "&activo=eq.true&select=contenido&limit=50",
+        { headers: sbH(true) }
+      );
+      existentes = (exR.data || []).map(function(a) { return a.contenido; });
+    } catch(e) {}
+
+    var claudeResp = await axios.post("https://api.anthropic.com/v1/messages", {
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 500,
+      messages: [{
+        role: "user",
+        content: "Analiza esta conversación de un pedido de restaurante y extrae SOLO aprendizajes útiles y NUEVOS.\n\n"
+          + "CONVERSACIÓN:\n" + msgs + "\n\n"
+          + "PEDIDO FINAL: " + itemsStr + " | Total: $" + (pedidoData.total || 0) + " | Dirección: " + (pedidoData.address || "?") + "\n"
+          + "TELÉFONO CLIENTE: " + telLocal + "\n\n"
+          + "APRENDIZAJES QUE YA TENEMOS (NO repitas estos):\n" + existentes.slice(0, 20).join("\n") + "\n\n"
+          + "EXTRAE solo lo que sea NUEVO y ÚTIL. Categorías:\n"
+          + "1. preferencia_cliente: gustos o restricciones del cliente (ej: 'Cliente 3001234567 siempre pide sin cebolla', 'Cliente X es alérgico a maní')\n"
+          + "2. regla_negocio: patrones que Luz debe recordar (ej: 'Cuando piden combo familiar preguntar si quieren papas grandes')\n"
+          + "3. faq: preguntas que los clientes hacen frecuentemente con su respuesta correcta\n"
+          + "4. producto_info: info útil sobre productos (ej: 'La Especial es la más pedida los viernes')\n\n"
+          + "Responde SOLO con JSON array. Si no hay nada nuevo que aprender, responde []. "
+          + "Máximo 3 aprendizajes por conversación. Cada uno: {\"tipo\":\"...\",\"contenido\":\"...\"}\n"
+          + "Sé MUY selectivo — solo guarda lo que realmente ayude en futuras conversaciones."
+      }]
+    }, {
+      headers: { "x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      timeout: 10000
+    });
+
+    var texto = (claudeResp.data.content[0].text || "").trim();
+    // Limpiar markdown
+    texto = texto.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    var start = texto.indexOf("[");
+    var end = texto.lastIndexOf("]");
+    if (start === -1 || end === -1) return;
+
+    var aprendizajes = JSON.parse(texto.substring(start, end + 1));
+    if (!Array.isArray(aprendizajes) || !aprendizajes.length) return;
+
+    var guardados = 0;
+    for (var ap of aprendizajes) {
+      if (!ap.tipo || !ap.contenido || ap.contenido.length < 10) continue;
+      // Verificar que no sea duplicado
+      var esDuplicado = existentes.some(function(e) {
+        return e.toLowerCase().indexOf(ap.contenido.toLowerCase().substring(0, 30)) !== -1;
+      });
+      if (esDuplicado) continue;
+
+      var tiposValidos = ["preferencia_cliente", "regla_negocio", "faq", "producto_info"];
+      var tipo = tiposValidos.indexOf(ap.tipo) !== -1 ? ap.tipo : "regla_negocio";
+
+      await guardarAprendizaje(restauranteId, tipo, ap.contenido, "auto_pedido");
+      guardados++;
+    }
+
+    if (guardados > 0) {
+      console.log("[LUZ-APRENDE] ✅ " + guardados + " aprendizaje(s) de pedido de " + telLocal);
+    }
+  } catch(e) {
+    // Silencioso — nunca debe afectar el flujo del pedido
+    console.error("[LUZ-APRENDE] Error:", e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LUZ NIVEL 3 — RAG: MEMORIA DE CONVERSACIONES
+// Guarda resúmenes estructurados de cada conversación exitosa.
+// Antes de responder preguntas difíciles, Luz busca experiencias similares
+// en su memoria y las usa como contexto para responder mejor.
+// Tabla: luz_memoria (restaurante_id, telefono, resumen, keywords, tipo, created_at)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Guardar memoria de conversación exitosa
+async function guardarMemoriaConversacion(restauranteId, telefono, conversacion, pedidoData) {
+  try {
+    var CLAUDE_KEY = process.env.ANTHROPIC_API_KEY;
+    if (!CLAUDE_KEY || !conversacion || conversacion.length < 3) return;
+
+    var msgs = conversacion.slice(-14).map(function(m) {
+      return (m.role === "user" ? "CLIENTE" : "LUZ") + ": " + (m.content || "").substring(0, 150);
+    }).join("\n");
+
+    var telLocal = stripCountryCode(telefono);
+    var itemsStr = Array.isArray(pedidoData.items) ? pedidoData.items.join(", ") : "";
+
+    var claudeResp = await axios.post("https://api.anthropic.com/v1/messages", {
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 300,
+      messages: [{
+        role: "user",
+        content: "Resume esta conversación de pedido en un restaurante para que sirva como referencia futura.\n\n"
+          + "CONVERSACIÓN:\n" + msgs + "\n\n"
+          + "PEDIDO: " + itemsStr + " | $" + (pedidoData.total || 0) + "\n\n"
+          + "Responde SOLO con JSON (sin backticks):\n"
+          + "{\"resumen\":\"resumen en 1-2 frases de cómo fue la interacción, qué pidió, qué preguntó\","
+          + "\"keywords\":\"palabras clave separadas por coma: productos, barrio, tipo de pago, preguntas que hizo, situaciones especiales\","
+          + "\"tipo\":\"pedido_exitoso|faq_resuelta|problema_resuelto|preferencia_detectada\","
+          + "\"productos\":[\"producto1\",\"producto2\"]}"
+      }]
+    }, {
+      headers: { "x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      timeout: 8000
+    });
+
+    var texto = (claudeResp.data.content[0].text || "").replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+    var s2 = texto.indexOf("{"), e2 = texto.lastIndexOf("}");
+    if (s2 === -1 || e2 === -1) return;
+
+    var mem = JSON.parse(texto.substring(s2, e2 + 1));
+    if (!mem.resumen || mem.resumen.length < 10) return;
+
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    await axios.post(SUPABASE_URL + "/rest/v1/luz_memoria", {
+      restaurante_id: restauranteId,
+      telefono: telLocal,
+      resumen: mem.resumen.substring(0, 500),
+      keywords: (mem.keywords || "").substring(0, 300),
+      tipo: mem.tipo || "pedido_exitoso",
+      productos: mem.productos || []
+    }, {
+      headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" }
+    });
+
+    console.log("[LUZ-RAG] ✅ Memoria guardada: " + mem.resumen.substring(0, 60));
+  } catch(e) {
+    console.error("[LUZ-RAG] guardar:", e.message);
+  }
+}
+
+// Buscar memorias similares al contexto actual
+async function buscarMemoriaSimilar(restauranteId, contexto, limit) {
+  try {
+    if (!restauranteId || !contexto || contexto.length < 5) return [];
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+
+    // Extraer palabras clave del contexto (quitar stopwords)
+    var stopwords = ["el","la","los","las","un","una","de","del","en","con","por","para","que","es","no","si","mi","tu","su","al","se","lo","me","le","ya","muy","mas","pero","como","hola","quiero","pedir","buenas","buenos","gracias","ok","listo"];
+    var palabras = contexto.toLowerCase()
+      .replace(/[^a-záéíóúñ\s]/g, "")
+      .split(/\s+/)
+      .filter(function(p) { return p.length > 2 && stopwords.indexOf(p) === -1; })
+      .slice(0, 6);
+
+    if (!palabras.length) return [];
+
+    // Buscar en keywords usando OR de las palabras más relevantes
+    var orClauses = palabras.map(function(p) {
+      return "keywords.ilike.*" + encodeURIComponent(p) + "*";
+    }).join(",");
+
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/luz_memoria?restaurante_id=eq." + restauranteId +
+      "&or=(" + orClauses + ")" +
+      "&order=created_at.desc&limit=" + (limit || 3) +
+      "&select=resumen,keywords,tipo,productos",
+      { headers: h }
+    );
+
+    return r.data || [];
+  } catch(e) {
+    console.error("[LUZ-RAG] buscar:", e.message);
+    return [];
+  }
+}
+
+// Formatear memorias para inyectar en el prompt
+function formatearMemorias(memorias) {
+  if (!memorias || !memorias.length) return "";
+  var texto = "\n\nEXPERIENCIAS PASADAS SIMILARES (usa como referencia, NO copies textualmente):";
+  memorias.forEach(function(m, i) {
+    texto += "\n" + (i + 1) + ". " + m.resumen;
+    if (m.productos && m.productos.length) texto += " [Productos: " + m.productos.join(", ") + "]";
+  });
+  return texto;
+}
+
 
 async function getOrderState(telefono) {
   try {
@@ -1234,15 +1440,217 @@ app.get("/restaurante", function(req, res) { res.sendFile(path.join(__dirname, "
 
 // Cache de estados por restaurante: { restaurante_id: { mesa_1: "libre", mesa_2: "ocupada" } }
 var mesaEstados = {};
+var mesaScanned = {}; // { "restId_mesa": timestamp }
 
-// GET /api/mesa-estado — ESP32 consulta cada 2 segundos
+// GET /api/mesa-scan — menu.html llama esto cuando se abre con ?mesa=X
+app.post("/api/mesa-scan", function(req, res) {
+  var { restaurante_id, mesa } = req.body;
+  if (!restaurante_id || !mesa) return res.status(400).json({ ok: false });
+  var key = restaurante_id + "_" + mesa;
+  mesaScanned[key] = Date.now();
+  // Marcar mesa como ocupada si estaba libre
+  if (!mesaEstados[restaurante_id]) mesaEstados[restaurante_id] = {};
+  if (!mesaEstados[restaurante_id]["mesa_" + mesa] || mesaEstados[restaurante_id]["mesa_" + mesa] === "libre") {
+    mesaEstados[restaurante_id]["mesa_" + mesa] = "ocupada";
+  }
+  console.log("[QR] Mesa " + mesa + " escaneada — rest:" + restaurante_id.substring(0, 8));
+  res.json({ ok: true });
+});
+
+
+// ══════════════════════════════════════════════════════════════════
+// /api/luz-panel — Luz vive en el panel con herramientas directas
+// ══════════════════════════════════════════════════════════════════
+app.post("/api/luz-panel", async function(req, res) {
+  var { restaurante_id, mensaje, pedidos_activos, historial } = req.body;
+  if (!restaurante_id || !mensaje) return res.json({ ok: false, error: "Faltan datos" });
+  try {
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    // Cargar pedidos activos si no vienen en el body
+    if (!pedidos_activos) {
+      var pedResp = await axios.get(
+        SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id +
+        "&estado=not.in.(entregado,cancelado)&order=created_at.desc&limit=10&select=id,numero_pedido,cliente_tel,items,total,estado,direccion",
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+      );
+      pedidos_activos = pedResp.data || [];
+    }
+
+    var pedidosCtx = pedidos_activos.map(function(p) {
+      var items = Array.isArray(p.items) ? p.items.join(", ") : String(p.items || "");
+      return "#" + p.numero_pedido + " | " + p.cliente_tel + " | " + p.estado + " | " + items + " | $" + p.total;
+    }).join("\n");
+
+    var sysprompt = `Eres Luz, asistente del restaurante. Tienes acceso directo al panel y puedes manipular pedidos.
+PEDIDOS ACTIVOS AHORA:
+${pedidosCtx || "(ninguno)"}
+
+ACCIONES QUE PUEDES EJECUTAR (responde con estas instrucciones al final de tu mensaje si aplica):
+MODIFICAR_PEDIDO:[numero]|AGREGAR:[item y precio ej: "1x Papa Crocante $6.500"]
+MODIFICAR_PEDIDO:[numero]|ELIMINAR:[item]
+MODIFICAR_PEDIDO:[numero]|ESTADO:[confirmado|en_preparacion|listo|en_camino|entregado]
+MODIFICAR_PEDIDO:[numero]|NOTA:[texto]
+CREAR_SUBPEDIDO:[numero_padre]|ITEMS:[items separados por coma]|TOTAL:[valor]|TEL:[telefono]
+WA_CLIENTE:[telefono]|[mensaje para enviar al cliente]
+
+Si el dueño te pide agregar algo a un pedido, usar MODIFICAR_PEDIDO.
+Si el cliente ya tiene un pedido y quiere uno nuevo adicional, usar CREAR_SUBPEDIDO.
+Si necesitas avisar al cliente, usar WA_CLIENTE.
+Responde siempre en español, máximo 3 líneas + la instrucción si aplica.`;
+
+    var conv = [{ role: "user", content: sysprompt }];
+    if (Array.isArray(historial)) {
+      historial.slice(-6).forEach(function(m) {
+        conv.push({ role: m.rol === "luz" ? "assistant" : "user", content: m.texto });
+      });
+    }
+    conv.push({ role: "user", content: mensaje });
+
+    var aiResp = await axios.post("https://api.anthropic.com/v1/messages", {
+      model: "claude-haiku-4-5",
+      max_tokens: 600,
+      system: sysprompt,
+      messages: [{ role: "user", content: mensaje }]
+    }, { headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" } });
+
+    var rawResp = aiResp.data.content[0].text || "";
+    var cleanResp = rawResp;
+    var accionEjecutada = null;
+    var accionDetalle = null;
+
+    // ── Ejecutar MODIFICAR_PEDIDO ────────────────────────────────
+    var modMatch = rawResp.match(/MODIFICAR_PEDIDO:([^|\n]+)\|([^\n]+)/);
+    if (modMatch) {
+      cleanResp = cleanResp.replace(/MODIFICAR_PEDIDO:[^\n]+/g,"").trim();
+      var numPed = modMatch[1].trim();
+      var accion = modMatch[2].trim();
+      try {
+        var pedR = await axios.get(
+          SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id + "&numero_pedido=eq." + numPed + "&select=id,items,total,subtotal,desechables,domicilio,notas_especiales",
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+        );
+        if (pedR.data && pedR.data.length > 0) {
+          var ped = pedR.data[0];
+          var patch = {};
+          if (accion.startsWith("AGREGAR:")) {
+            var nuevoItem = accion.replace("AGREGAR:","").trim();
+            var items2 = Array.isArray(ped.items) ? [...ped.items] : [];
+            items2.push("➕ " + nuevoItem);
+            var pm = nuevoItem.match(/\$([0-9.,]+)/);
+            var precioAdd = pm ? Number(pm[1].replace(/[.,]/g,"").slice(0,-2) || pm[1].replace(/\./g,"")) : 0;
+            // try to parse properly
+            if (pm) {
+              var pStr = pm[1].replace(/\./g,"").replace(",",".");
+              precioAdd = Math.round(parseFloat(pStr));
+              if (precioAdd < 1000 && precioAdd > 0) precioAdd *= 1000; // likely missing trailing zeros
+            }
+            patch.items = items2;
+            patch.total = Number(ped.total||0) + precioAdd;
+            patch.notas_especiales = ((ped.notas_especiales||"") ? ped.notas_especiales + " | " : "") + "✏️ +"+nuevoItem;
+          } else if (accion.startsWith("ESTADO:")) {
+            patch.estado = accion.replace("ESTADO:","").trim();
+          } else if (accion.startsWith("NOTA:")) {
+            patch.notas_especiales = ((ped.notas_especiales||"") ? ped.notas_especiales + " | " : "") + "📝 " + accion.replace("NOTA:","").trim();
+          } else if (accion.startsWith("ELIMINAR:")) {
+            var qtar = accion.replace("ELIMINAR:","").trim().toLowerCase();
+            var iAct = Array.isArray(ped.items) ? [...ped.items] : [];
+            var idxQ = iAct.findIndex(function(x){ return x.toLowerCase().includes(qtar); });
+            if (idxQ !== -1) { iAct.splice(idxQ,1); patch.items = iAct; }
+          }
+          if (Object.keys(patch).length > 0) {
+            patch.updated_at = new Date().toISOString();
+            await axios.patch(
+              SUPABASE_URL + "/rest/v1/pedidos?id=eq." + ped.id, patch,
+              { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+            );
+            accionEjecutada = "modificar_pedido";
+            accionDetalle = { numero: numPed, accion: accion, patch: patch };
+          }
+        }
+      } catch(e) { console.error("[luz-panel] modificar error:", e.message); }
+    }
+
+    // ── Ejecutar CREAR_SUBPEDIDO ─────────────────────────────────
+    var subMatch = rawResp.match(/CREAR_SUBPEDIDO:([^|]+)\|ITEMS:([^|]+)\|TOTAL:([^|]+)\|TEL:([^\n]+)/);
+    if (subMatch) {
+      cleanResp = cleanResp.replace(/CREAR_SUBPEDIDO:[^\n]+/g,"").trim();
+      try {
+        var numPadre = subMatch[1].trim();
+        var itemsSub = subMatch[2].trim().split(",").map(function(s){ return s.trim(); });
+        var totalSub = Number(subMatch[3].trim().replace(/[^0-9]/g,""));
+        var telSub = subMatch[4].trim().replace(/[^0-9]/g,"");
+        if(telSub.startsWith("57") && telSub.length===12) telSub=telSub.slice(2);
+        // Crear nuevo pedido con referencia al padre
+        var newPedR = await axios.post(SUPABASE_URL + "/rest/v1/pedidos", {
+          restaurante_id: restaurante_id,
+          cliente_tel: telSub,
+          items: itemsSub,
+          total: totalSub,
+          subtotal: totalSub,
+          estado: "confirmado",
+          tipo_pedido: "subpedido",
+          notas_especiales: "📎 ADICIONAL al pedido #" + numPadre,
+          canal: "panel_luz",
+          created_at: new Date().toISOString()
+        }, { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" } });
+        accionEjecutada = "crear_subpedido";
+        accionDetalle = { padre: numPadre, items: itemsSub, total: totalSub };
+      } catch(e) { console.error("[luz-panel] subpedido error:", e.message); }
+    }
+
+    // ── Ejecutar WA_CLIENTE ───────────────────────────────────────
+    var waMatch = rawResp.match(/WA_CLIENTE:([^|]+)\|([^\n]+)/);
+    if (waMatch) {
+      cleanResp = cleanResp.replace(/WA_CLIENTE:[^\n]+/g,"").trim();
+      try {
+        var restData = await axios.get(
+          SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=whatsapp_phone_id",
+          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+        );
+        if (restData.data && restData.data[0] && restData.data[0].whatsapp_phone_id) {
+          var telWA = waMatch[1].trim().replace(/[^0-9]/g,"");
+          if (!telWA.startsWith("57")) telWA = "57" + telWA;
+          await sendWhatsAppMessage(telWA, waMatch[2].trim(), restData.data[0].whatsapp_phone_id);
+          accionEjecutada = accionEjecutada || "wa_enviado";
+        }
+      } catch(e) { console.error("[luz-panel] wa error:", e.message); }
+    }
+
+    res.json({ ok: true, respuesta: cleanResp.trim(), accion: accionEjecutada, detalle: accionDetalle });
+  } catch(e) {
+    console.error("[luz-panel] error:", e.message);
+    res.json({ ok: false, error: e.message, respuesta: "Error al procesar. Intenta de nuevo." });
+  }
+});
+
+
+// Charr Tower: QR escaneado - push al mesero
+app.post("/api/charr-bienvenida", async function(req, res) {
+  var restaurante_id = req.body.restaurante_id;
+  var mesa = req.body.mesa;
+  if (!restaurante_id || !mesa) return res.json({ ok: false });
+  enviarPushPorRol(restaurante_id, "mesero", {
+    title: "Mesa " + mesa + " - Clientes llegaron",
+    body: "Escanearon el QR. Ya pueden pedir.",
+    icon: "/icons/icon-192.png",
+    tag: "qr-" + mesa,
+    url: "/mesero"
+  });
+  console.log("[CHARR] QR mesa " + mesa);
+  res.json({ ok: true });
+});
+
 app.get("/api/mesa-estado", function(req, res) {
   var restauranteId = req.query.restaurante_id;
   var mesa = req.query.mesa;
   if (!restauranteId || !mesa) return res.json({ estado: "libre" });
   var estados = mesaEstados[restauranteId] || {};
   var estado = estados["mesa_" + mesa] || "libre";
-  res.json({ estado: estado, mesa: mesa, restaurante_id: restauranteId });
+  // Flag de escaneo reciente (últimos 60s)
+  var key = restauranteId + "_" + mesa;
+  var scanned = mesaScanned[key] && (Date.now() - mesaScanned[key]) < 60000;
+  if (scanned) delete mesaScanned[key]; // una sola vez
+  res.json({ estado: estado, mesa: mesa, restaurante_id: restauranteId, scanned: scanned || false });
 });
 
 // POST /api/mesa-led — Panel actualiza el LED de una mesa
@@ -1354,37 +1762,41 @@ app.get("/api/esp32-cmd", async function(req, res) {
 });
 
 app.post("/api/esp32-registro", async function(req, res) {
-  var { restaurante_id, mesa, mac, ip, num_leds } = req.body;
+  var { restaurante_id, mesa, mac, ip, num_leds, battery_pct, battery_volt, wifi_ssid, wifi_rssi } = req.body;
   if (!restaurante_id || !mac) return res.status(400).json({ error: "Faltan datos" });
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json" };
     var macClean = mac.toUpperCase().trim();
-    console.log("[ESP32 registro] MAC recibida:", macClean, "IP:", ip, "Mesa:", mesa);
-    // Buscar si ya existe por MAC — sin encodeURIComponent para que los : pasen bien
+    var data = { ip: ip||null, num_leds: parseInt(num_leds)||20, online: true, last_seen: new Date().toISOString() };
+    // Campos nuevos: batería y WiFi
+    if (battery_pct !== undefined) data.battery_pct = parseInt(battery_pct);
+    if (battery_volt !== undefined) data.battery_volt = parseFloat(battery_volt);
+    if (wifi_ssid) data.wifi_ssid = wifi_ssid;
+    if (wifi_rssi !== undefined) data.wifi_rssi = parseInt(wifi_rssi);
+
     var existR = await axios.get(
       SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + macClean + "&restaurante_id=eq." + restaurante_id + "&select=id,mesa",
       { headers: h }
-    ).catch(function(e){ console.log("[ESP32] Error buscando:", e.message); return { data: [] }; });
-    var existe = existR.data && existR.data.length > 0;
-    if (existe) {
-      var mesaActual = existR.data[0].mesa || parseInt(mesa)||0;
+    ).catch(function(e){ return { data: [] }; });
+
+    if (existR.data && existR.data.length > 0) {
       await axios.patch(
         SUPABASE_URL + "/rest/v1/esp32_dispositivos?mac=eq." + macClean + "&restaurante_id=eq." + restaurante_id,
-        { ip: ip||null, num_leds: parseInt(num_leds)||20, online: true, last_seen: new Date().toISOString() },
-        { headers: { ...h, "Prefer": "return=minimal" } }
+        data, { headers: { ...h, "Prefer": "return=minimal" } }
       );
-      console.log("[ESP32] ✅ Actualizado — Mesa:" + mesaActual + " IP:" + ip);
     } else {
-      await axios.post(SUPABASE_URL + "/rest/v1/esp32_dispositivos",
-        { restaurante_id, mesa: parseInt(mesa)||0, mac: macClean, ip: ip||null, num_leds: parseInt(num_leds)||20, online: true, last_seen: new Date().toISOString() },
+      data.restaurante_id = restaurante_id;
+      data.mesa = parseInt(mesa) || 0;
+      data.mac = macClean;
+      await axios.post(SUPABASE_URL + "/rest/v1/esp32_dispositivos", data,
         { headers: { ...h, "Prefer": "return=minimal" } }
       );
-      console.log("[ESP32] ✅ NUEVO dispositivo registrado — MAC:" + macClean + " IP:" + ip);
     }
+    console.log("[ESP32] " + macClean + " mesa:" + (existR.data?.[0]?.mesa||mesa) + " bat:" + (battery_pct||"?") + "% wifi:" + (wifi_rssi||"?") + "dBm");
     res.json({ ok: true });
   } catch(e) {
-    console.error("[ESP32 registro ERROR]", e.message, e.response?.data);
+    console.error("[ESP32]", e.message);
     res.status(500).json({ error: e.message });
   }
 });
@@ -2635,7 +3047,7 @@ app.post("/api/pedido-estado", async function(req, res) {
       if (estado === "en_preparacion") {
         var msg = getMensaje(restaurante, "msg_en_preparacion", "Tu pedido" + numStr + " ya esta en preparacion! En breve estara listo.");
         await sendWhatsAppMessage(telefono_cliente, msg, pid);
-        if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
+        if (restaurante_id) guardarMensajeSupabase(restaurante_id, stripCountryCode(telefono_cliente), msg, "estado_luz", null);
         // Push a meseros: pedido en preparacion
         if (restaurante_id) enviarPushPorRol(restaurante_id, "mesero", { title: "🟡 Preparando", body: "Pedido" + numStr + " en preparacion", icon: "/icons/icon-192.png", vibrate: [100,50,100], tag: "pedido-" + id, url: "/mesero" });
       }
@@ -2647,7 +3059,7 @@ app.post("/api/pedido-estado", async function(req, res) {
           : "Tu pedido" + numStr + " esta listo y esperando al domiciliario!";
         var msg = getMensaje(restaurante, "msg_listo", msgListoDefault);
         await sendWhatsAppMessage(telefono_cliente, msg, pid);
-        if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
+        if (restaurante_id) guardarMensajeSupabase(restaurante_id, stripCountryCode(telefono_cliente), msg, "estado_luz", null);
         // Push a meseros y domis: pedido listo
         var esMesaStr = req.body.direccion && req.body.direccion.toUpperCase().indexOf("MESA") !== -1;
         if (restaurante_id && esMesaStr) {
@@ -2659,7 +3071,7 @@ app.post("/api/pedido-estado", async function(req, res) {
       if (estado === "en_camino") {
         var msg = getMensaje(restaurante, "msg_en_camino", "Tu pedido" + numStr + " ya va en camino. Que lo disfrutes!");
         try { await sendWhatsAppMessage(telefono_cliente, msg, pid); } catch(e) {}
-        if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono_cliente, msg, "estado_luz", null);
+        if (restaurante_id) guardarMensajeSupabase(restaurante_id, stripCountryCode(telefono_cliente), msg, "estado_luz", null);
         // Push al cliente
         enviarPushClientePorTel(restaurante_id, telefono_cliente, {
           title: "🛵 ¡Tu pedido va en camino!",
@@ -3113,7 +3525,7 @@ app.post("/api/pedido-manual", async function(req, res) {
         await sendWhatsAppMessage(telWA, msgCliente, restInfo.whatsapp_phone_id);
         console.log("[pedido-manual] ✅ WhatsApp enviado a " + telWA);
         // Guardar mensaje en historial de chat
-        guardarMensajeSupabase(restaurante_id, telefono, msgCliente, "estado_luz", null).catch(function(){});
+        guardarMensajeSupabase(restaurante_id, stripCountryCode(telefono), msgCliente, "estado_luz", null).catch(function(){});
       } else {
         console.warn("[pedido-manual] ⚠️ Sin whatsapp_phone_id — confirmación no enviada");
       }
@@ -3137,7 +3549,7 @@ app.post("/notificar-cliente", async function(req, res) {
     var msg = getMensaje(restaurante, "msg_en_camino", "Tu pedido" + numStr + " ya va en camino. Que lo disfrutes!");
     var pid = restaurante?.whatsapp_phone_id || process.env.WHATSAPP_PHONE_ID;
     await sendWhatsAppMessage(req.body.telefono, msg, pid);
-    if (req.body.restaurante_id) guardarMensajeSupabase(req.body.restaurante_id, req.body.telefono, msg, "estado_luz", null);
+    if (req.body.restaurante_id) guardarMensajeSupabase(req.body.restaurante_id, stripCountryCode(req.body.telefono), msg, "estado_luz", null);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
@@ -3299,8 +3711,14 @@ app.get("/api/chat/:telefono", async function(req, res) {
   if (!req.query.restaurante_id) return res.json({ ok: true, mensajes: [] });
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var tel = req.params.telefono.replace(/[^0-9]/g, "");
+    // Buscar con AMBOS formatos: con y sin código de país
+    var telLocal = tel.startsWith("57") && tel.length === 12 ? tel.substring(2) : tel;
+    var telFull = tel.length === 10 && !tel.startsWith("57") ? "57" + tel : tel;
     var r = await axios.get(
-      SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + req.query.restaurante_id + "&telefono=eq." + encodeURIComponent(req.params.telefono) + "&order=created_at.asc&limit=150",
+      SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + req.query.restaurante_id +
+      "&or=(telefono.eq." + encodeURIComponent(telLocal) + ",telefono.eq." + encodeURIComponent(telFull) + ")" +
+      "&order=created_at.asc&limit=200",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
     res.json({ ok: true, mensajes: r.data || [] });
   } catch (e) { res.json({ ok: true, mensajes: [] }); }
@@ -3312,10 +3730,12 @@ app.get("/api/mis-pedidos/:telefono", async function(req, res) {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var tel = req.params.telefono.replace(/[^0-9]/g,"");
     if(tel.startsWith("57") && tel.length===12) tel=tel.slice(2);
+    var telFull = "57" + tel;
+    // Buscar con ambos formatos de teléfono + todos los estados (incluye historial)
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + req.query.restaurante_id +
-      "&cliente_tel=eq." + encodeURIComponent(tel) +
-      "&estado=not.in.(entregado,cancelado)&order=created_at.desc&limit=10&select=*",
+      "&or=(cliente_tel.eq." + encodeURIComponent(tel) + ",cliente_tel.eq." + encodeURIComponent(telFull) + ")" +
+      "&order=created_at.desc&limit=20&select=*",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
     res.json({ ok: true, pedidos: r.data || [] });
   } catch (e) { res.json({ ok: true, pedidos: [] }); }
@@ -3467,6 +3887,8 @@ ACTION:CREAR_CUPON:{"codigo":"NOMBRE20","descuento":20,"tipo":"porcentaje","usos
 ACTION:ENVIAR_PROMO_MASIVA:{"mensaje":"texto"}
 ACTION:ENVIAR_MENSAJE_CLIENTE:{"telefono":"...","mensaje":"..."}
 ACTION:MODIFICAR_PEDIDO:{"pedido_id":"uuid","numero":134,"estado":"listo"}
+ACTION:MODIFICAR_PEDIDO:{"pedido_id":"uuid","numero":134,"agregar":"1x Papa Crocante $6.500","precio_extra":6500}
+ACTION:CREAR_SUBPEDIDO:{"pedido_padre":134,"cliente_tel":"3108128156","items":["1x Gaseosa $3.000"],"total":3000}
 ACTION:SILENCIAR_CLIENTE:{"telefono":"..."}
 
 CÓMO DEBES COMPORTARTE:
@@ -3565,14 +3987,52 @@ CÓMO DEBES COMPORTARTE:
         }
         return "✅ Promo enviada a "+enviados+" clientes"+(fallidos>0?" ("+fallidos+" fallidos)":"")+" de "+tels.length+" en total";
       }},
-      {re:/ACTION:MODIFICAR_PEDIDO:(\{[^}]+\})/,fn:async function(d){
+      {re:/ACTION:MODIFICAR_PEDIDO:(\{[^}\}]*(?:\{[^}]*\}[^}\}]*)*\})/,fn:async function(d){
         var patch={updated_at:new Date().toISOString()};
-        if(d.estado)patch.estado=d.estado;
-        if(d.notas)patch.notas_especiales=d.notas;
-        if(d.domiciliario_id)patch.domiciliario_id=d.domiciliario_id;
-        await axios.patch(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+d.pedido_id,patch,
-          {headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});
+        if(d.estado) patch.estado=d.estado;
+        if(d.notas) patch.notas_especiales=d.notas;
+        if(d.domiciliario_id) patch.domiciliario_id=d.domiciliario_id;
+        if(d.direccion) patch.direccion=d.direccion;
+        // Soporte para agregar items al pedido
+        if(d.agregar || d.items_nuevos) {
+          var pedActual = await axios.get(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+d.pedido_id+"&select=items,total,notas_especiales",
+            {headers:h}).catch(function(){return{data:[]};});
+          if(pedActual.data && pedActual.data[0]) {
+            var itemsActuales = Array.isArray(pedActual.data[0].items) ? [...pedActual.data[0].items] : [];
+            var nuevoItem = d.agregar || d.items_nuevos;
+            if(Array.isArray(nuevoItem)) { itemsActuales.push(...nuevoItem.map(function(x){return "➕ "+x;})); }
+            else { itemsActuales.push("➕ " + nuevoItem); }
+            patch.items = itemsActuales;
+            var precioExtra = Number(d.precio_extra||0);
+            if(precioExtra > 0) patch.total = Number(pedActual.data[0].total||0) + precioExtra;
+            var notaAnterior = pedActual.data[0].notas_especiales || "";
+            patch.notas_especiales = (notaAnterior ? notaAnterior+" | " : "") + "✏️ Panel: +"+(d.agregar||d.items_nuevos);
+          }
+        }
+        if(Object.keys(patch).length > 1) {
+          await axios.patch(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+d.pedido_id,patch,
+            {headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});
+        }
         return "✅ Pedido #"+d.numero+" actualizado";
+      }},
+      // Sub-pedido — pedido adicional ligado a uno existente
+      {re:/ACTION:CREAR_SUBPEDIDO:(\{[^}\}]*(?:\{[^}]*\}[^}\}]*)*\})/,fn:async function(d){
+        var nuevoP = {
+          restaurante_id: restaurante_id,
+          cliente_tel: d.cliente_tel || d.telefono || "",
+          items: Array.isArray(d.items) ? d.items : [d.items||""],
+          total: Number(d.total||0),
+          subtotal: Number(d.total||0),
+          estado: "confirmado",
+          tipo_pedido: "subpedido",
+          canal: "panel_luz",
+          notas_especiales: "📎 ADICIONAL al pedido #"+(d.pedido_padre||d.numero_padre||"?"),
+          created_at: new Date().toISOString()
+        };
+        var cResp = await axios.post(SUPABASE_URL+"/rest/v1/pedidos", nuevoP,
+          {headers:{...h,"Content-Type":"application/json","Prefer":"return=representation"}});
+        var numNuevo = cResp.data && cResp.data[0] ? cResp.data[0].numero_pedido : "nuevo";
+        return "✅ Sub-pedido #"+numNuevo+" creado (adicional a #"+(d.pedido_padre||"?")+" )";
       }},
       {re:/ACTION:SILENCIAR_CLIENTE:(\{[^}]+\})/,fn:async function(d){
         await axios.post(SUPABASE_URL+"/rest/v1/silencio_conversacion",
@@ -3881,7 +4341,7 @@ app.get("/api/domi-login", async function(req, res) {
     if(nombre) {
       // Buscar por nombre (case-insensitive)
       url = SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restaurante_id+
-        "&nombre=ilike."+encodeURIComponent("%"+nombre.trim()+"%")+"&select=*";
+        "&nombre=ilike."+encodeURIComponent("%"+nombre.trim()+"%")+"&activo=eq.true&select=*";
     } else if(telefono) {
       var tel10 = telefono.replace(/^57/,"");
       var tel12 = "57"+tel10;
@@ -3896,19 +4356,30 @@ app.get("/api/domi-login", async function(req, res) {
 });
 
 app.get("/api/domi-pedido-activo", async function(req, res) {
-  var {restaurante_id, domiciliario_id, telefono} = req.query;
+  var {restaurante_id, domiciliario_id} = req.query;
   if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
-    // Buscar por domiciliario_id
-    var r = await axios.get(
+    // 1. Buscar pedido en_camino asignado a ESTE domi
+    if(domiciliario_id) {
+      var rAsig = await axios.get(
+        SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
+        "&domiciliario_id=eq."+encodeURIComponent(domiciliario_id)+
+        "&estado=in.(listo,en_camino)&order=created_at.desc&limit=1&select=*",
+        {headers:h}
+      );
+      if(rAsig.data&&rAsig.data.length>0) return res.json(rAsig.data[0]);
+    }
+    // 2. Si no hay asignado: buscar cualquier pedido listo SIN domiciliario (disponible para tomar)
+    var hace6h = new Date(Date.now()-6*60*60*1000).toISOString();
+    var rDisp = await axios.get(
       SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
-      "&domiciliario_id=eq."+encodeURIComponent(domiciliario_id)+
-      "&estado=in.(listo,en_camino)&order=created_at.desc&limit=1&select=*",
+      "&estado=eq.listo&domiciliario_id=is.null&tipo_pedido=neq.recoger"+
+      "&created_at=gte."+hace6h+"&order=created_at.asc&limit=1&select=*",
       {headers:h}
     );
-    if(r.data&&r.data.length>0) return res.json(r.data[0]);
+    if(rDisp.data&&rDisp.data.length>0) return res.json(rDisp.data[0]);
     res.json(null);
   } catch(e) { res.status(500).json({error:e.message}); }
 });
@@ -3952,6 +4423,27 @@ app.get("/api/cocina-pedidos", async function(req, res) {
     console.error("[cocina-pedidos]",e.message);
     res.status(500).json({error:e.message});
   }
+});
+
+
+app.get("/api/cocina-historial", async function(req, res) {
+  var restaurante_id = req.query.restaurante_id;
+  if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
+  try {
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+    var hoy = new Date();
+    hoy.setUTCHours(5,0,0,0);
+    if(new Date().getUTCHours()<5) hoy.setUTCDate(hoy.getUTCDate()-1);
+    var r = await axios.get(
+      SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
+      "&estado=in.(listo,listo_entrega,en_camino,entregado)"+
+      "&created_at=gte."+hoy.toISOString()+
+      "&order=updated_at.desc&limit=80&select=id,numero_pedido,items,created_at,updated_at,tipo_pedido,direccion",
+      {headers:h}
+    );
+    res.json(r.data||[]);
+  } catch(e) { res.status(500).json({error:e.message}); }
 });
 
 app.get("/api/cocina-stats", async function(req, res) {
@@ -4368,9 +4860,10 @@ app.post("/api/canjear", async function(req, res) {
     var pedidoActualizado = false;
     var pedidoNumero = null;
     try {
+      // Buscar con AMBOS formatos de teléfono (con y sin 57)
       var pedR = await axios.get(
         SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id +
-        "&cliente_tel=eq." + encodeURIComponent(telLocal) +
+        "&or=(cliente_tel.eq." + encodeURIComponent(telLocal) + ",cliente_tel.eq." + encodeURIComponent("57" + telLocal) + ",cliente_tel.eq." + encodeURIComponent(telefono) + ")" +
         "&estado=in.(confirmado,en_preparacion,listo,en_camino)&order=created_at.desc&limit=1&select=*",
         { headers: h }
       );
@@ -4386,12 +4879,31 @@ app.post("/api/canjear", async function(req, res) {
           { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } }
         );
         pedidoActualizado = true;
-        alertMsg = "\u2B50 CANJE: " + nombreCli + " canje\u00f3 " + prod.puntos_requeridos + " pts por " + (prod.emoji||"\uD83C\uDF81") + " " + prod.nombre + " → agregado al Pedido #" + pedidoNumero;
+        alertMsg = "\u2B50 CANJE: " + nombreCli + " canjeó " + prod.puntos_requeridos + " pts por " + (prod.emoji||"\uD83C\uDF81") + " " + prod.nombre + " → agregado al Pedido #" + pedidoNumero;
         console.log("[canje] \u2705 Agregado al pedido #" + pedidoNumero);
       } else {
-        alertMsg = "\u2B50 CANJE sin pedido activo: " + nombreCli + " canje\u00f3 " + prod.puntos_requeridos + " pts por " + (prod.emoji||"\uD83C\uDF81") + " " + prod.nombre + " (pendiente de entregar)";
+        alertMsg = "\u2B50 CANJE sin pedido activo: " + nombreCli + " canjeó " + prod.puntos_requeridos + " pts por " + (prod.emoji||"\uD83C\uDF81") + " " + prod.nombre + " (pendiente de entregar)";
+        console.log("[canje] ⚠️ Sin pedido activo para " + telLocal + " — buscó con: " + telLocal + ", 57" + telLocal + ", " + telefono);
       }
+      // Guardar alerta en panel
       await guardarMensajeSupabase(restaurante_id, telLocal, alertMsg, "alerta_pregunta", null);
+
+      // 7b. NOTIFICAR AL DUEÑO POR WHATSAPP
+      try {
+        var restFullR = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=telefono_dueno,whatsapp_phone_id,nombre", { headers: h });
+        var restFull = restFullR.data && restFullR.data[0];
+        if (restFull && restFull.telefono_dueno && restFull.whatsapp_phone_id) {
+          var telDuenoCanje = "57" + stripCountryCode(restFull.telefono_dueno);
+          var msgDueno = "\uD83C\uDF81 *CANJE DE PUNTOS*\n\n"
+            + "Cliente: " + nombreCli + " (" + telLocal + ")\n"
+            + "Canjeó: " + (prod.emoji||"\uD83C\uDF81") + " " + prod.nombre + "\n"
+            + "Puntos usados: " + prod.puntos_requeridos + " | Restantes: " + nuevosPuntos + "\n"
+            + (pedidoActualizado ? "\u2705 Agregado al pedido #" + pedidoNumero : "⚠️ Sin pedido activo — pendiente de entregar");
+          await sendWhatsAppMessage(telDuenoCanje, msgDueno, restFull.whatsapp_phone_id);
+          console.log("[canje] ✅ Dueño notificado por WA");
+        }
+      } catch(eDueno) { console.error("[canje] notificar dueño:", eDueno.message); }
+
     } catch(ePed) { console.error("[canje] pedido:", ePed.message); }
 
     // 8. WhatsApp al cliente
@@ -5363,6 +5875,15 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     // Cargar prompts personalizados del admin (si hay)
     await getIAPrompts();
 
+    // ── LUZ RAG: buscar experiencias similares en la memoria ──
+    var memoriasTexto = "";
+    if (restaurante && userText && userText.length > 5) {
+      try {
+        var memorias = await buscarMemoriaSimilar(restaurante.id, userText, 3);
+        memoriasTexto = formatearMemorias(memorias);
+      } catch(eRAG) { /* silencioso */ }
+    }
+
     var systemFinal = buildSystemPrompt(restaurante)
       .replace(/MENU_URL_PLACEHOLDER/g, getMenuUrl(restaurante))
       .replace(/MENU_PLACEHOLDER/g, "MENU ACTIVO:\n" + menuParaPrompt)
@@ -5373,7 +5894,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       .replace(/NOMBRE_CLIENTE_PLACEHOLDER/g, nombreClienteTexto)
       .replace(/NIVEL_CLIENTE_PLACEHOLDER/g, nivelClienteTexto)
       .replace(/FECHA_INICIO_PLACEHOLDER/g, fechaInicioFidelidad)
-      + bienvenidaExtra + pedidoActivoTexto + aprendizajesTexto;
+      + bienvenidaExtra + pedidoActivoTexto + aprendizajesTexto + memoriasTexto;
 
     var claudeResponse = await axios.post(
       "https://api.anthropic.com/v1/messages",
@@ -5435,9 +5956,23 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     }
 
     if (sideEffect === "alerta_pregunta" && restaurante && orderState[from]?.alertaPregunta) {
-      guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "ALERTA_PREGUNTA: " + orderState[from].alertaPregunta, "alerta_pregunta", null).catch(function(){});
-      // Auto-learning: guardar pregunta sin respuesta
-      autoAprendizajeDePregunta(restaurante.id, orderState[from].alertaPregunta).catch(function(){});
+      var preguntaTexto = orderState[from].alertaPregunta;
+      guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "ALERTA_PREGUNTA: " + preguntaTexto, "alerta_pregunta", null).catch(function(){});
+      autoAprendizajeDePregunta(restaurante.id, preguntaTexto).catch(function(){});
+      // NOTIFICAR AL DUEÑO INMEDIATAMENTE
+      (async function() {
+        try {
+          if (restaurante.telefono_dueno && restaurante.whatsapp_phone_id) {
+            var telDuenoAlerta = "57" + stripCountryCode(restaurante.telefono_dueno);
+            var msgAlerta = "❓ *PREGUNTA SIN RESPUESTA*\n\n"
+              + "📱 Cliente: " + stripCountryCode(from) + "\n"
+              + "💬 \"" + preguntaTexto.substring(0, 200) + "\"\n\n"
+              + "Luz no supo responder. Abre el panel → Chats para atenderlo.";
+            await sendWhatsAppMessage(telDuenoAlerta, msgAlerta, restaurante.whatsapp_phone_id);
+            console.log("[ALERTA→DUEÑO] ✅ Notificado por pregunta sin respuesta");
+          }
+        } catch(eAlertDueno) { console.error("[ALERTA→DUEÑO]", eAlertDueno.message); }
+      })();
     }
 
     if (sideEffect === "modificar_pedido") { console.log("MODIFICAR intent:", JSON.stringify(orderState[from]?.modificarPedido)); }
@@ -5627,6 +6162,22 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
         });
       }
 
+      // ── NOTIFICAR AL DUEÑO: nuevo pedido por WhatsApp ──────────────────
+      if (restaurante && restaurante.telefono_dueno && restaurante.whatsapp_phone_id) {
+        (async function() {
+          try {
+            var telDuenoPed = "57" + stripCountryCode(restaurante.telefono_dueno);
+            var itemsResumen = Array.isArray(state.items) ? state.items.slice(0, 4).join("\n• ") : "";
+            var msgPed = "🛒 *NUEVO PEDIDO #" + state.orderNumber + "*\n\n"
+              + "📱 " + stripCountryCode(from) + "\n"
+              + "📋 • " + itemsResumen + "\n"
+              + "💰 $" + Number(state.total).toLocaleString("es-CO") + " — " + (state.paymentMethod || "?") + "\n"
+              + "📍 " + (state.address || "Por confirmar");
+            await sendWhatsAppMessage(telDuenoPed, msgPed, restaurante.whatsapp_phone_id);
+          } catch(e) {}
+        })();
+      }
+
       // ── SUMAR PUNTOS (flujo WhatsApp) ──────────────────────────────────
       if (restId && state.total) {
         try {
@@ -5649,6 +6200,17 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
           );
           console.log("[puntos-WA] ✅ " + telPuntos + ": " + puntosActP + " + " + puntosNuevosP + " = " + puntosTotalP + " pts | nivel: " + nivelP);
         } catch(ePuntos) { console.error("[puntos-WA]", ePuntos.message); }
+      }
+
+      // ── LUZ APRENDE: analizar conversación post-pedido (fire & forget) ──
+      if (restId && conversations[from]) {
+        luzAprendizajePostPedido(restId, from, conversations[from], {
+          items: state.items, total: state.total, address: state.address
+        }).catch(function(e) { console.error("[LUZ-APRENDE]", e.message); });
+        // ── LUZ RAG: guardar memoria de la conversación ──
+        guardarMemoriaConversacion(restId, from, conversations[from], {
+          items: state.items, total: state.total, address: state.address
+        }).catch(function(e) { console.error("[LUZ-RAG]", e.message); });
       }
 
       delete orderState[from];
@@ -5785,6 +6347,189 @@ var agentState = {
   canjesVistosHoy: new Set(),
   alertasEnviadas: new Set()
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LUZ NIVEL 2 — ANÁLISIS NOCTURNO DE CONVERSACIONES FALLIDAS
+// Corre 1 vez al día (11pm Colombia). Analiza conversaciones del día donde:
+// - El cliente se frustró o canceló
+// - El admin tuvo que intervenir
+// - Se recibió valoración baja (1-2 estrellas)
+// Genera correcciones automáticas para que Luz no repita errores
+// ═══════════════════════════════════════════════════════════════════════════════
+async function luzAnalisisNocturno(restauranteId) {
+  try {
+    var CLAUDE_KEY = process.env.ANTHROPIC_API_KEY;
+    if (!CLAUDE_KEY) return;
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    var hoy = getMedionocheColombiaISO();
+
+    // 1. Pedidos cancelados hoy
+    var cancelR = await axios.get(
+      SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId +
+      "&estado=eq.cancelado&created_at=gte." + hoy + "&select=cliente_tel,numero_pedido",
+      { headers: h }).catch(function(){ return { data: [] }; });
+
+    // 2. Valoraciones bajas
+    var valsR = await axios.get(
+      SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId +
+      "&valoracion=lte.2&valoracion=not.is.null&created_at=gte." + hoy + "&select=cliente_tel,numero_pedido,valoracion",
+      { headers: h }).catch(function(){ return { data: [] }; });
+
+    // 3. Intervenciones del admin (mensajes tipo "restaurante" que no son automáticos)
+    var adminR = await axios.get(
+      SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + restauranteId +
+      "&tipo=eq.restaurante&created_at=gte." + hoy +
+      "&mensaje=not.like.*pedido*ya*en*preparacion*&mensaje=not.like.*va*en*camino*" +
+      "&order=created_at.desc&limit=20&select=telefono,mensaje",
+      { headers: h }).catch(function(){ return { data: [] }; });
+
+    // 4. Alertas sin resolver
+    var alertR = await axios.get(
+      SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + restauranteId +
+      "&tipo=eq.alerta_pregunta&created_at=gte." + hoy +
+      "&select=telefono,mensaje",
+      { headers: h }).catch(function(){ return { data: [] }; });
+
+    var cancelados = cancelR.data || [];
+    var valsBajas = valsR.data || [];
+    var intervenciones = adminR.data || [];
+    var alertas = alertR.data || [];
+
+    if (!cancelados.length && !valsBajas.length && !intervenciones.length && !alertas.length) {
+      console.log("[LUZ-NIVEL2] Sin incidencias hoy para " + restauranteId.substring(0,8));
+      return;
+    }
+
+    // Cargar conversaciones de los clientes afectados
+    var telsAfectados = new Set();
+    cancelados.forEach(function(p){ if(p.cliente_tel) telsAfectados.add(p.cliente_tel); });
+    valsBajas.forEach(function(p){ if(p.cliente_tel) telsAfectados.add(p.cliente_tel); });
+
+    var convTexto = "";
+    for (var tel of Array.from(telsAfectados).slice(0, 5)) {
+      try {
+        var msgR = await axios.get(
+          SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + restauranteId +
+          "&telefono=eq." + encodeURIComponent(tel) + "&created_at=gte." + hoy +
+          "&order=created_at.asc&limit=20&select=mensaje,tipo",
+          { headers: h });
+        var conv = (msgR.data || []).map(function(m){ return (m.tipo === "cliente" ? "CLIENTE" : "LUZ") + ": " + (m.mensaje || "").substring(0, 120); }).join("\n");
+        if (conv) convTexto += "\n--- Cliente " + tel + " ---\n" + conv + "\n";
+      } catch(e) {}
+    }
+
+    var claudeResp = await axios.post("https://api.anthropic.com/v1/messages", {
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 600,
+      messages: [{
+        role: "user",
+        content: "Analiza estas incidencias del día en un restaurante y genera correcciones para el asistente IA (Luz).\n\n"
+          + "PEDIDOS CANCELADOS: " + cancelados.length + "\n"
+          + "VALORACIONES BAJAS: " + valsBajas.map(function(v){ return "#" + v.numero_pedido + " (" + v.valoracion + "★)"; }).join(", ") + "\n"
+          + "INTERVENCIONES DEL ADMIN: " + intervenciones.length + "\n"
+          + "PREGUNTAS SIN RESPUESTA: " + alertas.length + "\n\n"
+          + "CONVERSACIONES RELEVANTES:\n" + (convTexto || "(sin conversaciones disponibles)") + "\n\n"
+          + "Genera SOLO correcciones CONCRETAS y ÚTILES para que Luz mejore mañana.\n"
+          + "Responde con JSON array: [{\"tipo\":\"correccion\",\"contenido\":\"...\"}]\n"
+          + "Tipos: correccion, regla_negocio, faq\n"
+          + "Máximo 4 correcciones. Si no hay nada útil, responde [].\n"
+          + "Sé específico: 'Cuando el cliente pregunta X, responder Y' — no genérico."
+      }]
+    }, {
+      headers: { "x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      timeout: 15000
+    });
+
+    var texto = (claudeResp.data.content[0].text || "").trim().replace(/```json\s*/g, "").replace(/```\s*/g, "");
+    var s2 = texto.indexOf("["), e2 = texto.lastIndexOf("]");
+    if (s2 === -1 || e2 === -1) return;
+
+    var correcciones = JSON.parse(texto.substring(s2, e2 + 1));
+    var guardados = 0;
+    for (var corr of correcciones) {
+      if (!corr.contenido || corr.contenido.length < 10) continue;
+      await guardarAprendizaje(restauranteId, corr.tipo || "correccion", corr.contenido, "analisis_nocturno");
+      guardados++;
+    }
+    console.log("[LUZ-NIVEL2] ✅ " + guardados + " correcciones generadas para " + restauranteId.substring(0,8) +
+      " | cancelados:" + cancelados.length + " valsBajas:" + valsBajas.length + " alertas:" + alertas.length);
+  } catch(e) {
+    console.error("[LUZ-NIVEL2] Error:", e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LUZ ALIVE — Endpoint que el panel consulta para mostrar Luz proactiva
+// Retorna insights, alertas, y frases contextuales por tab
+// ═══════════════════════════════════════════════════════════════════════════════
+app.get("/api/luz-alive", async function(req, res) {
+  var restaurante_id = req.query.restaurante_id;
+  var tab = req.query.tab || "pedidos";
+  if (!restaurante_id) return res.json({ ok: false });
+  try {
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
+    var hoy = getMedionocheColombiaISO();
+    var alertas = [];
+    var frase = "";
+
+    // Stats rápidos del día
+    var [pedR, alertaR, canjesR] = await Promise.all([
+      axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id +
+        "&created_at=gte." + hoy + "&select=estado,total,metodo_pago", { headers: h }).catch(function(){ return { data: [] }; }),
+      axios.get(SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + restaurante_id +
+        "&tipo=eq.alerta_pregunta&created_at=gte." + hoy + "&select=id", { headers: h }).catch(function(){ return { data: [] }; }),
+      axios.get(SUPABASE_URL + "/rest/v1/canjes?restaurante_id=eq." + restaurante_id +
+        "&estado=eq.pendiente&created_at=gte." + hoy + "&select=id,telefono,producto_nombre,puntos_usados,created_at",
+        { headers: h }).catch(function(){ return { data: [] }; })
+    ]);
+
+    var pedidos = pedR.data || [];
+    var pedActivos = pedidos.filter(function(p){ return ["confirmado","en_preparacion","listo","en_camino"].indexOf(p.estado) !== -1; });
+    var ventasHoy = pedidos.filter(function(p){ return p.estado !== "cancelado"; }).reduce(function(s,p){ return s + Number(p.total||0); }, 0);
+    var alertasSinResolver = (alertaR.data || []).length;
+    var canjesPendientes = canjesR.data || [];
+
+    // Alertas críticas
+    if (canjesPendientes.length > 0) {
+      canjesPendientes.forEach(function(c) {
+        alertas.push({ tipo: "canje", msg: "🎁 Canje pendiente: " + c.producto_nombre + " (" + c.puntos_usados + " pts) — " + c.telefono });
+      });
+    }
+    if (pedActivos.length > 3) alertas.push({ tipo: "warn", msg: "Hay " + pedActivos.length + " pedidos activos al mismo tiempo — atención" });
+    if (alertasSinResolver > 0) alertas.push({ tipo: "alert", msg: alertasSinResolver + " pregunta(s) de clientes sin responder" });
+
+    // Frases contextuales por tab
+    var hora = getHoraColombia().getHours();
+    var saludo = hora < 12 ? "Buenos días" : hora < 18 ? "Buenas tardes" : "Buenas noches";
+
+    if (tab === "pedidos") {
+      if (!pedidos.length) frase = saludo + "! Sin pedidos aún hoy. Cuando llegue el primero te aviso.";
+      else if (ventasHoy > 200000) frase = "Vamos volando! $" + (ventasHoy/1000).toFixed(0) + "k en ventas hoy con " + pedidos.length + " pedidos.";
+      else frase = pedidos.length + " pedidos hoy por $" + (ventasHoy/1000).toFixed(0) + "k. " + (pedActivos.length ? pedActivos.length + " activo(s) ahora." : "Todo entregado.");
+    } else if (tab === "menu") {
+      frase = "Tienes " + pedidos.length + " pedidos hoy. Si algún producto se agotó, desactívalo y yo aviso a los clientes.";
+    } else if (tab === "chats") {
+      frase = alertasSinResolver > 0
+        ? "Hay " + alertasSinResolver + " conversaciones que necesitan tu atención."
+        : "Todos los chats están al día. Buen trabajo!";
+    } else if (tab === "domis") {
+      frase = "Panel de domiciliarios. Asigna los pedidos listos y yo notifico al cliente cuando salga.";
+    } else if (tab === "config") {
+      frase = "Configuración del restaurante. Cualquier cambio aquí se aplica inmediatamente.";
+    } else if (tab === "promo") {
+      var dia = getDiaColombiaStr();
+      frase = "Hoy es " + dia + ". Revisa que las promos del día estén activas para que yo las ofrezca a los clientes.";
+    } else {
+      frase = saludo + "! Aquí estoy monitoreando todo. " + pedidos.length + " pedidos hoy.";
+    }
+
+    res.json({ ok: true, frase: frase, alertas: alertas, stats: { pedidos: pedidos.length, activos: pedActivos.length, ventas: ventasHoy } });
+  } catch(e) {
+    res.json({ ok: true, frase: "Aquí estoy, lista para lo que necesites.", alertas: [], stats: {} });
+  }
+});
 
 async function luzAgentTick() {
   try {
@@ -5961,6 +6706,13 @@ async function luzAgentTick() {
             + "¡Buen trabajo hoy! 🌟";
           await alertarDueno(reporteMsg);
         } catch(eRep) {}
+      }
+
+      // ── NIVEL 2: ANÁLISIS NOCTURNO A LAS 11PM ────────────────────────────
+      var claveAnalisis = "analisis_" + diaCol;
+      if (horaCol === 23 && !agentState.alertasEnviadas.has(claveAnalisis)) {
+        agentState.alertasEnviadas.add(claveAnalisis);
+        luzAnalisisNocturno(restId).catch(function(e){ console.error("[LUZ-NIVEL2]", e.message); });
       }
 
       // ── ALERTA INVENTARIO BAJO (salsamentaria) ────────────────────────────
