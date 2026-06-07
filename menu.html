@@ -2916,8 +2916,26 @@ async function cargarMenu() {
   try {
     // 3 llamadas en paralelo: menú completo + destacados + clásicas
     var menuP = fetch("/api/menu?restaurante_id=" + rest.id)
-      .then(function(r){ return r.json(); })
-      .catch(function(e){ console.error("[menu] /api/menu falló:", e); return []; });
+      .then(function(r){
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function(d){ return Array.isArray(d) ? d : []; })
+      .catch(async function(e){
+        console.warn("[menu] /api/menu falló (" + e.message + "), intentando Supabase directo...");
+        try {
+          var r2 = await fetch(SU + "/rest/v1/productos?restaurante_id=eq." + rest.id + "&disponible=eq.true&select=*&order=categoria,nombre", {
+            headers: { "apikey": SK, "Authorization": "Bearer " + SK }
+          });
+          if (!r2.ok) throw new Error("Supabase HTTP " + r2.status);
+          var d2 = await r2.json();
+          console.log("[menu] Fallback Supabase OK:", Array.isArray(d2) ? d2.length : 0, "productos");
+          return Array.isArray(d2) ? d2 : [];
+        } catch(e2) {
+          console.error("[menu] Fallback también falló:", e2.message);
+          return [];
+        }
+      });
 
     var destacadosP = fetch("/api/destacados?restaurante_id=" + rest.id)
       .then(function(r){ return r.json(); })
@@ -3705,7 +3723,7 @@ var descTipo = null;
 var domCalculado = null;
 var zonasData = [];
 
-function abrirCheckout() {
+async function abrirCheckout() {
   document.getElementById('checkoutOv').classList.add('open');
   document.body.style.overflow = 'hidden';
   // Mostrar tab de mesa si viene de QR o ya es tipo mesa
@@ -3715,7 +3733,7 @@ function abrirCheckout() {
     if (window._mesaQR) tipoPedido = 'mesa';
   }
   setTipoCheckout(tipoPedido);
-  cargarZonas();
+  await cargarZonas();
   actualizarTotalesCheckout();
   // Pre-llenar si hay cliente conocido
   try {
@@ -4302,10 +4320,10 @@ var mpRefreshInterval = null;
 async function fetchPedidos(tel) {
   var body = document.getElementById("mpBody");
   try {
-    var r = await fetch(SU + "/rest/v1/pedidos?or=(cliente_tel.eq." + tel + ",cliente_tel.eq.57" + tel + ")&restaurante_id=eq." + rest.id + "&order=created_at.desc&limit=20&select=numero_pedido,items,total,estado,created_at,metodo_pago,direccion,tipo_pedido,notas_especiales", {
-      headers: { "apikey": SK, "Authorization": "Bearer " + SK }
-    });
-    var pedidos = await r.json();
+    // Backend usa clave de servicio; Supabase directo con clave anon falla con RLS activo
+    var r = await fetch("/api/mis-pedidos/" + tel + "?restaurante_id=" + rest.id);
+    var data = await r.json();
+    var pedidos = data.pedidos || (Array.isArray(data) ? data : []);
     if (!pedidos || !pedidos.length) {
       body.innerHTML = '<div class="empty"><div class="empty-ico">📭</div><div class="empty-txt">Aún no tienes pedidos</div><div class="empty-sub">Haz tu primer pedido desde el menú</div></div>';
       return;
@@ -4742,7 +4760,7 @@ window.addEventListener("load", async function() {
   initSheetDrag();
 
   // Cargar restaurante
-  var restId = gp("rest") || gp("r");
+  var restId = gp("rest") || gp("r") || "2cc8adc0-068b-4cc5-b880-5239346539ef";
   var mesa = gp("mesa") || gp("m");
   if (mesa) {
     var mesaNum = parseInt(mesa);
@@ -4755,31 +4773,27 @@ window.addEventListener("load", async function() {
   }
 
   try {
-    // Cargar restaurante desde el backend (no Supabase directo)
-    var restUrl = restId
-      ? "/api/restaurante?id=" + restId
-      : "/api/restaurante";
-    var r = await fetch(restUrl);
-    if (!r.ok) throw new Error("HTTP " + r.status);
+    // Cargar restaurante directo desde Supabase (no requiere endpoint backend)
+    var qId = restId || "2cc8adc0-068b-4cc5-b880-5239346539ef";
+    var r = await fetch(SU + "/rest/v1/restaurantes?id=eq." + qId + "&select=*", {
+      headers: { "apikey": SK, "Authorization": "Bearer " + SK }
+    });
+    if (!r.ok) throw new Error("Supabase HTTP " + r.status);
     var d = await r.json();
-    rest = Array.isArray(d) ? (d.length ? d[0] : null) : (d || null);
-    console.log("[init] Restaurante:", rest ? rest.nombre : "NO ENCONTRADO");
+    rest = Array.isArray(d) && d.length ? d[0] : null;
+    if (!rest) throw new Error("Restaurante no encontrado en Supabase");
+    console.log("[init] Restaurante:", rest.nombre);
   } catch (e) {
-    console.warn("[init] /api/restaurante falló, intentando Supabase directo...", e.message);
-    // Fallback: Supabase directo
+    console.error("[init] Error cargando restaurante:", e.message);
+    // Último fallback: intentar /api/restaurante por si está disponible
     try {
-      var url = restId
-        ? SU + "/rest/v1/restaurantes?id=eq." + restId + "&select=*"
-        : SU + "/rest/v1/restaurantes?estado=eq.activo&limit=1&select=*";
-      var r2 = await fetch(url, {
-        headers: { "apikey": SK, "Authorization": "Bearer " + SK }
-      });
-      var d2 = await r2.json();
-      rest = Array.isArray(d2) && d2.length ? d2[0] : null;
-      console.log("[init] Fallback Supabase:", rest ? rest.nombre : "NO ENCONTRADO");
-    } catch (e2) {
-      console.error("[init] Ambos métodos fallaron:", e2.message);
-    }
+      var r2 = await fetch("/api/restaurante?id=" + (restId || "2cc8adc0-068b-4cc5-b880-5239346539ef"));
+      if (r2.ok) {
+        var d2 = await r2.json();
+        rest = Array.isArray(d2) ? d2[0] : (d2 || null);
+        if (rest) console.log("[init] Restaurante via API:", rest.nombre);
+      }
+    } catch(e2) {}
   }
 
   if (!rest) {
@@ -5247,10 +5261,18 @@ async function luzEnviarMensaje(txt){
 }
 
 function luzAgregarProductoById(id, nombre, precio){
-  addItem({ id: id, nombre: nombre, precio: precio, imagen_url: "" });
+  // Usar la función correcta del carrito (addItem no existe)
+  var item = (typeof getItemById === "function") ? getItemById(id) : null;
+  var precioFinal = (item && typeof precioConDescuento === "function") ? precioConDescuento(item.precio) : precio;
+  var nomFinal = (item && item.nombre) ? item.nombre : nombre;
+  if (!carrito[id]) {
+    carrito[id] = { id: id, nombre: nomFinal, precio: precioFinal, qty: 0 };
+  }
+  carrito[id].qty++;
+  if (typeof actualizarCarrito === "function") actualizarCarrito();
   var sug = document.getElementById("lcSugs");
   if(sug) sug.innerHTML = "";
-  var confirmMsg = "✅ ¡Listo! Agregué " + nombre + " al carrito. ¿Quieres algo más?";
+  var confirmMsg = "✅ ¡Listo! Agregué " + nomFinal + " al carrito. ¿Quieres algo más?";
   luzConvHistory.push({ role: "assistant", content: confirmMsg });
   luzAgregarMsgChat("luz", confirmMsg, true);
   luzMostrarSugerencias(["Quiero algo más", "Ver mi pedido 🛒", "Agregar una bebida"]);
@@ -5492,34 +5514,30 @@ function luzInit(){
   luzBienvenida();
 }
 
-// ── CHECKOUT HELPER — Luz aparece al abrir el carrito ─────────
+// ── CHECKOUT HELPER — version corregida con Object.values() ───
+// (carrito es un objeto {}, no array — .reduce/.map directos lanzaban TypeError)
 function luzCheckoutHelper(){
-  if(!rest || !window.carrito || carrito.length === 0) return;
+  if(!rest || !window.carrito) return;
+  var items = Object.values(carrito || {});
+  if(!items.length) return;
 
-  var totalCarrito = carrito.reduce(function(s, i){ return s + (Number(i.precio||0) * (i.qty||1)); }, 0);
+  var totalCarrito = items.reduce(function(s, i){ return s + (Number(i.precio||0) * (i.qty||1)); }, 0);
   var puntosAGanar = Math.floor(totalCarrito / 1000);
-  var puntosCanj = window.clientePuntos ? clientePuntos.puntos : 0;
+  var puntosCanj = (window.clienteData && clienteData.puntos) ? clienteData.puntos : 0;
   var msgs = [];
 
-  // Puntos a ganar
   if(puntosAGanar > 0) msgs.push("Con este pedido ganas " + puntosAGanar + " puntos ⭐");
-
-  // Si puede canjear
   if(puntosCanj >= 50) msgs.push("Tienes " + puntosCanj + " puntos — puedes canjear un producto gratis 🎁");
+  msgs.push("¿Todo como lo quieres? Usa las Notas para pedir sin cebolla, extra queso, etc.");
 
-  // Sugerencia de personalización
-  msgs.push("¿Todo como lo quieres? Usa las Notas para pedir sin cebolla, extra queso, bien cocido, etc.");
-
-  // Sugerencia de agregar algo
-  var itemsEnCarrito = carrito.map(function(i){ return (i.nombre||"").toLowerCase(); }).join(" ");
-  if(itemsEnCarrito.indexOf("hamburgues") !== -1 && itemsEnCarrito.indexOf("gaseosa") === -1 && itemsEnCarrito.indexOf("bebida") === -1){
+  var itemsNombres = items.map(function(i){ return (i.nombre||"").toLowerCase(); }).join(" ");
+  if(itemsNombres.indexOf("hamburgues") !== -1 && itemsNombres.indexOf("gaseosa") === -1 && itemsNombres.indexOf("bebida") === -1){
     msgs.push("¿Le agregas una gaseosa? 🥤");
   }
 
   var msgFinal = msgs.slice(0,2).join(" · ");
   if(!msgFinal) return;
 
-  // Mostrar burbuja de checkout
   setTimeout(function(){
     var el = document.getElementById("lwMsg");
     var bv = document.getElementById("luzWelcome");
