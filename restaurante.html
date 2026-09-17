@@ -1149,167 +1149,110 @@ document.addEventListener("DOMContentLoaded", function(){
 
 <!-- PIN -->
 <!-- PANTALLA SELECCIÓN PAÍS/MODO -->
-<div id="pinScreen" style="display:flex">
-  <div class="pin-box">
-
-    <!-- PASO 1: Selección de país -->
-    <div id="stepPais">
-      <div class="pin-brand">
-        <div class="pin-orb">LZ</div>
-        <div class="pin-name">LUZ IA</div>
-        <div class="pin-sub">¿Desde dónde te conectas?</div>
+<div id="pinScreen" class="hl-access-screen" style="display:flex">
+  <div class="hl-access-backdrop" aria-hidden="true"></div>
+  <div class="hl-access-ambient" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="hl-access-shell">
+    <aside class="hl-access-story">
+      <div class="hl-access-brand">
+        <div class="hl-access-brand-orb"><span class="hl-orb-star">✦</span><i class="orbit a"></i><i class="orbit b"></i></div>
+        <div><div class="hl-access-logo">HOLA <b>LUZ</b></div><div class="hl-access-tagline">RESTAURANTES SIN LÍMITES</div></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:24px">
+      <div class="hl-story-copy">
+        <span class="hl-story-kicker">UNA NUEVA EXPERIENCIA</span>
+        <h1>Tu restaurante,<br><b>más inteligente.</b></h1>
+        <p>Operación, clientes y tecnología conectados en un solo lugar.</p>
+      </div>
+      <div class="hl-story-points">
+        <div><span>⚡</span><b>Operación en tiempo real</b><small>Todo lo importante, siempre visible.</small></div>
+        <div><span>◎</span><b>Hola Luz contigo</b><small>Contexto e inteligencia en cada sección.</small></div>
+        <div><span>◇</span><b>Experiencia premium</b><small>Diseñada para trabajar rápido y mejor.</small></div>
+      </div>
+      <div class="hl-story-footer">BUENA COMIDA · MEJORES MOMENTOS · TECNOLOGÍA QUE CONECTA</div>
+    </aside>
 
-        <!-- COLOMBIA -->
-        <button onclick="selPais('co')" class="pais-btn" style="
-          padding:0;background:none;border:none;cursor:pointer;
-          display:flex;flex-direction:column;align-items:center;gap:0;
-          border-radius:20px;overflow:hidden;position:relative;
-          transition:all .25s cubic-bezier(.22,.68,0,1.2);
-          box-shadow:0 4px 20px rgba(0,0,0,0.4);
-        ">
-          <!-- Bandera Colombia SVG -->
-          <div style="width:100%;height:90px;position:relative;overflow:hidden;border-radius:16px 16px 0 0">
-            <svg viewBox="0 0 3 2" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
-              <rect width="3" height="2" fill="#FCD116"/>
-              <rect y="1" width="3" height=".5" fill="#003893"/>
-              <rect y="1.5" width="3" height=".5" fill="#CE1126"/>
-            </svg>
-            <!-- Shine overlay -->
-            <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,transparent 50%);pointer-events:none"></div>
-            <!-- Glow bottom -->
-            <div style="position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(to top,rgba(0,0,0,0.5),transparent);pointer-events:none"></div>
-          </div>
-          <!-- Label -->
-          <div style="width:100%;padding:12px 10px 14px;background:rgba(252,209,22,0.08);border:1.5px solid rgba(252,209,22,0.2);border-top:none;border-radius:0 0 16px 16px;text-align:center">
-            <div style="font-size:14px;font-weight:900;color:#fef9c3;letter-spacing:-.01em">Colombia</div>
-            <div style="font-size:10px;color:rgba(254,249,195,0.55);margin-top:3px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">LUZ IA</div>
-          </div>
-        </button>
+    <main class="pin-box hl-access-card">
+      <div class="hl-step-rail"><span id="accessStep1" class="active">1</span><i></i><span id="accessStep2">2</span><i></i><span id="accessStep3">3</span></div>
 
-        <!-- USA -->
-        <button onclick="selPais('us')" class="pais-btn" style="
-          padding:0;background:none;border:none;cursor:pointer;
-          display:flex;flex-direction:column;align-items:center;gap:0;
-          border-radius:20px;overflow:hidden;position:relative;
-          transition:all .25s cubic-bezier(.22,.68,0,1.2);
-          box-shadow:0 4px 20px rgba(0,0,0,0.4);
-        ">
-          <!-- Bandera USA SVG -->
-          <div style="width:100%;height:90px;position:relative;overflow:hidden;border-radius:16px 16px 0 0">
-            <svg viewBox="0 0 190 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
-              <!-- Franjas -->
-              <rect width="190" height="100" fill="#B22234"/>
-              <rect y="7.69" width="190" height="7.69" fill="#FFFFFF"/>
-              <rect y="23.08" width="190" height="7.69" fill="#FFFFFF"/>
-              <rect y="38.46" width="190" height="7.69" fill="#FFFFFF"/>
-              <rect y="53.85" width="190" height="7.69" fill="#FFFFFF"/>
-              <rect y="69.23" width="190" height="7.69" fill="#FFFFFF"/>
-              <rect y="84.62" width="190" height="7.69" fill="#FFFFFF"/>
-              <!-- Cantón azul -->
-              <rect width="76" height="53.85" fill="#3C3B6E"/>
-              <!-- Estrellas (5 filas) -->
-              <g fill="white" font-size="8">
-                <!-- Fila 1: 6 estrellas -->
-                <text x="6" y="12">★</text><text x="18" y="12">★</text><text x="30" y="12">★</text><text x="42" y="12">★</text><text x="54" y="12">★</text><text x="66" y="12">★</text>
-                <!-- Fila 2: 5 estrellas (offset) -->
-                <text x="12" y="22">★</text><text x="24" y="22">★</text><text x="36" y="22">★</text><text x="48" y="22">★</text><text x="60" y="22">★</text>
-                <!-- Fila 3: 6 -->
-                <text x="6" y="32">★</text><text x="18" y="32">★</text><text x="30" y="32">★</text><text x="42" y="32">★</text><text x="54" y="32">★</text><text x="66" y="32">★</text>
-                <!-- Fila 4: 5 offset -->
-                <text x="12" y="42">★</text><text x="24" y="42">★</text><text x="36" y="42">★</text><text x="48" y="42">★</text><text x="60" y="42">★</text>
-                <!-- Fila 5: 6 -->
-                <text x="6" y="52">★</text><text x="18" y="52">★</text><text x="30" y="52">★</text><text x="42" y="52">★</text><text x="54" y="52">★</text><text x="66" y="52">★</text>
-              </g>
-            </svg>
-            <!-- Shine overlay -->
-            <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.12) 0%,transparent 50%);pointer-events:none"></div>
-            <!-- Glow bottom -->
-            <div style="position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(to top,rgba(0,0,0,0.5),transparent);pointer-events:none"></div>
-          </div>
-          <!-- Label -->
-          <div style="width:100%;padding:12px 10px 14px;background:rgba(60,59,110,0.25);border:1.5px solid rgba(100,120,220,0.25);border-top:none;border-radius:0 0 16px 16px;text-align:center">
-            <div style="font-size:14px;font-weight:900;color:#c7d2fe;letter-spacing:-.01em">USA</div>
-            <div style="font-size:10px;color:rgba(199,210,254,0.5);margin-top:3px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">CHARR TOWER</div>
-          </div>
-        </button>
-
+      <!-- PASO 1: país -->
+      <div id="stepPais" class="access-step">
+        <div class="access-orb"><span>✦</span><i></i><i></i></div>
+        <div class="access-eyebrow">UBICACIÓN</div>
+        <h2>¿Desde dónde te conectas?</h2>
+        <p class="access-lead">Selecciona tu mercado para personalizar la experiencia.</p>
+        <div class="country-grid">
+          <button class="country-card colombia" onclick="selPais('co')">
+            <div class="country-visual">
+              <svg class="country-flag" viewBox="0 0 3 2" aria-hidden="true"><rect width="3" height="2" fill="#FCD116"/><rect y="1" width="3" height=".5" fill="#003893"/><rect y="1.5" width="3" height=".5" fill="#CE1126"/></svg>
+              <div class="country-sky"></div>
+            </div>
+            <div class="country-copy"><strong>Colombia</strong><span>Hola Luz</span><em>Continuar →</em></div>
+          </button>
+          <button class="country-card usa" onclick="selPais('us')">
+            <div class="country-visual">
+              <svg class="country-flag us" viewBox="0 0 190 100" aria-hidden="true"><rect width="190" height="100" fill="#B22234"/><g fill="#fff"><rect y="8" width="190" height="8"/><rect y="24" width="190" height="8"/><rect y="40" width="190" height="8"/><rect y="56" width="190" height="8"/><rect y="72" width="190" height="8"/><rect y="88" width="190" height="8"/></g><rect width="78" height="55" fill="#3C3B6E"/><g fill="#fff" font-size="10"><text x="8" y="15">✦ ✦ ✦ ✦</text><text x="13" y="29">✦ ✦ ✦</text><text x="8" y="43">✦ ✦ ✦ ✦</text></g></svg>
+              <div class="country-sky us"></div>
+            </div>
+            <div class="country-copy"><strong>USA</strong><span>CHARR Tower</span><em>Continuar →</em></div>
+          </button>
+        </div>
+        <div class="access-trust"><span>◎ Dos mercados</span><span>◇ Una misma visión</span></div>
       </div>
 
-      <style>
-        .pais-btn:hover{transform:translateY(-4px) scale(1.03)!important;box-shadow:0 12px 36px rgba(0,0,0,0.5)!important;}
-        .pais-btn:active{transform:scale(0.97)!important}
-      </style>
-    </div>
+      <!-- PASO 2: tipo -->
+      <div id="stepTipo" class="access-step" style="display:none">
+        <div class="access-mini-country"><span class="co-dot"></span> Colombia</div>
+        <div class="access-eyebrow">TIPO DE NEGOCIO</div>
+        <h2>¿Qué tipo de negocio?</h2>
+        <p class="access-lead">Selecciona la categoría que mejor representa tu operación.</p>
+        <div class="business-grid">
+          <button class="business-card restaurant" onclick="selTipo('restaurante')">
+            <div class="business-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M13 7v17M8 7v10c0 4 10 4 10 0V7M31 7v34M31 7c7 3 9 11 9 17H31" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div><strong>Restaurante</strong><span>Servicio completo</span>
+          </button>
+          <button class="business-card ice" onclick="selTipo('heladeria')">
+            <div class="business-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 20h16L24 42 16 20Z" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15 19c-3-8 7-13 11-7 3-6 12-2 9 7H15Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg></div><strong>Heladería</strong><span>Postres y helados</span>
+          </button>
+          <button class="business-card deli" onclick="selTipo('salsamentaria')">
+            <div class="business-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 29c6-13 22-18 30-8-3 13-18 19-30 8Z" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M15 29l5-5m4 3 6-6m-3 10 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div><strong>Salsamentaria</strong><span>Productos gourmet</span>
+          </button>
+          <button class="business-card charr" onclick="selTipo('charr')">
+            <div class="business-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><rect x="11" y="8" width="26" height="12" rx="4" fill="none" stroke="currentColor" stroke-width="2.4"/><rect x="8" y="24" width="32" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M18 20v4m12-4v4M16 32h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div><strong>CHARR Tower</strong><span>Hardware inteligente</span>
+          </button>
+        </div>
+        <button onclick="volverPais()" class="access-back">← Volver</button>
+      </div>
 
-    <!-- PASO 2 Colombia: Tipo de acceso -->
-    <div id="stepTipo" style="display:none">
-      <div class="pin-brand">
-        <div class="pin-orb">🇨🇴</div>
-        <div class="pin-name">Colombia</div>
-        <div class="pin-sub">¿Qué tipo de negocio?</div>
+      <!-- PASO 3: PIN -->
+      <div id="stepPin" class="access-step" style="display:none">
+        <div class="access-orb access-orb-pin" id="pinOrb"><span>✦</span><i></i><i></i></div>
+        <div class="access-eyebrow">ACCESO SEGURO</div>
+        <h2 id="pinTitulo">HOLA LUZ</h2>
+        <p class="access-lead" id="pinSubtitulo">Ingresa tu PIN de restaurante</p>
+        <div class="pin-selection-summary"><span id="pinBusinessLabel">Restaurante</span><i></i><span>Colombia</span></div>
+        <div class="pin-dots"><div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div><div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div></div>
+        <div class="pin-grid access-keypad">
+          <div class="key" id="k1">1</div><div class="key" id="k2">2</div><div class="key" id="k3">3</div>
+          <div class="key" id="k4">4</div><div class="key" id="k5">5</div><div class="key" id="k6">6</div>
+          <div class="key" id="k7">7</div><div class="key" id="k8">8</div><div class="key" id="k9">9</div>
+          <div class="key empty"></div><div class="key" id="k0">0</div><div class="key del" id="kdel"><svg viewBox="0 0 24 24"><path d="M9 6 4 12l5 6h10V6H9Zm2 3 5 6m0-6-5 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+        <div class="pin-verify" id="pinVerify"><span class="verify-spinner"></span><div><b>Verificando acceso…</b><small>Conexión segura con tu restaurante</small></div></div>
+        <div class="pin-err" id="pinErr"></div>
+        <button onclick="volverTipo()" class="access-back">← Volver</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px">
-        <button onclick="selTipo('restaurante')" style="padding:16px 10px;background:rgba(124,58,237,.08);border:1.5px solid rgba(124,58,237,.25);border-radius:18px;cursor:pointer;transition:all .2s;font-family:inherit">
-          <div style="font-size:28px;margin-bottom:6px">🍽️</div>
-          <div style="font-size:12px;font-weight:800;color:#c4b5fd">Restaurante</div>
-        </button>
-        <button onclick="selTipo('heladeria')" style="padding:16px 10px;background:rgba(6,182,212,.08);border:1.5px solid rgba(6,182,212,.25);border-radius:18px;cursor:pointer;transition:all .2s;font-family:inherit">
-          <div style="font-size:28px;margin-bottom:6px">🍦</div>
-          <div style="font-size:12px;font-weight:800;color:#67e8f9">Heladería</div>
-        </button>
-        <button onclick="selTipo('salsamentaria')" style="padding:16px 10px;background:rgba(245,158,11,.08);border:1.5px solid rgba(245,158,11,.25);border-radius:18px;cursor:pointer;transition:all .2s;font-family:inherit">
-          <div style="font-size:28px;margin-bottom:6px">🧀</div>
-          <div style="font-size:12px;font-weight:800;color:#fcd34d">Salsamentaria</div>
-        </button>
-        <button onclick="selTipo('charr')" style="padding:16px 10px;background:rgba(16,185,129,.08);border:1.5px solid rgba(16,185,129,.25);border-radius:18px;cursor:pointer;transition:all .2s;font-family:inherit">
-          <div style="font-size:28px;margin-bottom:6px">🏮</div>
-          <div style="font-size:12px;font-weight:800;color:#6ee7b7">CHARR Tower</div>
-        </button>
-      </div>
-      <button onclick="volverPais()" style="margin-top:14px;width:100%;padding:10px;background:none;border:1px solid rgba(255,255,255,.08);border-radius:12px;color:rgba(255,255,255,.4);font-size:12px;font-family:inherit;cursor:pointer">← Volver</button>
-    </div>
 
-    <!-- PASO 3: PIN -->
-    <div id="stepPin" style="display:none">
-      <div class="pin-brand">
-        <div class="pin-orb" id="pinOrb">LZ</div>
-        <div class="pin-name" id="pinTitulo">LUZ IA</div>
-        <div class="pin-sub" id="pinSubtitulo">Ingresa tu PIN de 4 dígitos</div>
-      </div>
-      <div class="pin-dots">
-        <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
-        <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
-      </div>
-      <div class="pin-grid">
-        <div class="key" id="k1">1</div><div class="key" id="k2">2</div><div class="key" id="k3">3</div>
-        <div class="key" id="k4">4</div><div class="key" id="k5">5</div><div class="key" id="k6">6</div>
-        <div class="key" id="k7">7</div><div class="key" id="k8">8</div><div class="key" id="k9">9</div>
-        <div class="key empty"></div><div class="key" id="k0">0</div><div class="key del" id="kdel">&#9003;</div>
-      </div>
-      <div class="pin-err" id="pinErr"></div>
-      <button onclick="volverTipo()" style="margin-top:12px;width:100%;padding:10px;background:none;border:1px solid rgba(255,255,255,.08);border-radius:12px;color:rgba(255,255,255,.4);font-size:12px;font-family:inherit;cursor:pointer">← Volver</button>
-    </div>
-
-    <!-- PASO USA: Login/Registro CHARR -->
-    <div id="stepUSA" style="display:none">
-      <div class="pin-brand">
-        <div class="pin-orb">🇺🇸</div>
-        <div class="pin-name">CHARR TOWER</div>
-        <div class="pin-sub">USA · $24.99/month</div>
-      </div>
-      <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
-        <input id="usa-email" class="pin-input-field" type="email" placeholder="Email" autocomplete="email">
-        <input id="usa-pass" class="pin-input-field" type="password" placeholder="Password" autocomplete="current-password">
+      <!-- USA / CHARR existing flow, visually restyled -->
+      <div id="stepUSA" class="access-step" style="display:none">
+        <div class="access-orb access-orb-pin"><span>✦</span><i></i><i></i></div>
+        <div class="access-eyebrow">CHARR TOWER · USA</div><h2>Acceso CHARR</h2><p class="access-lead">Ingresa con tu cuenta para administrar tu experiencia.</p>
+        <div class="usa-fields"><input id="usa-email" class="pin-input-field" type="email" placeholder="Email" autocomplete="email"><input id="usa-pass" class="pin-input-field" type="password" placeholder="Password" autocomplete="current-password"></div>
         <div class="pin-err" id="usaErr"></div>
-        <button onclick="loginUSA()" style="padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;border-radius:14px;color:#fff;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;margin-top:4px">Sign In</button>
-        <div style="text-align:center;font-size:11px;color:rgba(255,255,255,.4)">Don't have an account?</div>
-        <button onclick="mostrarRegistroUSA()" style="padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;color:#c4b5fd;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer">Create CHARR account →</button>
+        <button onclick="loginUSA()" class="access-primary">Sign In <span>→</span></button>
+        <button onclick="mostrarRegistroUSA()" class="access-secondary">Create CHARR account</button>
+        <button onclick="volverPais()" class="access-back">← Back</button>
       </div>
-      <button onclick="volverPais()" style="margin-top:12px;width:100%;padding:10px;background:none;border:1px solid rgba(255,255,255,.08);border-radius:12px;color:rgba(255,255,255,.4);font-size:12px;font-family:inherit;cursor:pointer">← Back</button>
-    </div>
-
+      <div class="access-security"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m8.5 12 2.3 2.3 4.7-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span>Acceso cifrado y seguro</span></div>
+    </main>
   </div>
 </div>
 
@@ -2872,42 +2815,44 @@ function dots(){for(var i=0;i<4;i++){var d=document.getElementById("d"+i);if(d){
 for(var _i=0;_i<=9;_i++){(function(n){var el=document.getElementById("k"+n);if(el)el.addEventListener("click",function(){pinKey(String(n));});}(_i));}
 document.getElementById("kdel").addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
 
-var pinChecking=false;
 async function chkPin(){
-  if(pinChecking||pin.length!==4)return;
-  pinChecking=true;
-  var errEl=document.getElementById("pinErr"),currentPin=pin;
-  if(errEl){errEl.style.color="#a5f3fc";errEl.textContent="Verificando…";}
-  try{
-    if(tipoActual==="charr"){
-      var cr=await fetch("/api/charr/verify-pin",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:currentPin})});
-      if(!cr.ok)throw new Error("HTTP "+cr.status);
-      var cd=await cr.json();
-      if(!cd||!cd.ok)throw new Error("PIN_INVALID");
-      localStorage.setItem("charr_account",JSON.stringify(cd.account));
-      document.getElementById("pinScreen").style.display="none";
-      notif("✅ Bienvenido, "+((cd.account&&cd.account.nombre_negocio)||"CHARR Tower"));
-      return;
-    }
-    var url="/api/supabase/restaurantes?pin=eq."+encodeURIComponent(currentPin)+"&select=*&_="+Date.now();
-    var rr=await fetch(url,{method:"GET",cache:"no-store",headers:{"Accept":"application/json"}});
-    if(!rr.ok)throw new Error("HTTP "+rr.status);
-    var rows=await rr.json();
-    if(!Array.isArray(rows)||!rows.length)throw new Error("PIN_INVALID");
-    var restaurante=rows[0];
-    if(restaurante.estado==="suspendido"){
-      if(errEl){errEl.style.color="#fca5a5";errEl.textContent="Cuenta suspendida. Contacta a HOLA LUZ.";}
-      pin="";dots();return;
-    }
-    if(errEl)errEl.textContent="";
-    enterApp(restaurante);
-  }catch(e){
-    console.error("[chkPin]",e);
-    if(errEl){errEl.style.color="#f87171";errEl.textContent=(String(e&&e.message)==="PIN_INVALID")?"PIN incorrecto":"No se pudo validar el PIN. Intenta de nuevo.";}
-    var b=document.querySelector(".pin-box");if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");},500);}
-    pin="";dots();
-  }finally{
-    pinChecking=false;
+  var errEl=document.getElementById("pinErr");
+  if(tipoActual==="charr"){
+    try{
+      var r=await fetch("/api/charr/verify-pin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:pin})});
+      var d=await r.json();
+      if(d.ok){
+        localStorage.setItem("charr_account",JSON.stringify(d.account));
+        document.getElementById("pinScreen").style.display="none";
+        notif("✅ Bienvenido, "+d.account.nombre_negocio);
+      } else {
+        if(errEl)errEl.textContent="PIN incorrecto";
+        var b=document.querySelector(".pin-box");if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}
+        pin="";dots();
+      }
+    }catch(e){if(errEl)errEl.textContent="Error de conexión";pin="";dots();}
+  } else {
+    // Buscar por PIN — acepta activo O trial (no bloqueados)
+    get("restaurantes","pin=eq."+pin+"&select=*").then(function(d){
+      if(d&&d.length){
+        var r=d[0];
+        // Rechazar solo si está explícitamente suspendido
+        if(r.estado==="suspendido"){
+          if(errEl)errEl.textContent="Cuenta suspendida. Contacta a LUZ IA.";
+          pin="";dots();return;
+        }
+        enterApp(r);
+      } else {
+        if(errEl)errEl.textContent="PIN incorrecto";
+        var b=document.querySelector(".pin-box");
+        if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}
+        pin="";dots();
+      }
+    }).catch(function(e){
+      console.error("[chkPin] error:",e);
+      if(errEl)errEl.textContent="Error de conexión. Verifica tu internet.";
+      pin="";dots();
+    });
   }
 }
 // ── MOSTRAR PANTALLA AL CARGAR ───────────────────────────────────────────────
@@ -2928,9 +2873,8 @@ function enterApp(restauranteData){
 function goApp(){
   document.getElementById("pinScreen").style.display="none";
   document.getElementById("app").style.display="block";
-  var safeName=(rest&&rest.nombre)?String(rest.nombre):"Restaurante";
-  var p=safeName.split(" "),l=p.pop()||"";
-  var rn=document.getElementById("restNombre");if(rn)rn.innerHTML=(p.join(" ")+(l?" <span>"+escHtml(l)+"</span>":""));
+  var p=rest.nombre.split(" "),l=p.pop();
+  document.getElementById("restNombre").innerHTML=p.join(" ")+" <span>"+l+"</span>";
   var dn=document.getElementById("dashRestName");if(dn)dn.textContent=rest.nombre||"Restaurante";
   var han=document.getElementById("hlAccountName");if(han)han.textContent=rest.nombre||"Restaurante";var hav=document.getElementById("hlAccountAvatar");if(hav){var initials=(rest.nombre||"HL").split(/\s+/).slice(0,2).map(function(x){return x.charAt(0)}).join("").toUpperCase();hav.textContent=initials||"HL";}
   var ds=document.getElementById("dashRestSub");if(ds)ds.textContent=(rest.slogan||rest.hero_slogan||"Operaciones en tiempo real")+" · Hola Luz";
@@ -8059,5 +8003,67 @@ window.renderOrdersV5=function(){
   updateOrdersCountsV5();syncOrderTabsV5();filterOrdersV5();updateOrdersClockV5();
   if(!domiciliariosList.length&&rest)cargarDomiciliarios();
 };
+})();
+</script>
+
+<style id="holaLuzAccessV7">
+#pinScreen.hl-access-screen{position:fixed;inset:0;z-index:9999;min-height:100dvh;padding:26px;display:flex;align-items:center;justify-content:center;overflow:auto;background:#030716}
+.hl-access-backdrop{position:absolute;inset:-30px;background-image:linear-gradient(90deg,rgba(2,5,18,.78),rgba(3,7,24,.50) 48%,rgba(2,5,20,.72)),url(data:image/webp;base64,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);background-size:cover;background-position:center;filter:saturate(1.2) contrast(1.05);transform:scale(1.06);opacity:.98}
+#pinScreen:after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(65,83,180,.075) 1px,transparent 1px),linear-gradient(90deg,rgba(65,83,180,.06) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.8),transparent 78%);pointer-events:none}
+.hl-access-ambient{position:absolute;inset:0;overflow:hidden;pointer-events:none}.hl-access-ambient i{position:absolute;border-radius:50%;filter:blur(100px);opacity:.35;animation:accessAmbient 12s ease-in-out infinite}.hl-access-ambient i:nth-child(1){width:420px;height:420px;background:#4f46e5;top:-150px;left:22%}.hl-access-ambient i:nth-child(2){width:360px;height:360px;background:#0ea5e9;right:-80px;top:28%;animation-delay:-4s}.hl-access-ambient i:nth-child(3){width:300px;height:300px;background:#7c3aed;bottom:-90px;left:42%;animation-delay:-7s}@keyframes accessAmbient{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(24px,-16px,0) scale(1.08)}}
+.hl-access-shell{position:relative;z-index:2;width:min(1180px,100%);display:grid;grid-template-columns:minmax(300px,.88fr) minmax(420px,560px);gap:34px;align-items:stretch}
+.hl-access-story{min-height:650px;padding:40px 34px;border:1px solid rgba(96,165,250,.16);border-radius:34px;background:linear-gradient(150deg,rgba(4,10,31,.54),rgba(5,10,31,.24));backdrop-filter:blur(18px);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 30px 80px rgba(0,0,0,.25);display:flex;flex-direction:column}
+.hl-access-brand{display:flex;align-items:center;gap:14px}.hl-access-brand-orb{width:56px;height:56px;border-radius:50%;position:relative;display:grid;place-items:center;color:white;background:radial-gradient(circle,#fff 0 7%,#9f7aea 10%,#4f46e5 34%,rgba(37,99,235,.28) 57%,transparent 70%);box-shadow:0 0 36px rgba(99,102,241,.72),0 0 70px rgba(34,211,238,.18)}.hl-access-brand-orb .hl-orb-star{font-size:19px;text-shadow:0 0 16px white}.hl-access-brand-orb .orbit{position:absolute;inset:8px;border:1px solid rgba(110,231,255,.68);border-radius:50%;transform:rotate(28deg) scaleX(1.42);animation:accessOrbit 7s linear infinite}.hl-access-brand-orb .orbit.b{transform:rotate(-52deg) scaleX(1.28);border-color:rgba(192,132,252,.66);animation-duration:9s;animation-direction:reverse}@keyframes accessOrbit{to{rotate:360deg}}
+.hl-access-logo{font-size:30px;font-weight:900;letter-spacing:-.04em;color:#fff}.hl-access-logo b{background:linear-gradient(90deg,#b7c8ff,#6ee7ff,#b56cff);-webkit-background-clip:text;background-clip:text;color:transparent}.hl-access-tagline{font-size:8px;letter-spacing:.34em;color:rgba(225,231,255,.58);font-weight:800;margin-top:5px}
+.hl-story-copy{margin-top:auto;margin-bottom:44px}.hl-story-kicker{font-size:9px;letter-spacing:.28em;color:#67e8f9;font-weight:800}.hl-story-copy h1{font-size:46px;line-height:1.03;letter-spacing:-.045em;margin-top:12px;font-weight:500}.hl-story-copy h1 b{font-weight:900;background:linear-gradient(90deg,#fff,#8fdcff,#ad86ff);-webkit-background-clip:text;background-clip:text;color:transparent}.hl-story-copy p{font-size:15px;line-height:1.6;color:rgba(226,232,255,.60);max-width:430px;margin-top:17px}
+.hl-story-points{display:grid;gap:14px}.hl-story-points>div{display:grid;grid-template-columns:34px 1fr;gap:2px 12px;align-items:center;padding:11px 13px;border-radius:16px;background:rgba(7,14,39,.35);border:1px solid rgba(96,165,250,.08)}.hl-story-points span{grid-row:1/3;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;color:#6ee7ff;background:rgba(37,99,235,.12);box-shadow:0 0 18px rgba(37,99,235,.10)}.hl-story-points b{font-size:12px}.hl-story-points small{font-size:9px;color:rgba(220,225,255,.48)}.hl-story-footer{font-size:7px;letter-spacing:.25em;color:rgba(220,225,255,.35);margin-top:26px}
+#pinScreen .pin-box.hl-access-card{width:100%;max-width:none;min-height:650px;padding:30px 34px 24px;border-radius:34px;background:linear-gradient(155deg,rgba(6,13,40,.86),rgba(7,11,34,.77));border:1px solid rgba(94,110,255,.44);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 34px 90px rgba(0,0,0,.48),0 0 55px rgba(67,56,202,.18),0 0 100px rgba(34,211,238,.06);backdrop-filter:blur(34px) saturate(135%);position:relative;overflow:hidden}
+#pinScreen .pin-box.hl-access-card:before{content:"";position:absolute;left:9%;right:9%;top:0;height:1px;background:linear-gradient(90deg,transparent,#60a5fa,#a78bfa,#22d3ee,transparent);box-shadow:0 0 18px #60a5fa}
+.hl-step-rail{display:flex;align-items:center;justify-content:center;margin-bottom:24px}.hl-step-rail span{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(99,102,241,.26);background:rgba(17,24,57,.72);font:800 10px 'JetBrains Mono';color:rgba(216,220,255,.35);transition:.28s}.hl-step-rail span.active{color:white;border-color:#67e8f9;background:linear-gradient(135deg,#4338ca,#2563eb);box-shadow:0 0 0 4px rgba(59,130,246,.08),0 0 18px rgba(34,211,238,.38)}.hl-step-rail span.done{color:#c4b5fd;border-color:#8b5cf6;background:rgba(124,58,237,.24)}.hl-step-rail i{width:62px;height:1px;background:linear-gradient(90deg,rgba(99,102,241,.22),rgba(34,211,238,.22))}
+.access-step{animation:accessStepIn .38s cubic-bezier(.2,.85,.2,1) both}@keyframes accessStepIn{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}
+.access-orb{width:84px;height:84px;margin:3px auto 13px;border-radius:50%;position:relative;display:grid;place-items:center;background:radial-gradient(circle,#fff 0 5%,#bda7ff 8%,#6d4aff 24%,rgba(67,56,202,.72) 42%,rgba(37,99,235,.16) 64%,transparent 70%);box-shadow:0 0 30px rgba(139,92,246,.8),0 0 62px rgba(37,99,235,.35),0 0 95px rgba(34,211,238,.12);animation:accessOrbBreath 4s ease-in-out infinite}.access-orb span{font-size:26px;color:#fff;text-shadow:0 0 17px #fff}.access-orb i{position:absolute;inset:17px;border:1px solid rgba(103,232,249,.68);border-radius:50%;transform:rotate(30deg) scaleX(1.48);animation:accessRing 7s linear infinite}.access-orb i:nth-of-type(2){transform:rotate(-54deg) scaleX(1.28);border-color:rgba(196,181,253,.75);animation-duration:9s;animation-direction:reverse}@keyframes accessOrbBreath{50%{filter:brightness(1.25);transform:scale(1.035)}}@keyframes accessRing{to{rotate:360deg}}
+.access-eyebrow{font-size:8px;text-align:center;letter-spacing:.31em;color:#8fdcff;font-weight:800;margin-bottom:9px}.access-step h2{font-size:29px;line-height:1.05;text-align:center;letter-spacing:-.035em}.access-lead{text-align:center;font-size:11px;color:rgba(218,224,255,.52);line-height:1.5;margin:7px auto 19px;max-width:360px}
+.country-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.country-card{position:relative;padding:0;border-radius:22px;overflow:hidden;cursor:pointer;background:rgba(6,12,36,.72);border:1px solid rgba(99,102,241,.27);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 14px 30px rgba(0,0,0,.20);transition:.24s ease;color:white;text-align:left}.country-card:hover{transform:translateY(-4px);border-color:rgba(34,211,238,.72);box-shadow:0 0 0 1px rgba(124,58,237,.18),0 0 27px rgba(34,211,238,.18),0 20px 40px rgba(0,0,0,.28)}.country-visual{height:145px;position:relative;overflow:hidden;background:radial-gradient(circle at 65% 15%,rgba(139,92,246,.34),transparent 40%),linear-gradient(155deg,#121a4a,#07122d)}.country-flag{position:absolute;width:78%;height:auto;left:-6%;bottom:-5%;filter:drop-shadow(0 14px 20px rgba(0,0,0,.34));transform:rotate(-4deg)}.country-flag.us{width:88%;bottom:8%;left:-1%;transform:rotate(-3deg)}.country-sky{position:absolute;inset:0;background:radial-gradient(circle at 72% 35%,rgba(65,215,255,.22),transparent 24%),linear-gradient(180deg,transparent 50%,rgba(3,6,22,.78));mix-blend-mode:screen;pointer-events:none}.country-copy{padding:13px 15px 15px;display:grid;grid-template-columns:1fr auto;align-items:end}.country-copy strong{font-size:16px}.country-copy span{font-size:8px;grid-column:1;color:#67e8f9;text-transform:uppercase;letter-spacing:.12em;margin-top:3px}.country-copy em{grid-column:2;grid-row:1/3;font-style:normal;font-size:9px;color:rgba(223,228,255,.58)}.access-trust{display:flex;justify-content:center;gap:22px;margin-top:17px;font-size:8px;letter-spacing:.08em;color:rgba(218,224,255,.38)}
+.access-mini-country{width:max-content;margin:0 auto 10px;padding:5px 9px;border-radius:99px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);font-size:8px;color:rgba(230,234,255,.64)}.co-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:linear-gradient(#fcd116 0 50%,#003893 50% 75%,#ce1126 75%)}
+.business-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.business-card{min-height:132px;padding:16px 12px;border-radius:19px;background:linear-gradient(145deg,rgba(10,18,51,.84),rgba(6,11,32,.78));border:1px solid rgba(99,102,241,.20);color:white;cursor:pointer;transition:.24s;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}.business-card:hover{transform:translateY(-3px) scale(1.01);box-shadow:0 0 26px rgba(37,99,235,.16),0 14px 34px rgba(0,0,0,.24)}.business-card.restaurant:hover{border-color:#f0b35b;box-shadow:0 0 28px rgba(245,158,11,.18)}.business-card.ice:hover{border-color:#67e8f9}.business-card.deli:hover{border-color:#fb923c}.business-card.charr:hover{border-color:#a78bfa}.business-icon{width:48px;height:48px;margin:0 auto 10px;border-radius:15px;display:grid;place-items:center;color:#b8c7ff;background:radial-gradient(circle at 50% 30%,rgba(99,102,241,.18),rgba(17,24,57,.66));border:1px solid rgba(99,102,241,.25);box-shadow:0 0 20px rgba(99,102,241,.10)}.business-icon svg{width:30px;height:30px}.restaurant .business-icon{color:#ffd078}.ice .business-icon{color:#67e8f9}.deli .business-icon{color:#fb923c}.charr .business-icon{color:#c4b5fd}.business-card strong{display:block;font-size:12px}.business-card span{display:block;font-size:8px;color:rgba(216,222,255,.45);margin-top:4px}
+.access-back,.access-secondary{width:100%;margin-top:15px;height:43px;border-radius:13px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);color:rgba(221,226,255,.52);font:700 10px 'Satoshi';cursor:pointer;transition:.2s}.access-back:hover,.access-secondary:hover{border-color:rgba(96,165,250,.25);color:#fff;background:rgba(59,130,246,.06)}
+.access-orb-pin{width:74px;height:74px}.pin-selection-summary{display:flex;align-items:center;justify-content:center;gap:9px;margin:-4px 0 16px;font-size:8px;color:#a5b4fc}.pin-selection-summary i{width:3px;height:3px;border-radius:50%;background:#5eead4}#pinScreen .pin-dots{margin:0 0 18px;gap:13px}#pinScreen .pin-dot{width:13px;height:13px;border:1px solid rgba(96,165,250,.30);background:rgba(59,130,246,.10)}#pinScreen .pin-dot.filled{background:#dffcff;border-color:#67e8f9;box-shadow:0 0 0 4px rgba(34,211,238,.08),0 0 18px rgba(34,211,238,.85),0 0 30px rgba(139,92,246,.25);transform:scale(1.08)}
+#pinScreen .access-keypad{gap:10px;max-width:350px;margin:0 auto}#pinScreen .access-keypad .key{height:57px;border-radius:14px;font-size:19px;font-weight:800;background:linear-gradient(145deg,rgba(18,29,67,.90),rgba(7,14,38,.88));border:1px solid rgba(96,165,250,.24);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 20px rgba(0,0,0,.16);transition:.15s}#pinScreen .access-keypad .key:hover{transform:translateY(-2px);border-color:#60a5fa;background:linear-gradient(145deg,rgba(27,44,91,.98),rgba(9,18,50,.95));box-shadow:0 0 20px rgba(59,130,246,.18),inset 0 1px 0 rgba(255,255,255,.08)}#pinScreen .access-keypad .key:active{transform:scale(.95);border-color:#a78bfa;box-shadow:0 0 26px rgba(124,58,237,.42)}#pinScreen .key.del svg{width:22px;height:22px}
+.pin-verify{display:flex;align-items:center;justify-content:center;gap:11px;max-height:0;overflow:hidden;opacity:0;margin-top:0;transition:.28s ease}.pin-verify.active{max-height:60px;opacity:1;margin-top:16px}.verify-spinner{width:26px;height:26px;border-radius:50%;border:2px solid rgba(96,165,250,.14);border-top-color:#67e8f9;border-right-color:#8b5cf6;box-shadow:0 0 18px rgba(34,211,238,.18);animation:verifySpin .85s linear infinite}@keyframes verifySpin{to{transform:rotate(360deg)}}.pin-verify b{display:block;font-size:10px}.pin-verify small{display:block;font-size:7.5px;color:rgba(217,223,255,.42);margin-top:2px}#pinScreen .pin-err{font-size:10px;min-height:15px;margin-top:8px}
+.usa-fields{display:grid;gap:10px;margin-top:20px}#pinScreen .pin-input-field{height:48px;background:rgba(255,255,255,.035);border-color:rgba(96,165,250,.16)}.access-primary{width:100%;height:48px;margin-top:8px;border:0;border-radius:14px;background:linear-gradient(90deg,#2563eb,#7c3aed 62%,#22d3ee);color:#fff;font:800 11px Satoshi;box-shadow:0 10px 28px rgba(67,56,202,.32),0 0 20px rgba(34,211,238,.12);cursor:pointer}.access-primary span{float:right;margin-right:6px}
+.access-security{position:absolute;left:34px;right:34px;bottom:15px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:7px;letter-spacing:.09em;color:rgba(211,219,255,.30)}.access-security svg{width:14px;height:14px;color:#67e8f9}
+@media(max-width:900px){#pinScreen.hl-access-screen{padding:14px}.hl-access-shell{grid-template-columns:1fr;max-width:560px}.hl-access-story{display:none}#pinScreen .pin-box.hl-access-card{min-height:auto;padding:26px 24px 52px}}
+@media(max-width:520px){#pinScreen.hl-access-screen{padding:8px}#pinScreen .pin-box.hl-access-card{padding:22px 16px 48px;border-radius:26px}.country-grid{grid-template-columns:1fr 1fr;gap:8px}.country-visual{height:115px}.country-copy{padding:10px}.business-grid{gap:8px}.business-card{min-height:112px;padding:12px 8px}.access-step h2{font-size:23px}.hl-step-rail i{width:42px}#pinScreen .access-keypad .key{height:53px}}
+</style>
+
+<script id="holaLuzAccessV7JS">
+(function(){
+  function setRail(n){
+    for(var i=1;i<=3;i++){
+      var el=document.getElementById('accessStep'+i);
+      if(!el) continue;
+      el.classList.toggle('active',i===n);
+      el.classList.toggle('done',i<n);
+    }
+  }
+  var oldSelPais=window.selPais;
+  window.selPais=function(p){oldSelPais(p);setRail(p==='us'?3:2);};
+  var oldSelTipo=window.selTipo;
+  window.selTipo=function(t){
+    oldSelTipo(t);setRail(3);
+    var names={restaurante:'Restaurante',heladeria:'Heladería',salsamentaria:'Salsamentaria',charr:'CHARR Tower'};
+    var l=document.getElementById('pinBusinessLabel');if(l)l.textContent=names[t]||'Restaurante';
+    var o=document.getElementById('pinOrb');if(o)o.innerHTML='<span>✦</span><i></i><i></i>';
+    var tt=document.getElementById('pinTitulo');if(tt)tt.textContent='HOLA LUZ';
+  };
+  var oldVolverPais=window.volverPais;
+  window.volverPais=function(){oldVolverPais();setRail(1);};
+  var oldVolverTipo=window.volverTipo;
+  window.volverTipo=function(){oldVolverTipo();setRail(2);var v=document.getElementById('pinVerify');if(v)v.classList.remove('active');};
+  var oldPinKey=window.pinKey;
+  window.pinKey=function(k){oldPinKey(k);if(pin.length===4){var v=document.getElementById('pinVerify');if(v)v.classList.add('active');}};
+  var oldDots=window.dots;
+  window.dots=function(){oldDots();if(pin.length<4){var v=document.getElementById('pinVerify');if(v)v.classList.remove('active');}};
+  setRail(1);
 })();
 </script>
