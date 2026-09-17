@@ -2630,6 +2630,8 @@ document.addEventListener("DOMContentLoaded", function(){
 .reset-opt.activo{background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.35);color:#fca5a5;font-weight:700;}
 </style><script>
 var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
+console.info("HOLA LUZ — BUILD V7.5 · PIN SURGICAL FIX");
+
 var rest=null,pin="",known={},timer=null;
 var ESTADOS={confirmado:{l:"Recibido",c:"tr",n:"en_preparacion",bl:"Preparando",bc:"bp"},en_preparacion:{l:"Preparando",c:"tp",n:"listo",bl:"Listo",bc:"bl"},listo:{l:"Listo",c:"tl2",n:"en_camino",bl:"En camino",bc:"bc"},en_camino:{l:"En camino",c:"tc",n:"entregado",bl:"Entregado",bc:"be"},cuenta:{l:"💳 Cuenta",c:"tp",n:"entregado",bl:"✅ Cuenta cobrada",bc:"be"},listo_entrega:{l:"Listo",c:"tl2",n:"entregado",bl:"💳 Cobrar y cerrar",bc:"bcerrar"},entregado:{l:"Entregado",c:"te",n:null,bl:null,bc:null}};
 var filtroActual="hoy",pedidoAEliminar=null,editPedidoId=null;
@@ -2866,8 +2868,35 @@ function dots(){for(var i=0;i<4;i++){var d=document.getElementById("d"+i);if(d){
 for(var _i=0;_i<=9;_i++){(function(n){var el=document.getElementById("k"+n);if(el)el.addEventListener("click",function(){pinKey(String(n));});}(_i));}
 document.getElementById("kdel").addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
 
+async function getRestaurantePorPinSeguro(pinValue){
+  var filtro="pin=eq."+encodeURIComponent(pinValue)+"&select=*";
+  var directUrl=SU+"/rest/v1/restaurantes?"+filtro;
+
+  // Primera vía: consulta directa con la publishable key que este mismo panel ya usa.
+  // No cambia tabla, filtro ni datos; solo evita que el login dependa del salto Railway -> Supabase.
+  try{
+    var rd=await fetch(directUrl,{
+      method:"GET",
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Accept":"application/json"},
+      cache:"no-store"
+    });
+    if(rd.ok){
+      var dd=await rd.json();
+      if(Array.isArray(dd)) return dd;
+    }else{
+      console.warn("[PIN] lectura directa HTTP",rd.status);
+    }
+  }catch(eDirect){
+    console.warn("[PIN] lectura directa falló; usando proxy legacy",eDirect&&eDirect.message?eDirect.message:eDirect);
+  }
+
+  // Segunda vía: flujo original de producción, sin cambios.
+  return get("restaurantes",filtro);
+}
+
 async function chkPin(){
   var errEl=document.getElementById("pinErr");
+  var verifyEl=document.getElementById("pinVerify");
   if(tipoActual==="charr"){
     try{
       var r=await fetch("/api/charr/verify-pin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:pin})});
@@ -2883,30 +2912,29 @@ async function chkPin(){
       }
     }catch(e){if(errEl)errEl.textContent="Error de conexión";pin="";dots();}
   } else {
-    // FLUJO LEGACY ORIGINAL — NO MODIFICAR: misma consulta que el panel estable.
-    var verifyEl=document.getElementById("pinVerify");
     if(verifyEl)verifyEl.classList.add("active");
-    get("restaurantes","pin=eq."+pin+"&select=*").then(function(d){
+    try{
+      var d=await getRestaurantePorPinSeguro(pin);
       if(verifyEl)verifyEl.classList.remove("active");
       if(d&&d.length){
-        var r=d[0];
-        if(r.estado==="suspendido"){
+        var restauranteData=d[0];
+        if(restauranteData.estado==="suspendido"){
           if(errEl)errEl.textContent="Cuenta suspendida. Contacta a HOLA LUZ.";
           pin="";dots();return;
         }
-        enterApp(r);
-      } else {
+        enterApp(restauranteData);
+      }else{
         if(errEl)errEl.textContent="PIN incorrecto";
-        var b=document.querySelector(".pin-box");
-        if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}
+        var box=document.querySelector(".pin-box");
+        if(box){box.classList.add("pin-shake");setTimeout(function(){box.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}
         pin="";dots();
       }
-    }).catch(function(e){
+    }catch(e){
       if(verifyEl)verifyEl.classList.remove("active");
-      console.error("[chkPin] error:",e);
-      if(errEl)errEl.textContent="Error de conexión. Verifica tu internet.";
+      console.error("[chkPin] ambas rutas fallaron:",e);
+      if(errEl)errEl.textContent="No se pudo verificar el PIN. Intenta nuevamente.";
       pin="";dots();
-    });
+    }
   }
 }
 // ── MOSTRAR PANTALLA AL CARGAR ───────────────────────────────────────────────
