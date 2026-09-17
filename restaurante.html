@@ -8171,3 +8171,253 @@ window.renderOrdersV5=function(){
   setRail(1);
 })();
 </script>
+
+
+<style id="holaLuzOrdersV8">
+/* ===== HOLA LUZ ORDERS V8 · MARKET READY DISPATCH ===== */
+#page-orders .orders-v5-shell{max-width:1680px;padding:16px 18px 110px}
+#page-orders .orders-v5-topbar{margin-bottom:14px}
+#page-orders .orders-v5-title{font-size:34px;letter-spacing:-.045em;text-shadow:0 0 26px rgba(96,165,250,.12)}
+#page-orders .orders-v5-sub{font-size:11px;color:rgba(220,228,255,.56)}
+#page-orders .orders-v5-live{padding:11px 15px;border-color:rgba(34,211,238,.28);box-shadow:0 0 24px rgba(34,211,238,.07),inset 0 1px 0 rgba(255,255,255,.06)}
+#page-orders .orders-v5-live b{font-size:11px}#page-orders .orders-v5-live small{font-size:9px}
+#page-orders .orders-v5-toolbar{margin-bottom:12px}
+#page-orders .orders-v5-search input{height:48px;font-size:12px;border-radius:16px;border-color:rgba(96,165,250,.24);background:linear-gradient(135deg,rgba(10,17,48,.94),rgba(7,12,35,.88));box-shadow:0 10px 30px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.05)}
+#page-orders .orders-v5-btn{font-size:10px;padding:10px 14px;border-radius:13px}
+#page-orders .orders-v5-tabs{gap:9px;padding-bottom:10px}
+#page-orders .orders-v5-tab{min-width:102px;padding:10px 14px;font-size:10px;border-radius:14px;background:linear-gradient(145deg,rgba(12,18,49,.84),rgba(7,11,31,.76));border-color:rgba(96,165,250,.15)}
+#page-orders .orders-v5-tab i{font-size:9px;min-width:22px;height:22px}
+#page-orders .orders-v5-tab.active{background:linear-gradient(135deg,rgba(109,40,217,.92),rgba(37,99,235,.82) 60%,rgba(6,182,212,.7));box-shadow:0 0 0 1px rgba(125,211,252,.1),0 0 28px rgba(99,102,241,.26),0 10px 26px rgba(0,0,0,.18)}
+
+/* Left order inbox */
+#page-orders .orders-v5-grid{grid-template-columns:minmax(310px,355px) minmax(0,1fr);gap:14px;align-items:start}
+#page-orders .orders-v5-list{max-height:760px;gap:10px;padding:2px 5px 4px 1px;scroll-behavior:smooth;overflow-anchor:none}
+#page-orders .orders-v5-card{padding:14px 14px 13px;border-radius:21px;background:radial-gradient(circle at 92% 8%,rgba(59,130,246,.09),transparent 36%),linear-gradient(145deg,rgba(13,21,57,.96),rgba(6,11,32,.93));border-color:rgba(96,165,250,.20);box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 12px 34px rgba(0,0,0,.18);transform:none!important;overflow:hidden}
+#page-orders .orders-v5-card:after{content:"";position:absolute;inset:-40% auto -40% -55%;width:45%;background:linear-gradient(90deg,transparent,rgba(125,211,252,.08),transparent);transform:skewX(-18deg);transition:left .55s ease;pointer-events:none}
+#page-orders .orders-v5-card:hover:after,#page-orders .orders-v5-card.selected:after{left:115%}
+#page-orders .orders-v5-card:hover{border-color:rgba(34,211,238,.34);box-shadow:0 0 28px rgba(34,211,238,.07),0 16px 40px rgba(0,0,0,.22)}
+#page-orders .orders-v5-card.selected{border-color:rgba(34,211,238,.58);background:radial-gradient(circle at 96% 5%,rgba(34,211,238,.13),transparent 36%),linear-gradient(145deg,rgba(15,27,69,.98),rgba(8,13,38,.97));box-shadow:0 0 0 1px rgba(34,211,238,.09),0 0 34px rgba(34,211,238,.12),0 18px 44px rgba(0,0,0,.24)}
+#page-orders .orders-v5-card:before{width:3px;opacity:.7}.orders-v5-card.selected:before{width:4px!important}
+#page-orders .ov5-top{align-items:center}#page-orders .ov5-num{font-size:19px;letter-spacing:-.03em}#page-orders .ov5-time{font-size:9px;color:#fde68a}
+#page-orders .ov5-source{font-size:8px;padding:5px 9px;border-radius:9px;margin-top:8px}
+#page-orders .ov5-person{margin-top:10px;align-items:center}#page-orders .ov5-person b{font-size:11px}#page-orders .ov5-person small{font-size:8.5px;line-height:1.35;max-width:190px}#page-orders .ov5-amount{font-size:14px;color:#67e8f9;text-shadow:0 0 14px rgba(34,211,238,.22)}
+#page-orders .ov5-summary{font-size:9.5px;line-height:1.5;margin-top:9px;color:rgba(226,232,255,.72)}
+#page-orders .ov8-card-progress{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:11px}
+#page-orders .ov8-card-progress i{height:3px;border-radius:9px;background:rgba(96,165,250,.10);box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
+#page-orders .ov8-card-progress i.done{background:linear-gradient(90deg,#7c3aed,#2563eb);box-shadow:0 0 8px rgba(99,102,241,.25)}
+#page-orders .ov8-card-progress i.active{background:linear-gradient(90deg,#2563eb,#22d3ee);box-shadow:0 0 12px rgba(34,211,238,.65);animation:ov8PulseRail 1.8s ease-in-out infinite}
+@keyframes ov8PulseRail{50%{filter:brightness(1.6);box-shadow:0 0 18px rgba(34,211,238,.8)}}
+#page-orders .ov5-actions{margin-top:11px;gap:8px}#page-orders .ov5-actions button{padding:9px 9px;font-size:8.5px;border-radius:11px}#page-orders .ov5-actions .main,#page-orders .ov5-actions .cyan{box-shadow:0 0 18px rgba(59,130,246,.13)}
+
+/* Main cockpit */
+#page-orders .orders-v5-detail{min-height:720px;border-radius:25px;border-color:rgba(88,111,255,.28);background:radial-gradient(circle at 80% -10%,rgba(37,99,235,.10),transparent 28%),linear-gradient(150deg,rgba(8,15,44,.97),rgba(4,8,28,.96));box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 24px 70px rgba(0,0,0,.28),0 0 50px rgba(37,99,235,.055);overflow:visible}
+#page-orders .ov8-workspace{display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:720px}
+#page-orders .ov8-main-detail{min-width:0;border-right:1px solid rgba(90,108,255,.15);overflow:hidden;border-radius:25px 0 0 25px}
+#page-orders .ov8-hero{position:relative;padding:18px 20px 16px;border-bottom:1px solid rgba(99,102,241,.15);background:linear-gradient(100deg,rgba(64,53,190,.13),rgba(6,182,212,.04));overflow:hidden}
+#page-orders .ov8-hero:after{content:"";position:absolute;right:-70px;top:-95px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(34,211,238,.09),transparent 66%);pointer-events:none}
+#page-orders .ov8-hero-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;position:relative;z-index:1}
+#page-orders .ov8-order-id{font:900 24px JetBrains Mono;letter-spacing:-.04em;color:#fff;text-shadow:0 0 22px rgba(125,211,252,.12)}
+#page-orders .ov8-order-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:8px}
+#page-orders .ov8-status{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;font:900 9px Satoshi;border:1px solid rgba(167,139,250,.32);background:rgba(124,58,237,.13);color:#ddd6fe;box-shadow:0 0 18px rgba(124,58,237,.10)}
+#page-orders .ov8-status:before{content:"";width:7px;height:7px;border-radius:50%;background:#8b5cf6;box-shadow:0 0 10px #8b5cf6}
+#page-orders .ov8-status.kitchen:before{background:#10b981;box-shadow:0 0 10px #10b981}#page-orders .ov8-status.ready:before{background:#f59e0b;box-shadow:0 0 10px #f59e0b}#page-orders .ov8-status.route:before{background:#22d3ee;box-shadow:0 0 12px #22d3ee;animation:ov8StatePulse 1.4s ease-in-out infinite}#page-orders .ov8-status.done:before{background:#60a5fa;box-shadow:0 0 10px #60a5fa}
+@keyframes ov8StatePulse{50%{transform:scale(1.55);opacity:.62}}
+#page-orders .ov8-time,#page-orders .ov8-source-mini{font:800 9px JetBrains Mono;color:rgba(221,230,255,.55)}
+#page-orders .ov8-hero-total{text-align:right;position:relative;z-index:1}#page-orders .ov8-hero-total small{display:block;font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:rgba(216,225,255,.38)}#page-orders .ov8-hero-total b{display:block;margin-top:5px;font:900 24px JetBrains Mono;color:#5eead4;text-shadow:0 0 18px rgba(45,212,191,.28)}
+#page-orders .ov8-body{padding:16px 20px 18px}
+#page-orders .ov8-strip{display:grid;grid-template-columns:1.05fr 1.35fr .8fr;gap:9px}
+#page-orders .ov8-strip-card{min-height:86px;padding:12px 13px;border-radius:16px;background:linear-gradient(145deg,rgba(15,24,59,.72),rgba(8,13,36,.66));border:1px solid rgba(96,165,250,.10);box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+#page-orders .ov8-strip-card small{display:block;font-size:8px;letter-spacing:.09em;text-transform:uppercase;color:rgba(215,224,255,.38)}#page-orders .ov8-strip-card b{display:block;font-size:12px;line-height:1.35;margin-top:6px;color:#f8fafc}#page-orders .ov8-strip-card span{display:block;font-size:9px;line-height:1.45;color:rgba(208,217,248,.54);margin-top:4px}
+#page-orders .ov8-strip-card a{color:#67e8f9;text-decoration:none;font-weight:800}
+#page-orders .ov8-section-head{display:flex;align-items:center;justify-content:space-between;margin:17px 0 9px}#page-orders .ov8-section-head b{font-size:13px}#page-orders .ov8-section-head span{font-size:9px;color:rgba(215,224,255,.42)}#page-orders .ov8-section-head button{padding:7px 10px;border-radius:10px;border:1px solid rgba(99,102,241,.24);background:rgba(99,102,241,.07);color:#c7d2fe;font:800 8px Satoshi;cursor:pointer}
+#page-orders .ov8-products-layout{display:grid;grid-template-columns:minmax(0,1.45fr) 225px;gap:10px;align-items:start}
+#page-orders .ov8-item-list{display:grid;gap:8px}
+#page-orders .ov8-item{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 11px;border-radius:14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.055);transition:.18s ease}
+#page-orders .ov8-item:hover{border-color:rgba(34,211,238,.20);background:rgba(34,211,238,.03)}#page-orders .ov8-item-ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(109,40,217,.22),rgba(37,99,235,.12));border:1px solid rgba(129,140,248,.18);color:#93c5fd;font-size:18px;box-shadow:0 0 18px rgba(99,102,241,.07)}#page-orders .ov8-item b{font-size:11px}#page-orders .ov8-item span{display:block;font-size:8.5px;color:rgba(205,216,248,.46);margin-top:3px}#page-orders .ov8-item em{font-style:normal;font:900 10px JetBrains Mono;color:#dbeafe}
+#page-orders .ov8-note{margin-top:8px;padding:11px 12px;border-radius:14px;background:linear-gradient(135deg,rgba(124,58,237,.07),rgba(37,99,235,.035));border:1px solid rgba(168,85,247,.14)}#page-orders .ov8-note small{font-size:8px;color:#a78bfa;text-transform:uppercase;letter-spacing:.08em}#page-orders .ov8-note p{font-size:9.5px;line-height:1.5;color:rgba(225,230,255,.68);margin-top:5px}
+#page-orders .ov8-totals{padding:13px;border-radius:16px;background:linear-gradient(180deg,rgba(9,18,48,.82),rgba(6,12,34,.75));border:1px solid rgba(34,211,238,.12);box-shadow:0 0 26px rgba(34,211,238,.035)}#page-orders .ov8-totals>div{display:flex;justify-content:space-between;gap:8px;font-size:9px;color:rgba(214,225,255,.52);padding:5px 0}#page-orders .ov8-totals strong{display:flex;justify-content:space-between;gap:8px;margin-top:7px;padding-top:11px;border-top:1px solid rgba(255,255,255,.08);font:900 14px JetBrains Mono;color:#5eead4;text-shadow:0 0 15px rgba(45,212,191,.26)}#page-orders .ov8-total-actions{display:grid;gap:7px;margin-top:10px}#page-orders .ov8-total-actions button{padding:9px;border-radius:11px;border:1px solid rgba(99,102,241,.2);background:rgba(99,102,241,.065);color:#c7d2fe;font:800 8px Satoshi;cursor:pointer}
+
+/* Living order rail */
+#page-orders .ov8-progress-wrap{margin-top:17px;padding:15px 13px 12px;border-radius:17px;background:linear-gradient(145deg,rgba(10,18,48,.7),rgba(6,11,31,.54));border:1px solid rgba(96,165,250,.10)}
+#page-orders .ov8-progress-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}#page-orders .ov8-progress-title b{font-size:11px}#page-orders .ov8-progress-title span{font-size:8px;color:#67e8f9}
+#page-orders .ov8-rail{position:relative;display:grid;gap:0;grid-template-columns:repeat(5,1fr)}#page-orders .ov8-rail:before{content:"";position:absolute;left:7%;right:7%;top:14px;height:3px;border-radius:99px;background:rgba(71,85,105,.35)}#page-orders .ov8-rail-fill{position:absolute;left:7%;top:14px;height:3px;border-radius:99px;background:linear-gradient(90deg,#7c3aed,#2563eb,#22d3ee);box-shadow:0 0 14px rgba(34,211,238,.35);transition:width .5s cubic-bezier(.2,.9,.2,1)}
+#page-orders .ov8-step{position:relative;text-align:center;z-index:1}#page-orders .ov8-step i{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;margin:0 auto 7px;background:#0b1433;border:2px solid #334155;color:transparent;transition:.35s ease}#page-orders .ov8-step.done i{background:linear-gradient(145deg,#6d28d9,#4338ca);border-color:#a78bfa;box-shadow:0 0 16px rgba(124,58,237,.32)}#page-orders .ov8-step.done i:after{content:"✓";color:white;font:900 10px Satoshi}#page-orders .ov8-step.active i{background:radial-gradient(circle,#dffaff 0 18%,#22d3ee 22%,#2563eb 62%,#0b1433 68%);border-color:#a5f3fc;box-shadow:0 0 0 5px rgba(34,211,238,.08),0 0 22px rgba(34,211,238,.65);animation:ov8NodePulse 1.8s ease-in-out infinite}@keyframes ov8NodePulse{50%{box-shadow:0 0 0 9px rgba(34,211,238,.03),0 0 30px rgba(34,211,238,.82)}}#page-orders .ov8-step span{font-size:8px;color:rgba(205,216,248,.38)}#page-orders .ov8-step.active span{color:#e0f2fe;font-weight:900}#page-orders .ov8-step.done span{color:#c4b5fd}
+
+/* bottom actions */
+#page-orders .ov8-actions{display:flex;gap:9px;align-items:center;padding:13px 20px;border-top:1px solid rgba(99,102,241,.13);background:rgba(3,8,24,.58);backdrop-filter:blur(20px)}#page-orders .ov8-actions button{padding:10px 13px;border-radius:12px;border:1px solid rgba(99,102,241,.23);background:rgba(99,102,241,.07);color:#dbeafe;font:800 9px Satoshi;cursor:pointer;transition:.2s ease}#page-orders .ov8-actions button:hover{transform:translateY(-1px);border-color:rgba(34,211,238,.34)}#page-orders .ov8-actions .next{margin-left:auto;background:linear-gradient(135deg,#7c3aed,#2563eb 58%,#06b6d4);border:0;color:white;min-width:150px;box-shadow:0 0 24px rgba(37,99,235,.18),0 8px 24px rgba(0,0,0,.18)}#page-orders .ov8-actions .next.glow{animation:ov8ButtonGlow 2s ease-in-out infinite}@keyframes ov8ButtonGlow{50%{box-shadow:0 0 35px rgba(34,211,238,.34),0 8px 26px rgba(0,0,0,.22)}}
+
+/* Dispatch side */
+#page-orders .orders-v5-side{position:static!important;padding:15px;display:flex!important;flex-direction:column;gap:12px;background:linear-gradient(180deg,rgba(7,13,38,.74),rgba(3,8,26,.54));border-radius:0 25px 25px 0}
+#page-orders .ov5-side-card{padding:14px;border-radius:19px;border-color:rgba(91,108,255,.25);background:radial-gradient(circle at 100% 0%,rgba(124,58,237,.09),transparent 34%),linear-gradient(145deg,rgba(11,18,50,.94),rgba(5,10,30,.91));box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 14px 38px rgba(0,0,0,.17)}
+#page-orders .ov5-side-head b{font-size:12px}#page-orders .ov5-side-head small{font-size:8.5px}#page-orders .ov5-side-head button,#page-orders .ov5-side-head span{font-size:9px;color:#67e8f9}
+#page-orders .ov5-couriers{gap:9px}
+#page-orders .ov5-courier{grid-template-columns:52px minmax(0,1fr) auto;gap:10px;padding:10px;border-radius:15px;background:linear-gradient(135deg,rgba(15,27,65,.78),rgba(7,13,36,.70));border:1px solid rgba(34,211,238,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.04);transition:.22s ease}
+#page-orders .ov5-courier:hover{transform:translateY(-2px);border-color:rgba(34,211,238,.35);box-shadow:0 0 24px rgba(34,211,238,.07)}
+#page-orders .ov5-courier.assigned{border-color:rgba(16,185,129,.38);background:linear-gradient(135deg,rgba(6,78,59,.16),rgba(8,18,42,.75));box-shadow:0 0 26px rgba(16,185,129,.06)}
+#page-orders .ov5-courier-avatar{width:52px;height:52px;border-radius:15px;font-size:15px;border:2px solid rgba(34,211,238,.28);box-shadow:0 0 18px rgba(34,211,238,.10);overflow:hidden}#page-orders .ov5-courier-avatar img{width:100%;height:100%;object-fit:cover;object-position:center}
+#page-orders .ov5-courier b{font-size:10.5px}#page-orders .ov5-courier small{font-size:8px;line-height:1.4;margin-top:4px}#page-orders .ov5-courier button{padding:8px 10px;font-size:8px;border-radius:10px}
+#page-orders .ov8-domi-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px}.ov8-online-dot{width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 9px #10b981}.ov8-busy-dot{background:#22d3ee;box-shadow:0 0 9px #22d3ee}
+#page-orders .ov8-track-panel{margin-top:12px;padding-top:12px;border-top:1px solid rgba(99,102,241,.12)}
+#page-orders .ov8-track-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}#page-orders .ov8-track-head b{font-size:10px}#page-orders .ov8-track-head span{font-size:8px;color:#67e8f9}
+#page-orders #ordersV8Map{height:190px;border-radius:15px;overflow:hidden;background:radial-gradient(circle at 50% 50%,rgba(37,99,235,.12),rgba(4,9,27,.95));border:1px solid rgba(34,211,238,.13);position:relative;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+#page-orders .ov8-map-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:22px;font-size:9px;line-height:1.5;color:rgba(214,224,255,.48)}
+#page-orders .ov8-track-summary{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}#page-orders .ov8-track-stat{padding:9px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05)}#page-orders .ov8-track-stat small{display:block;font-size:7px;color:rgba(214,224,255,.35);text-transform:uppercase}#page-orders .ov8-track-stat b{display:block;font-size:9px;color:#dbeafe;margin-top:4px}
+#page-orders .ov8-no-courier{padding:16px 12px;text-align:center;border-radius:14px;background:rgba(37,99,235,.04);border:1px dashed rgba(96,165,250,.16)}#page-orders .ov8-no-courier b{font-size:10px}#page-orders .ov8-no-courier p{font-size:8px;line-height:1.5;color:rgba(214,224,255,.46);margin-top:5px}
+#page-orders .ov5-luz{grid-template-columns:86px 1fr}#page-orders .ov5-luz-copy b{font-size:11px}#page-orders .ov5-luz-copy p{font-size:9px;line-height:1.55}#page-orders .ov5-luz-copy button{font-size:8px;padding:9px 11px}
+
+/* State transition animation */
+#page-orders .orders-v5-detail.state-changing .ov8-status,#page-orders .orders-v5-detail.ov8-state-flash .ov8-status{animation:ov8StateFlash .55s ease}
+@keyframes ov8StateFlash{0%{filter:brightness(1);transform:scale(1)}45%{filter:brightness(1.8);transform:scale(1.045);box-shadow:0 0 32px rgba(34,211,238,.55)}100%{filter:brightness(1);transform:scale(1)}}
+
+@media(max-width:1320px){#page-orders .orders-v5-grid{grid-template-columns:300px minmax(0,1fr)}#page-orders .ov8-workspace{grid-template-columns:minmax(0,1fr) 300px}#page-orders .ov8-strip{grid-template-columns:1fr 1fr}#page-orders .ov8-strip-card:last-child{grid-column:1/-1}}
+@media(max-width:1030px){#page-orders .orders-v5-grid{grid-template-columns:1fr}#page-orders .orders-v5-list{max-height:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));order:2}#page-orders .orders-v5-detail{order:1;min-height:0}#page-orders .ov8-workspace{grid-template-columns:1fr}#page-orders .ov8-main-detail{border-right:0;border-bottom:1px solid rgba(90,108,255,.15);border-radius:25px 25px 0 0}#page-orders .orders-v5-side{border-radius:0 0 25px 25px;display:grid!important;grid-template-columns:1fr 1fr}#page-orders .ov8-products-layout{grid-template-columns:1fr 210px}}
+@media(max-width:700px){#page-orders .orders-v5-shell{padding:10px 8px 96px}#page-orders .orders-v5-title{font-size:28px}#page-orders .orders-v5-list{grid-template-columns:1fr}#page-orders .orders-v5-detail{border-radius:20px}#page-orders .ov8-strip{grid-template-columns:1fr}#page-orders .ov8-strip-card:last-child{grid-column:auto}#page-orders .ov8-products-layout{grid-template-columns:1fr}#page-orders .orders-v5-side{grid-template-columns:1fr}#page-orders .ov8-actions{flex-wrap:wrap}#page-orders .ov8-actions .next{margin-left:0;flex:1;min-width:180px}#page-orders .ov8-hero-total b{font-size:19px}#page-orders .ov8-order-id{font-size:21px}#page-orders .ov8-rail{overflow-x:auto;min-width:510px}#page-orders .ov8-progress-wrap{overflow:hidden}.orders-v5-tab{min-width:94px!important}}
+</style>
+
+
+<script>
+/* ===== HOLA LUZ ORDERS V8 · stable inbox + dispatch + live courier tracking ===== */
+(function(){
+  console.log('HOLA LUZ — BUILD V8 · ORDERS DISPATCH');
+  var stableIds=[],stableInit=false,lastListSig='',lastFilter='',domiLocations=[],trackMap=null,trackMarkers=[];
+
+  function isMesaV8(p){var d=(p&&p.direccion||'').trim().toUpperCase(),t=(p&&p.tipo_pedido||'').trim().toLowerCase();return d.indexOf('MESA ')===0||t==='mesa'||t==='comer_aqui'||t==='en_mesa';}
+  function isPickupV8(p){var d=(p&&p.direccion||'').trim().toUpperCase(),t=(p&&p.tipo_pedido||'').trim().toLowerCase();return t==='recoger'||t==='pickup'||d.indexOf('RECOGER')===0;}
+  window.needsCourierV5=function(p){return !!p&&!isMesaV8(p)&&!isPickupV8(p);};
+
+  function stableSortV8(arr){
+    arr=(arr||[]).slice();
+    if(!stableInit){arr.sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at)});stableIds=arr.map(function(x){return String(x.id)});stableInit=true;return arr;}
+    var known={};stableIds.forEach(function(id,i){known[id]=i});
+    var newbies=arr.filter(function(x){return known[String(x.id)]===undefined}).sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at)});
+    if(newbies.length) stableIds=newbies.map(function(x){return String(x.id)}).concat(stableIds);
+    var rank={};stableIds.forEach(function(id,i){rank[id]=i});
+    return arr.sort(function(a,b){var ra=rank[String(a.id)],rb=rank[String(b.id)];if(ra===undefined)ra=999999;if(rb===undefined)rb=999999;return ra-rb;});
+  }
+  function listSignatureV8(arr){return (arr||[]).map(function(p){return [p.id,p.estado,p.updated_at,p.total,p.domiciliario_id,p.domiciliario_nombre,p.notas_especiales].join('|')}).join('||')+'::'+ordersV2Filter;}
+  function activeForAllV8(p){var s=(p.estado||'').toLowerCase();return !['entregado','cancelado','cuenta'].includes(s);}
+
+  window.renderOrdersV2=function(rows){
+    ordersV5ActiveRows=Array.isArray(rows)?rows:[];
+    ordersV2Data=ordersV5ActiveRows.slice();
+    renderOrdersV5();
+    if(rest){
+      var since=new Date(Date.now()-24*60*60*1000).toISOString();
+      get('pedidos','restaurante_id=eq.'+rest.id+'&estado=eq.entregado&created_at=gte.'+since+'&order=created_at.desc&limit=18').then(function(done){
+        ordersV5DeliveredRows=Array.isArray(done)?done:[];
+        var seen={},merged=[];ordersV5ActiveRows.concat(ordersV5DeliveredRows).forEach(function(x){if(x&&x.id&&!seen[x.id]){seen[x.id]=1;merged.push(x)}});ordersV2Data=merged;
+        updateOrdersCountsV5();
+        if(ordersV2Filter==='entregado')filterOrdersV5();
+      }).catch(function(){});
+    }
+  };
+
+  window.updateOrdersCountsV5=function(){
+    var arr=ordersV2Data||[],counts={confirmado:0,en_preparacion:0,listo:0,en_camino:0,entregado:0},active=0;
+    arr.forEach(function(p){var s=(p.estado||'').toLowerCase();if(counts[s]!==undefined)counts[s]++;if(activeForAllV8(p))active++;});
+    setText('ov5CountAll',String(active));setText('ov5CountNew',String(counts.confirmado));setText('ov5CountKitchen',String(counts.en_preparacion));setText('ov5CountReady',String(counts.listo));setText('ov5CountRoute',String(counts.en_camino));setText('ov5CountDone',String(counts.entregado));setText('ordersV5ActiveCount',active+' pedido'+(active===1?'':'s')+' activo'+(active===1?'':'s'));
+  };
+
+  window.filterOrdersV5=function(){
+    var box=document.getElementById('ordersV5List');if(!box)return;
+    var q=((document.getElementById('ordersV5Search')||{}).value||'').trim().toLowerCase();
+    var arr=(ordersV2Data||[]).filter(function(p){var st=(p.estado||'').toLowerCase();if(ordersV2Filter==='all'){if(!activeForAllV8(p))return false;}else if(st!==ordersV2Filter)return false;var blob=[p.numero_pedido,p.cliente_nombre,p.cliente_tel,p.direccion,p.canal,p.domiciliario_nombre].join(' ').toLowerCase();return !q||blob.indexOf(q)!==-1;});
+    arr=stableSortV8(arr);
+    if(!arr.length){box.innerHTML='<div class="ov5-empty">No hay pedidos en este filtro.</div>';selectedOrderV5Id=null;lastListSig='';renderOrderDetailV5(null);return;}
+    if(!selectedOrderV5Id||!arr.some(function(x){return String(x.id)===String(selectedOrderV5Id)}))selectedOrderV5Id=arr[0].id;
+    var sig=listSignatureV8(arr),scroll=box.scrollTop;
+    if(sig!==lastListSig||ordersV2Filter!==lastFilter){box.innerHTML=arr.map(orderCardHtmlV5).join('');box.scrollTop=scroll;lastListSig=sig;lastFilter=ordersV2Filter;}
+    box.querySelectorAll('.orders-v5-card').forEach(function(el){el.classList.toggle('selected',String(el.getAttribute('data-order-id'))===String(selectedOrderV5Id));});
+    renderOrderDetailV5(orderByIdV5(selectedOrderV5Id));
+  };
+
+  window.orderCardHtmlV5=function(p){
+    var s=stateInfoV5(p.estado),src=sourceInfoV5(p),items=normalizeItemsV5(p.items),summary=items.slice(0,2).map(function(i){return (i.qty?i.qty+'x ':'')+i.label}).join(' · ')||'Pedido sin detalle',selected=String(p.id)===String(selectedOrderV5Id),idx=Math.max(0,Math.min(4,s.idx||0));
+    var action=s.next?s.nextLabel:'Ver pedido',actionClass=s.cls==='done'?'good':(s.cls==='route'?'cyan':'main');if((p.estado||'').toLowerCase()==='confirmado'){action='Visible en Cocina';actionClass='cyan';}
+    var rail=[0,1,2,3,4].map(function(i){return '<i class="'+(i<idx?'done':(i===idx?'active':''))+'"></i>'}).join('');
+    return '<article data-order-id="'+p.id+'" class="orders-v5-card '+(selected?'selected':'')+'" onclick="selectOrderV5(\''+p.id+'\')"><div class="ov5-top"><span class="ov5-num">#'+escHtml(String(p.numero_pedido||'—'))+'</span><span class="ov5-time">'+ago(p.created_at)+'</span></div><span class="ov5-source '+src.cls+'">'+src.icon+' '+escHtml(src.label)+'</span><div class="ov5-person"><div><b>'+escHtml(p.cliente_nombre||p.cliente_tel||'Cliente')+(p.cliente_nivel?' · '+escHtml(String(p.cliente_nivel)):'')+'</b><small>'+escHtml(p.direccion||'Sin ubicación')+'</small></div><span class="ov5-amount">'+fmt(Number(p.total||0))+'</span></div><div class="ov5-summary">'+escHtml(summary)+'</div><div class="ov8-card-progress">'+rail+'</div><div class="ov5-actions"><button onclick="event.stopPropagation();selectOrderV5(\''+p.id+'\')">Abrir</button><button class="'+actionClass+'" onclick="event.stopPropagation();'+(s.next?'primaryOrderActionV5(\''+p.id+'\')':'selectOrderV5(\''+p.id+'\')')+'">'+escHtml(action)+'</button></div></article>';
+  };
+
+  window.selectOrderV5=function(id){selectedOrderV5Id=id;var box=document.getElementById('ordersV5List');if(box)box.querySelectorAll('.orders-v5-card').forEach(function(el){el.classList.toggle('selected',String(el.getAttribute('data-order-id'))===String(id));});renderOrderDetailV5(orderByIdV5(id));};
+
+  function stepsV8(p){
+    var mesa=isMesaV8(p),pickup=isPickupV8(p),st=(p.estado||'confirmado').toLowerCase();
+    if(mesa||pickup){var labs=mesa?['Nuevo','Cocina','Listo','Servido','Cerrado']:['Nuevo','Cocina','Listo','Recogido','Cerrado'];var map={confirmado:0,en_preparacion:1,listo:2,listo_entrega:2,servido:3,en_camino:3,entregado:4,cuenta:3};return {labs:labs,idx:map[st]===undefined?0:map[st]};}
+    var map2={confirmado:0,en_preparacion:1,listo:2,en_camino:3,entregado:4};return {labs:['Nuevo','Cocina','Listo','En ruta','Entregado'],idx:map2[st]===undefined?0:map2[st]};
+  }
+  function progressHtmlV8(p){var x=stepsV8(p),pct=Math.max(0,Math.min(86,(x.idx/(x.labs.length-1))*86));return '<div class="ov8-progress-wrap"><div class="ov8-progress-title"><b>Flujo del pedido</b><span>'+escHtml(x.labs[x.idx]||'Activo')+'</span></div><div class="ov8-rail"><div class="ov8-rail-fill" style="width:'+pct+'%"></div>'+x.labs.map(function(l,i){return '<div class="ov8-step '+(i<x.idx?'done':(i===x.idx?'active':''))+'"><i></i><span>'+escHtml(l)+'</span></div>'}).join('')+'</div></div>';}
+  function orderNoteV8(p){return p.notas_especiales||'Sin notas especiales.';}
+  function proofUrlV8(p){if(p.comprobante_url&&!String(p.comprobante_url).startsWith('/api/'))return p.comprobante_url;if(p.comprobante_media_id)return '/api/comprobante/'+p.comprobante_media_id;return '';}
+  function sourceOrTypeV8(p){if(isMesaV8(p))return 'Mesa';if(isPickupV8(p))return 'Recoger';return 'Domicilio';}
+
+  window.renderOrderDetailV5=function(p){
+    var d=document.getElementById('ordersV5Detail');if(!d)return;
+    var side=document.querySelector('#page-orders .orders-v5-side');if(side&&d.contains(side))side.remove();
+    if(!p){d.innerHTML='<div class="ov5-empty">Selecciona un pedido para abrir el cockpit operativo.</div>';if(side)d.appendChild(side);renderCouriersV5(null);renderLuzOrderV5(null);return;}
+    var s=stateInfoV5(p.estado),src=sourceInfoV5(p),items=normalizeItemsV5(p.items),subtotal=Number(p.subtotal||0),des=Number(p.desechables||0),dom=Number(p.domicilio||0),total=Number(p.total||0),dir=p.direccion||'Sin ubicación',nota=orderNoteV8(p),proof=proofUrlV8(p);
+    var itemHtml=items.length?items.map(function(i){var label=(i.qty?i.qty+'x ':'')+i.label;return '<div class="ov8-item"><div class="ov8-item-ico">◫</div><div><b>'+escHtml(label)+'</b><span>'+escHtml(i.note||'Preparación estándar')+'</span></div><em>'+(i.price!=null?fmt(Number(i.price)):'')+'</em></div>'}).join(''):'<div class="ov8-no-courier"><b>Sin productos detallados</b><p>Este pedido no tiene items estructurados para mostrar.</p></div>';
+    var mapLink=needsCourierV5(p)&&dir?'<a href="#" onclick="event.preventDefault();openMapV5(\''+encodeURIComponent(dir)+'\')">Abrir destino →</a>':'';
+    var payExtra=proof?'Comprobante adjunto':'Pago registrado por operación';
+    var next='';if(s.next)next='<button class="next glow" onclick="primaryOrderActionV5(\''+p.id+'\')">'+escHtml(s.nextLabel)+' →</button>';
+    var hero='<div class="ov8-hero"><div class="ov8-hero-top"><div><div class="ov8-order-id">#'+escHtml(String(p.numero_pedido||'—'))+'</div><div class="ov8-order-meta"><span class="ov8-status '+s.cls+'">'+escHtml(s.label)+'</span><span class="ov8-source-mini">'+src.icon+' '+escHtml(src.label)+'</span><span class="ov8-time">'+ago(p.created_at)+'</span></div></div><div class="ov8-hero-total"><small>Total del pedido</small><b>'+fmt(total)+'</b></div></div></div>';
+    var strip='<div class="ov8-strip"><div class="ov8-strip-card"><small>Cliente</small><b>'+escHtml(p.cliente_nombre||p.cliente_tel||'Cliente')+'</b><span>'+escHtml(p.cliente_tel||'Sin teléfono')+(p.cliente_nivel?' · '+escHtml(String(p.cliente_nivel)):'')+'</span></div><div class="ov8-strip-card"><small>'+sourceOrTypeV8(p)+'</small><b>'+escHtml(dir)+'</b><span>'+mapLink+'</span></div><div class="ov8-strip-card"><small>Método de pago</small><b>'+escHtml(p.metodo_pago||'Sin registrar')+'</b><span>'+payExtra+'</span></div></div>';
+    var products='<div class="ov8-section-head"><div><b>Productos del pedido</b><span> · '+items.length+' item'+(items.length===1?'':'s')+'</span></div><button onclick="openEditFromOrderV5(\''+p.id+'\')">Editar pedido</button></div><div class="ov8-products-layout"><div><div class="ov8-item-list">'+itemHtml+'</div><div class="ov8-note"><small>Notas del cliente</small><p>'+escHtml(nota)+'</p></div></div><div class="ov8-totals"><div><span>Subtotal</span><span>'+fmt(subtotal)+'</span></div><div><span>Desechables</span><span>'+fmt(des)+'</span></div><div><span>Domicilio</span><span>'+fmt(dom)+'</span></div><strong><span>Total</span><span>'+fmt(total)+'</span></strong><div class="ov8-total-actions"><button onclick="printOrderV5(\''+p.id+'\')">Imprimir ticket</button>'+(proof?'<button onclick="openProofV5(\''+encodeURIComponent(proof)+'\')">Ver comprobante</button>':'')+'</div></div></div>';
+    var actions='<div class="ov8-actions"><button onclick="printOrderV5(\''+p.id+'\')">▣ Ticket</button><button onclick="openOrderChatV5(\''+p.id+'\')">◌ Contactar</button>'+(needsCourierV5(p)&&!p.domiciliario_id?'<button onclick="renderCouriersV5(orderByIdV5(\''+p.id+'\'))">Asignar domi</button>':'')+next+'</div>';
+    d.innerHTML='<div class="ov8-workspace"><main class="ov8-main-detail">'+hero+'<div class="ov8-body">'+strip+products+progressHtmlV8(p)+'</div>'+actions+'</main></div>';
+    var work=d.querySelector('.ov8-workspace');if(side&&work)work.appendChild(side);
+    ensureTrackingPanelV8();renderCouriersV5(p);renderLuzOrderV5(p);refreshOrderDomiTrackingV8(p);
+  };
+
+  function courierPhotoV8(dom){var u=dom&&(dom.foto_url||dom.avatar_url||dom.photo_url||dom.imagen_url||dom.image_url);var initial=escHtml(String((dom&&dom.nombre)||'D').charAt(0).toUpperCase());return u?'<div class="ov5-courier-avatar"><img src="'+escHtml(u)+'" alt="'+escHtml(dom.nombre||'Domiciliario')+'" onerror="this.parentElement.textContent=\''+initial+'\'"></div>':'<div class="ov5-courier-avatar">'+initial+'</div>';}
+  function activeOrderForDomiV8(id){return (ordersV2Data||[]).find(function(p){return String(p.domiciliario_id||'')===String(id||'')&&!['entregado','cancelado'].includes((p.estado||'').toLowerCase())})||null;}
+  function locForDomiV8(id){return (domiLocations||[]).find(function(x){return String(x.domiciliario_id)===String(id)})||null;}
+  function freshTextV8(loc){if(!loc||!loc.updated_at)return 'Sin posición reciente';var m=Math.max(0,Math.floor((Date.now()-new Date(loc.updated_at).getTime())/60000));return m<1?'GPS ahora':m<60?'GPS hace '+m+' min':'GPS sin actualizar';}
+
+  window.renderCouriersV5=function(p){
+    var box=document.getElementById('ordersV5Couriers');if(!box)return;
+    ensureTrackingPanelV8();
+    if(!p){box.innerHTML='<div class="ov8-no-courier"><b>Selecciona un pedido</b><p>El despacho aparecerá aquí cuando abras una orden.</p></div>';return;}
+    if(!needsCourierV5(p)){box.innerHTML='<div class="ov8-no-courier"><b>No requiere domiciliario</b><p>Este pedido es de Mesa o Recoger. El flujo de reparto queda oculto.</p></div>';refreshOrderDomiTrackingV8(p);return;}
+    var list=(domiciliariosList||[]).filter(function(x){return x.activo});var assignedId=p.domiciliario_id;var html='';
+    if(assignedId||p.domiciliario_nombre){var ad=list.find(function(x){return String(x.id)===String(assignedId)})||{id:assignedId,nombre:p.domiciliario_nombre||'Domiciliario'};var loc=locForDomiV8(ad.id);html+='<div class="ov5-courier assigned">'+courierPhotoV8(ad)+'<div><b>'+escHtml(ad.nombre||'Asignado')+'</b><small><span class="ov8-domi-meta"><i class="ov8-online-dot ov8-busy-dot"></i>Asignado · '+escHtml(freshTextV8(loc))+'</span></small></div><button onclick="abrirDomiModal(\''+p.id+'\',\''+String(p.numero_pedido||'')+'\')">Cambiar</button></div>';}
+    var opts=list.filter(function(x){return !assignedId||String(x.id)!==String(assignedId)}).slice(0,assignedId?3:5);
+    if(!opts.length&&!html){html='<div class="ov8-no-courier"><b>No hay domiciliarios en turno</b><p>Activa al equipo desde la sección Domiciliarios.</p><button class="orders-v5-btn" style="margin-top:9px" onclick="showTab(\'domis\')">Administrar equipo</button></div>';}
+    html+=opts.map(function(dom){var active=activeOrderForDomiV8(dom.id),loc=locForDomiV8(dom.id),status=active?('En ruta #'+(active.numero_pedido||'')):'Disponible';return '<div class="ov5-courier">'+courierPhotoV8(dom)+'<div><b>'+escHtml(dom.nombre||'Domiciliario')+'</b><small><span class="ov8-domi-meta"><i class="ov8-online-dot '+(active?'ov8-busy-dot':'')+'"></i>'+escHtml(status)+' · '+escHtml(freshTextV8(loc))+'</span></small></div><button onclick="assignCourierV5(\''+p.id+'\',\''+String(p.numero_pedido||'')+'\',\''+dom.id+'\',\''+encodeURIComponent(dom.nombre||'Domiciliario')+'\')">Asignar</button></div>'}).join('');
+    box.innerHTML=html;refreshOrderDomiTrackingV8(p);
+  };
+
+  function ensureTrackingPanelV8(){
+    var courierBox=document.getElementById('ordersV5Couriers');if(!courierBox)return;var card=courierBox.closest('.ov5-side-card');if(!card)return;
+    var head=card.querySelector('.ov5-side-head');if(head){var b=head.querySelector('b');if(b)b.textContent='Despacho & tracking';var sm=head.querySelector('small');if(sm)sm.textContent='Domiciliarios en tiempo real';}
+    if(card.querySelector('#ordersV8Tracking'))return;
+    var panel=document.createElement('div');panel.id='ordersV8Tracking';panel.className='ov8-track-panel';panel.innerHTML='<div class="ov8-track-head"><b>Posición en vivo</b><span id="ordersV8TrackingStatus">Esperando GPS</span></div><div id="ordersV8Map"><div class="ov8-map-empty">El mapa mostrará la ubicación real reportada por los domiciliarios activos.</div></div><div class="ov8-track-summary"><div class="ov8-track-stat"><small>Asignado</small><b id="ordersV8Assigned">—</b></div><div class="ov8-track-stat"><small>Última posición</small><b id="ordersV8Fresh">—</b></div></div>';
+    card.appendChild(panel);
+  }
+
+  async function loadDomiLocationsV8(){if(!rest)return [];try{var r=await fetch('/api/domi-ubicaciones?restaurante_id='+encodeURIComponent(rest.id),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);var d=await r.json();domiLocations=Array.isArray(d)?d:[];return domiLocations;}catch(e){return domiLocations||[];}}
+  function destroyTrackMapV8(){if(trackMap&&window.L){try{trackMap.remove()}catch(e){}}trackMap=null;trackMarkers=[];var m=document.getElementById('ordersV8Map');if(m)m.innerHTML='';}
+  function drawMapV8(p){
+    ensureTrackingPanelV8();var mapEl=document.getElementById('ordersV8Map'),status=document.getElementById('ordersV8TrackingStatus'),ass=document.getElementById('ordersV8Assigned'),fresh=document.getElementById('ordersV8Fresh');if(!mapEl)return;
+    if(!needsCourierV5(p)){destroyTrackMapV8();mapEl.innerHTML='<div class="ov8-map-empty">Este pedido no usa reparto. El tracking no es necesario.</div>';if(status)status.textContent='No aplica';if(ass)ass.textContent='Mesa / Recoger';if(fresh)fresh.textContent='—';return;}
+    var locs=(domiLocations||[]).filter(function(x){return x.lat&&x.lng});var target=p.domiciliario_id?locs.filter(function(x){return String(x.domiciliario_id)===String(p.domiciliario_id)}):locs;
+    if(ass)ass.textContent=p.domiciliario_nombre||((domiciliariosList||[]).find(function(x){return String(x.id)===String(p.domiciliario_id)})||{}).nombre||'Sin asignar';
+    var assignedLoc=p.domiciliario_id?locs.find(function(x){return String(x.domiciliario_id)===String(p.domiciliario_id)}):null;if(fresh)fresh.textContent=freshTextV8(assignedLoc);if(status)status.textContent=assignedLoc?'GPS conectado':(locs.length?'Equipo visible':'Sin GPS activo');
+    if(!target.length){destroyTrackMapV8();mapEl.innerHTML='<div class="ov8-map-empty">'+(p.domiciliario_id?'El domiciliario asignado todavía no reporta una posición reciente.':'Selecciona un domiciliario o espera una posición activa.')+'<br><br><button class="orders-v5-btn" onclick="openMapV5(\''+encodeURIComponent(p.direccion||'')+'\')">Abrir destino</button></div>';return;}
+    if(!window.L){mapEl.innerHTML='<div class="ov8-map-empty">Cargando mapa en vivo…</div>';setTimeout(function(){drawMapV8(p)},700);return;}
+    if(trackMap){try{trackMap.remove()}catch(e){}trackMap=null;}mapEl.innerHTML='';
+    trackMap=L.map(mapEl,{zoomControl:false,attributionControl:false,dragging:true,scrollWheelZoom:false}).setView([Number(target[0].lat),Number(target[0].lng)],15);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(trackMap);trackMarkers=[];var bounds=[];
+    target.forEach(function(u){var dom=(domiciliariosList||[]).find(function(x){return String(x.id)===String(u.domiciliario_id)})||{};var name=dom.nombre||u.nombre||'Domiciliario';var icon=L.divIcon({className:'',iconSize:[38,38],iconAnchor:[19,19],html:'<div style="width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#67e8f9,#2563eb 46%,#312e81 72%);border:3px solid rgba(255,255,255,.9);box-shadow:0 0 0 5px rgba(34,211,238,.12),0 0 24px rgba(34,211,238,.55);color:white;font-weight:900">'+escHtml(String(name).charAt(0).toUpperCase())+'</div>'});var mk=L.marker([Number(u.lat),Number(u.lng)],{icon:icon}).addTo(trackMap);mk.bindPopup('<b>'+escHtml(name)+'</b><br>'+escHtml(freshTextV8(u)));trackMarkers.push(mk);bounds.push([Number(u.lat),Number(u.lng)]);});
+    if(bounds.length>1)trackMap.fitBounds(L.latLngBounds(bounds),{padding:[24,24]});setTimeout(function(){if(trackMap)trackMap.invalidateSize()},120);
+  }
+  window.refreshOrderDomiTrackingV8=async function(p){if(!p)return;await loadDomiLocationsV8();drawMapV8(p);};
+
+  var oldAssign=window.assignCourierV5;window.assignCourierV5=function(pid,pnum,did,dname){var detail=document.getElementById('ordersV5Detail');if(detail)detail.classList.add('ov8-state-flash');return oldAssign(pid,pnum,did,dname);};
+  var oldRenderLuz=window.renderLuzOrderV5;window.renderLuzOrderV5=function(p){oldRenderLuz(p);var t=document.getElementById('ordersV5LuzTitle'),x=document.getElementById('ordersV5LuzText');if(!p||!t||!x)return;if(needsCourierV5(p)&&!p.domiciliario_id&&(p.estado==='listo'||p.estado==='en_preparacion')){t.textContent='Despacho pendiente';x.textContent='El pedido requiere domiciliario. Puedes asignarlo desde las cards superiores sin salir de esta orden.';}else if(p.domiciliario_id&&p.estado==='en_camino'){t.textContent='Tracking activo';x.textContent='La posición del domiciliario se actualiza en el mapa cuando su dispositivo reporta GPS.';}};
+
+  window.renderOrdersV5=function(){updateOrdersCountsV5();syncOrderTabsV5();filterOrdersV5();updateOrdersClockV5();if(!domiciliariosList.length&&rest)cargarDomiciliarios();};
+
+  setInterval(function(){var pg=document.getElementById('page-orders');if(!pg||!pg.classList.contains('active'))return;var p=orderByIdV5(selectedOrderV5Id);if(p)refreshOrderDomiTrackingV8(p);},15000);
+
+  document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('.orders-v5-tab');if(t){lastListSig='';lastFilter='';}},true);
+})();
+</script>
