@@ -942,6 +942,59 @@ select.finput{cursor:pointer}
 .page.active{animation:pgIn .22s ease!important}
 @keyframes pgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
+
+/* ── DASHBOARD COMMAND CENTER V1 — conserva ADN Hola Luz ── */
+.dashboard-v2{padding:14px 12px 10px;max-width:1120px;margin:0 auto;}
+.dash-identity{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 16px;margin-bottom:12px;border:1px solid rgba(124,58,237,.28);border-radius:22px;background:linear-gradient(135deg,rgba(15,12,40,.78),rgba(25,15,64,.52));backdrop-filter:blur(28px) saturate(125%);-webkit-backdrop-filter:blur(28px) saturate(125%);box-shadow:0 20px 50px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.08),0 0 34px rgba(124,58,237,.09)}
+.dash-identity:before{content:'';position:absolute;width:180px;height:180px;border-radius:50%;right:-75px;top:-95px;background:radial-gradient(circle,rgba(37,99,235,.28),rgba(124,58,237,.12) 42%,transparent 70%);filter:blur(8px);animation:dashAura 8s ease-in-out infinite;pointer-events:none}
+@keyframes dashAura{0%,100%{transform:translate(0,0) scale(1);opacity:.7}50%{transform:translate(-16px,12px) scale(1.12);opacity:1}}
+.dash-rest-wrap{display:flex;align-items:center;gap:12px;min-width:0;position:relative;z-index:1}
+.dash-logo{width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:radial-gradient(circle at 35% 25%,rgba(255,255,255,.2),rgba(124,58,237,.34) 35%,rgba(37,99,235,.14) 75%);border:1px solid rgba(34,211,238,.38);box-shadow:0 0 0 3px rgba(124,58,237,.1),0 0 28px rgba(34,211,238,.18);font-size:25px;overflow:hidden}
+.dash-logo img{width:100%;height:100%;object-fit:cover}
+.dash-rest-name{font-size:18px;font-weight:800;letter-spacing:-.025em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:430px}
+.dash-rest-sub{font-size:11px;color:rgba(224,215,255,.48);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-rest-tags{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+.dash-mini-tag{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);border-radius:999px;font-size:9px;font-weight:700;color:rgba(241,240,255,.58)}
+.dash-live{position:relative;z-index:1;display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:14px;border:1px solid rgba(45,212,191,.32);background:rgba(16,185,129,.08);color:#5eead4;font-size:10px;font-weight:800;letter-spacing:.08em;white-space:nowrap;box-shadow:0 0 22px rgba(16,185,129,.08)}
+.dash-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:12px}
+.dash-kpi{position:relative;min-width:0;padding:13px;border-radius:18px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.025));backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 10px 28px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden;transition:transform .2s,border-color .2s}
+.dash-kpi:hover{transform:translateY(-2px);border-color:rgba(124,58,237,.3)}
+.dash-kpi:after{content:'';position:absolute;width:60px;height:60px;border-radius:50%;right:-24px;bottom:-28px;background:var(--kglow,rgba(124,58,237,.22));filter:blur(14px)}
+.dash-kpi-icon{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:14px;background:var(--kbg,rgba(124,58,237,.12));color:var(--kcolor,#c4b5fd);border:1px solid color-mix(in srgb,var(--kcolor,#c4b5fd) 28%,transparent);box-shadow:0 0 18px color-mix(in srgb,var(--kcolor,#c4b5fd) 12%,transparent)}
+.dash-kpi-label{font-size:9px;text-transform:uppercase;letter-spacing:.09em;color:rgba(241,240,255,.42);font-weight:700;white-space:nowrap}
+.dash-kpi-value{font-family:'Satoshi',sans-serif;font-size:22px;font-weight:800;letter-spacing:-.045em;margin-top:4px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-kpi-note{font-size:9px;color:rgba(241,240,255,.36);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-main-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(230px,.9fr);gap:10px;margin-bottom:12px}
+.dash-panel{position:relative;border-radius:20px;border:1px solid rgba(124,58,237,.18);background:linear-gradient(150deg,rgba(8,10,31,.78),rgba(22,13,52,.52));backdrop-filter:blur(22px) saturate(120%);-webkit-backdrop-filter:blur(22px) saturate(120%);box-shadow:0 16px 38px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden}
+.dash-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 15px 8px}
+.dash-panel-title{font-size:12px;font-weight:800;color:#f5f3ff;display:flex;align-items:center;gap:7px}
+.dash-panel-sub{font-size:9px;color:rgba(241,240,255,.35);margin-top:2px}
+.dash-chart-total{font-size:16px;font-weight:800;color:#a7f3d0;text-align:right}
+.dash-chart{height:160px;padding:4px 14px 12px;display:flex;align-items:flex-end;gap:7px;position:relative}
+.dash-chart:before{content:'';position:absolute;inset:8px 14px 24px;background:linear-gradient(rgba(99,102,241,.08) 1px,transparent 1px);background-size:100% 25%;pointer-events:none}
+.dash-bar-wrap{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px;min-width:0;z-index:1}
+.dash-bar{width:100%;max-width:34px;min-height:4px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#22d3ee 0%,#4f46e5 58%,rgba(124,58,237,.36) 100%);box-shadow:0 0 16px rgba(34,211,238,.12);transition:height .5s cubic-bezier(.2,.8,.2,1)}
+.dash-bar-label{font:8px 'JetBrains Mono',monospace;color:rgba(241,240,255,.28)}
+.dash-luz{padding:13px;display:flex;flex-direction:column;min-height:226px}
+.dash-luz-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.dash-luz-orb{position:relative;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:radial-gradient(circle at 50% 45%,#fff 0 5%,#d8b4fe 6% 10%,#7c3aed 25%,#312e81 52%,rgba(49,46,129,.25) 68%,transparent 72%);box-shadow:0 0 15px rgba(167,139,250,.75),0 0 36px rgba(79,70,229,.45);animation:dashOrbBreath 3.4s ease-in-out infinite}
+.dash-luz-orb:before,.dash-luz-orb:after{content:'';position:absolute;inset:-7px;border:1px solid rgba(34,211,238,.28);border-radius:50%;animation:dashOrbRing 5s linear infinite}.dash-luz-orb:after{inset:-12px;border-color:rgba(167,139,250,.16);animation-duration:7s;animation-direction:reverse}
+.dash-luz-star{font-size:20px;color:white;text-shadow:0 0 12px white;z-index:1}
+@keyframes dashOrbBreath{0%,100%{transform:scale(1);filter:saturate(1)}50%{transform:scale(1.06);filter:saturate(1.25)}}
+@keyframes dashOrbRing{from{transform:rotate(0deg) scale(1)}50%{transform:rotate(180deg) scale(1.05)}to{transform:rotate(360deg) scale(1)}}
+.dash-luz-status{font-size:10px;font-weight:800;color:#c4b5fd}.dash-luz-status b{color:#5eead4}
+.dash-luz-copy{padding:11px 12px;border-radius:15px;background:linear-gradient(135deg,rgba(124,58,237,.11),rgba(37,99,235,.06));border:1px solid rgba(124,58,237,.18);font-size:11px;line-height:1.55;color:rgba(241,240,255,.72);flex:1}
+.dash-luz-copy strong{display:block;color:#fff;margin-bottom:4px;font-size:12px}
+.dash-luz-btn{margin-top:9px;width:100%;padding:10px 12px;border:1px solid rgba(124,58,237,.38);border-radius:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5,#2563eb);color:#fff;font:700 11px 'Satoshi',sans-serif;cursor:pointer;box-shadow:0 7px 22px rgba(124,58,237,.25);transition:transform .15s,box-shadow .15s}.dash-luz-btn:active{transform:scale(.97)}
+.dash-section-label{display:flex;align-items:center;justify-content:space-between;margin:4px 1px 8px}.dash-section-label span:first-child{font-size:11px;font-weight:800;color:#f1f0ff}.dash-section-label .dash-section-link{font-size:9px;color:#60a5fa;cursor:pointer}
+.dash-activity{padding:5px 12px 9px}
+.dash-activity-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:9px;padding:9px 8px;border-bottom:1px solid rgba(255,255,255,.045);border-radius:11px;transition:background .15s}.dash-activity-row:last-child{border-bottom:0}.dash-activity-row:hover{background:rgba(255,255,255,.025)}
+.dash-activity-icon{width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.16);font-size:13px}
+.dash-activity-title{font-size:11px;font-weight:700;color:#f8f7ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dash-activity-meta{font-size:9px;color:rgba(241,240,255,.36);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dash-activity-side{text-align:right}.dash-activity-time{font-size:8px;color:rgba(241,240,255,.28);margin-bottom:3px}.dash-state{display:inline-flex;padding:3px 7px;border-radius:999px;border:1px solid rgba(34,211,238,.22);background:rgba(34,211,238,.07);color:#67e8f9;font-size:8px;font-weight:800}
+.dash-orders-head{margin:12px 0 7px;display:flex;align-items:center;justify-content:space-between}.dash-orders-head-title{font-size:12px;font-weight:800}.dash-orders-head-sub{font-size:9px;color:rgba(241,240,255,.34)}
+@media(max-width:680px){.dashboard-v2{padding:10px 9px 4px}.dash-identity{padding:12px}.dash-logo{width:48px;height:48px;border-radius:16px}.dash-rest-name{font-size:15px;max-width:180px}.dash-rest-sub{font-size:9px}.dash-live{padding:7px 9px;font-size:8px}.dash-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.dash-kpi{padding:11px}.dash-kpi-value{font-size:19px}.dash-main-grid{grid-template-columns:1fr}.dash-chart{height:142px}.dash-luz{min-height:auto}.dash-rest-tags{display:none}}
+@media(min-width:900px){.dashboard-v2{padding-top:18px}.dash-kpi-value{font-size:25px}.dash-chart{height:185px}}
+
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" async></script>
@@ -1143,54 +1196,53 @@ document.addEventListener("DOMContentLoaded", function(){
   <div class="content">
     <!-- PEDIDOS -->
     <div class="page active" id="page-pedidos">
-      <div class="stats-row" style="cursor:pointer" onclick="toggleResumen()">
-        <div class="stat-card"><span class="stat-icon">🛒</span><div class="stat-label">Pedidos hoy</div><div class="stat-val purple" id="countHoy">0</div><div class="stat-sub" id="subDomMesa">cargando...</div></div>
-        <div class="stat-card"><span class="stat-icon">💰</span><div class="stat-label">Ventas hoy</div><div class="stat-val green" id="ventasHoy">$0</div><div class="stat-sub">toca para ver resumen</div></div>
-      </div>
+      <div class="dashboard-v2">
+        <section class="dash-identity">
+          <div class="dash-rest-wrap">
+            <div class="dash-logo" id="dashRestLogo">🍽️</div>
+            <div style="min-width:0">
+              <div class="dash-rest-name" id="dashRestName">Restaurante</div>
+              <div class="dash-rest-sub" id="dashRestSub">Operaciones en tiempo real · Hola Luz</div>
+              <div class="dash-rest-tags"><span class="dash-mini-tag">🍴 Restaurante</span><span class="dash-mini-tag" id="dashRestLocation">📍 Operación activa</span></div>
+            </div>
+          </div>
+          <div class="dash-live"><span class="live-dot"></span> EN VIVO</div>
+        </section>
 
-      <!-- LUZ ACTIVITY BAR — dinámica -->
-      <div id="luzActivityBar" style="margin:0 12px 10px;background:linear-gradient(135deg,rgba(124,58,237,0.1),rgba(79,70,229,0.06));border:1px solid rgba(124,58,237,0.2);border-radius:16px;padding:10px 14px;display:flex;align-items:center;gap:12px">
-        <div style="flex-shrink:0;position:relative">
-          <img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg" style="width:38px;height:38px;border-radius:50%;object-fit:cover;object-position:center top;border:2px solid rgba(124,58,237,0.5)" onerror="this.setAttribute('hidden','true')">
-          <div id="luzActivityDot" style="position:absolute;bottom:-1px;right:-1px;width:10px;height:10px;border-radius:50%;background:#10b981;border:2px solid #0a0a16;box-shadow:0 0 6px #10b981;animation:ldot 1.5s ease infinite"></div>
-        </div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:800;color:#c4b5fd;letter-spacing:.04em">LUZ · Asistente Activa</div>
-          <div id="luzActivityTxt" style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:1px;font-style:italic;transition:all .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Monitoreando pedidos en tiempo real...</div>
-        </div>
-        <div id="luzWaveBar" style="display:flex;align-items:center;gap:2px;height:18px;opacity:0.5">
-          <div style="width:2px;height:6px;background:#a855f7;border-radius:1px;animation:vbar .8s ease infinite"></div>
-          <div style="width:2px;height:12px;background:#a855f7;border-radius:1px;animation:vbar .8s ease .1s infinite"></div>
-          <div style="width:2px;height:18px;background:#a855f7;border-radius:1px;animation:vbar .8s ease .2s infinite"></div>
-          <div style="width:2px;height:12px;background:#a855f7;border-radius:1px;animation:vbar .8s ease .3s infinite"></div>
-          <div style="width:2px;height:6px;background:#a855f7;border-radius:1px;animation:vbar .8s ease .4s infinite"></div>
-        </div>
-      </div>
+        <section class="dash-kpis" onclick="toggleResumen()" style="cursor:pointer">
+          <article class="dash-kpi" style="--kcolor:#60a5fa;--kbg:rgba(37,99,235,.11);--kglow:rgba(37,99,235,.25)"><div class="dash-kpi-icon">🛍️</div><div class="dash-kpi-label">Pedidos hoy</div><div class="dash-kpi-value" id="countHoy">0</div><div class="dash-kpi-note" id="subDomMesa">cargando...</div></article>
+          <article class="dash-kpi" style="--kcolor:#2dd4bf;--kbg:rgba(20,184,166,.10);--kglow:rgba(20,184,166,.24)"><div class="dash-kpi-icon">💵</div><div class="dash-kpi-label">Ventas hoy</div><div class="dash-kpi-value" id="ventasHoy">$0</div><div class="dash-kpi-note">ventas registradas</div></article>
+          <article class="dash-kpi" style="--kcolor:#fbbf24;--kbg:rgba(245,158,11,.10);--kglow:rgba(245,158,11,.22)"><div class="dash-kpi-icon">◷</div><div class="dash-kpi-label">Pendientes</div><div class="dash-kpi-value" id="pendingCount">0</div><div class="dash-kpi-note">requieren operación</div></article>
+          <article class="dash-kpi" style="--kcolor:#c084fc;--kbg:rgba(168,85,247,.10);--kglow:rgba(168,85,247,.24)"><div class="dash-kpi-icon">◇</div><div class="dash-kpi-label">Ticket promedio</div><div class="dash-kpi-value" id="ticketPromDash">$0</div><div class="dash-kpi-note">promedio de hoy</div></article>
+        </section>
 
-      <div id="resumenPanel" style="display:none;margin:0 12px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;overflow:hidden;">
-        <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em">📊 Resumen del día</div>
-        <div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.05)">
-          <div style="font-size:11px;font-weight:700;color:#818cf8;margin-bottom:6px">🛵 DOMICILIOS</div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">Pedidos</span><span id="rDomCount" style="font-weight:700">0</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">Ventas</span><span id="rDomVentas" style="font-weight:700;color:#6ee7b7">$0</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">💵 Efectivo</span><span id="rDomEfectivo" style="font-weight:700">$0</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">📱 Digital</span><span id="rDomDigital" style="font-weight:700">$0</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text3)">💳 Datáfono</span><span id="rDomDatafono" style="font-weight:700">$0</span></div>
+        <section class="dash-main-grid">
+          <div class="dash-panel">
+            <div class="dash-panel-head"><div><div class="dash-panel-title">▥ Ventas de los últimos 7 días</div><div class="dash-panel-sub">Datos reales de pedidos registrados</div></div><div><div class="dash-chart-total" id="weekTotalDash">$0</div><div class="dash-panel-sub" style="text-align:right">Total semanal</div></div></div>
+            <div class="dash-chart" id="weekChart"><div style="margin:auto;color:var(--text3);font-size:11px">Cargando actividad…</div></div>
+          </div>
+          <aside class="dash-panel dash-luz">
+            <div class="dash-luz-head"><div class="dash-luz-orb"><span class="dash-luz-star">✦</span></div><div><div class="dash-luz-status">Luz · <b>Asistente Activa</b></div><div class="dash-panel-sub">Monitoreando la operación</div></div></div>
+            <div class="dash-luz-copy"><strong id="dashLuzTitle">Estoy observando tu operación ✨</strong><span id="luzActivityTxt">Monitoreando pedidos en tiempo real...</span><div id="luzWaveBar" style="display:flex;align-items:center;gap:2px;height:16px;opacity:.5;margin-top:8px"><div class="luz-vbar"></div><div class="luz-vbar"></div><div class="luz-vbar"></div><div class="luz-vbar"></div><div class="luz-vbar"></div></div></div>
+            <button class="dash-luz-btn" onclick="showTab('luz-ia')">Ver más insights →</button>
+          </aside>
+        </section>
+
+        <section class="dash-panel" style="margin-bottom:12px">
+          <div class="dash-panel-head"><div><div class="dash-panel-title"><span class="live-dot"></span> Actividad en tiempo real</div><div class="dash-panel-sub">Últimos movimientos de la operación</div></div><div class="dash-panel-sub">LIVE</div></div>
+          <div class="dash-activity" id="dashboardActivity"><div class="dash-activity-row"><div class="dash-activity-icon">✨</div><div><div class="dash-activity-title">Luz está conectando la actividad</div><div class="dash-activity-meta">Los movimientos aparecerán aquí</div></div><div class="dash-activity-side"><span class="dash-state">En vivo</span></div></div></div>
+        </section>
+
+        <div id="resumenPanel" style="display:none;margin-bottom:12px;background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.08);border-radius:18px;overflow:hidden;backdrop-filter:blur(20px)">
+          <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em">📊 Resumen financiero del día</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+            <div style="padding:11px 14px;border-right:1px solid rgba(255,255,255,.05)"><div style="font-size:10px;font-weight:700;color:#818cf8;margin-bottom:6px">🛵 DOMICILIOS</div><div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--text3)">Pedidos</span><b id="rDomCount">0</b></div><div style="display:flex;justify-content:space-between;font-size:11px;margin-top:4px"><span style="color:var(--text3)">Ventas</span><b id="rDomVentas" style="color:#6ee7b7">$0</b></div><span id="rDomEfectivo" hidden>$0</span><span id="rDomDigital" hidden>$0</span><span id="rDomDatafono" hidden>$0</span></div>
+            <div style="padding:11px 14px"><div style="font-size:10px;font-weight:700;color:#34d399;margin-bottom:6px">🪑 MESAS</div><div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--text3)">Pedidos</span><b id="rMesaCount">0</b></div><div style="display:flex;justify-content:space-between;font-size:11px;margin-top:4px"><span style="color:var(--text3)">Ventas</span><b id="rMesaVentas" style="color:#6ee7b7">$0</b></div><span id="rMesaEfectivo" hidden>$0</span><span id="rMesaDatafono" hidden>$0</span></div>
+          </div>
+          <div style="padding:11px 14px;border-top:1px solid rgba(255,255,255,.05);display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center"><div><div style="font-size:9px;color:var(--text3)">Pedidos</div><b id="rTotalCount">0</b></div><div><div style="font-size:9px;color:var(--text3)">Ventas</div><b id="rTotalVentas" style="color:#6ee7b7">$0</b></div><div><div style="font-size:9px;color:var(--text3)">Domicilios</div><b id="rTotalDomicilios">$0</b></div><div><div style="font-size:9px;color:var(--text3)">Ticket</div><b id="rTicketProm" style="color:#c4b5fd">$0</b></div></div>
         </div>
-        <div style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.05)">
-          <div style="font-size:11px;font-weight:700;color:#34d399;margin-bottom:6px">🪑 MESAS</div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">Pedidos</span><span id="rMesaCount" style="font-weight:700">0</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">Ventas</span><span id="rMesaVentas" style="font-weight:700;color:#6ee7b7">$0</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">💵 Efectivo</span><span id="rMesaEfectivo" style="font-weight:700">$0</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text3)">💳 Datáfono</span><span id="rMesaDatafono" style="font-weight:700">$0</span></div>
-        </div>
-        <div style="padding:10px 16px;background:rgba(16,185,129,0.05)">
-          <div style="font-size:11px;font-weight:700;color:#fbbf24;margin-bottom:6px">💰 TOTALES</div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">Total pedidos</span><span id="rTotalCount" style="font-weight:700">0</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:3px"><span style="color:var(--text);font-weight:700">Total ventas</span><span id="rTotalVentas" style="font-weight:800;color:#6ee7b7;font-size:16px">$0</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span style="color:var(--text3)">Domicilios cobrados</span><span id="rTotalDomicilios" style="font-weight:700">$0</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text3)">Ticket promedio</span><span id="rTicketProm" style="font-weight:700;color:#c4b5fd">$0</span></div>
-        </div>
+
+        <div class="dash-orders-head"><div><div class="dash-orders-head-title">Pedidos activos</div><div class="dash-orders-head-sub">Operación detallada · conserva todas tus acciones actuales</div></div><span class="dash-state">Tiempo real</span></div>
       </div>
       <div class="pedidos-pad" id="pedidosLista"><div class="empty"><div class="ei">🛒</div><div class="et">No hay pedidos activos</div></div></div>
     </div>
@@ -2212,7 +2264,7 @@ document.addEventListener("DOMContentLoaded", function(){
   <div class="float-nav">
     <div class="float-nav-inner">
       <div class="fnav-tab" id="tab-luz-ia" onclick="showTab('luz-ia')"><div class="fnav-icon" style="font-size:20px">✨</div><div class="fnav-label">Luz IA</div></div>
-      <div class="fnav-tab active" id="tab-pedidos"><div class="fnav-icon">🛒</div><div class="fnav-label">Pedidos</div><div class="nav-badge" id="pedidosBadge"></div></div>
+      <div class="fnav-tab active" id="tab-pedidos"><div class="fnav-icon">⌂</div><div class="fnav-label">Inicio</div><div class="nav-badge" id="pedidosBadge"></div></div>
       <div class="fnav-tab" id="tab-historial"><div class="fnav-icon">📊</div><div class="fnav-label">Historial</div></div>
       <div class="fnav-tab" id="tab-menu"><div class="fnav-icon">📋</div><div class="fnav-label">Menú</div></div>
       <div class="fnav-tab fnav-center" id="tab-chat"><div class="fnav-center-ring"><div style="font-size:24px">💬</div></div><div class="fnav-label">Chats</div><div class="nav-badge" id="chatBadge"></div></div>
@@ -2655,8 +2707,11 @@ function goApp(){
   document.getElementById("app").style.display="block";
   var p=rest.nombre.split(" "),l=p.pop();
   document.getElementById("restNombre").innerHTML=p.join(" ")+" <span>"+l+"</span>";
+  var dn=document.getElementById("dashRestName");if(dn)dn.textContent=rest.nombre||"Restaurante";
+  var ds=document.getElementById("dashRestSub");if(ds)ds.textContent=(rest.slogan||rest.hero_slogan||"Operaciones en tiempo real")+" · Hola Luz";
+  var dl=document.getElementById("dashRestLogo");if(dl&&rest.logo_url){dl.innerHTML='<img src="'+escHtml(rest.logo_url)+'" alt="Logo" onerror="this.parentNode.textContent=\'🍽️\'">';}
   localStorage.setItem("luzRestId",rest.id);
-  loadPedidos();loadStats();cargarConfig();renderCupones();
+  loadPedidos();loadStats();loadDashboardWeek();cargarConfig();renderCupones();
   setTimeout(function(){loadMenuEditor();},1500);
   timer=setInterval(function(){loadPedidos();loadStats();checkNuevosMensajes();checkProgsAutomaticas();checkResetSilencios();},8000);
   setTimeout(checkNuevosMensajes,2000);setTimeout(checkProgsAutomaticas,3000);
@@ -3275,14 +3330,17 @@ function loadStats(){
   if(!rest)return;
   var col=getHoraColombia();
   var desde=new Date(Date.UTC(col.getFullYear(),col.getMonth(),col.getDate(),5,0,0)).toISOString();
-  get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+desde+"&estado=not.in.(cancelado,cuenta)&select=total,domicilio,metodo_pago,direccion").then(function(p){
-    if(!p||!p.length){document.getElementById("countHoy").textContent=0;document.getElementById("ventasHoy").textContent="$0";document.getElementById("subDomMesa").textContent="sin pedidos hoy";return;}
+  get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+desde+"&estado=not.in.(cancelado,cuenta)&select=total,domicilio,metodo_pago,direccion,estado,created_at,numero_pedido,items,cliente_nombre").then(function(p){
+    p=Array.isArray(p)?p:[];
+    var countEl=document.getElementById("countHoy"),ventasEl=document.getElementById("ventasHoy"),subEl=document.getElementById("subDomMesa");
+    if(!p.length){if(countEl)countEl.textContent=0;if(ventasEl)ventasEl.textContent="$0";if(subEl)subEl.textContent="sin pedidos hoy";setText("pendingCount","0");setText("ticketPromDash","$0");renderDashboardActivity([]);return;}
     var domicilios=[],mesas=[];
     p.forEach(function(x){if((x.direccion||"").toLowerCase().startsWith("mesa "))mesas.push(x);else domicilios.push(x);});
     var totalVentas=p.reduce(function(s,x){return s+Number(x.total||0);},0);
-    document.getElementById("countHoy").textContent=p.length;
-    document.getElementById("ventasHoy").textContent=fmt(totalVentas);
-    document.getElementById("subDomMesa").textContent=domicilios.length+" domis · "+mesas.length+" mesas";
+    var pendientes=p.filter(function(x){return !["entregado","cancelado"].includes((x.estado||"").toLowerCase());}).length;
+    var ticket=Math.round(totalVentas/(p.length||1));
+    if(countEl)countEl.textContent=p.length;if(ventasEl)ventasEl.textContent=fmt(totalVentas);if(subEl)subEl.textContent=domicilios.length+" domis · "+mesas.length+" mesas";
+    setText("pendingCount",String(pendientes));setText("ticketPromDash",fmt(ticket));
     var domVentas=domicilios.reduce(function(s,x){return s+Number(x.total||0);},0);
     var domEfectivo=domicilios.filter(function(x){return(x.metodo_pago||"").toLowerCase()==="efectivo";}).reduce(function(s,x){return s+Number(x.total||0);},0);
     var domDatafono=domicilios.filter(function(x){return(x.metodo_pago||"").toLowerCase()==="datafono";}).reduce(function(s,x){return s+Number(x.total||0);},0);
@@ -3291,21 +3349,17 @@ function loadStats(){
     var mesaVentas=mesas.reduce(function(s,x){return s+Number(x.total||0);},0);
     var mesaEfectivo=mesas.filter(function(x){return(x.metodo_pago||"").toLowerCase()==="efectivo";}).reduce(function(s,x){return s+Number(x.total||0);},0);
     var mesaDatafono=mesas.filter(function(x){return(x.metodo_pago||"").toLowerCase()==="datafono";}).reduce(function(s,x){return s+Number(x.total||0);},0);
-    document.getElementById("rDomCount").textContent=domicilios.length;
-    document.getElementById("rDomVentas").textContent=fmt(domVentas);
-    document.getElementById("rDomEfectivo").textContent=fmt(domEfectivo);
-    document.getElementById("rDomDigital").textContent=fmt(domDigital);
-    document.getElementById("rDomDatafono").textContent=fmt(domDatafono);
-    document.getElementById("rMesaCount").textContent=mesas.length;
-    document.getElementById("rMesaVentas").textContent=fmt(mesaVentas);
-    document.getElementById("rMesaEfectivo").textContent=fmt(mesaEfectivo);
-    document.getElementById("rMesaDatafono").textContent=fmt(mesaDatafono);
-    document.getElementById("rTotalCount").textContent=p.length;
-    document.getElementById("rTotalVentas").textContent=fmt(totalVentas);
-    document.getElementById("rTotalDomicilios").textContent=fmt(domDomicilios);
-    document.getElementById("rTicketProm").textContent=fmt(Math.round(totalVentas/(p.length||1)));
-  }).catch(function(){});
+    setText("rDomCount",domicilios.length);setText("rDomVentas",fmt(domVentas));setText("rDomEfectivo",fmt(domEfectivo));setText("rDomDigital",fmt(domDigital));setText("rDomDatafono",fmt(domDatafono));
+    setText("rMesaCount",mesas.length);setText("rMesaVentas",fmt(mesaVentas));setText("rMesaEfectivo",fmt(mesaEfectivo));setText("rMesaDatafono",fmt(mesaDatafono));
+    setText("rTotalCount",p.length);setText("rTotalVentas",fmt(totalVentas));setText("rTotalDomicilios",fmt(domDomicilios));setText("rTicketProm",fmt(ticket));
+    var luzTitle=document.getElementById("dashLuzTitle"),luzText=document.getElementById("luzActivityTxt");
+    if(luzTitle&&luzText){if(pendientes>=5){luzTitle.textContent="Hay movimiento operativo ⚡";luzText.textContent=pendientes+" pedidos siguen activos. Conviene revisar tiempos de cocina y entrega.";}else if(pendientes>0){luzTitle.textContent="Operación bajo control ✨";luzText.textContent=pendientes+" pedido"+(pendientes===1?"":"s")+" activo"+(pendientes===1?"":"s")+" en este momento.";}else{luzTitle.textContent="Todo tranquilo por ahora ✨";luzText.textContent="No hay pedidos pendientes. Sigo monitoreando el restaurante.";}}
+    renderDashboardActivity(p.slice().sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);}).slice(0,4));
+  }).catch(function(e){console.warn("[dashboard] stats",e);});
 }
+function setText(id,value){var el=document.getElementById(id);if(el)el.textContent=value;}
+function renderDashboardActivity(rows){var box=document.getElementById("dashboardActivity");if(!box)return;if(!rows||!rows.length){box.innerHTML='<div class="dash-activity-row"><div class="dash-activity-icon">✨</div><div><div class="dash-activity-title">Sin movimientos recientes</div><div class="dash-activity-meta">Luz sigue monitoreando la operación</div></div><div class="dash-activity-side"><span class="dash-state">En vivo</span></div></div>';return;}var stateLabel={confirmado:"Confirmado",en_preparacion:"En cocina",listo:"Listo",en_camino:"En camino",entregado:"Entregado",cuenta:"Cuenta"};var stateIcon={confirmado:"🛍️",en_preparacion:"👨‍🍳",listo:"✨",en_camino:"🛵",entregado:"✓",cuenta:"💳"};box.innerHTML=rows.map(function(x){var st=(x.estado||"confirmado").toLowerCase();var items=x.items;if(typeof items==="string"){try{items=JSON.parse(items);}catch(e){items=[];}}var itemTxt=Array.isArray(items)?items.slice(0,2).map(function(i){return typeof i==="string"?i:(i.nombre||"");}).filter(Boolean).join(" + "):"";return '<div class="dash-activity-row"><div class="dash-activity-icon">'+(stateIcon[st]||"•")+'</div><div><div class="dash-activity-title">Pedido #'+escHtml(String(x.numero_pedido||""))+' · '+(stateLabel[st]||st)+'</div><div class="dash-activity-meta">'+escHtml(itemTxt||x.cliente_nombre||x.direccion||"Movimiento registrado")+'</div></div><div class="dash-activity-side"><div class="dash-activity-time">'+ago(x.created_at)+'</div><span class="dash-state">'+escHtml(stateLabel[st]||st)+'</span></div></div>';}).join("");}
+function loadDashboardWeek(){if(!rest)return;var now=new Date(),desde=new Date(now.getTime()-6*24*60*60*1000);get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+desde.toISOString()+"&estado=not.in.(cancelado,cuenta)&select=total,created_at").then(function(rows){rows=Array.isArray(rows)?rows:[];var days=[],map={};for(var i=6;i>=0;i--){var d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-i);var key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");var lab=["D","L","M","M","J","V","S"][d.getDay()];days.push({key:key,label:lab,total:0});map[key]=days[days.length-1];}rows.forEach(function(r){var d=new Date(r.created_at);var key=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");if(map[key])map[key].total+=Number(r.total||0);});var max=Math.max.apply(null,days.map(function(d){return d.total;}));if(!isFinite(max)||max<=0)max=1;var total=days.reduce(function(a,d){return a+d.total;},0);setText("weekTotalDash",fmt(total));var chart=document.getElementById("weekChart");if(chart)chart.innerHTML=days.map(function(d){var h=Math.max(4,Math.round((d.total/max)*118));return '<div class="dash-bar-wrap" title="'+d.label+': '+fmt(d.total)+'"><div class="dash-bar" style="height:'+h+'px"></div><div class="dash-bar-label">'+d.label+'</div></div>';}).join("");}).catch(function(e){console.warn("[dashboard] week",e);});}
 function toggleResumen(){var panel=document.getElementById("resumenPanel");panel.style.display=panel.style.display==="none"?"block":"none";}
 document.getElementById("editCancelar").addEventListener("click",function(){document.getElementById("editOverlay").classList.remove("open");editPedidoId=null;});
 document.getElementById("editOverlay").addEventListener("click",function(e){if(e.target===this){this.classList.remove("open");editPedidoId=null;}});
