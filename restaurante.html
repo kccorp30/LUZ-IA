@@ -2872,44 +2872,42 @@ function dots(){for(var i=0;i<4;i++){var d=document.getElementById("d"+i);if(d){
 for(var _i=0;_i<=9;_i++){(function(n){var el=document.getElementById("k"+n);if(el)el.addEventListener("click",function(){pinKey(String(n));});}(_i));}
 document.getElementById("kdel").addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
 
+var pinChecking=false;
 async function chkPin(){
-  var errEl=document.getElementById("pinErr");
-  if(tipoActual==="charr"){
-    try{
-      var r=await fetch("/api/charr/verify-pin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:pin})});
-      var d=await r.json();
-      if(d.ok){
-        localStorage.setItem("charr_account",JSON.stringify(d.account));
-        document.getElementById("pinScreen").style.display="none";
-        notif("✅ Bienvenido, "+d.account.nombre_negocio);
-      } else {
-        if(errEl)errEl.textContent="PIN incorrecto";
-        var b=document.querySelector(".pin-box");if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}
-        pin="";dots();
-      }
-    }catch(e){if(errEl)errEl.textContent="Error de conexión";pin="";dots();}
-  } else {
-    // Buscar por PIN — acepta activo O trial (no bloqueados)
-    get("restaurantes","pin=eq."+pin+"&select=*").then(function(d){
-      if(d&&d.length){
-        var r=d[0];
-        // Rechazar solo si está explícitamente suspendido
-        if(r.estado==="suspendido"){
-          if(errEl)errEl.textContent="Cuenta suspendida. Contacta a LUZ IA.";
-          pin="";dots();return;
-        }
-        enterApp(r);
-      } else {
-        if(errEl)errEl.textContent="PIN incorrecto";
-        var b=document.querySelector(".pin-box");
-        if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}
-        pin="";dots();
-      }
-    }).catch(function(e){
-      console.error("[chkPin] error:",e);
-      if(errEl)errEl.textContent="Error de conexión. Verifica tu internet.";
-      pin="";dots();
-    });
+  if(pinChecking||pin.length!==4)return;
+  pinChecking=true;
+  var errEl=document.getElementById("pinErr"),currentPin=pin;
+  if(errEl){errEl.style.color="#a5f3fc";errEl.textContent="Verificando…";}
+  try{
+    if(tipoActual==="charr"){
+      var cr=await fetch("/api/charr/verify-pin",{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:currentPin})});
+      if(!cr.ok)throw new Error("HTTP "+cr.status);
+      var cd=await cr.json();
+      if(!cd||!cd.ok)throw new Error("PIN_INVALID");
+      localStorage.setItem("charr_account",JSON.stringify(cd.account));
+      document.getElementById("pinScreen").style.display="none";
+      notif("✅ Bienvenido, "+((cd.account&&cd.account.nombre_negocio)||"CHARR Tower"));
+      return;
+    }
+    var url="/api/supabase/restaurantes?pin=eq."+encodeURIComponent(currentPin)+"&select=*&_="+Date.now();
+    var rr=await fetch(url,{method:"GET",cache:"no-store",headers:{"Accept":"application/json"}});
+    if(!rr.ok)throw new Error("HTTP "+rr.status);
+    var rows=await rr.json();
+    if(!Array.isArray(rows)||!rows.length)throw new Error("PIN_INVALID");
+    var restaurante=rows[0];
+    if(restaurante.estado==="suspendido"){
+      if(errEl){errEl.style.color="#fca5a5";errEl.textContent="Cuenta suspendida. Contacta a HOLA LUZ.";}
+      pin="";dots();return;
+    }
+    if(errEl)errEl.textContent="";
+    enterApp(restaurante);
+  }catch(e){
+    console.error("[chkPin]",e);
+    if(errEl){errEl.style.color="#f87171";errEl.textContent=(String(e&&e.message)==="PIN_INVALID")?"PIN incorrecto":"No se pudo validar el PIN. Intenta de nuevo.";}
+    var b=document.querySelector(".pin-box");if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");},500);}
+    pin="";dots();
+  }finally{
+    pinChecking=false;
   }
 }
 // ── MOSTRAR PANTALLA AL CARGAR ───────────────────────────────────────────────
@@ -2930,8 +2928,9 @@ function enterApp(restauranteData){
 function goApp(){
   document.getElementById("pinScreen").style.display="none";
   document.getElementById("app").style.display="block";
-  var p=rest.nombre.split(" "),l=p.pop();
-  document.getElementById("restNombre").innerHTML=p.join(" ")+" <span>"+l+"</span>";
+  var safeName=(rest&&rest.nombre)?String(rest.nombre):"Restaurante";
+  var p=safeName.split(" "),l=p.pop()||"";
+  var rn=document.getElementById("restNombre");if(rn)rn.innerHTML=(p.join(" ")+(l?" <span>"+escHtml(l)+"</span>":""));
   var dn=document.getElementById("dashRestName");if(dn)dn.textContent=rest.nombre||"Restaurante";
   var han=document.getElementById("hlAccountName");if(han)han.textContent=rest.nombre||"Restaurante";var hav=document.getElementById("hlAccountAvatar");if(hav){var initials=(rest.nombre||"HL").split(/\s+/).slice(0,2).map(function(x){return x.charAt(0)}).join("").toUpperCase();hav.textContent=initials||"HL";}
   var ds=document.getElementById("dashRestSub");if(ds)ds.textContent=(rest.slogan||rest.hero_slogan||"Operaciones en tiempo real")+" · Hola Luz";
