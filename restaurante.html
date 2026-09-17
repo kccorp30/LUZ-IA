@@ -2838,59 +2838,115 @@ function dots(){for(var i=0;i<4;i++){var d=document.getElementById("d"+i);if(d){
 for(var _i=0;_i<=9;_i++){(function(n){var el=document.getElementById("k"+n);if(el)el.addEventListener("click",function(){pinKey(String(n));});}(_i));}
 document.getElementById("kdel").addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
 
-async function chkPin(){
-  var errEl=document.getElementById("pinErr");
-  var verifyEl=document.getElementById("pinVerify");
-  if(errEl)errEl.textContent="";
-  if(verifyEl)verifyEl.classList.add("active");
+function fetchPinQueryStable(pinValue){
+  var query='restaurantes?pin=eq.'+encodeURIComponent(pinValue)+'&select=*';
 
-  if(tipoActual==="charr"){
+  function timedFetch(url, ms){
+    if(typeof AbortController==='undefined') return fetch(url,{cache:'no-store'});
+    var controller=new AbortController();
+    var timer=setTimeout(function(){controller.abort();},ms||7000);
+    return fetch(url,{cache:'no-store',signal:controller.signal}).finally(function(){clearTimeout(timer);});
+  }
+
+  // 1) Flujo ORIGINAL del panel: /api/supabase/restaurantes...
+  return timedFetch('/api/supabase/'+query,7000)
+    .then(function(r){
+      if(!r.ok) throw new Error('SUPABASE_PROXY_'+r.status);
+      return r.json();
+    })
+    .then(function(d){
+      if(Array.isArray(d)) return {rows:d,source:'original'};
+      throw new Error('INVALID_PROXY_RESPONSE');
+    })
+    .catch(function(primaryErr){
+      console.warn('[login] proxy original no respondió; usando proxy legacy',primaryErr);
+      // 2) Fallback que YA EXISTE en el index viejo. No requiere cambiar backend.
+      return timedFetch('/api/proxy-db?q='+encodeURIComponent(query),7000)
+        .then(function(r){
+          if(!r.ok) throw new Error('LEGACY_PROXY_'+r.status);
+          return r.json();
+        })
+        .then(function(d){
+          if(Array.isArray(d)) return {rows:d,source:'legacy'};
+          throw new Error('INVALID_LEGACY_RESPONSE');
+        });
+    });
+}
+
+async function chkPin(){
+  var errEl=document.getElementById('pinErr');
+  var verifyEl=document.getElementById('pinVerify');
+  if(errEl)errEl.textContent='';
+  if(verifyEl){
+    var vb=verifyEl.querySelector('b'),vs=verifyEl.querySelector('small');
+    if(vb)vb.textContent='Verificando acceso…';
+    if(vs)vs.textContent='Conexión segura con tu restaurante';
+    verifyEl.classList.add('active');
+  }
+
+  if(tipoActual==='charr'){
     try{
-      var r=await fetch("/api/charr/verify-pin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pin:pin})});
+      var r=await fetch('/api/charr/verify-pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:pin})});
       var d=await r.json();
       if(d.ok){
-        localStorage.setItem("charr_account",JSON.stringify(d.account));
-        document.getElementById("pinScreen").style.display="none";
-        notif("✅ Bienvenido, "+d.account.nombre_negocio);
-      } else {
-        if(errEl)errEl.textContent="PIN incorrecto";
-        var b=document.querySelector(".pin-box");if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}
-        pin="";dots();
+        localStorage.setItem('charr_account',JSON.stringify(d.account));
+        document.getElementById('pinScreen').style.display='none';
+        notif('✅ Bienvenido, '+d.account.nombre_negocio);
+      }else{
+        if(errEl)errEl.textContent='PIN incorrecto';
+        var b=document.querySelector('.pin-box');if(b){b.classList.add('pin-shake');setTimeout(function(){b.classList.remove('pin-shake');if(errEl)errEl.textContent='';},500);}
+        pin='';dots();
       }
-    }catch(e){if(errEl)errEl.textContent="Error de conexión";pin="";dots();}
-    finally{if(verifyEl)verifyEl.classList.remove("active");}
-  } else {
-    // Login aislado del proxy genérico. No cambia ninguna otra función del panel.
-    try{
-      var resp=await fetch("/api/restaurante/login-pin",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","Cache-Control":"no-store"},
-        body:JSON.stringify({pin:pin}),
-        cache:"no-store"
-      });
-      var data={};
-      try{data=await resp.json();}catch(parseErr){}
-      if(resp.ok&&data.ok&&data.restaurante){
-        if(verifyEl){verifyEl.querySelector("b").textContent="Acceso confirmado";verifyEl.querySelector("small").textContent="Preparando tu espacio de trabajo…";}
-        setTimeout(function(){enterApp(data.restaurante);},260);
+    }catch(e){
+      if(errEl)errEl.textContent='Error de conexión';
+      pin='';dots();
+    }finally{
+      if(verifyEl)verifyEl.classList.remove('active');
+    }
+    return;
+  }
+
+  try{
+    var result=await fetchPinQueryStable(pin);
+    var rows=result.rows||[];
+    if(rows.length){
+      var restauranteData=rows[0];
+      if(restauranteData.estado==='suspendido'){
+        if(errEl)errEl.textContent='Cuenta suspendida. Contacta a HOLA LUZ.';
+        pin='';dots();
         return;
       }
-      if(data.code==="BAD_PIN"||resp.status===401){
-        if(errEl)errEl.textContent="PIN incorrecto";
-      }else{
-        if(errEl)errEl.textContent="La conexión con el restaurante está tardando. Intenta de nuevo.";
+      if(verifyEl){
+        var okb=verifyEl.querySelector('b'),oks=verifyEl.querySelector('small');
+        if(okb)okb.textContent='Acceso confirmado';
+        if(oks)oks.textContent='Preparando tu espacio de trabajo…';
       }
-      var box=document.querySelector(".pin-box");if(box){box.classList.add("pin-shake");setTimeout(function(){box.classList.remove("pin-shake");},500);}
-      pin="";dots();
-    }catch(e){
-      console.error("[chkPin] login endpoint:",e);
-      if(errEl)errEl.textContent="No pudimos conectar con el servidor. Intenta nuevamente.";
-      pin="";dots();
-    }finally{
-      setTimeout(function(){
-        if(verifyEl){verifyEl.classList.remove("active");var b=verifyEl.querySelector("b"),sm=verifyEl.querySelector("small");if(b)b.textContent="Verificando acceso…";if(sm)sm.textContent="Conexión segura con tu restaurante";}
-      },320);
+      setTimeout(function(){enterApp(restauranteData);},220);
+      return;
     }
+    // Si el proxy original respondió correctamente con [] entonces el PIN no existe.
+    if(result.source==='original'){
+      if(errEl)errEl.textContent='PIN incorrecto';
+    }else{
+      // El legacy devuelve [] también ante errores de BD; no acusamos PIN incorrecto.
+      if(errEl)errEl.textContent='No pudimos verificar el restaurante. Intenta de nuevo.';
+    }
+    var box=document.querySelector('.pin-box');
+    if(box){box.classList.add('pin-shake');setTimeout(function(){box.classList.remove('pin-shake');},500);}
+    pin='';dots();
+  }catch(e){
+    console.error('[chkPin] ambos proxies fallaron:',e);
+    if(errEl)errEl.textContent='La conexión con el restaurante está tardando. Intenta nuevamente.';
+    pin='';dots();
+  }finally{
+    setTimeout(function(){
+      if(verifyEl){
+        verifyEl.classList.remove('active');
+        var b2=verifyEl.querySelector('b'),sm2=verifyEl.querySelector('small');
+        if(b2)b2.textContent='Verificando acceso…';
+        if(sm2)sm2.textContent='Conexión segura con tu restaurante';
+      }
+    },300);
   }
 }
 // ── MOSTRAR PANTALLA AL CARGAR ───────────────────────────────────────────────
@@ -8072,6 +8128,28 @@ window.renderOrdersV5=function(){
 .access-security{position:absolute;left:34px;right:34px;bottom:15px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:7px;letter-spacing:.09em;color:rgba(211,219,255,.30)}.access-security svg{width:14px;height:14px;color:#67e8f9}
 @media(max-width:900px){#pinScreen.hl-access-screen{padding:14px}.hl-access-shell{grid-template-columns:1fr;max-width:560px}.hl-access-story{display:none}#pinScreen .pin-box.hl-access-card{min-height:auto;padding:26px 24px 52px}}
 @media(max-width:520px){#pinScreen.hl-access-screen{padding:8px}#pinScreen .pin-box.hl-access-card{padding:22px 16px 48px;border-radius:26px}.country-grid{grid-template-columns:1fr 1fr;gap:8px}.country-visual{height:115px}.country-copy{padding:10px}.business-grid{gap:8px}.business-card{min-height:112px;padding:12px 8px}.access-step h2{font-size:23px}.hl-step-rail i{width:42px}#pinScreen .access-keypad .key{height:53px}}
+
+/* V7.3 — acceso con foco en la selección, branding integrado al ambiente */
+@media(min-width:901px){
+  .hl-access-shell{width:min(1260px,100%);grid-template-columns:minmax(350px,.76fr) minmax(540px,620px);gap:54px}
+  .hl-access-story{min-height:650px;padding:42px 8px 34px 0;border:0;border-radius:0;background:transparent;backdrop-filter:none;box-shadow:none;position:relative;overflow:visible}
+  .hl-access-story:before{content:"";position:absolute;width:620px;height:620px;left:-230px;top:0;background:radial-gradient(circle,rgba(40,102,255,.24),rgba(89,46,255,.10) 38%,transparent 70%);filter:blur(18px);pointer-events:none;z-index:-1}
+  .hl-access-brand{padding-left:3px}.hl-access-logo{font-size:34px}.hl-access-brand-orb{width:62px;height:62px}
+  .hl-story-copy{margin-top:auto;margin-bottom:32px;max-width:490px}.hl-story-copy h1{font-size:54px}.hl-story-copy p{font-size:16px;max-width:460px}
+  .hl-story-points{gap:11px;max-width:455px}.hl-story-points>div{padding:10px 0 10px 14px;border:0;border-left:1px solid rgba(96,165,250,.22);border-radius:0;background:transparent}.hl-story-points span{background:rgba(15,31,75,.52);border:1px solid rgba(96,165,250,.16)}
+  .hl-story-footer{margin-top:22px;padding-left:2px}
+  #pinScreen .pin-box.hl-access-card{min-height:650px;padding:31px 38px 25px;border-color:rgba(89,121,255,.52);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 36px 100px rgba(0,0,0,.48),0 0 70px rgba(67,56,202,.22),0 0 120px rgba(34,211,238,.08)}
+}
+.country-grid{gap:15px}.country-card{border-color:rgba(104,128,255,.34);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 16px 38px rgba(0,0,0,.28),0 0 24px rgba(56,89,255,.08)}
+.country-card:hover{transform:translateY(-5px) scale(1.012);border-color:rgba(91,226,255,.88);box-shadow:0 0 0 1px rgba(124,58,237,.18),0 0 34px rgba(34,211,238,.22),0 22px 44px rgba(0,0,0,.34)}
+.country-visual{height:172px}.country-visual:before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.09),transparent 24%,transparent 72%,rgba(88,207,255,.08));z-index:2;pointer-events:none}
+.country-card .country-flag{width:48%;left:7%;bottom:8%;border-radius:9px;border:1px solid rgba(255,255,255,.52);background:rgba(255,255,255,.06);box-shadow:0 10px 25px rgba(0,0,0,.44),0 0 18px rgba(255,255,255,.10);filter:saturate(1.08) contrast(1.04);transform:rotate(-2deg);z-index:3;transition:.28s ease}
+.country-card .country-flag.us{width:53%;left:7%;bottom:8%;transform:rotate(-2deg)}
+.country-card:hover .country-flag{transform:translateY(-4px) rotate(-1deg) scale(1.035);box-shadow:0 14px 30px rgba(0,0,0,.48),0 0 24px rgba(103,232,249,.18)}
+.country-card:hover .country-flag.us{transform:translateY(-4px) rotate(-1deg) scale(1.035)}
+.country-copy{padding:15px 17px 17px}.country-copy strong{font-size:18px}.country-copy span{font-size:8.5px}.country-copy em{font-size:9px;color:rgba(231,236,255,.67)}
+@media(max-width:520px){.country-visual{height:128px}.country-card .country-flag,.country-card .country-flag.us{width:54%;left:7%;bottom:8%}.country-copy strong{font-size:15px}}
+
 </style>
 
 <script id="holaLuzAccessV7JS">
