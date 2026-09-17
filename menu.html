@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A0710">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2512,7 +2512,7 @@ body::after {
   <div class="greet">
     <div class="greet-label">La Curva · Street Food</div>
     <h1 class="greet-title" id="heroGreet">Buenas 👋</h1>
-    <div class="greet-sub" id="heroSub">Pide tu favorito, llega rapidito</div>
+    <div class="greet-sub" id="heroSub">¿Qué se te antoja hoy?</div>
   </div>
 
   <div class="tipos">
@@ -2523,7 +2523,7 @@ body::after {
       <span class="ico">🏪</span> Recoger
     </button>
     <button class="tipo-chip hide" id="t-mesa" onclick="setTipo('mesa')">
-      <span class="ico">🍽️</span> Mesa
+      <span class="ico">🍽️</span> Comer aquí
     </button>
   </div>
 
@@ -2537,14 +2537,12 @@ body::after {
   </div>
 </section>
 
-<section class="prms">
-  <div class="prms-wrap" id="prmsWrap"></div>
-</section>
+
 
 <section class="srch-wrap">
   <div class="srch">
     <span class="srch-ico">🔍</span>
-    <input id="srchInput" type="text" placeholder="Buscar producto..." oninput="filtrarBusqueda(this.value)">
+    <input id="srchInput" aria-label="Buscar en el menú" type="search" placeholder="Busca tu próximo favorito" oninput="filtrarBusqueda(this.value)">
     <button class="srch-clear hide" id="srchClear" onclick="limpiarBusqueda()">✕</button>
   </div>
   <div class="srch-results-info hide" id="srchResults"></div>
@@ -2559,6 +2557,9 @@ body::after {
   </div>
 </div>
 
+<section class="prms" aria-label="Promociones del restaurante">
+  <div class="prms-wrap" id="prmsWrap"></div>
+</section>
 <main class="prods" id="prodsArea">
   <div class="skel-card">
     <div class="skel skel-img"></div>
@@ -2588,7 +2589,7 @@ body::after {
 
 <button class="cart-fab" id="cartFab" onclick="openCart()">
   <span class="cart-fab-ico">
-    🛒
+    <span data-icon="bag"></span>
     <span class="cart-fab-badge" id="cartFabQty">0</span>
   </span>
   <span class="cart-fab-label">
@@ -2611,7 +2612,7 @@ body::after {
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <!-- ═══ CHECKOUT SHEET ═══ -->
 <div class="sheet-bg" id="checkoutOv">
@@ -2859,11 +2860,7 @@ function actualizarSaludo() {
 }
 
 // ── Promos ──
-var PROMOS_DEFAULT = [
-  { titulo:"2x1 en Combos", desc:"Todos los martes pide dos combos al precio de uno", c1:"#7c1a08", c2:"#3d0d04", ico:"🍔" },
-  { titulo:"Domicilio Gratis", desc:"En pedidos mayores a $30.000", c1:"#0a2a1a", c2:"#051409", ico:"🛵" },
-  { titulo:"Puntos Dobles", desc:"Acumula el doble de puntos los fines de semana", c1:"#1a1408", c2:"#0a0904", ico:"⭐" }
-];
+var PROMOS_DEFAULT = []; // Only configured promotions are presented.
 
 function renderPromos() {
   var wrap = document.getElementById("prmsWrap");
@@ -2953,7 +2950,7 @@ async function cargarMenu() {
         return Object.assign({}, i, { categoria: "Hamburguesas Tradicionales" });
       });
     } else {
-      CLASICAS = CLASICAS_FALLBACK.slice();
+      CLASICAS = (menuResp || []).filter(function(i){ return esClasicaCat(i.categoria) && i.disponible !== false; }); // Never invent purchasable items.
     }
 
     // 1. Top vendidos (automático)
@@ -3110,9 +3107,9 @@ function renderDestacadosSection() {
 
   var h = '<section class="clasicas-section" id="sec-destacados">';
   h += '<div class="clasicas-header" style="background:linear-gradient(135deg,rgba(255,59,0,0.14) 0%,rgba(255,122,26,0.08) 100%);border-color:rgba(255,59,0,0.22)">';
-  h += '<div class="clasicas-badge" style="background:linear-gradient(135deg,#FF3B00,#FF7A1A);">🔥 Más Vendidos</div>';
-  h += '<div class="clasicas-title">Los Favoritos de La Curva</div>';
-  h += '<div class="clasicas-sub">Lo que más piden nuestros clientes · ' + destacados.length + ' opción' + (destacados.length !== 1 ? 'es' : '') + '</div>';
+  h += '<div class="clasicas-badge" style="background:linear-gradient(135deg,#FF3B00,#FF7A1A);">Selección del restaurante</div>';
+  h += '<div class="clasicas-title">Selección de la casa</div>';
+  h += '<div class="clasicas-sub">Para descubrir y volver a pedir · ' + destacados.length + ' opción' + (destacados.length !== 1 ? 'es' : '') + '</div>';
   h += '</div>';
   h += '<div class="prods-grid">';
   destacados.forEach(function(i, idx) {
@@ -3127,7 +3124,7 @@ function renderClasicasSection() {
   var h = '<section class="clasicas-section" id="sec-clasicas">';
   h += '<div class="clasicas-header">';
   h += '<div class="clasicas-badge">🔥 Tradicionales</div>';
-  h += '<div class="clasicas-title">Las Clásicas de La Curva</div>';
+  h += '<div class="clasicas-title">Las clásicas</div>';
   h += '<div class="clasicas-sub">Las de toda la vida, hechas artesanales · ' + CLASICAS.length + ' opciones</div>';
   h += '</div>';
   h += '<div class="prods-grid">';
@@ -3196,9 +3193,9 @@ function renderProductCard(item, idx, esClasica, tipoDestacado) {
   // Imagen
   var imgHtml;
   if (item.imagen_url) {
-    imgHtml = '<img src="' + escHtml(item.imagen_url) + '" alt="' + escHtml(item.nombre) + '" onerror="this.style.display=\'none\';this.nextElementSibling&&(this.nextElementSibling.style.display=\'flex\')" loading="lazy"><div class="pcard-img-emoji" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center">' + (item.emoji || "🍔") + '</div>';
+    imgHtml = '<img src="' + escHtml(item.imagen_url) + '" alt="' + escHtml(item.nombre) + '" onerror="this.style.display=\'none\';this.nextElementSibling&&(this.nextElementSibling.style.display=\'flex\')" loading="lazy"><div class="pcard-img-emoji" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center">' + "Foto pendiente" + '</div>';
   } else {
-    imgHtml = '<span class="pcard-img-emoji">' + (item.emoji || "🍔") + '</span>';
+    imgHtml = '<span class="pcard-img-emoji">' + "Foto pendiente" + '</span>';
   }
 
   // Badge en imagen (oferta)
@@ -3229,7 +3226,7 @@ function renderProductCard(item, idx, esClasica, tipoDestacado) {
     destBadge = '<div class="pcard-trad-badge">⭐ Clásica</div>';
   }
 
-  return '<article class="' + classes.join(" ") + '" id="pc-' + item.id + '" style="animation-delay:' + delay + 'ms" onclick="abrirDetalleProducto(\''+item.id+'\')">'
+  return '<article tabindex="0" onkeydown="if(event.target===this &amp;&amp; (event.key===&quot;Enter&quot; || event.key===&quot; &quot;)){event.preventDefault();this.click()}" class="' + classes.join(" ") + '" id="pc-' + item.id + '" style="animation-delay:' + delay + 'ms" onclick="abrirDetalleProducto(\''+item.id+'\')">'
     + '<div class="pcard-body">'
     + '<div class="pcard-top">'
     + destBadge
@@ -3402,9 +3399,9 @@ function abrirDetalleProducto(id) {
 
   var imgHtml;
   if (item.imagen_url) {
-    imgHtml = '<img src="' + escHtml(item.imagen_url) + '" onerror="this.parentElement.innerHTML=\'<span class=det-img-emoji>' + (item.emoji || '🍔') + '</span>\'">';
+    imgHtml = '<img src="' + escHtml(item.imagen_url) + '" onerror="this.parentElement.innerHTML=\'<span class=det-img-emoji>' + 'Foto pendiente' + '</span>\'">';
   } else {
-    imgHtml = '<span class="det-img-emoji">' + (item.emoji || '🍔') + '</span>';
+    imgHtml = '<span class="det-img-emoji">' + 'Foto pendiente' + '</span>';
   }
 
   var h = '<div class="det-img">' + imgHtml + '</div>';
@@ -3433,7 +3430,7 @@ function abrirDetalleProducto(id) {
     h += '</div></div>';
   }
 
-  h += '<div class="det-section-title">📝 Notas especiales</div>';
+  h += '<div class="det-section-title">Notas para la cocina</div>';
   h += '<textarea class="det-notas" id="detNotas" placeholder="Ej: sin cebolla, extra queso...">' + (carrito[id] && carrito[id].notas ? escHtml(carrito[id].notas) : '') + '</textarea>';
 
   document.getElementById("detBody").innerHTML = h;
@@ -3546,7 +3543,7 @@ async function renderCarritoUI() {
     var item = getItemById(ci.id) || ci;
     var img = item.imagen_url
       ? '<img src="' + escHtml(item.imagen_url) + '" onerror="this.style.display=\'none\'">'
-      : '<span class="ci-emoji">' + (item.emoji || "🍔") + '</span>';
+      : '<span class="ci-emoji">' + "Foto pendiente" + '</span>';
     var total = ci.precio * ci.qty;
     h += '<div class="ci" id="ci-row-' + ci.id + '">'
       + '<div class="ci-img">' + img + '</div>'
@@ -4377,9 +4374,9 @@ function renderPedidoCard(p, esActivo) {
   var fechaStr = fecha.toLocaleDateString("es-CO", { day:"numeric", month:"short" }) + " " + fecha.toLocaleTimeString("es-CO", { hour:"2-digit", minute:"2-digit" });
   var estado = p.estado || "confirmado";
   // Normalizar estados
-  var estadoNorm = { confirmado:"confirmado", en_preparacion:"preparando", preparando:"preparando", listo:"preparando", en_camino:"en_camino", entregado:"entregado" }[estado] || "confirmado";
-  var estadoLabel = { confirmado:"Recibido", preparando:"Preparando", en_camino:"En camino", entregado:"Entregado" };
-  var estadoEmoji = { confirmado:"📋", preparando:"👨‍🍳", en_camino:"🛵", entregado:"✅" };
+  var estadoNorm = { confirmado:"confirmado", en_preparacion:"preparando", preparando:"preparando", listo:"listo", en_camino:"en_camino", entregado:"entregado" }[estado] || "confirmado";
+  var estadoLabel = { confirmado:"Recibido", preparando:"En cocina", listo:"Listo", en_camino:"En camino", entregado:"Entregado" };
+  var estadoEmoji = { confirmado:"📋", preparando:"👨‍🍳", listo:"✓", en_camino:"🛵", entregado:"✅" };
 
   // Renderizar items — destacar canjes
   var itemsHtml = "";
@@ -4402,13 +4399,13 @@ function renderPedidoCard(p, esActivo) {
 
   // Tracking visual
   if (esActivo) {
-    var pasos = ["confirmado", "preparando", "en_camino", "entregado"];
+    var pasos = ["confirmado", "preparando", "listo", "en_camino", "entregado"];
     var idxActual = pasos.indexOf(estadoNorm);
     h += '<div class="mp-track">';
     pasos.forEach(function(paso, i) {
       var cls = i < idxActual ? "done" : i === idxActual ? "current" : "";
       var ico = i < idxActual ? "✓" : (estadoEmoji[paso] || "");
-      var labels = { confirmado:"Recibido", preparando:"Preparando", en_camino:"En camino", entregado:"Entregado" };
+      var labels = { confirmado:"Recibido", preparando:"En cocina", listo:"Listo", en_camino:"En camino", entregado:"Entregado" };
       h += '<div class="mp-track-step ' + cls + '"><div class="mp-track-dot">' + ico + '</div><div class="mp-track-label">' + labels[paso] + '</div></div>';
       if (i < pasos.length - 1) {
         h += '<div class="mp-track-line' + (i < idxActual ? " done" : "") + '"></div>';
@@ -4804,6 +4801,7 @@ window.addEventListener("load", async function() {
   }
 
   // Aplicar config del restaurante
+  hlApplyRestaurant(rest);
   if (rest.nombre) document.title = rest.nombre + " · Menú";
   if (rest.hero_slogan) {
     var sub = document.getElementById("heroSub");
@@ -4889,8 +4887,8 @@ function instalarMenuPWA(){
   _deferredPWA.userChoice.then(function(){_deferredPWA=null;var btn=document.getElementById('menuPwaBtn');if(btn)btn.style.display='none';});
 }
 </script>
-</body>
-</html>
+
+
 
 <!-- ═══════════════════════════════════════════════════════
      LUZ ASISTENTE — Sistema completo integrado al menú
@@ -4974,11 +4972,10 @@ function instalarMenuPWA(){
 </style>
 
 <!-- BOTÓN FLOTANTE LUZ -->
-<div id="luzBtn" onclick="toggleLuzChat()" title="Habla con Luz">
-  <img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg"
-       alt="LUZ" onerror="this.parentNode.innerHTML='💜'">
+<button id="luzBtn" onclick="toggleLuzChat()" title="Habla con Luz" aria-label="Hablar con Luz">
+  <span class="hl-orb" aria-hidden="true">✦</span>
   <div class="luz-notif-dot" id="luzNotifDot">!</div>
-</div>
+</button>
 
 <!-- BURBUJA BIENVENIDA -->
 <div id="luzWelcome">
@@ -4995,12 +4992,11 @@ function instalarMenuPWA(){
 <div id="luzChat">
   <div class="lc-header">
     <div class="lc-av">
-      <img src="https://vbxuwzcfzfjwhllkppkg.supabase.co/storage/v1/object/public/media/luz-avatar.jpg"
-           alt="LUZ" onerror="this.style.display='none'">
+      <span class="hl-orb" aria-hidden="true">✦</span>
     </div>
     <div class="lc-title">
       <div class="lc-name">Luz <span style="font-size:10px;color:rgba(168,85,247,0.7);font-weight:500">· Asistente IA</span></div>
-      <div class="lc-status" id="lcStatus">● En línea</div>
+      <div class="lc-status" id="lcStatus">Asistente del restaurante</div>
     </div>
     <button class="lc-close" onclick="cerrarLuzChat()">✕</button>
   </div>
@@ -5061,8 +5057,8 @@ function luzBienvenida(){
     var bv = document.getElementById("luzWelcome");
     if(el && bv){
       el.textContent = msg;
-      bv.classList.add("show");
-      luzHablar(msg, true);
+      // No unsolicited welcome overlay.
+      // Welcome stays silent; voice remains available on request.
       setTimeout(function(){ bv.classList.remove("show"); }, 7000);
       var dot = document.getElementById("luzNotifDot");
       if(dot) dot.classList.add("show");
@@ -5543,7 +5539,7 @@ function luzCheckoutHelper(){
     var bv = document.getElementById("luzWelcome");
     if(el && bv && !luzChatOpen){
       el.textContent = msgFinal;
-      bv.classList.add("show");
+      // No unsolicited welcome overlay.
       luzHablar(msgFinal, true);
       setTimeout(function(){ bv.classList.remove("show"); }, 6000);
     }
@@ -5564,3 +5560,180 @@ setTimeout(function(){
   if(!luzInitDone && window.rest && rest) luzInit();
 }, 6000);
 </script>
+
+<style id="hola-luz-identity">
+/* HOLA LUZ / Customer identity 1.0 — shared presentation tokens */
+:root {
+ --restaurant-primary:#ff7b32; --restaurant-secondary:#ffc08f;
+ --luz-violet:#9670ff; --luz-blue:#568dff; --luz-cyan:#68d9e5;
+ --bg:#10100f; --bg-2:#191918; --bg-3:#232322;
+ --brand:var(--restaurant-primary); --brand-2:var(--restaurant-secondary); --brand-dark:var(--restaurant-primary);
+ --brand-glow:color-mix(in srgb,var(--brand) 18%,transparent);
+ --text:#faf7f2; --t2:#c2beb8; --t3:#a29e98; --t4:#807d78;
+ --border:rgba(255,255,255,.075); --border-2:rgba(255,255,255,.15);
+ --hl-radius:20px; --hl-radius-control:14px; --hl-gap:24px;
+ --hl-nav-height:74px; --hl-width:1160px;
+ --shadow-glow:0 4px 22px var(--brand-glow);
+ --t-fast:180ms; --t-normal:260ms; --t-drawer:380ms;
+}
+body {background:var(--bg);padding-bottom:calc(170px + env(safe-area-inset-bottom));font-size:16px;line-height:1.5}
+body::before {background:radial-gradient(ellipse 70% 400px at 80% 0%,color-mix(in srgb,var(--brand) 6%,transparent),transparent)}
+body::after {display:none}
+button,input,textarea,select {-webkit-tap-highlight-color:transparent}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible,textarea:focus-visible {outline:2px solid var(--luz-cyan);outline-offset:4px}
+input,textarea,select {font-size:16px!important}
+button {touch-action:manipulation}
+.hdr {height:calc(76px + env(safe-area-inset-top));padding-inline:max(24px,calc((100vw - var(--hl-width))/2));background:rgba(16,16,15,.94);backdrop-filter:blur(20px)}
+.hdr.scrolled {background:rgba(16,16,15,.92)}
+.hdr-brand {font-size:25px;letter-spacing:-1.2px;max-width:58%;line-height:1.05}
+.hdr-brand img {max-width:100%;max-height:46px;object-fit:contain}
+.hdr-btn {width:44px;height:44px;background:var(--bg-2);box-shadow:none;border:0}
+.hero,.srch-wrap,.prms,.prods {max-width:var(--hl-width);margin-inline:auto}
+.hero {padding:calc(112px + env(safe-area-inset-top)) 24px 12px}
+.greet-label {color:var(--t3);font-size:11px;letter-spacing:.18em;font-weight:600}
+.greet-title {font-size:clamp(30px,5vw,52px);line-height:1.12;letter-spacing:-.055em;margin-top:12px}
+.greet-sub {font-size:17px;color:var(--t2);margin-top:10px}
+.tipos {display:flex;gap:10px;margin-top:26px;background:none;border:0;padding:0}
+.tipo-chip {flex:1;min-height:88px;display:flex;flex-direction:column;justify-content:center;gap:10px;border-radius:var(--hl-radius-control);background:var(--bg-2);border:1px solid var(--border);font-size:13px;box-shadow:none}
+.tipo-chip .ico {font-size:24px;display:flex}
+.tipo-chip.on {background:var(--brand);color:#17100a;border-color:transparent;box-shadow:0 5px 22px var(--brand-glow)}
+.rew {background:transparent;border:0;border-bottom:1px solid var(--border);border-radius:0;padding:18px 0;margin-top:8px;box-shadow:none}
+.rew-ico {background:none;color:var(--t2);width:32px}
+.rew-title {font-size:13px}.rew-sub {font-size:12px}.rew-arrow {color:var(--t3)}
+.srch-wrap {padding:12px 24px}.srch {min-height:54px;background:var(--bg-2);border-radius:14px;border:1px solid var(--border)}
+.cats-wrap {top:calc(76px + env(safe-area-inset-top));background:rgba(16,16,15,.96);backdrop-filter:blur(18px);border:0;z-index:70}
+.cats-row {max-width:var(--hl-width);margin:auto;padding:12px 24px;gap:8px}
+.cat-pill {min-height:42px;padding:10px 18px;background:transparent;border:1px solid var(--border);font-size:13px}
+.cat-pill.on {background:var(--text);color:var(--bg);border-color:transparent;box-shadow:none}
+.prms {padding:8px 24px}.prms:has(.prms-wrap:empty){display:none}
+.prm {min-height:160px;border:0;box-shadow:none}.prm::before{display:none}
+.prods {padding:24px 24px 60px}
+.clasicas-section,.cat-section {margin-bottom:40px}
+.clasicas-header {background:transparent!important;border:0!important;border-radius:0;padding:0 0 20px;box-shadow:none}
+.clasicas-header::before {display:none}
+.clasicas-badge {background:none!important;border:0;padding:0;color:var(--brand);font-size:10px;letter-spacing:.14em;text-transform:uppercase;box-shadow:none}
+.clasicas-title,.cat-section-title {font-size:28px;color:var(--text);background:none;-webkit-text-fill-color:var(--text);line-height:1.15;letter-spacing:-.04em}
+.clasicas-sub {color:var(--t3);font-size:13px;margin-top:8px}
+.cat-section-header {margin-bottom:20px}.cat-section-count {background:none;color:var(--t3)}
+.prods-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 14px}
+.pcard,.pcard.tradicional {display:flex;flex-direction:column-reverse;gap:0;padding:0;background:none;border:0;border-radius:0;box-shadow:none;overflow:visible}
+.pcard.in-cart {background:none}.pcard:active,.pcard.tradicional:active {background:none}
+.pcard-img-wrap {width:100%;height:auto;aspect-ratio:1.15;flex:none;border-radius:var(--hl-radius);overflow:hidden;background:#24211c;position:relative}
+.pcard-img-wrap img {width:100%;height:100%;object-fit:cover;transition:transform 400ms var(--ease-out)}
+.pcard-body {padding:14px 0 0;gap:12px;flex:1}
+.pcard-name {font-size:17px;font-weight:700;line-height:1.22;letter-spacing:-.025em}
+.pcard-desc {font-size:13px;color:var(--t3);line-height:1.5;-webkit-line-clamp:2}
+.pcard-price {font-family:inherit;font-size:18px;color:var(--text);font-weight:700;letter-spacing:-.03em}
+.pcard-img-emoji,.det-img-emoji {font-family:inherit;font-size:12px!important;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.pcard-price-before {font-family:inherit}.pcard-bottom {gap:4px;flex-wrap:wrap;margin-top:auto}
+.pcard-add {width:44px;height:44px;min-width:44px;background:var(--brand);color:#17100a;border-radius:50%;box-shadow:none;font-size:26px}
+.pcard-qty-btn {width:36px;height:44px}.pcard-qty {border-color:var(--border);background:var(--bg-2)}
+.pcard-trad-badge {font-size:10px;padding:0;background:none!important;border:0!important;color:var(--t3)!important}
+#sec-destacados .prods-grid,#sec-clasicas .prods-grid {display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:18px;padding-bottom:12px}
+#sec-destacados .pcard,#sec-clasicas .pcard {flex:0 0 76%;scroll-snap-align:start}
+#sec-destacados .pcard-img-wrap {aspect-ratio:1.35}
+#sec-destacados .pcard-name {font-size:22px}
+.cart-fab {bottom:calc(86px + env(safe-area-inset-bottom));border-radius:18px;background:var(--brand);color:#17100a;box-shadow:0 8px 30px #0005;transform:translateY(230px)}
+.cart-fab.show {transform:translateY(0)}
+.hl-nav {position:fixed;bottom:0;left:0;right:0;z-index:90;display:flex;justify-content:space-around;gap:4px;max-width:600px;margin:auto;padding:10px 12px calc(10px + env(safe-area-inset-bottom));height:calc(var(--hl-nav-height) + env(safe-area-inset-bottom));background:rgba(24,24,23,.94);backdrop-filter:blur(24px);border:1px solid var(--border);border-radius:24px 24px 0 0}
+.hl-nav button {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:10px;min-width:56px;color:var(--t3)}
+.hl-nav button[aria-current=page] {color:var(--brand)}
+.hl-icon {width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.hl-nav-space {width:56px}
+#luzBtn {width:48px;height:48px;bottom:calc(17px + env(safe-area-inset-bottom));right:calc(50% - 24px);z-index:95;background:transparent;border:0;box-shadow:none;animation:none;overflow:visible}
+.hl-orb {display:inline-flex;width:100%;height:100%;align-items:center;justify-content:center;border-radius:50%;color:#f8f1ff;font-size:30px;background:radial-gradient(circle at 40% 35%,#8670d9 0%,#392961 36%,#141523 65%);border:1px solid #a488ee70;box-shadow:inset -3px -2px 9px #568dff66,0 0 15px #9670ff25;text-shadow:0 0 10px #bb9cff;animation:hl-breathe 5s ease-in-out infinite}
+.lc-av,.lch-av {border:0;overflow:visible}.lc-av:has(img),.lch-av:has(img){background:radial-gradient(circle,#9670ff,#141523)}
+.lch-av img {display:none}.lch-av:has(img)::after{content:'✦';display:grid;place-items:center;height:100%;color:white;font-size:25px}
+#luzChat {background:var(--bg-2);max-width:560px;margin:auto;z-index:250;max-height:85dvh;padding-bottom:env(safe-area-inset-bottom)}
+#luzWelcome {display:none}
+.sheet {background:var(--bg-2);max-height:94dvh;border-radius:28px 28px 0 0}
+.sheet-title {font-size:21px;letter-spacing:-.03em}.sheet-body{padding:20px 24px}
+.sheet-head {padding:14px 24px}.sheet-foot {background:var(--bg-2);padding:16px 24px max(20px,env(safe-area-inset-bottom));border-top:1px solid var(--border)}
+.sheet-close {width:44px;height:44px}.btn-xl,.det-add-btn {min-height:56px;border-radius:14px;background:var(--brand);color:#17100a;box-shadow:none;font-size:16px}
+.det-img {height:auto;aspect-ratio:1.15;border-radius:20px;background:#24211c}.det-img img {object-fit:cover}
+.det-name {font-size:30px;letter-spacing:-.045em;line-height:1.12;margin-top:22px}.det-desc {font-size:15px;line-height:1.6;color:var(--t2)}
+.det-price {font-family:inherit;font-size:26px;color:var(--text)}.det-section-title {font-size:14px;margin-top:24px}
+.det-notas,.fld-input,.fld-textarea,.fld-select {background:var(--bg);border-color:var(--border);border-radius:12px;min-height:48px}
+.det-qty-btn,.ci-ctrl-btn {min-width:44px;min-height:44px}.det-qty-row{gap:12px}
+.ci {background:transparent;border:0;border-bottom:1px solid var(--border);border-radius:0;padding:16px 0}.ci-name{font-size:16px}.ci-price{font-family:inherit;color:var(--t2)}
+.cart-total-box {background:transparent;border:0;padding:16px 0}.cart-total-row{font-size:15px}
+.upsell-section {background:transparent;border:0;border-top:1px solid var(--border);border-radius:0;padding:22px 0}.upsell-section::before{display:none}
+.upsell-card {background:var(--bg);border:0}.upsell-title{color:var(--text)}
+.mp-card {background:var(--bg);border:0;padding:22px;border-radius:20px}.mp-card.activo{border:1px solid var(--border);box-shadow:none}
+.mp-card-status {font-size:23px;letter-spacing:-.03em;background:none!important;padding:14px 0;line-height:1.2}.mp-track{gap:3px}.mp-track-label{font-size:10px}.mp-track-dot{width:32px;height:32px;font-size:14px}
+.mp-track-step.current .mp-track-dot{box-shadow:0 0 16px var(--brand-glow)}
+.rew-hero {background:linear-gradient(145deg,#35322c,#191918);border:1px solid var(--border);border-radius:22px;padding:32px}.rew-pts-big{font-family:inherit;font-size:56px;color:var(--text)}
+.toast {bottom:calc(164px + env(safe-area-inset-bottom));max-width:90vw;font-size:14px}
+#menuPwaBtn {bottom:calc(155px + env(safe-area-inset-bottom))!important}
+.hl-credit{text-align:center;color:var(--t3);font-size:11px;letter-spacing:.08em;padding:0 24px 30px}
+@keyframes hl-breathe{50%{filter:brightness(1.18);transform:scale(1.035)}}
+@media(hover:hover){.pcard:hover img{transform:scale(1.035)}.pcard:hover .pcard-name{color:var(--brand)}}
+@media(min-width:760px){.hero{padding-top:120px}.tipos{max-width:560px}.rew{max-width:560px}.prods-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:30px}.pcard-img-wrap{aspect-ratio:1.3}#sec-destacados .pcard,#sec-clasicas .pcard{flex-basis:calc((100% - 36px)/3)}.sheet{max-width:620px}.hl-nav{bottom:18px;border-radius:24px}.cart-fab{bottom:110px}#luzBtn{bottom:35px}.srch-wrap{padding-top:20px}.greet-sub{font-size:20px}}
+@media(min-width:1100px){.hero{display:grid;grid-template-columns:1fr 460px;column-gap:64px}.greet{grid-row:span 2;align-self:center}.tipos{margin-top:0}.rew{margin-top:0}.pcard-name{font-size:20px}.prods-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+<nav class="hl-nav" aria-label="Navegación principal">
+<button data-nav="home" aria-current="page" onclick="hlNavigate('home')"><span data-icon="home"></span>Inicio</button>
+<button data-nav="menu" onclick="hlNavigate('menu')"><span data-icon="menu"></span>Menú</button>
+<span class="hl-nav-space" aria-hidden="true"></span>
+<button data-nav="orders" onclick="hlNavigate('orders')"><span data-icon="bag"></span>Pedidos</button>
+<button data-nav="rewards" onclick="hlNavigate('rewards')"><span data-icon="star"></span>Mis puntos</button>
+</nav><div class="hl-credit">Tu restaurante · Potenciado por Hola Luz</div><script>
+/* Presentation adapters. Existing network and purchase handlers are reused. */
+function hlApplyRestaurant(data) {
+  var theme = data.visual_theme || {};
+  if (typeof theme === 'string') { try {theme=JSON.parse(theme)} catch(e){theme={}} }
+  [['--restaurant-primary',theme.primary || data.color_primario],['--restaurant-secondary',theme.secondary || data.color_secundario]].forEach(function(pair){
+    if (typeof pair[1]==='string' && /^#[0-9a-f]{6}$/i.test(pair[1])) document.documentElement.style.setProperty(pair[0],pair[1]);
+  });
+  var logo=document.getElementById('hdrLogo');
+  if(data.nombre){logo.textContent=data.nombre;document.querySelector('.greet-label').textContent=data.nombre;}
+  var src=theme.logo || data.logo_url;
+  if(src && /^https?:\/\//i.test(src)){var img=new Image();img.alt=data.nombre || 'Restaurante';img.onload=function(){logo.replaceChildren(img)};img.src=src;}
+}
+function hlNavigate(where){
+ if(where==='orders'){abrirMisPedidos();return}
+ if(where==='rewards'){abrirRewards();return}
+ document.querySelectorAll('.hl-nav button').forEach(function(b){if(b.dataset.nav===where)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+ if(where==='home'){window.scrollTo({top:0,behavior:'smooth'})}
+ else{document.querySelector('.srch-wrap').scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('srchInput').focus({preventScroll:true})}
+}
+var hlPaths={home:'M3 10 12 3 21 10 M5 9v12h5v-7h4v7h5V9',menu:'M4 5h16M4 12h16M4 19h16',bag:'M5 7h14l1 14H4L5 7 M9 8V6a3 3 0 0 1 6 0v2',star:'m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z',search:'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',bike:'M7 16a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M23 16a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M3 16l5-9h7l4 9 M8 7l5 9H3 M7 4h4 M15 4h3v3',table:'M3 9h18M5 9v12M19 9v12M7 3v6M17 3v6'};
+function hlIcon(name){return '<svg class="hl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="'+hlPaths[name]+'"/></svg>'}
+document.querySelectorAll('[data-icon]').forEach(function(el){el.innerHTML=hlIcon(el.dataset.icon)});
+[['#t-domi .ico','bike'],['#t-rec .ico','bag'],['#t-mesa .ico','table'],['.srch-ico','search'],['.rew-ico','star']].forEach(function(p){var el=document.querySelector(p[0]);if(el)el.innerHTML=hlIcon(p[1])});
+document.querySelectorAll('.hdr-btn').forEach(function(b,i){var dot=b.querySelector('.hdr-btn-dot');b.innerHTML=hlIcon(i?'star':'bag');if(dot)b.append(dot);b.setAttribute('aria-label',b.title)});
+// Modal focus containment, restoration and hidden-state semantics.
+var hlFocus=null;
+document.querySelectorAll('.sheet-bg').forEach(function(overlay){
+ overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
+ var title=overlay.querySelector('.sheet-title');if(title && title.id)overlay.setAttribute('aria-labelledby',title.id);else overlay.setAttribute('aria-label',title?title.textContent:'Detalle');
+ var wasOpen=overlay.classList.contains('open'); overlay.inert=!wasOpen;
+ new MutationObserver(function(){var open=overlay.classList.contains('open');if(open===wasOpen)return;wasOpen=open;overlay.inert=!open;if(open){hlFocus=document.activeElement;var first=overlay.querySelector('button,input,textarea');if(first)first.focus({preventScroll:true})}else if(hlFocus && !document.querySelector('.sheet-bg.open'))hlFocus.focus({preventScroll:true})}).observe(overlay,{attributes:true,attributeFilter:['class']});
+ overlay.addEventListener('keydown',function(e){if(e.key!=='Tab')return;var els=Array.from(overlay.querySelectorAll('button,input,select,textarea,[tabindex="0"]')).filter(function(el){return !el.disabled && el.getClientRects().length});if(!els.length)return;var first=els[0],last=els[els.length-1];if(e.shiftKey && document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey && document.activeElement===last){e.preventDefault();first.focus()}});
+});
+</script></body></html>
+<!--
+DELIVERY NOTES — HOLA LUZ CUSTOMER IDENTITY / 2026-09-17
+Scope: presentation refactor of supplied standalone menu. Existing fetch URLs, order submission,
+payment handlers and restaurant connection are retained. No backend/schema/RLS modifications.
+Tokens: restaurant primary/secondary, Luz violet/blue/cyan; warm graphite surfaces; text contrast;
+20px image radius, 14px controls; 180/260/380ms interactions; 1160px desktop content.
+Components: header/logo, mode chooser, search, categories, editorial rails, product cards/detail,
+cart, checkout fields, order timeline, loyalty, bottom navigation, orb, sheet focus behavior.
+Theme: optional visual_theme {primary,secondary,logo}, also color_primario/color_secundario/logo_url.
+Existing restaurant name and photography are used. Themes accept six-digit hex accents.
+Assets: CSS energy orb and consistent inline SVG navigation icons; no generated food photography.
+Missing photos explicitly say Foto pendiente; replace via existing restaurant product image fields.
+Removed unconfigured promotional defaults and hardcoded purchasable classics fallback.
+Ready order state is distinct from preparation. No simulated locations, routes, ratings or ETA.
+Responsive: mobile two-column catalogue + horizontal featured rails; desktop 3/4-column layout,
+three featured products per rail, split greeting/modes; safe-area fixed navigation and cart.
+Motion: image hover zoom, existing add feedback/sheet transitions, slow orb breathing.
+Reduced-motion disables animation/transitions. Pinch zoom enabled. Modal keyboard focus contained.
+Limitations: reservations, map tracking, account/profile and favorites lack implementations here.
+Existing per-product cart model, payment trust, phone-based identity, hardcoded default restaurant,
+API reliability and original AI action logic require backend/project review, not verified here.
+Custom accent contrast must be checked per restaurant. Not a migration to Hola Luz V2.
+Test data and endpoint mocks are isolated from production; no real purchases or payments executed.
+-->
