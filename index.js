@@ -2655,6 +2655,7 @@ app.get("/health", function(req, res) {
 
 app.get("/cocina",      function(req, res) { res.sendFile(path.join(__dirname, "cocina.html")); });
 app.get("/domi",        function(req, res) { res.sendFile(path.join(__dirname, "domiciliario.html")); });
+app.get("/encontrarme", function(req, res) { res.sendFile(path.join(__dirname, "cliente_ubicacion.html")); });
 app.get("/mesero",      function(req, res) { res.sendFile(path.join(__dirname, "mesero2.html")); });
 app.get("/sw.js",       function(req, res) { res.setHeader("Content-Type","application/javascript"); res.setHeader("Service-Worker-Allowed","/"); res.sendFile(path.join(__dirname, "sw.js")); });
 app.get("/offline.html",function(req, res) { res.sendFile(path.join(__dirname, "offline.html")); });
@@ -3309,6 +3310,7 @@ app.post("/api/pedido-estado", async function(req, res) {
 
     if (estado === "entregado" && restaurante_id) {
       try {
+        await axios.patch(SUPABASE_URL + "/rest/v1/luz_finder_sessions?pedido_id=eq." + encodeURIComponent(id), { active:false, updated_at:new Date().toISOString() }, { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type":"application/json", "Prefer":"return=minimal" } }).catch(function(){});
         var pedDoneR = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id + "&select=domiciliario_id", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
         var didDone = pedDoneR.data && pedDoneR.data[0] && pedDoneR.data[0].domiciliario_id;
         if (didDone) await autoAsignarPendienteParaDomi(restaurante_id, didDone);
@@ -3422,11 +3424,20 @@ app.post("/enviar-mensaje-cliente", async function(req, res) {
 
 
 // ── UBICACIÓN DOMICILIARIO ─────────────────────────────────────────────────
+var domiTrailCache={};
 async function guardarUbicacionDomi(body){
-  var {pedido_id,restaurante_id,domiciliario_id,lat,lng}=body||{};if(!domiciliario_id||lat==null||lng==null)throw new Error("Faltan datos");
+  var {pedido_id,restaurante_id,domiciliario_id,lat,lng,accuracy}=body||{};if(!domiciliario_id||lat==null||lng==null)throw new Error("Faltan datos");
   var svcKey=SUPABASE_SERVICE_KEY_VAL,now=new Date().toISOString();var headers={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"};
   await axios.post(SUPABASE_URL+"/rest/v1/domiciliario_ubicacion?on_conflict=domiciliario_id",{domiciliario_id:domiciliario_id,restaurante_id:restaurante_id||null,lat:Number(lat),lng:Number(lng),pedido_id:pedido_id||null,updated_at:now},{headers:headers});
   await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+domiciliario_id,{ultimo_gps_at:now,ultimo_acceso_at:now},{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"}}).catch(function(){});
+  // V10.2: guardar una traza ligera de la ruta del pedido. El servidor limita la frecuencia para no llenar la BD.
+  if(pedido_id&&restaurante_id){
+    try{
+      var trailH={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"},k=String(pedido_id)+":"+String(domiciliario_id),last=domiTrailCache[k],should=!last;
+      if(last){var age=Date.now()-last.ts,moved=distanciaKm(last.lat,last.lng,Number(lat),Number(lng));should=age>=15000||(moved!=null&&moved>=0.02);}
+      if(should){await axios.post(SUPABASE_URL+"/rest/v1/domiciliario_ruta_puntos",{restaurante_id:restaurante_id,pedido_id:pedido_id,domiciliario_id:domiciliario_id,lat:Number(lat),lng:Number(lng),accuracy:accuracy!=null?Number(accuracy):null,created_at:now},{headers:trailH});domiTrailCache[k]={lat:Number(lat),lng:Number(lng),ts:Date.now()};}
+    }catch(eTrail){console.warn("[ruta-trail]",eTrail.message);}
+  }
   return now;
 }
 app.post("/api/domi-ubicacion",async function(req,res){try{var at=await guardarUbicacionDomi(req.body),auto=null;if(req.body&&req.body.trigger_dispatch&&req.body.restaurante_id&&req.body.domiciliario_id){try{auto=await autoAsignarPendienteParaDomi(req.body.restaurante_id,req.body.domiciliario_id);}catch(eAuto){console.warn("[gps-auto-dispatch]",eAuto.message);}}res.json({ok:true,updated_at:at,auto_asignacion:auto});}catch(e){res.status(500).json({ok:false,error:e.message});}});
@@ -4563,6 +4574,57 @@ app.get("/api/domi-admin/list", async function(req,res){
 app.get("/api/domi-pedido-activo", async function(req,res){
   var rid=req.query.restaurante_id,did=req.query.domiciliario_id;if(!rid||!did)return res.status(400).json({error:"Faltan restaurante_id o domiciliario_id"});
   try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var rAsig=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+rid+"&domiciliario_id=eq."+encodeURIComponent(did)+"&estado=in.(listo,en_camino)&order=domiciliario_asignado_at.desc.nullslast,created_at.desc&limit=1&select=*",{headers:h});if(rAsig.data&&rAsig.data[0])return res.json(Object.assign({},rAsig.data[0],{assignment_state:"assigned"}));res.json(null);}catch(e){res.status(500).json({error:e.message});}
+});
+
+
+// ── LUZ FINDER V10.2 · ubicación viva del cliente + radar de proximidad ─────
+function finderHashToken(raw){return crypto.createHash("sha256").update(String(raw||"")).digest("hex");}
+function finderFresh(row){return !!(row&&row.active&&row.expires_at&&new Date(row.expires_at).getTime()>Date.now());}
+async function finderOrderForDomi(pedidoId,t){
+  var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+  var r=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+encodeURIComponent(pedidoId)+"&restaurante_id=eq."+encodeURIComponent(t.rid)+"&domiciliario_id=eq."+encodeURIComponent(t.did)+"&select=id,numero_pedido,cliente_tel,cliente_nombre,direccion,lat_destino,lng_destino,estado,restaurante_id,domiciliario_id",{headers:h});
+  return r.data&&r.data[0]||null;
+}
+async function finderSessionRowByPedido(pedidoId){
+  var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+  var r=await axios.get(SUPABASE_URL+"/rest/v1/luz_finder_sessions?pedido_id=eq."+encodeURIComponent(pedidoId)+"&select=*",{headers:h});return r.data&&r.data[0]||null;
+}
+app.post("/api/luz-finder/session", async function(req,res){
+  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  var pedidoId=req.body&&req.body.pedido_id;if(!pedidoId)return res.status(400).json({ok:false,error:"Falta pedido_id"});
+  try{
+    var p=await finderOrderForDomi(pedidoId,t);if(!p)return res.status(404).json({ok:false,error:"Esta misión no pertenece al domiciliario"});
+    if(String(p.estado||"")==="entregado")return res.status(409).json({ok:false,error:"El pedido ya está entregado"});
+    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};
+    var raw=crypto.randomBytes(24).toString("base64url"),hash=finderHashToken(raw),expires=new Date(Date.now()+20*60*1000).toISOString(),existing=await finderSessionRowByPedido(pedidoId),row;
+    if(existing){var rr=await axios.patch(SUPABASE_URL+"/rest/v1/luz_finder_sessions?pedido_id=eq."+encodeURIComponent(pedidoId),{token_hash:hash,active:true,expires_at:expires,domiciliario_id:t.did,updated_at:new Date().toISOString()},{headers:h});row=rr.data&&rr.data[0]||existing;}
+    else{var cr=await axios.post(SUPABASE_URL+"/rest/v1/luz_finder_sessions",{pedido_id:pedidoId,restaurante_id:t.rid,domiciliario_id:t.did,token_hash:hash,active:true,expires_at:expires},{headers:h});row=cr.data&&cr.data[0];}
+    var url="https://"+req.get("host")+"/encontrarme?token="+encodeURIComponent(raw),sent=false;
+    try{
+      var restR=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+encodeURIComponent(t.rid)+"&select=nombre,whatsapp_phone_id",{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}}),rest=restR.data&&restR.data[0]||{};
+      if(p.cliente_tel){var txt="✨ Luz · Tu domiciliario ya está cerca.\n\nActiva tu ubicación temporal para ayudarlo a encontrarte dentro del conjunto, edificio o lugar:\n"+url+"\n\nLa ubicación se comparte solo durante esta entrega y se apaga automáticamente.";await sendWhatsAppMessage(p.cliente_tel,txt,rest.whatsapp_phone_id);sent=true;}
+    }catch(eSend){console.warn("[finder-whatsapp]",eSend.message);}
+    await registrarEventoLuz(t.rid,pedidoId,"domiciliario",t.did,"finder_solicitado","Luz Finder activado",sent?"Le pedí al cliente activar su ubicación temporal.":"Comparte el enlace con el cliente para activar su ubicación temporal.",{share_url:url,expires_at:expires},"luz",null);
+    res.json({ok:true,share_url:url,expires_at:expires,whatsapp_sent:sent,session_id:row&&row.id||null});
+  }catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
+});
+app.get("/api/luz-finder/status", async function(req,res){
+  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});var pedidoId=req.query.pedido_id;if(!pedidoId)return res.status(400).json({ok:false,error:"Falta pedido_id"});
+  try{var p=await finderOrderForDomi(pedidoId,t);if(!p)return res.status(404).json({ok:false,error:"Misión no encontrada"});var row=await finderSessionRowByPedido(pedidoId),live=finderFresh(row)&&row.client_lat!=null&&row.client_lng!=null&&row.client_updated_at&&Date.now()-new Date(row.client_updated_at).getTime()<25000;res.json({ok:true,active:finderFresh(row),live:!!live,client:live?{lat:row.client_lat,lng:row.client_lng,accuracy:row.client_accuracy,heading:row.client_heading,updated_at:row.client_updated_at}:null,fallback:p.lat_destino!=null&&p.lng_destino!=null?{lat:p.lat_destino,lng:p.lng_destino}:null,expires_at:row&&row.expires_at||null});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+app.get("/api/luz-finder/public", async function(req,res){
+  var raw=req.query.token;if(!raw)return res.status(400).json({ok:false,error:"Enlace inválido"});
+  try{var hash=finderHashToken(raw),svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var r=await axios.get(SUPABASE_URL+"/rest/v1/luz_finder_sessions?token_hash=eq."+hash+"&select=id,pedido_id,restaurante_id,active,expires_at,client_updated_at",{headers:h}),row=r.data&&r.data[0];if(!finderFresh(row))return res.status(410).json({ok:false,error:"Este enlace ya expiró"});var pr=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+row.pedido_id+"&select=numero_pedido,estado",{headers:h}),p=pr.data&&pr.data[0]||{};if(p.estado==="entregado")return res.status(410).json({ok:false,error:"Esta entrega ya terminó"});var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+row.restaurante_id+"&select=nombre",{headers:h}),rest=rr.data&&rr.data[0]||{};res.json({ok:true,restaurant:rest.nombre||"HOLA LUZ",order_number:p.numero_pedido||null,expires_at:row.expires_at,sharing:!!row.client_updated_at});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+app.post("/api/luz-finder/public/location", async function(req,res){
+  var raw=req.body&&req.body.token,lat=Number(req.body&&req.body.lat),lng=Number(req.body&&req.body.lng),acc=req.body&&req.body.accuracy!=null?Number(req.body.accuracy):null,heading=req.body&&req.body.heading!=null?Number(req.body.heading):null;if(!raw||!isFinite(lat)||!isFinite(lng))return res.status(400).json({ok:false,error:"Ubicación inválida"});
+  try{var hash=finderHashToken(raw),svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};var r=await axios.get(SUPABASE_URL+"/rest/v1/luz_finder_sessions?token_hash=eq."+hash+"&select=*",{headers:h}),row=r.data&&r.data[0];if(!finderFresh(row))return res.status(410).json({ok:false,error:"La sesión expiró"});var now=new Date().toISOString();await axios.patch(SUPABASE_URL+"/rest/v1/luz_finder_sessions?id=eq."+row.id,{client_lat:lat,client_lng:lng,client_accuracy:isFinite(acc)?acc:null,client_heading:isFinite(heading)?heading:null,client_updated_at:now,updated_at:now},{headers:h});res.json({ok:true,updated_at:now});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+app.post("/api/luz-finder/public/stop", async function(req,res){
+  var raw=req.body&&req.body.token;if(!raw)return res.status(400).json({ok:false,error:"Enlace inválido"});try{var hash=finderHashToken(raw),svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};await axios.patch(SUPABASE_URL+"/rest/v1/luz_finder_sessions?token_hash=eq."+hash,{active:false,updated_at:new Date().toISOString()},{headers:h});res.json({ok:true});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+app.get("/api/domi-ruta-pedido", async function(req,res){
+  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});var pedidoId=req.query.pedido_id;if(!pedidoId)return res.status(400).json({ok:false,error:"Falta pedido_id"});try{var p=await finderOrderForDomi(pedidoId,t);if(!p)return res.status(404).json({ok:false,error:"Misión no encontrada"});var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var r=await axios.get(SUPABASE_URL+"/rest/v1/domiciliario_ruta_puntos?pedido_id=eq."+encodeURIComponent(pedidoId)+"&domiciliario_id=eq."+encodeURIComponent(t.did)+"&order=created_at.asc&limit=2000&select=lat,lng,accuracy,created_at",{headers:h});res.json({ok:true,puntos:r.data||[]});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
 app.get("/api/domi-historial", async function(req,res){
