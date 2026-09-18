@@ -3197,7 +3197,10 @@ app.post("/api/pedido-estado", async function(req, res) {
       try {
         var pedEvtR = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id + "&select=domiciliario_id", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
         var evtDid = pedEvtR.data && pedEvtR.data[0] && pedEvtR.data[0].domiciliario_id;
-        if (evtDid) registrarEventoDomi(restaurante_id, evtDid, id, estado === "en_camino" ? "en_ruta" : "entregado", { numero_pedido: numero_pedido || null }).catch(function(){});
+        if (evtDid) {
+          registrarEventoDomi(restaurante_id, evtDid, id, estado === "en_camino" ? "en_ruta" : "entregado", { numero_pedido: numero_pedido || null }).catch(function(){});
+          registrarEventoLuz(restaurante_id,id,"domiciliario",evtDid,estado === "en_camino" ? "pedido_en_ruta" : "pedido_entregado",estado === "en_camino" ? "Ruta iniciada" : "Entrega completada",estado === "en_camino" ? "El restaurante y el cliente ya fueron actualizados. Continúa hacia el destino." : "Excelente trabajo. La entrega quedó cerrada y vuelves a estar disponible.",{numero_pedido:numero_pedido||null},"luz",null).catch(function(){});
+        }
       } catch(eEvt) {}
     }
 
@@ -4490,9 +4493,20 @@ app.post("/api/domi-perfil", async function(req,res){
 app.post("/api/domi-evento", async function(req,res){
   var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
   var tipo=String(req.body.tipo||"");var permitidos=["recogido","llegue_cliente","problema","navegacion_iniciada"];if(permitidos.indexOf(tipo)<0)return res.status(400).json({ok:false,error:"Evento no permitido"});
-  var pid=req.body.pedido_id||null,meta=req.body.metadata||{};await registrarEventoDomi(t.rid,t.did,pid,tipo,meta);
+  var pid=req.body.pedido_id||null,meta=req.body.metadata||{};
+  if(pid && (tipo==="recogido" || tipo==="llegue_cliente")){
+    try{
+      var svcKeyDup=SUPABASE_SERVICE_KEY_VAL,hDup={"apikey":svcKeyDup,"Authorization":"Bearer "+svcKeyDup};
+      var dup=await axios.get(SUPABASE_URL+"/rest/v1/domiciliario_eventos?restaurante_id=eq."+t.rid+"&domiciliario_id=eq."+t.did+"&pedido_id=eq."+pid+"&tipo=eq."+tipo+"&limit=1&select=id",{headers:hDup});
+      if(dup.data&&dup.data[0])return res.json({ok:true,duplicate:true});
+    }catch(eDup){}
+  }
+  await registrarEventoDomi(t.rid,t.did,pid,tipo,meta);
   var copy={recogido:["Pedido recogido","El domiciliario confirmó que ya tiene el pedido."],llegue_cliente:["Domiciliario en destino","La entrega llegó al punto del cliente."],problema:["Domiciliario necesita ayuda","Se reportó un problema durante la misión."],navegacion_iniciada:["Navegación iniciada","El domiciliario abrió la ruta de entrega."]}[tipo]||["Actualización de entrega",tipo];
-  await registrarEventoLuz(t.rid,pid,"restaurante",null,"domi_"+tipo,copy[0],copy[1],Object.assign({domiciliario_id:t.did},meta),"domiciliario",t.did);res.json({ok:true});
+  await registrarEventoLuz(t.rid,pid,"restaurante",null,"domi_"+tipo,copy[0],copy[1],Object.assign({domiciliario_id:t.did},meta),"domiciliario",t.did);
+  var selfCopy={recogido:["Pedido recogido","Perfecto. Ya tienes el pedido; el siguiente paso es iniciar la ruta."],llegue_cliente:["Llegaste al cliente","Ya registré tu llegada. Toma la evidencia para completar la entrega."],problema:["Reporte enviado","Ya informé al restaurante que necesitas ayuda con esta misión."],navegacion_iniciada:["Navegación iniciada","Mantendré el seguimiento de esta misión mientras HOLA LUZ esté activa."]}[tipo]||[copy[0],copy[1]];
+  await registrarEventoLuz(t.rid,pid,"domiciliario",t.did,"domi_"+tipo,selfCopy[0],selfCopy[1],Object.assign({domiciliario_id:t.did},meta),"luz",null);
+  res.json({ok:true});
 });
 app.get("/api/domi-eventos", async function(req,res){
   var rid=req.query.restaurante_id,did=req.query.domiciliario_id||null,pid=req.query.pedido_id||null;if(!rid)return res.status(400).json({ok:false,error:"Falta restaurante_id"});
