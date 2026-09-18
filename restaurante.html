@@ -8309,3 +8309,40 @@ window.renderOrdersV5=function(){
   window.autoAsignarTodos=async function(){if(!rest)return;var ready=(ordersV2Data||[]).filter(function(p){return needsCourierV5(p)&&!p.domiciliario_id&&String(p.estado||'').toLowerCase()==='listo'});if(!ready.length){if(typeof hlNotice==='function')hlNotice('info','Nada para despachar','Solo se asignan domicilios que Cocina ya marcó LISTO.',3000);return}if(!d9State.auto){if(typeof hlNotice==='function')hlNotice('warn','Activa Luz automática','Enciende Asignación automática para que Luz seleccione por cercanía.',3300);return}var n=typeof hlNotice==='function'?hlNotice('info','Luz está despachando','Revisando '+ready.length+' pedido(s) listo(s)…',0):null;try{var d=await d9Json('/api/domi-admin/dispatch-ready',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest.id})}),c=(d.asignaciones||[]).length;if(typeof resolveNoticeV82==='function'&&n)resolveNoticeV82(n,c?'success':'warn',c?c+' pedido(s) asignados':'Sin domiciliarios elegibles',c?'Las misiones ya fueron enviadas.':'Mantendré los pedidos listos y volveré a intentarlo cuando haya un domiciliario disponible.',3400);if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:c?'domi_asignado':'pedido_listo_sin_domi',titulo:c?'Despacho completado':'Sigo buscando equipo',mensaje:c?'Ya envié las nuevas misiones.':'No encontré todavía un domiciliario elegible con GPS reciente.'},false);try{loadPedidos();d9Refresh(false)}catch(x){}}catch(e){if(typeof resolveNoticeV82==='function'&&n)resolveNoticeV82(n,'error','No pude completar el despacho',String(e.message||e),4200)}};
 })();
 </script>
+
+
+<style>
+/* V10.1 silent sync: refreshes data without replaying entrance animations */
+#page-orders.hl-silent-sync *,#page-orders.hl-silent-sync *:before,#page-orders.hl-silent-sync *:after{animation-play-state:paused!important;transition-duration:0s!important}
+.v10-luz-bar.speaking{border-color:rgba(55,237,207,.38);box-shadow:0 20px 60px rgba(0,0,0,.38),0 0 45px rgba(71,87,255,.18),0 0 25px rgba(55,237,207,.10)}.v10-luz-bar.speaking .hl-orb{animation:v101RestOrb 1.25s ease-in-out infinite}@keyframes v101RestOrb{0%,100%{filter:brightness(1);transform:scale(.43) translateY(0)}50%{filter:brightness(1.2) saturate(1.2);transform:scale(.47) translateY(-2px)}}
+</style>
+<script>
+/* ===== V10.1 · LUZ VISIBLE/VOICE + SILENT ORDER POLLING ===== */
+(function(){
+  var voiceUnlocked10=false,lastOrdersSig101='';
+  function unlock10(){if(voiceUnlocked10)return;voiceUnlocked10=true;try{if(window.speechSynthesis){var u=new SpeechSynthesisUtterance('');u.volume=0;window.speechSynthesis.speak(u)}}catch(e){}}
+  ['pointerdown','touchstart','keydown'].forEach(function(ev){document.addEventListener(ev,unlock10,{once:true,passive:true})});
+  async function speak10(text){if(!voiceUnlocked10||!text)return;var clean=String(text).replace(/[✨✓🛵📍⚠️✦]/g,'').replace(/\s+/g,' ').trim();if(!clean)return;try{if(typeof luzHablarElevenLabs==='function'){await luzHablarElevenLabs(clean);return}}catch(e){}if(!window.speechSynthesis)return;try{window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(clean.length>190?clean.slice(0,190):clean);u.lang='es-CO';u.rate=1.02;u.pitch=1.08;u.volume=.92;var vs=window.speechSynthesis.getVoices()||[],v=vs.find(function(x){return x.lang==='es-CO'||x.lang==='es-419'})||vs.find(function(x){return /^es/i.test(x.lang)&&/paulina|monica|laura|sofia|female|mujer/i.test(x.name)})||vs.find(function(x){return /^es/i.test(x.lang)});if(v)u.voice=v;window.speechSynthesis.speak(u)}catch(e){}}
+  var prevSpeak=window.v10SpeakLuz;
+  window.v10SpeakLuz=function(evt,silent){
+    if(prevSpeak)prevSpeak(evt,silent);
+    var bar=document.getElementById('v10LuzBar');if(bar){bar.classList.add('speaking');setTimeout(function(){bar.classList.remove('speaking')},2100)}
+    if(!silent){var txt=((evt&&evt.titulo)||'Luz')+'. '+((evt&&evt.mensaje)||'');speak10(txt);try{if(typeof luzActivityUpdate==='function')luzActivityUpdate((evt&&evt.mensaje)||'Actualicé la operación.')}catch(e){}}
+  };
+  function sig(rows){return (rows||[]).map(function(p){return [p.id,p.estado,p.updated_at,p.total,p.domiciliario_id,p.domiciliario_nombre,p.tipo_pedido,p.foto_entrega].join('|')}).join('||')}
+  var prevRender=window.renderOrdersV2;
+  window.renderOrdersV2=function(rows){
+    rows=Array.isArray(rows)?rows:[];
+    var next=sig(rows),page=document.getElementById('page-orders');
+    if(next===lastOrdersSig101){
+      try{updateOrdersCountsV5();updateOrdersClockV5()}catch(e){}
+      return;
+    }
+    lastOrdersSig101=next;
+    if(page)page.classList.add('hl-silent-sync');
+    try{return prevRender?prevRender(rows):undefined}finally{requestAnimationFrame(function(){requestAnimationFrame(function(){if(page)page.classList.remove('hl-silent-sync')})})}
+  };
+  // The older proactive bar used a photographic avatar; keep a single frozen Luz identity.
+  setTimeout(function(){document.querySelectorAll('.luz-alive-avatar').forEach(function(el){el.innerHTML=typeof orb10==='function'?orb10(72):'<div class="hl-orb hl-orb-small"><span class="hl-orb-core">✦</span><span class="hl-orbit o1"></span><span class="hl-orbit o2"></span><span class="hl-orbit o3"></span></div>';el.style.overflow='visible';el.style.border='0';el.style.background='transparent';el.style.boxShadow='none'})},800);
+})();
+</script>
