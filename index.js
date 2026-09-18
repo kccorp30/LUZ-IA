@@ -22,10 +22,13 @@ function readSupabaseSecretBundle() {
   } catch (e) { return null; }
 }
 const SUPABASE_SERVICE_KEY_VAL =
-  process.env.SUPABASE_SECRET_KEY ||
-  readSupabaseSecretBundle() ||
+  // Mantener primero los nombres legacy si ya existen en Railway.
+  // V10.2 firmaba las sesiones del domiciliario con esta prioridad; cambiarla
+  // invalida tokens ya emitidos. Las claves nuevas sb_secret_ siguen soportadas.
   process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SECRET_KEY ||
+  readSupabaseSecretBundle() ||
   process.env.SUPABASE_ANON_KEY ||
   SUPABASE_KEY;
 function sbPrivilegedHeaders(extra) {
@@ -2051,7 +2054,25 @@ function domiVerifyPin(pin,stored){
 }
 function domiB64url(v){return Buffer.from(v).toString("base64").replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");}
 function domiFromB64url(v){v=String(v||"").replace(/-/g,"+").replace(/_/g,"/");while(v.length%4)v+="=";return Buffer.from(v,"base64").toString("utf8");}
-function domiTokenSecret(){return process.env.DOMI_SESSION_SECRET||process.env.ADMIN_SECRET||SUPABASE_SERVICE_KEY_VAL||"hola-luz-domi";}
+function domiTokenSecrets(){
+  // Compatibilidad de sesiones entre despliegues. Las sesiones NO deben romperse
+  // porque se rote/migre una API key de Supabase. DOMI_SESSION_SECRET es la
+  // opción recomendada y, si existe, siempre se usa para nuevos tokens.
+  var vals=[
+    process.env.DOMI_SESSION_SECRET,
+    process.env.ADMIN_SECRET,
+    process.env.SUPABASE_SERVICE_KEY,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    process.env.SUPABASE_SECRET_KEY,
+    readSupabaseSecretBundle(),
+    process.env.SUPABASE_ANON_KEY,
+    SUPABASE_KEY,
+    SUPABASE_SERVICE_KEY_VAL,
+    "hola-luz-domi"
+  ].filter(Boolean).map(String);
+  return [...new Set(vals)];
+}
+function domiTokenSecret(){return domiTokenSecrets()[0]||"hola-luz-domi";}
 function crearDomiToken(d){
   var payload=domiB64url(JSON.stringify({did:d.id,rid:d.restaurante_id,exp:Date.now()+30*24*60*60*1000}));
   var sig=crypto.createHmac("sha256",domiTokenSecret()).update(payload).digest("hex");return payload+"."+sig;
@@ -2060,8 +2081,16 @@ function leerDomiToken(req){
   try{
     var raw=(req.headers.authorization||"").replace(/^Bearer\s+/i,"")||req.headers["x-domi-token"]||"";
     var p=raw.split(".");if(p.length!==2)return null;
-    var sig=crypto.createHmac("sha256",domiTokenSecret()).update(p[0]).digest("hex");
-    var a=Buffer.from(sig,"hex"),b=Buffer.from(p[1],"hex");if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return null;
+    var provided=Buffer.from(p[1],"hex");
+    if(!provided.length)return null;
+    var valid=domiTokenSecrets().some(function(secret){
+      try{
+        var sig=crypto.createHmac("sha256",secret).update(p[0]).digest("hex");
+        var expected=Buffer.from(sig,"hex");
+        return expected.length===provided.length&&crypto.timingSafeEqual(expected,provided);
+      }catch(e){return false;}
+    });
+    if(!valid)return null;
     var data=JSON.parse(domiFromB64url(p[0]));if(!data.exp||Date.now()>data.exp)return null;return data;
   }catch(e){return null;}
 }
