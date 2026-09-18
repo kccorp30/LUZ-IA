@@ -1998,39 +1998,129 @@ async function descontarInventario(restauranteId, items) {
   } catch(e) { console.warn("[descontarInventario]", e.message); }
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOLA LUZ · DOMICILIARIOS PROFESSIONAL CORE
+// Cuenta habilitada, turno, GPS, autenticación por teléfono + PIN y auto-dispatch.
+// El campo legacy `activo` NO se usa como turno en esta arquitectura.
+// ═══════════════════════════════════════════════════════════════════════════
+function normalizarTelefonoDomi(v){
+  var d=String(v||"").replace(/[^0-9]/g,"");
+  if(d.length===12&&d.startsWith("57"))d=d.slice(2);
+  if(d.length>10)d=d.slice(-10);
+  return d;
+}
+function domiSafe(d){
+  if(!d)return null;
+  var o=Object.assign({},d);delete o.pin_hash;return o;
+}
+function domiHashPin(pin,salt){
+  salt=salt||crypto.randomBytes(16).toString("hex");
+  var hash=crypto.scryptSync(String(pin),salt,32).toString("hex");
+  return salt+":"+hash;
+}
+function domiVerifyPin(pin,stored){
+  try{
+    if(!stored||stored.indexOf(":")<0)return false;
+    var p=stored.split(":"),calc=crypto.scryptSync(String(pin),p[0],32),expected=Buffer.from(p[1],"hex");
+    return expected.length===calc.length&&crypto.timingSafeEqual(expected,calc);
+  }catch(e){return false;}
+}
+function domiB64url(v){return Buffer.from(v).toString("base64").replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");}
+function domiFromB64url(v){v=String(v||"").replace(/-/g,"+").replace(/_/g,"/");while(v.length%4)v+="=";return Buffer.from(v,"base64").toString("utf8");}
+function domiTokenSecret(){return process.env.DOMI_SESSION_SECRET||process.env.ADMIN_SECRET||SUPABASE_SERVICE_KEY_VAL||"hola-luz-domi";}
+function crearDomiToken(d){
+  var payload=domiB64url(JSON.stringify({did:d.id,rid:d.restaurante_id,exp:Date.now()+30*24*60*60*1000}));
+  var sig=crypto.createHmac("sha256",domiTokenSecret()).update(payload).digest("hex");return payload+"."+sig;
+}
+function leerDomiToken(req){
+  try{
+    var raw=(req.headers.authorization||"").replace(/^Bearer\s+/i,"")||req.headers["x-domi-token"]||"";
+    var p=raw.split(".");if(p.length!==2)return null;
+    var sig=crypto.createHmac("sha256",domiTokenSecret()).update(p[0]).digest("hex");
+    var a=Buffer.from(sig,"hex"),b=Buffer.from(p[1],"hex");if(a.length!==b.length||!crypto.timingSafeEqual(a,b))return null;
+    var data=JSON.parse(domiFromB64url(p[0]));if(!data.exp||Date.now()>data.exp)return null;return data;
+  }catch(e){return null;}
+}
+async function registrarEventoDomi(restauranteId,domiId,pedidoId,tipo,metadata){
+  try{
+    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};
+    await axios.post(SUPABASE_URL+"/rest/v1/domiciliario_eventos",{restaurante_id:restauranteId||null,domiciliario_id:domiId||null,pedido_id:pedidoId||null,tipo:String(tipo||"evento"),metadata:metadata||{}},{headers:h});
+  }catch(e){console.warn("[domi-evento]",e.message);}
+}
+function esPedidoDomicilio(p){
+  if(!p)return false;
+  var t=String(p.tipo_pedido||"").toLowerCase(),dir=String(p.direccion||"").trim().toUpperCase();
+  if(t==="mesa"||t==="recoger"||t==="pickup"||dir.indexOf("MESA ")===0||dir==="MESA"||dir.indexOf("RECOGER")===0)return false;
+  return true;
+}
+async function obtenerDomiDisponibles(restauranteId){
+  var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+  var hace5=new Date(Date.now()-5*60*1000).toISOString();
+  var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restauranteId+
+    "&habilitado=eq.true&turno_activo=eq.true&ultimo_gps_at=gte."+encodeURIComponent(hace5)+
+    "&select=id,nombre,telefono,foto_url,vehiculo,placa,ultimo_gps_at,ultima_asignacion_at,onboarding_completo",{headers:h});
+  var ds=dr.data||[];if(!ds.length)return[];
+  var ids=ds.map(function(d){return d.id;});
+  var pr=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restauranteId+
+    "&domiciliario_id=in.("+ids.join(",")+")&estado=in.(listo,en_camino)&select=id,domiciliario_id",{headers:h}).catch(function(){return{data:[]};});
+  var busy={};(pr.data||[]).forEach(function(p){if(p.domiciliario_id)busy[p.domiciliario_id]=true;});
+  return ds.filter(function(d){return d.onboarding_completo&&!busy[d.id];}).sort(function(a,b){
+    var aa=a.ultima_asignacion_at?new Date(a.ultima_asignacion_at).getTime():0,bb=b.ultima_asignacion_at?new Date(b.ultima_asignacion_at).getTime():0;
+    if(aa!==bb)return aa-bb;return new Date(b.ultimo_gps_at||0)-new Date(a.ultimo_gps_at||0);
+  });
+}
+async function asignarPedidoInterno(pedido,domi,restauranteId,fuente){
+  if(!pedido||!domi)return null;
+  var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};
+  var ahora=new Date().toISOString();
+  await axios.patch(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+pedido.id+"&domiciliario_id=is.null",
+    {domiciliario_id:domi.id,domiciliario_nombre:domi.nombre,domiciliario_asignado_at:ahora,updated_at:ahora},{headers:h});
+  await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+domi.id,{ultima_asignacion_at:ahora},{headers:h}).catch(function(){});
+  console.log("[domi-dispatch] "+(fuente||"manual")+" pedido #"+(pedido.numero_pedido||pedido.id)+" -> "+domi.nombre);
+  registrarEventoDomi(restauranteId,domi.id,pedido.id,"asignado",{fuente:fuente||"manual",numero_pedido:pedido.numero_pedido||null}).catch(function(){});
+  try{enviarPushPorRol(restauranteId,"domiciliario",{title:"🛵 Nueva entrega",body:"Pedido #"+(pedido.numero_pedido||"")+" asignado a "+domi.nombre,icon:"/icons/icon-192.png",vibrate:[200,90,200],tag:"domi-"+pedido.id,url:"/domiciliario"});}catch(e){}
+  return {id:domi.id,nombre:domi.nombre,fuente:fuente||"manual"};
+}
+async function autoAsignarPedidoSeguro(pedidoId,restauranteId){
+  if(!pedidoId||!restauranteId)return null;
+  var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+  var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+restauranteId+"&select=domicilios_asignacion_auto",{headers:h});
+  if(!rr.data||!rr.data[0]||!rr.data[0].domicilios_asignacion_auto)return null;
+  var pr=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+pedidoId+"&select=*",{headers:h});var p=pr.data&&pr.data[0];
+  if(!p||p.estado!=="listo"||p.domiciliario_id||!esPedidoDomicilio(p))return null;
+  var ds=await obtenerDomiDisponibles(restauranteId);if(!ds.length)return null;
+  return asignarPedidoInterno(p,ds[0],restauranteId,"auto");
+}
+async function autoAsignarPendienteParaDomi(restauranteId,domiId){
+  var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+  var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+restauranteId+"&select=domicilios_asignacion_auto",{headers:h});
+  if(!rr.data||!rr.data[0]||!rr.data[0].domicilios_asignacion_auto)return null;
+  var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+domiId+"&habilitado=eq.true&turno_activo=eq.true&select=*",{headers:h});var d=dr.data&&dr.data[0];if(!d)return null;
+  var ar=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restauranteId+"&domiciliario_id=eq."+domiId+"&estado=in.(listo,en_camino)&select=id",{headers:h});if(ar.data&&ar.data.length)return null;
+  var hace6h=new Date(Date.now()-6*60*60*1000).toISOString();
+  var pr=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restauranteId+"&estado=eq.listo&domiciliario_id=is.null&created_at=gte."+encodeURIComponent(hace6h)+"&order=created_at.asc&limit=12&select=*",{headers:h});
+  var p=(pr.data||[]).find(esPedidoDomicilio);if(!p)return null;return asignarPedidoInterno(p,d,restauranteId,"auto-next");
+}
+
 // ── ASIGNAR DOMICILIARIO — notifica al dueño ──────────────────────────────────
 app.post("/api/asignar-domiciliario", async function(req, res) {
   try {
     var { pedido_id, domiciliario_id, domiciliario_nombre, restaurante_id } = req.body;
-    if (!pedido_id || !domiciliario_id) return res.status(400).json({ ok: false, error: "Faltan datos" });
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" };
-    // Asignar en BD
-    await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + pedido_id,
-      { domiciliario_id: domiciliario_id, domiciliario_nombre: domiciliario_nombre },
-      { headers: h }
-    );
-    // Notificar al dueño
-    if (restaurante_id) {
-      try {
-        var rResp = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id + "&select=telefono_dueno,whatsapp_phone_id,whapi_token", { headers: sbH(true) });
-        var rInfo = rResp.data && rResp.data[0];
-        // Get pedido info
-        var pResp = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + pedido_id + "&select=numero_pedido,direccion,total", { headers: sbH(true) });
-        var pInfo = pResp.data && pResp.data[0];
-        if (rInfo && rInfo.telefono_dueno && pInfo) {
-          var telD = "57" + String(rInfo.telefono_dueno).replace(/^57/,"");
-          var msg = "🛵 *Pedido #" + pInfo.numero_pedido + " asignado a " + domiciliario_nombre + "*\n"
-            + "📍 " + (pInfo.direccion || "Sin dir") + "\n"
-            + "💰 $" + Number(pInfo.total||0).toLocaleString("es-CO");
-          await sendWhatsAppMessage(telD, msg, rInfo.whatsapp_phone_id, rInfo.whapi_token).catch(function(){});
-        }
-      } catch(eN) { console.warn("[asignar-domi notif]", eN.message); }
-    }
-    res.json({ ok: true });
-  } catch(e) {
-    res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message });
-  }
+    if (!pedido_id || !domiciliario_id) return res.status(400).json({ ok:false,error:"Faltan datos" });
+    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+    var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+domiciliario_id+"&select=*",{headers:h});
+    var domi=dr.data&&dr.data[0];if(!domi||domi.habilitado===false)return res.status(409).json({ok:false,error:"Domiciliario no disponible"});
+    var pr=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+pedido_id+"&select=*",{headers:h});
+    var pedido=pr.data&&pr.data[0];if(!pedido)return res.status(404).json({ok:false,error:"Pedido no encontrado"});
+    if(!esPedidoDomicilio(pedido))return res.status(409).json({ok:false,error:"Este pedido no requiere domiciliario"});
+    if(pedido.domiciliario_id&&String(pedido.domiciliario_id)!==String(domi.id))return res.status(409).json({ok:false,error:"El pedido ya fue asignado a otro domiciliario"});
+    var asignado=pedido.domiciliario_id?{id:domi.id,nombre:domi.nombre,fuente:"existing"}:await asignarPedidoInterno(pedido,domi,restaurante_id||pedido.restaurante_id,"manual");
+    // Mantener la notificación al dueño del flujo legacy
+    var rid=restaurante_id||pedido.restaurante_id;
+    if(rid){try{var rResp=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+rid+"&select=telefono_dueno,whatsapp_phone_id,whapi_token",{headers:sbH(true)});var rInfo=rResp.data&&rResp.data[0];if(rInfo&&rInfo.telefono_dueno){var telD="57"+String(rInfo.telefono_dueno).replace(/^57/,"");var msg="🛵 *Pedido #"+pedido.numero_pedido+" asignado a "+domi.nombre+"*\n📍 "+(pedido.direccion||"Sin dir")+"\n💰 $"+Number(pedido.total||0).toLocaleString("es-CO");await sendWhatsAppMessage(telD,msg,rInfo.whatsapp_phone_id,rInfo.whapi_token).catch(function(){});}}catch(eN){console.warn("[asignar-domi notif]",eN.message);}}
+    res.json({ok:true,domiciliario:asignado,warning:domi.turno_activo?null:"domiciliario_fuera_de_turno"});
+  } catch(e) { res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message}); }
 });
 
 
@@ -3035,6 +3125,22 @@ app.post("/api/pedido-estado", async function(req, res) {
         throw ePatch;
       }
     }
+    var autoAsignacionDomi = null;
+    if (estado === "listo" && restaurante_id) {
+      try {
+        autoAsignacionDomi = await autoAsignarPedidoSeguro(id, restaurante_id);
+        if (autoAsignacionDomi) req.body.domiciliario_nombre = autoAsignacionDomi.nombre;
+      } catch(eAuto) { console.warn("[auto-dispatch]", eAuto.message); }
+    }
+
+    if ((estado === "en_camino" || estado === "entregado") && restaurante_id) {
+      try {
+        var pedEvtR = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id + "&select=domiciliario_id", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+        var evtDid = pedEvtR.data && pedEvtR.data[0] && pedEvtR.data[0].domiciliario_id;
+        if (evtDid) registrarEventoDomi(restaurante_id, evtDid, id, estado === "en_camino" ? "en_ruta" : "entregado", { numero_pedido: numero_pedido || null }).catch(function(){});
+      } catch(eEvt) {}
+    }
+
     // servido y listo_entrega: solo actualizar estado, no mandar WhatsApp
     if (estado === "listo_entrega" || estado === "servido" || estado === "sirviendo") { return res.json({ ok: true }); }
     if (telefono_cliente) {
@@ -3138,7 +3244,14 @@ app.post("/api/pedido-estado", async function(req, res) {
       console.log("[led-sync] Mesa " + mesaNum + " → " + estadoLed);
     }
 
-    res.json({ ok: true });
+    if (estado === "entregado" && restaurante_id) {
+      try {
+        var pedDoneR = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id + "&select=domiciliario_id", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
+        var didDone = pedDoneR.data && pedDoneR.data[0] && pedDoneR.data[0].domiciliario_id;
+        if (didDone) await autoAsignarPendienteParaDomi(restaurante_id, didDone);
+      } catch(eNext) { console.warn("[auto-dispatch-next]", eNext.message); }
+    }
+    res.json({ ok: true, auto_asignacion: autoAsignacionDomi });
   } catch (err) { res.status(500).json({ ok: false, error: err.response ? JSON.stringify(err.response.data) : err.message }); }
 });
 
@@ -3246,106 +3359,26 @@ app.post("/enviar-mensaje-cliente", async function(req, res) {
 
 
 // ── UBICACIÓN DOMICILIARIO ─────────────────────────────────────────────────
-app.post("/api/domi-ubicacion", async function(req, res) {
-  // Alias de /api/ubicacion-domiciliario — mismo handler
-  req.url = "/api/ubicacion-domiciliario";
-  var { pedido_id, restaurante_id, domiciliario_id, lat, lng } = req.body;
-  if(!domiciliario_id || !lat || !lng) return res.status(400).json({error:"Faltan datos"});
-  try {
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var headers = {"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"};
-    var body = { domiciliario_id, restaurante_id: restaurante_id||null, lat, lng, pedido_id: pedido_id||null, updated_at: new Date().toISOString() };
-    await axios.post(SUPABASE_URL+"/rest/v1/domiciliario_ubicacion?on_conflict=domiciliario_id", body, {headers}).catch(async function(){
-      await axios.post(SUPABASE_URL+"/rest/v1/domiciliario_ubicacion", body, {headers});
-    });
-    res.json({ok:true});
-  } catch(e) { res.status(500).json({error:e.message}); }
-});
-
-app.post("/api/ubicacion-domiciliario", async function(req, res) {
-  try {
-    var { pedido_id, restaurante_id, domiciliario_id, lat, lng } = req.body;
-    if (!lat || !lng || !domiciliario_id) return res.status(400).json({ error: "Faltan datos" });
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var headers = { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=minimal" };
-    // Guardar/actualizar ubicación — upsert por domiciliario_id
-    var body = { domiciliario_id, restaurante_id: restaurante_id || null, lat, lng, updated_at: new Date().toISOString() };
-    if (pedido_id) body.pedido_id = pedido_id;
-    // Intentar upsert por domiciliario_id
-    await axios.post(SUPABASE_URL + "/rest/v1/domiciliario_ubicacion?on_conflict=domiciliario_id", body, { headers }).catch(async function() {
-      // Si falla por constraint, intentar con pedido_id
-      if (pedido_id) {
-        await axios.post(SUPABASE_URL + "/rest/v1/domiciliario_ubicacion?on_conflict=pedido_id", body, { headers });
-      }
-    });
-    res.json({ ok: true });
-  } catch(e) {
-    res.status(500).json({ ok: false, error: e.response?.data || e.message });
-  }
-});
-
-// ── UBICACIONES EN TIEMPO REAL DE DOMICILIARIOS ─────────────────
-app.get("/api/domi-ubicaciones", async function(req, res) {
-  var { restaurante_id } = req.query;
-  if (!restaurante_id) return res.status(400).json({ error: "Falta restaurante_id" });
-  try {
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
-    // Ubicaciones actualizadas en los últimos 30 minutos
-    var hace30 = new Date(Date.now() - 30*60*1000).toISOString();
-    var r = await axios.get(
-      SUPABASE_URL + "/rest/v1/domiciliario_ubicacion?restaurante_id=eq." + restaurante_id +
-      "&updated_at=gte." + hace30 + "&select=domiciliario_id,lat,lng,updated_at,pedido_id",
-      { headers: h }
-    );
-    // Enriquecer con nombre del domi
-    var ubicaciones = r.data || [];
-    if (ubicaciones.length > 0) {
-      var ids = [...new Set(ubicaciones.map(function(u){ return u.domiciliario_id; }))].filter(Boolean);
-      var domisR = await axios.get(
-        SUPABASE_URL + "/rest/v1/domiciliarios?id=in.(" + ids.join(",") + ")&select=id,nombre",
-        { headers: h }
-      ).catch(function(){ return { data: [] }; });
-      var domisMap = {};
-      (domisR.data || []).forEach(function(d){ domisMap[d.id] = d.nombre; });
-      ubicaciones = ubicaciones.map(function(u){
-        return Object.assign({}, u, { nombre: domisMap[u.domiciliario_id] || "Domi" });
-      });
-    }
-    res.json(ubicaciones);
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
+async function guardarUbicacionDomi(body){
+  var {pedido_id,restaurante_id,domiciliario_id,lat,lng}=body||{};if(!domiciliario_id||lat==null||lng==null)throw new Error("Faltan datos");
+  var svcKey=SUPABASE_SERVICE_KEY_VAL,now=new Date().toISOString();var headers={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"};
+  await axios.post(SUPABASE_URL+"/rest/v1/domiciliario_ubicacion?on_conflict=domiciliario_id",{domiciliario_id:domiciliario_id,restaurante_id:restaurante_id||null,lat:Number(lat),lng:Number(lng),pedido_id:pedido_id||null,updated_at:now},{headers:headers});
+  await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+domiciliario_id,{ultimo_gps_at:now,ultimo_acceso_at:now},{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"}}).catch(function(){});
+  return now;
+}
+app.post("/api/domi-ubicacion",async function(req,res){try{var at=await guardarUbicacionDomi(req.body);res.json({ok:true,updated_at:at});}catch(e){res.status(500).json({ok:false,error:e.message});}});
+app.post("/api/ubicacion-domiciliario",async function(req,res){try{var at=await guardarUbicacionDomi(req.body);res.json({ok:true,updated_at:at});}catch(e){res.status(500).json({ok:false,error:e.message});}});
+app.get("/api/domi-ubicaciones",async function(req,res){
+  var rid=req.query.restaurante_id;if(!rid)return res.status(400).json({error:"Falta restaurante_id"});try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var hace30=new Date(Date.now()-30*60*1000).toISOString();var r=await axios.get(SUPABASE_URL+"/rest/v1/domiciliario_ubicacion?restaurante_id=eq."+rid+"&updated_at=gte."+encodeURIComponent(hace30)+"&select=domiciliario_id,lat,lng,updated_at,pedido_id",{headers:h});var ubic=r.data||[];if(ubic.length){var ids=[...new Set(ubic.map(function(u){return u.domiciliario_id;}).filter(Boolean))];var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=in.("+ids.join(",")+")&select=id,nombre,foto_url,vehiculo,placa,turno_activo,habilitado,ultimo_gps_at",{headers:h}).catch(function(){return{data:[]};});var dm={};(dr.data||[]).forEach(function(d){dm[d.id]=d;});ubic=ubic.map(function(u){return Object.assign({},u,{domiciliario:dm[u.domiciliario_id]||null,nombre:dm[u.domiciliario_id]?dm[u.domiciliario_id].nombre:"Domi"});});}res.json(ubic);}catch(e){res.status(500).json({error:e.message});}
 });
 
 // ── ESTADÍSTICAS DEL DOMICILIARIO ─────────────────────────────────────────
-app.get("/api/domi-stats", async function(req, res) {
-  var { domiciliario_id, restaurante_id } = req.query;
-  if (!domiciliario_id || !restaurante_id) return res.json({ entregas: 0, hoy: 0, semana: 0, total_ganado: 0, pedidos_activos: [] });
-  try {
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
-    var hoy = new Date(); hoy.setHours(0,0,0,0);
-    var semana = new Date(Date.now() - 7*24*60*60*1000);
-    // Pedidos entregados por este domiciliario
-    var [todosR, pedActR] = await Promise.all([
-      axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id +
-        "&domiciliario_id=eq." + domiciliario_id + "&estado=eq.entregado&select=id,total,created_at", { headers: h }),
-      axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante_id +
-        "&domiciliario_id=eq." + domiciliario_id + "&estado=in.(en_camino,listo)&select=id,numero_pedido,total,cliente_tel,direccion,items,estado,created_at&order=created_at.desc", { headers: h })
-    ]);
-    var todos = todosR.data || [];
-    var hoyCount = todos.filter(function(p) { return new Date(p.created_at) >= hoy; }).length;
-    var semanaCount = todos.filter(function(p) { return new Date(p.created_at) >= semana; }).length;
-    var totalGanado = todos.reduce(function(s, p) { return s + Number(p.total || 0); }, 0);
-    res.json({
-      entregas: todos.length,
-      hoy: hoyCount,
-      semana: semanaCount,
-      total_ganado: totalGanado,
-      pedidos_activos: pedActR.data || []
-    });
-  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+app.get("/api/domi-stats", async function(req,res){
+  var {domiciliario_id,restaurante_id}=req.query;if(!domiciliario_id||!restaurante_id)return res.json({ok:true,entregas:0,hoy:0,semana:0,total_ganado:0,ganancia_domicilios:0,entregas_hoy:0,tiempo_promedio:null,pedidos_activos:[]});
+  try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var hoy=new Date();hoy.setHours(0,0,0,0);var semana=new Date(Date.now()-7*24*60*60*1000);var [todosR,pedActR]=await Promise.all([
+    axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+"&domiciliario_id=eq."+domiciliario_id+"&estado=eq.entregado&select=id,total,domicilio,created_at,updated_at,en_ruta_at,entregado_at",{headers:h}),
+    axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+"&domiciliario_id=eq."+domiciliario_id+"&estado=in.(en_camino,listo)&select=id,numero_pedido,total,cliente_tel,direccion,items,estado,created_at&order=created_at.desc",{headers:h})]);var todos=todosR.data||[],hoyRows=todos.filter(function(p){return new Date(p.created_at)>=hoy;}),semRows=todos.filter(function(p){return new Date(p.created_at)>=semana;});var tiempos=hoyRows.map(function(p){var a=p.en_ruta_at||p.created_at,b=p.entregado_at||p.updated_at;if(!a||!b)return null;var m=(new Date(b)-new Date(a))/60000;return m>0&&m<300?m:null;}).filter(function(x){return x!=null;});var prom=tiempos.length?tiempos.reduce(function(s,x){return s+x;},0)/tiempos.length:null;var total=todos.reduce(function(s,p){return s+Number(p.total||0);},0),gan=todos.reduce(function(s,p){return s+Number(p.domicilio||0);},0);res.json({ok:true,entregas:todos.length,hoy:hoyRows.length,semana:semRows.length,total_ganado:total,ganancia_domicilios:gan,entregas_hoy:hoyRows.length,tiempo_promedio:prom,pedidos_activos:pedActR.data||[]});
+  }catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
 // ── FOTO DE ENTREGA ────────────────────────────────────────────────────────
@@ -4331,76 +4364,115 @@ app.post("/api/domi-foto-perfil", async function(req, res) {
   }
 });
 
-app.get("/api/domi-login", async function(req, res) {
-  var {restaurante_id, telefono, nombre} = req.query;
-  if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
-  try {
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
-    var url;
-    if(nombre) {
-      // Buscar por nombre (case-insensitive)
-      url = SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restaurante_id+
-        "&nombre=ilike."+encodeURIComponent("%"+nombre.trim()+"%")+"&activo=eq.true&select=*";
-    } else if(telefono) {
-      var tel10 = telefono.replace(/^57/,"");
-      var tel12 = "57"+tel10;
-      url = SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restaurante_id+
-        "&or=(telefono.eq."+encodeURIComponent(tel10)+",telefono.eq."+encodeURIComponent(tel12)+",telefono.eq."+encodeURIComponent(telefono)+")&select=*";
-    } else {
-      return res.status(400).json({error:"Falta nombre o teléfono"});
-    }
-    var r = await axios.get(url, {headers:h});
-    res.json(r.data||[]);
-  } catch(e) { res.status(500).json({error:e.message}); }
+// ── DOMI AUTH · teléfono + PIN ───────────────────────────────────────────────
+app.get("/api/domi-login", async function(req,res){
+  // Compatibilidad legacy: ya no usa `activo` como turno.
+  var {restaurante_id,telefono,nombre}=req.query;if(!restaurante_id)return res.status(400).json({error:"Falta restaurante_id"});
+  try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey},url;
+    if(telefono){var tel=normalizarTelefonoDomi(telefono);url=SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restaurante_id+"&telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=*";}
+    else if(nombre){url=SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+restaurante_id+"&nombre=ilike."+encodeURIComponent("%"+nombre.trim()+"%")+"&habilitado=eq.true&select=*";}
+    else return res.status(400).json({error:"Falta teléfono"});
+    var r=await axios.get(url,{headers:h});res.json((r.data||[]).map(domiSafe));
+  }catch(e){res.status(500).json({error:e.message});}
 });
 
-app.get("/api/domi-pedido-activo", async function(req, res) {
-  var {restaurante_id, domiciliario_id} = req.query;
-  if(!restaurante_id) return res.status(400).json({error:"Falta restaurante_id"});
-  try {
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
-    // 1. Buscar pedido en_camino asignado a ESTE domi
-    if(domiciliario_id) {
-      var rAsig = await axios.get(
-        SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
-        "&domiciliario_id=eq."+encodeURIComponent(domiciliario_id)+
-        "&estado=in.(listo,en_camino)&order=created_at.desc&limit=1&select=*",
-        {headers:h}
-      );
-      if(rAsig.data&&rAsig.data.length>0) return res.json(rAsig.data[0]);
-    }
-    // 2. Si no hay asignado: buscar cualquier pedido listo SIN domiciliario (disponible para tomar)
-    var hace6h = new Date(Date.now()-6*60*60*1000).toISOString();
-    var rDisp = await axios.get(
-      SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
-      "&estado=eq.listo&domiciliario_id=is.null&tipo_pedido=neq.recoger"+
-      "&created_at=gte."+hace6h+"&order=created_at.asc&limit=1&select=*",
-      {headers:h}
-    );
-    if(rDisp.data&&rDisp.data.length>0) return res.json(rDisp.data[0]);
-    res.json(null);
-  } catch(e) { res.status(500).json({error:e.message}); }
+app.post("/api/domi-auth/start", async function(req,res){
+  try{
+    var tel=normalizarTelefonoDomi(req.body.telefono),rid=req.body.restaurante_id||null;if(tel.length!==10)return res.status(400).json({ok:false,error:"Número de teléfono inválido"});
+    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+    var q="/rest/v1/domiciliarios?telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=id,restaurante_id,nombre,telefono,foto_url,onboarding_completo,vehiculo,placa,turno_activo"+(rid?"&restaurante_id=eq."+rid:"");
+    var dr=await axios.get(SUPABASE_URL+q,{headers:h});var ds=dr.data||[];
+    if(!ds.length)return res.status(404).json({ok:false,code:"not_invited",error:"Este número todavía no tiene una invitación de un restaurante."});
+    var ids=[...new Set(ds.map(function(d){return d.restaurante_id;}).filter(Boolean))],names={};
+    if(ids.length){var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=in.("+ids.join(",")+")&select=id,nombre,logo_url,ciudad",{headers:h});(rr.data||[]).forEach(function(r){names[r.id]=r;});}
+    res.json({ok:true,accounts:ds.map(function(d){var r=names[d.restaurante_id]||{};return Object.assign(d,{restaurante_nombre:r.nombre||"Restaurante",restaurante_logo:r.logo_url||null,restaurante_ciudad:r.ciudad||null});})});
+  }catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
-app.get("/api/domi-historial", async function(req, res) {
-  var {restaurante_id, domiciliario_id} = req.query;
-  if(!restaurante_id||!domiciliario_id) return res.status(400).json({error:"Faltan datos"});
-  try {
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var h = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
-    var hoy = new Date();
-    hoy.setHours(0,0,0,0);
-    var r = await axios.get(
-      SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
-      "&domiciliario_id=eq."+encodeURIComponent(domiciliario_id)+
-      "&estado=eq.entregado&created_at=gte."+hoy.toISOString()+
-      "&order=created_at.desc&limit=50&select=id,numero_pedido,total,domicilio,direccion,created_at,updated_at,comprobante_media_id,comprobante_url,items,notas_especiales,metodo_pago,cliente_tel",
-      {headers:h}
-    );
-    res.json(r.data||[]);
-  } catch(e) { res.status(500).json({error:e.message}); }
+app.post("/api/domi-auth/complete", async function(req,res){
+  try{
+    var tel=normalizarTelefonoDomi(req.body.telefono),did=req.body.domiciliario_id,nombre=String(req.body.nombre||"").trim(),pin=String(req.body.pin||""),vehiculo=String(req.body.vehiculo||"moto").toLowerCase(),placa=String(req.body.placa||"").trim().toUpperCase();
+    if(!did||tel.length!==10||nombre.length<2||!/^[0-9]{4,6}$/.test(pin))return res.status(400).json({ok:false,error:"Completa teléfono, nombre y un PIN de 4 a 6 dígitos."});
+    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};
+    var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+did+"&telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=*",{headers:h});var d=dr.data&&dr.data[0];if(!d)return res.status(404).json({ok:false,error:"Invitación no válida"});
+    var upd={nombre:nombre,pin_hash:domiHashPin(pin),onboarding_completo:true,vehiculo:["moto","bici","carro","otro"].includes(vehiculo)?vehiculo:"moto",placa:placa||null,perfil_actualizado_at:new Date().toISOString(),ultimo_acceso_at:new Date().toISOString()};
+    var pr=await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+did,upd,{headers:h});var out=(pr.data&&pr.data[0])||Object.assign({},d,upd);res.json({ok:true,token:crearDomiToken(out),domiciliario:domiSafe(out)});
+  }catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
+});
+
+app.post("/api/domi-auth/login", async function(req,res){
+  try{
+    var tel=normalizarTelefonoDomi(req.body.telefono),did=req.body.domiciliario_id,pin=String(req.body.pin||"");if(tel.length!==10||!did||!pin)return res.status(400).json({ok:false,error:"Faltan datos"});
+    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};
+    var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+did+"&telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=*",{headers:h});var d=dr.data&&dr.data[0];if(!d)return res.status(404).json({ok:false,error:"Cuenta no encontrada"});
+    if(!d.onboarding_completo||!d.pin_hash)return res.status(409).json({ok:false,code:"setup_required",error:"Debes terminar la configuración de tu cuenta."});
+    if(!domiVerifyPin(pin,d.pin_hash))return res.status(401).json({ok:false,error:"PIN incorrecto"});
+    var now=new Date().toISOString();await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+d.id,{ultimo_acceso_at:now},{headers:h}).catch(function(){});d.ultimo_acceso_at=now;
+    res.json({ok:true,token:crearDomiToken(d),domiciliario:domiSafe(d)});
+  }catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+
+app.get("/api/domi-auth/me", async function(req,res){
+  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did+"&habilitado=eq.true&select=*",{headers:h});var d=dr.data&&dr.data[0];if(!d)return res.status(401).json({ok:false,error:"Cuenta deshabilitada"});res.json({ok:true,domiciliario:domiSafe(d)});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+
+app.post("/api/domi-turno", async function(req,res){
+  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  try{var activo=!!req.body.activo,now=new Date().toISOString(),svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};var patch={turno_activo:activo,ultimo_acceso_at:now};if(activo)patch.turno_inicio_at=now;else patch.turno_fin_at=now;await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did,patch,{headers:h});var auto=null;if(activo){try{auto=await autoAsignarPendienteParaDomi(t.rid,t.did);}catch(e){}}await registrarEventoDomi(t.rid,t.did,null,activo?"turno_iniciado":"turno_finalizado",{});res.json({ok:true,turno_activo:activo,auto_asignacion:auto});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+
+app.post("/api/domi-perfil", async function(req,res){
+  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  try{var patch={},nombre=String(req.body.nombre||"").trim(),veh=String(req.body.vehiculo||"").toLowerCase(),placa=String(req.body.placa||"").trim().toUpperCase(),email=String(req.body.email||"").trim();if(nombre.length>=2)patch.nombre=nombre;if(["moto","bici","carro","otro"].includes(veh))patch.vehiculo=veh;patch.placa=placa||null;patch.email=email||null;patch.perfil_actualizado_at=new Date().toISOString();var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};var rr=await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did,patch,{headers:h});res.json({ok:true,domiciliario:domiSafe(rr.data&&rr.data[0]||patch)});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+
+app.post("/api/domi-evento", async function(req,res){
+  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  var tipo=String(req.body.tipo||"");var permitidos=["recogido","llegue_cliente","problema","navegacion_iniciada"];if(permitidos.indexOf(tipo)<0)return res.status(400).json({ok:false,error:"Evento no permitido"});
+  await registrarEventoDomi(t.rid,t.did,req.body.pedido_id||null,tipo,req.body.metadata||{});res.json({ok:true});
+});
+app.get("/api/domi-eventos", async function(req,res){
+  var rid=req.query.restaurante_id,did=req.query.domiciliario_id||null,pid=req.query.pedido_id||null;if(!rid)return res.status(400).json({ok:false,error:"Falta restaurante_id"});
+  try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var q="/rest/v1/domiciliario_eventos?restaurante_id=eq."+rid+(did?"&domiciliario_id=eq."+did:"")+(pid?"&pedido_id=eq."+pid:"")+"&order=created_at.desc&limit=100&select=*";var r=await axios.get(SUPABASE_URL+q,{headers:h});res.json({ok:true,eventos:r.data||[]});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+
+// ── ADMIN RESTAURANTE · CENTRO DE DOMICILIOS ────────────────────────────────
+app.get("/api/domi-admin/settings", async function(req,res){
+  var rid=req.query.restaurante_id;if(!rid)return res.status(400).json({ok:false,error:"Falta restaurante_id"});try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+rid+"&select=domicilios_asignacion_auto",{headers:h});res.json({ok:true,auto:!!(rr.data&&rr.data[0]&&rr.data[0].domicilios_asignacion_auto)});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+app.post("/api/domi-admin/settings", async function(req,res){
+  var rid=req.body.restaurante_id;if(!rid)return res.status(400).json({ok:false,error:"Falta restaurante_id"});try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};var auto=!!req.body.auto;await axios.patch(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+rid,{domicilios_asignacion_auto:auto},{headers:h});res.json({ok:true,auto:auto});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+app.post("/api/domi-admin/invite", async function(req,res){
+  try{var rid=req.body.restaurante_id,tel=normalizarTelefonoDomi(req.body.telefono),nombre=String(req.body.nombre||"").trim();if(!rid||tel.length!==10)return res.status(400).json({ok:false,error:"Ingresa un teléfono válido"});var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};var ex=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+rid+"&telefono=eq."+encodeURIComponent(tel)+"&select=*",{headers:h});var d;if(ex.data&&ex.data[0]){var rr=await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+ex.data[0].id,{habilitado:true,nombre:nombre||ex.data[0].nombre||"Domiciliario"},{headers:h});d=rr.data&&rr.data[0]||ex.data[0];}else{var cr=await axios.post(SUPABASE_URL+"/rest/v1/domiciliarios",{restaurante_id:rid,telefono:tel,nombre:nombre||"Domiciliario",habilitado:true,onboarding_completo:false,turno_activo:false,activo:true},{headers:h});d=cr.data&&cr.data[0];}res.json({ok:true,domiciliario:domiSafe(d),access_url:"/domiciliario?restaurante="+encodeURIComponent(rid)});}catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
+});
+app.post("/api/domi-admin/update", async function(req,res){
+  try{var rid=req.body.restaurante_id,did=req.body.domiciliario_id;if(!rid||!did)return res.status(400).json({ok:false,error:"Faltan datos"});var p={perfil_actualizado_at:new Date().toISOString()};if("habilitado" in req.body){p.habilitado=!!req.body.habilitado;if(!p.habilitado)p.turno_activo=false;}if(req.body.nombre)p.nombre=String(req.body.nombre).trim();if(req.body.telefono){var tel=normalizarTelefonoDomi(req.body.telefono);if(tel.length!==10)return res.status(400).json({ok:false,error:"Teléfono inválido"});p.telefono=tel;}if(req.body.vehiculo)p.vehiculo=String(req.body.vehiculo);if("placa" in req.body)p.placa=String(req.body.placa||"").trim().toUpperCase()||null;if("turno_activo" in req.body){p.turno_activo=!!req.body.turno_activo;if(!p.turno_activo)p.turno_fin_at=new Date().toISOString();}var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};var rr=await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+did+"&restaurante_id=eq."+rid,p,{headers:h});res.json({ok:true,domiciliario:domiSafe(rr.data&&rr.data[0])});}catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
+});
+app.post("/api/domi-admin/reset-access", async function(req,res){
+  try{var rid=req.body.restaurante_id,did=req.body.domiciliario_id;if(!rid||!did)return res.status(400).json({ok:false,error:"Faltan datos"});var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+did+"&restaurante_id=eq."+rid,{pin_hash:null,onboarding_completo:false,turno_activo:false,perfil_actualizado_at:new Date().toISOString()},{headers:h});res.json({ok:true});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+app.get("/api/domi-admin/list", async function(req,res){
+  var rid=req.query.restaurante_id;if(!rid)return res.status(400).json({ok:false,error:"Falta restaurante_id"});
+  try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var [dr,ur,pr]=await Promise.all([
+    axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?restaurante_id=eq."+rid+"&select=*&order=created_at.asc",{headers:h}),
+    axios.get(SUPABASE_URL+"/rest/v1/domiciliario_ubicacion?restaurante_id=eq."+rid+"&select=domiciliario_id,lat,lng,updated_at,pedido_id",{headers:h}).catch(function(){return{data:[]};}),
+    axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+rid+"&domiciliario_id=not.is.null&estado=in.(listo,en_camino)&select=id,numero_pedido,domiciliario_id,estado,direccion,total,domicilio",{headers:h}).catch(function(){return{data:[]};})
+  ]);var loc={},act={};(ur.data||[]).forEach(function(u){loc[u.domiciliario_id]=u;});(pr.data||[]).forEach(function(p){act[p.domiciliario_id]=p;});var now=Date.now();var out=(dr.data||[]).map(function(d){var l=loc[d.id]||null,p=act[d.id]||null,age=l&&l.updated_at?now-new Date(l.updated_at).getTime():null;var presence=!d.habilitado?"disabled":!d.onboarding_completo?"pending":!d.turno_activo?"offline":age!=null&&age<90000? (p?"busy":"online") : "stale";return Object.assign(domiSafe(d),{ubicacion:l,pedido_activo:p,presence:presence,gps_age_ms:age});});res.json({ok:true,domiciliarios:out});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+
+app.get("/api/domi-pedido-activo", async function(req,res){
+  var rid=req.query.restaurante_id,did=req.query.domiciliario_id;if(!rid)return res.status(400).json({error:"Falta restaurante_id"});
+  try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};if(did){var rAsig=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+rid+"&domiciliario_id=eq."+encodeURIComponent(did)+"&estado=in.(listo,en_camino)&order=created_at.desc&limit=1&select=*",{headers:h});if(rAsig.data&&rAsig.data[0])return res.json(Object.assign({},rAsig.data[0],{assignment_state:"assigned"}));}
+    var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+rid+"&select=domicilios_asignacion_auto",{headers:h});if(rr.data&&rr.data[0]&&rr.data[0].domicilios_asignacion_auto)return res.json(null);
+    var hace6h=new Date(Date.now()-6*60*60*1000).toISOString();var rDisp=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+rid+"&estado=eq.listo&domiciliario_id=is.null&created_at=gte."+encodeURIComponent(hace6h)+"&order=created_at.asc&limit=12&select=*",{headers:h});var p=(rDisp.data||[]).find(esPedidoDomicilio);if(p)return res.json(Object.assign({},p,{assignment_state:"available"}));res.json(null);
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
+app.get("/api/domi-historial", async function(req,res){
+  var {restaurante_id,domiciliario_id}=req.query;if(!restaurante_id||!domiciliario_id)return res.status(400).json({error:"Faltan datos"});
+  try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var hoy=new Date();hoy.setHours(0,0,0,0);var r=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+"&domiciliario_id=eq."+encodeURIComponent(domiciliario_id)+"&estado=eq.entregado&created_at=gte."+hoy.toISOString()+"&order=created_at.desc&limit=50&select=id,numero_pedido,total,domicilio,direccion,created_at,updated_at,entregado_at,foto_entrega,comprobante_media_id,comprobante_url,items,notas_especiales,metodo_pago,cliente_tel",{headers:h});res.json(r.data||[]);}catch(e){res.status(500).json({error:e.message});}
 });
 
 app.get("/api/cocina-pedidos", async function(req, res) {
