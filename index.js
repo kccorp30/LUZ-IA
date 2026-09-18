@@ -43,6 +43,14 @@ function hasPrivilegedSupabaseKey() {
   var key = String(SUPABASE_SERVICE_KEY_VAL || '');
   return /^sb_secret_/i.test(key) || (key.startsWith('eyJ') && key !== String(SUPABASE_KEY || ''));
 }
+const FINDER_SERVER_SECRET = process.env.FINDER_SERVER_SECRET || "1dcLIWVzcBU4eUkNV4F0TdErKozdrPFU_YoRJlUXvTRQWcRlTlxKdGybgz7UGhCK";
+function finderDbHeaders(extra) {
+  if (hasPrivilegedSupabaseKey()) return sbPrivilegedHeaders(extra);
+  var key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || SUPABASE_KEY;
+  var h = Object.assign({"apikey": key, "x-finder-server": FINDER_SERVER_SECRET}, extra || {});
+  if (!/^sb_(publishable|secret)_/i.test(String(key || ''))) h.Authorization = "Bearer " + key;
+  return h;
+}
 console.log("[Supabase] URL:", SUPABASE_URL);
 console.log("[Supabase] KEY tipo:", SUPABASE_KEY.startsWith("sb_publishable") ? "anon/publishable" : "service_role");
 console.log("[Supabase] SERVICE KEY tipo:", SUPABASE_SERVICE_KEY_VAL.startsWith("sb_publishable") ? "anon/publishable (igual que KEY)" : "service_role ✅");
@@ -3362,7 +3370,7 @@ app.post("/api/pedido-estado", async function(req, res) {
 
     if (estado === "entregado" && restaurante_id) {
       try {
-        await axios.patch(SUPABASE_URL + "/rest/v1/luz_finder_sessions?pedido_id=eq." + encodeURIComponent(id), { active:false, updated_at:new Date().toISOString() }, { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type":"application/json", "Prefer":"return=minimal" } }).catch(function(){});
+        await axios.patch(SUPABASE_URL + "/rest/v1/luz_finder_sessions?pedido_id=eq." + encodeURIComponent(id), { active:false, updated_at:new Date().toISOString() }, { headers: finderDbHeaders({ "Content-Type":"application/json", "Prefer":"return=minimal" }) }).catch(function(){});
         var pedDoneR = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id + "&select=domiciliario_id", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
         var didDone = pedDoneR.data && pedDoneR.data[0] && pedDoneR.data[0].domiciliario_id;
         if (didDone) await autoAsignarPendienteParaDomi(restaurante_id, didDone);
@@ -3485,7 +3493,7 @@ async function guardarUbicacionDomi(body){
   // V10.2: guardar una traza ligera de la ruta del pedido. El servidor limita la frecuencia para no llenar la BD.
   if(pedido_id&&restaurante_id){
     try{
-      var trailH=sbPrivilegedHeaders({"Content-Type":"application/json","Prefer":"return=minimal"}),k=String(pedido_id)+":"+String(domiciliario_id),last=domiTrailCache[k],should=!last;
+      var trailH=finderDbHeaders({"Content-Type":"application/json","Prefer":"return=minimal"}),k=String(pedido_id)+":"+String(domiciliario_id),last=domiTrailCache[k],should=!last;
       if(last){var age=Date.now()-last.ts,moved=distanciaKm(last.lat,last.lng,Number(lat),Number(lng));should=age>=15000||(moved!=null&&moved>=0.02);}
       if(should){await axios.post(SUPABASE_URL+"/rest/v1/domiciliario_ruta_puntos",{restaurante_id:restaurante_id,pedido_id:pedido_id,domiciliario_id:domiciliario_id,lat:Number(lat),lng:Number(lng),accuracy:accuracy!=null?Number(accuracy):null,created_at:now},{headers:trailH});domiTrailCache[k]={lat:Number(lat),lng:Number(lng),ts:Date.now()};}
     }catch(eTrail){console.warn("[ruta-trail]",eTrail.message);}
@@ -4633,12 +4641,12 @@ app.get("/api/domi-pedido-activo", async function(req,res){
 function finderHashToken(raw){return crypto.createHash("sha256").update(String(raw||"")).digest("hex");}
 function finderFresh(row){return !!(row&&row.active&&row.expires_at&&new Date(row.expires_at).getTime()>Date.now());}
 async function finderOrderForDomi(pedidoId,t){
-  var h=sbPrivilegedHeaders();
+  var h=finderDbHeaders();
   var r=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+encodeURIComponent(pedidoId)+"&restaurante_id=eq."+encodeURIComponent(t.rid)+"&domiciliario_id=eq."+encodeURIComponent(t.did)+"&select=id,numero_pedido,cliente_tel,cliente_nombre,direccion,lat_destino,lng_destino,estado,restaurante_id,domiciliario_id",{headers:h});
   return r.data&&r.data[0]||null;
 }
 async function finderSessionRowByPedido(pedidoId){
-  var h=sbPrivilegedHeaders();
+  var h=finderDbHeaders();
   var r=await axios.get(SUPABASE_URL+"/rest/v1/luz_finder_sessions?pedido_id=eq."+encodeURIComponent(pedidoId)+"&select=*",{headers:h});return r.data&&r.data[0]||null;
 }
 app.post("/api/luz-finder/session", async function(req,res){
@@ -4647,13 +4655,13 @@ app.post("/api/luz-finder/session", async function(req,res){
   try{
     var p=await finderOrderForDomi(pedidoId,t);if(!p)return res.status(404).json({ok:false,error:"Esta misión no pertenece al domiciliario"});
     if(String(p.estado||"")==="entregado")return res.status(409).json({ok:false,error:"El pedido ya está entregado"});
-    var svcKey=SUPABASE_SERVICE_KEY_VAL,h=sbPrivilegedHeaders({"Content-Type":"application/json","Prefer":"return=representation"});
+    var svcKey=SUPABASE_SERVICE_KEY_VAL,h=finderDbHeaders({"Content-Type":"application/json","Prefer":"return=representation"});
     var raw=crypto.randomBytes(24).toString("base64url"),hash=finderHashToken(raw),expires=new Date(Date.now()+20*60*1000).toISOString(),existing=await finderSessionRowByPedido(pedidoId),row;
     if(existing){var rr=await axios.patch(SUPABASE_URL+"/rest/v1/luz_finder_sessions?pedido_id=eq."+encodeURIComponent(pedidoId),{token_hash:hash,active:true,expires_at:expires,domiciliario_id:t.did,updated_at:new Date().toISOString()},{headers:h});row=rr.data&&rr.data[0]||existing;}
     else{var cr=await axios.post(SUPABASE_URL+"/rest/v1/luz_finder_sessions",{pedido_id:pedidoId,restaurante_id:t.rid,domiciliario_id:t.did,token_hash:hash,active:true,expires_at:expires},{headers:h});row=cr.data&&cr.data[0];}
     var url="https://"+req.get("host")+"/encontrarme?token="+encodeURIComponent(raw),sent=false,whatsappError=null;
     try{
-      var restR=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+encodeURIComponent(t.rid)+"&select=nombre,whatsapp_phone_id",{headers:sbPrivilegedHeaders()}),rest=restR.data&&restR.data[0]||{};
+      var restR=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+encodeURIComponent(t.rid)+"&select=nombre,whatsapp_phone_id",{headers:finderDbHeaders()}),rest=restR.data&&restR.data[0]||{};
       if(p.cliente_tel){var txt="✨ Luz · Tu domiciliario ya está cerca.\n\nActiva tu ubicación temporal para ayudarlo a encontrarte dentro del conjunto, edificio o lugar:\n"+url+"\n\nLa ubicación se comparte solo durante esta entrega y se apaga automáticamente.";var waResult=await sendWhatsAppMessage(p.cliente_tel,txt,rest.whatsapp_phone_id);sent=!!(waResult&&waResult.ok);if(!sent) whatsappError=waResult&&waResult.error?waResult.error:"No confirmado";}
     }catch(eSend){console.warn("[finder-whatsapp]",eSend.message);}
     await registrarEventoLuz(t.rid,pedidoId,"domiciliario",t.did,"finder_solicitado","Luz Finder activado",sent?"Le pedí al cliente activar su ubicación temporal.":"Comparte el enlace con el cliente para activar su ubicación temporal.",{share_url:url,expires_at:expires},"luz",null);
@@ -4666,17 +4674,17 @@ app.get("/api/luz-finder/status", async function(req,res){
 });
 app.get("/api/luz-finder/public", async function(req,res){
   var raw=req.query.token;if(!raw)return res.status(400).json({ok:false,error:"Enlace inválido"});
-  try{var hash=finderHashToken(raw),svcKey=SUPABASE_SERVICE_KEY_VAL,h=sbPrivilegedHeaders();var r=await axios.get(SUPABASE_URL+"/rest/v1/luz_finder_sessions?token_hash=eq."+hash+"&select=id,pedido_id,restaurante_id,active,expires_at,client_updated_at",{headers:h}),row=r.data&&r.data[0];if(!finderFresh(row))return res.status(410).json({ok:false,error:"Este enlace ya expiró"});var pr=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+row.pedido_id+"&select=numero_pedido,estado",{headers:h}),p=pr.data&&pr.data[0]||{};if(p.estado==="entregado")return res.status(410).json({ok:false,error:"Esta entrega ya terminó"});var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+row.restaurante_id+"&select=nombre",{headers:h}),rest=rr.data&&rr.data[0]||{};res.json({ok:true,restaurant:rest.nombre||"HOLA LUZ",order_number:p.numero_pedido||null,expires_at:row.expires_at,sharing:!!row.client_updated_at});}catch(e){res.status(500).json({ok:false,error:e.message});}
+  try{var hash=finderHashToken(raw),svcKey=SUPABASE_SERVICE_KEY_VAL,h=finderDbHeaders();var r=await axios.get(SUPABASE_URL+"/rest/v1/luz_finder_sessions?token_hash=eq."+hash+"&select=id,pedido_id,restaurante_id,active,expires_at,client_updated_at",{headers:h}),row=r.data&&r.data[0];if(!finderFresh(row))return res.status(410).json({ok:false,error:"Este enlace ya expiró"});var pr=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+row.pedido_id+"&select=numero_pedido,estado",{headers:h}),p=pr.data&&pr.data[0]||{};if(p.estado==="entregado")return res.status(410).json({ok:false,error:"Esta entrega ya terminó"});var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+row.restaurante_id+"&select=nombre",{headers:h}),rest=rr.data&&rr.data[0]||{};res.json({ok:true,restaurant:rest.nombre||"HOLA LUZ",order_number:p.numero_pedido||null,expires_at:row.expires_at,sharing:!!row.client_updated_at});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 app.post("/api/luz-finder/public/location", async function(req,res){
   var raw=req.body&&req.body.token,lat=Number(req.body&&req.body.lat),lng=Number(req.body&&req.body.lng),acc=req.body&&req.body.accuracy!=null?Number(req.body.accuracy):null,heading=req.body&&req.body.heading!=null?Number(req.body.heading):null;if(!raw||!isFinite(lat)||!isFinite(lng))return res.status(400).json({ok:false,error:"Ubicación inválida"});
-  try{var hash=finderHashToken(raw),svcKey=SUPABASE_SERVICE_KEY_VAL,h=sbPrivilegedHeaders({"Content-Type":"application/json","Prefer":"return=representation"});var r=await axios.get(SUPABASE_URL+"/rest/v1/luz_finder_sessions?token_hash=eq."+hash+"&select=*",{headers:h}),row=r.data&&r.data[0];if(!finderFresh(row))return res.status(410).json({ok:false,error:"La sesión expiró"});var now=new Date().toISOString();await axios.patch(SUPABASE_URL+"/rest/v1/luz_finder_sessions?id=eq."+row.id,{client_lat:lat,client_lng:lng,client_accuracy:isFinite(acc)?acc:null,client_heading:isFinite(heading)?heading:null,client_updated_at:now,updated_at:now},{headers:h});res.json({ok:true,updated_at:now});}catch(e){res.status(500).json({ok:false,error:e.message});}
+  try{var hash=finderHashToken(raw),svcKey=SUPABASE_SERVICE_KEY_VAL,h=finderDbHeaders({"Content-Type":"application/json","Prefer":"return=representation"});var r=await axios.get(SUPABASE_URL+"/rest/v1/luz_finder_sessions?token_hash=eq."+hash+"&select=*",{headers:h}),row=r.data&&r.data[0];if(!finderFresh(row))return res.status(410).json({ok:false,error:"La sesión expiró"});var now=new Date().toISOString();await axios.patch(SUPABASE_URL+"/rest/v1/luz_finder_sessions?id=eq."+row.id,{client_lat:lat,client_lng:lng,client_accuracy:isFinite(acc)?acc:null,client_heading:isFinite(heading)?heading:null,client_updated_at:now,updated_at:now},{headers:h});res.json({ok:true,updated_at:now});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 app.post("/api/luz-finder/public/stop", async function(req,res){
-  var raw=req.body&&req.body.token;if(!raw)return res.status(400).json({ok:false,error:"Enlace inválido"});try{var hash=finderHashToken(raw),svcKey=SUPABASE_SERVICE_KEY_VAL,h=sbPrivilegedHeaders({"Content-Type":"application/json","Prefer":"return=minimal"});await axios.patch(SUPABASE_URL+"/rest/v1/luz_finder_sessions?token_hash=eq."+hash,{active:false,updated_at:new Date().toISOString()},{headers:h});res.json({ok:true});}catch(e){res.status(500).json({ok:false,error:e.message});}
+  var raw=req.body&&req.body.token;if(!raw)return res.status(400).json({ok:false,error:"Enlace inválido"});try{var hash=finderHashToken(raw),svcKey=SUPABASE_SERVICE_KEY_VAL,h=finderDbHeaders({"Content-Type":"application/json","Prefer":"return=minimal"});await axios.patch(SUPABASE_URL+"/rest/v1/luz_finder_sessions?token_hash=eq."+hash,{active:false,updated_at:new Date().toISOString()},{headers:h});res.json({ok:true});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 app.get("/api/domi-ruta-pedido", async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});var pedidoId=req.query.pedido_id;if(!pedidoId)return res.status(400).json({ok:false,error:"Falta pedido_id"});try{var p=await finderOrderForDomi(pedidoId,t);if(!p)return res.status(404).json({ok:false,error:"Misión no encontrada"});var svcKey=SUPABASE_SERVICE_KEY_VAL,h=sbPrivilegedHeaders();var r=await axios.get(SUPABASE_URL+"/rest/v1/domiciliario_ruta_puntos?pedido_id=eq."+encodeURIComponent(pedidoId)+"&domiciliario_id=eq."+encodeURIComponent(t.did)+"&order=created_at.asc&limit=2000&select=lat,lng,accuracy,created_at",{headers:h});res.json({ok:true,puntos:r.data||[]});}catch(e){res.status(500).json({ok:false,error:e.message});}
+  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});var pedidoId=req.query.pedido_id;if(!pedidoId)return res.status(400).json({ok:false,error:"Falta pedido_id"});try{var p=await finderOrderForDomi(pedidoId,t);if(!p)return res.status(404).json({ok:false,error:"Misión no encontrada"});var svcKey=SUPABASE_SERVICE_KEY_VAL,h=finderDbHeaders();var r=await axios.get(SUPABASE_URL+"/rest/v1/domiciliario_ruta_puntos?pedido_id=eq."+encodeURIComponent(pedidoId)+"&domiciliario_id=eq."+encodeURIComponent(t.did)+"&order=created_at.asc&limit=2000&select=lat,lng,accuracy,created_at",{headers:h});res.json({ok:true,puntos:r.data||[]});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
 app.get("/api/domi-historial", async function(req,res){
