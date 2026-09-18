@@ -57,6 +57,11 @@ body{background:radial-gradient(70% 45% at 50% -8%,rgba(62,55,255,.24),transpare
 .notify-btn{cursor:pointer}.notify-btn .notif-count{position:absolute;right:-3px;top:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:10px;display:none;place-items:center;background:linear-gradient(135deg,#ff4d78,#ff7b55);color:white;font-size:9px;font-weight:900;border:2px solid #06102a;box-shadow:0 0 14px rgba(255,77,120,.5)}.notify-btn.has-unread .notif-count{display:grid}.notify-btn.has-unread>i{display:none}
 .notif-backdrop{position:fixed;inset:0;z-index:110;background:rgba(1,5,18,.56);backdrop-filter:blur(7px);opacity:0;pointer-events:none;transition:.25s}.notif-backdrop.on{opacity:1;pointer-events:auto}.notif-drawer{position:absolute;right:0;top:0;bottom:0;width:min(92vw,430px);padding:calc(18px + env(safe-area-inset-top,0px)) 14px calc(18px + env(safe-area-inset-bottom,0px));background:radial-gradient(circle at 50% -10%,rgba(96,58,255,.21),transparent 30%),linear-gradient(180deg,#07122e,#040a1c);border-left:1px solid rgba(112,111,255,.24);box-shadow:-26px 0 80px rgba(0,0,0,.55);transform:translateX(104%);transition:.32s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column}.notif-backdrop.on .notif-drawer{transform:translateX(0)}.notif-head{display:flex;align-items:center;gap:11px;padding:4px 2px 15px;border-bottom:1px solid rgba(104,128,212,.12)}.notif-head-copy{flex:1}.notif-head-copy small{display:block;color:#8a9bc1;font-size:8px;text-transform:uppercase;letter-spacing:.13em}.notif-head-copy b{display:block;margin-top:3px;font-size:20px}.notif-x{width:38px;height:38px;border-radius:13px;border:1px solid rgba(112,134,210,.15);background:rgba(255,255,255,.035);color:#a9b7d4;font-size:18px}.notif-feed{overflow:auto;padding:12px 1px 16px;display:flex;flex-direction:column;gap:9px}.notif-empty{padding:42px 14px;text-align:center;color:#687da8;font-size:11px;line-height:1.55}.notif-item{display:grid;grid-template-columns:38px 1fr;gap:10px;padding:12px;border-radius:17px;background:linear-gradient(145deg,rgba(14,29,69,.86),rgba(7,16,42,.8));border:1px solid rgba(92,126,217,.13);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}.notif-item.fresh{border-color:rgba(111,80,255,.38);box-shadow:0 0 28px rgba(96,64,255,.08),inset 0 1px 0 rgba(255,255,255,.04)}.notif-ico{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;background:rgba(114,78,255,.11);border:1px solid rgba(137,91,255,.18);color:#c9b9ff;font-size:15px}.notif-item b{display:block;font-size:11.5px;color:#f0f4ff;line-height:1.3}.notif-item p{margin:4px 0 0;color:#8da0c6;font-size:9px;line-height:1.5}.notif-time{display:block;margin-top:7px;color:#566d99;font-size:8px}.notif-actions{margin-top:auto;border-top:1px solid rgba(104,128,212,.12);padding-top:11px}.notif-actions button{width:100%;min-height:48px;border:1px solid rgba(88,154,255,.22);border-radius:15px;background:linear-gradient(95deg,rgba(91,63,255,.23),rgba(42,142,255,.16));color:#dceaff;font-size:11px;font-weight:900}
 </style>
+
+<style>
+.luz-action-bar.thinking{border-color:rgba(77,240,214,.42)!important;box-shadow:0 20px 70px rgba(0,0,0,.48),0 0 42px rgba(72,116,255,.25),0 0 24px rgba(77,240,214,.12)!important}.luz-action-bar.thinking .hl-orb{filter:saturate(1.22) brightness(1.08);animation:v101LuzMove 1.35s ease-in-out infinite}.luz-action-bar.thinking .luz-action-wave i{animation-duration:.7s!important}@keyframes v101LuzMove{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.06)}}
+.v101-map-controls{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-top:12px;padding:13px;border-radius:18px;border:1px solid rgba(74,222,199,.2);background:linear-gradient(135deg,rgba(18,91,96,.18),rgba(49,39,119,.16))}.v101-map-controls b{display:block;font-size:12px;color:#dffdf7}.v101-map-controls span{display:block;margin-top:3px;font-size:9px;color:#8399bd;line-height:1.45}.v101-map-controls button{min-height:44px;padding:0 14px;border:1px solid rgba(95,140,255,.32);border-radius:13px;background:linear-gradient(100deg,#7647ff,#178cff 55%,#23d9e8);color:#fff;font-size:9px;font-weight:950;box-shadow:0 8px 25px rgba(50,96,255,.22)}@media(max-width:620px){.v101-map-controls{grid-template-columns:1fr}.v101-map-controls button{width:100%}}
+</style>
 </head>
 <body>
 <div class="bgfx"><div class="gridfx"></div></div>
@@ -195,6 +200,140 @@ function openProfilePhoto(){profilePhoto=null;document.getElementById('profilePr
 document.getElementById('profileInput').onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){profilePhoto=ev.target.result;var im=document.getElementById('profilePreview');im.src=profilePhoto;im.classList.remove('hide');document.getElementById('sendProfilePhoto').classList.remove('hide')};r.readAsDataURL(f)};
 async function uploadProfilePhoto(){if(!profilePhoto||!domi)return;try{var d=await jfetch('/api/domi-foto-perfil',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domiciliario_id:domi.id,foto_base64:profilePhoto,mime:'image/jpeg'})});domi.foto_url=d.foto_url;avatarHtml(document.getElementById('topAvatar'),domi);avatarHtml(document.getElementById('profileAvatar'),domi);closeSheet('profilePhotoSheet');notice('success','Foto actualizada','El restaurante ya puede verla.')}catch(e){notice('error','No se pudo subir',e.message)}}
 async function logout(){if(shift){try{await jfetch('/api/domi-turno',{method:'POST',headers:authHeader(),body:JSON.stringify({activo:false})})}catch(e){}}stopGPS();clearInterval(poll);clearInterval(notifPoll);try{localStorage.removeItem('hl_domi_token')}catch(e){}location.reload()}
+
+/* ===== V10.1 · FLOW FIX + LUZ VOICE + FOREGROUND TRACKING ===== */
+var luzVoiceUnlocked=false,luzVoiceMuted=false;
+function unlockLuzVoice(){
+  if(luzVoiceUnlocked)return;
+  luzVoiceUnlocked=true;
+  try{
+    if(window.speechSynthesis){
+      var u=new SpeechSynthesisUtterance('');u.volume=0;window.speechSynthesis.speak(u);
+    }
+  }catch(e){}
+}
+['pointerdown','touchstart','keydown'].forEach(function(ev){document.addEventListener(ev,unlockLuzVoice,{once:true,passive:true})});
+var luzVoiceCacheDomi={};
+async function luzSpeakDomi(text){
+  if(luzVoiceMuted||!luzVoiceUnlocked||!text)return;
+  var clean=String(text).replace(/[✨✓🛵📍⚠️✦]/g,'').replace(/\s+/g,' ').trim();
+  if(!clean)return;
+  try{
+    var key=clean.slice(0,80),url=luzVoiceCacheDomi[key];
+    if(!url){var r=await fetch('/api/luz-voz',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({texto:clean}),signal:AbortSignal.timeout?AbortSignal.timeout(9000):undefined});if(!r.ok)throw new Error('voice '+r.status);url=URL.createObjectURL(await r.blob());luzVoiceCacheDomi[key]=url;var ks=Object.keys(luzVoiceCacheDomi);if(ks.length>20){try{URL.revokeObjectURL(luzVoiceCacheDomi[ks[0]])}catch(x){}delete luzVoiceCacheDomi[ks[0]]}}
+    var a=new Audio(url);a.volume=.92;await a.play();return;
+  }catch(e){}
+  if(!window.speechSynthesis)return;
+  try{window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(clean.length>180?clean.slice(0,180):clean);u.lang='es-CO';u.rate=1.02;u.pitch=1.08;u.volume=.92;var voices=window.speechSynthesis.getVoices()||[],v=voices.find(function(x){return x.lang==='es-CO'||x.lang==='es-419'})||voices.find(function(x){return /^es/i.test(x.lang)&&/paulina|monica|laura|sofia|female|mujer/i.test(x.name)})||voices.find(function(x){return /^es/i.test(x.lang)});if(v)u.voice=v;window.speechSynthesis.speak(u)}catch(e){}
+}
+var showLuzActionV10=showLuzAction;
+showLuzAction=function(title,text){
+  showLuzActionV10(title,text);
+  var b=document.getElementById('luzActionBar');if(b)b.classList.add('thinking');
+  luzSpeakDomi((title||'Luz')+'. '+(text||''));
+  setTimeout(function(){if(b)b.classList.remove('thinking')},1800);
+};
+// El evento de llegada manda sobre el estado en_camino.
+flowIndex=function(p){
+  var ev=(p&&p._events||[]).map(function(x){return x.tipo});
+  if(ev.indexOf('entregado')>=0||String(p&&p.estado||'')==='entregado')return 4;
+  if(ev.indexOf('llegue_cliente')>=0)return 3;
+  if(String(p&&p.estado||'')==='en_camino'||ev.indexOf('en_ruta')>=0)return 2;
+  if(ev.indexOf('recogido')>=0)return 1;
+  return p&&p.domiciliario_id?0:0;
+};
+var eventV10=event;
+event=async function(type){
+  if(!ped)return false;
+  try{
+    await jfetch('/api/domi-evento',{method:'POST',headers:authHeader(),body:JSON.stringify({tipo:type,pedido_id:ped.id})});
+    ped._events=ped._events||[];
+    if(!ped._events.some(function(x){return x.tipo===type}))ped._events.unshift({tipo:type,created_at:new Date().toISOString()});
+    pedSig='';
+    await renderMission(ped);
+    loadLuzNotifications(false);
+    return true;
+  }catch(e){notice('error','No se pudo actualizar',e.message);return false;}
+};
+markPicked=async function(){
+  if(await event('recogido')){
+    notice('success','Pedido recogido','Ya puedes iniciar la ruta hacia el cliente.');
+    showLuzAction('Pedido recogido','Perfecto. Ya tienes el pedido. Cuando estés listo, inicia la ruta hacia el cliente.');
+  }
+};
+var startRouteV10=startRoute;
+startRoute=async function(){
+  if(!ped)return;
+  try{
+    await event('navegacion_iniciada');
+    await jfetch('/api/pedido-estado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:ped.id,estado:'en_camino',telefono_cliente:ped.cliente_tel,numero_pedido:ped.numero_pedido,restaurante_id:restId,direccion:ped.direccion,domiciliario_nombre:domi.nombre})});
+    ped.estado='en_camino';pedSig='';
+    notice('success','Ruta iniciada','El cliente y el restaurante fueron actualizados.');
+    showLuzAction('Ruta iniciada','Voy siguiendo tu entrega. Mantén HOLA LUZ abierta para compartir tu ubicación en tiempo real.');
+    await renderMission(ped);
+  }catch(e){notice('error','No se pudo iniciar la ruta',e.message)}
+};
+arrivedClient=async function(){
+  if(!ped)return;
+  var ok=await event('llegue_cliente');
+  if(!ok)return;
+  notice('success','Llegaste al destino','Ahora registra la evidencia para completar la entrega.');
+  showLuzAction('Llegaste al cliente','Ya registré tu llegada. El siguiente paso es tomar la foto de evidencia y confirmar la entrega.');
+  await renderMission(ped);
+};
+var uploadDeliveryPhotoV10=uploadDeliveryPhoto;
+uploadDeliveryPhoto=async function(){
+  if(!ped||!deliveryPhoto)return;
+  try{
+    var d=await jfetch('/api/foto-entrega',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pedido_id:ped.id,restaurante_id:restId,domiciliario_id:domi.id,imagen_base64:deliveryPhoto})});
+    ped.foto_entrega=d.url;closeSheet('photoSheet');notice('success','Evidencia guardada','La foto quedó asociada al pedido.');
+    showLuzAction('Evidencia guardada','Perfecto. Estoy cerrando la entrega y actualizando al restaurante.');
+    await completeDelivery();
+  }catch(e){notice('error','No se guardó la foto',e.message)}
+};
+var completeDeliveryV10=completeDelivery;
+completeDelivery=async function(){
+  if(!ped)return;
+  try{
+    var n=ped.numero_pedido,earn=ped.domicilio||0;
+    await jfetch('/api/pedido-estado',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:ped.id,estado:'entregado',telefono_cliente:ped.cliente_tel,numero_pedido:ped.numero_pedido,restaurante_id:restId,direccion:ped.direccion,domiciliario_nombre:domi.nombre})});
+    ped=null;pedSig='';notice('success','¡Entrega completada!','#'+n+' · ganancia '+money(earn));
+    showLuzAction('Entrega completada','Excelente trabajo. El pedido #'+n+' quedó cerrado y vuelves a estar disponible.');
+    await loadHistory();await loadStats();renderIdle();renderPresence();setTimeout(function(){loadMission(true)},500);
+  }catch(e){notice('error','No se pudo completar',e.message)}
+};
+var acceptMissionV10=acceptMission;
+acceptMission=async function(){
+  await acceptMissionV10();
+  if(ped&&ped.domiciliario_id===domi.id)showLuzAction('Misión aceptada','Ya está sincronizada con el restaurante. Revisa el pedido y recoge cuando Cocina lo tenga listo.');
+};
+// Mantener la app en primer plano conserva el tracking web. Navegación externa queda como opción separada.
+function ensureMapControlsV101(){
+  var view=document.getElementById('view-map');if(!view||document.getElementById('v101MapControls'))return;
+  var c=document.createElement('div');c.id='v101MapControls';c.className='v101-map-controls';
+  c.innerHTML='<div><b>Tracking HOLA LUZ activo</b><span>Mantén esta pantalla abierta para compartir ubicación continuamente.</span></div><button onclick="openExternalNavigation()">ABRIR NAVEGACIÓN EXTERNA ↗</button>';
+  var m=view.querySelector('.mission');if(m)m.appendChild(c);
+}
+navigate=function(){
+  if(!ped)return;
+  event('navegacion_iniciada');
+  goView('map');ensureMapControlsV101();
+  showLuzAction('Tracking activo','Te mantengo dentro de HOLA LUZ para no perder tu ubicación. Si necesitas navegación giro a giro, usa el botón de navegación externa.');
+};
+function openExternalNavigation(){
+  if(!ped)return;
+  var u=ped.lat_destino&&ped.lng_destino?'https://www.google.com/maps/dir/?api=1&destination='+ped.lat_destino+','+ped.lng_destino:'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(ped.direccion||'');
+  showLuzAction('Vas a salir de HOLA LUZ','En iPhone el navegador puede pausar el GPS cuando queda en segundo plano. Volveré a sincronizar apenas regreses.');
+  setTimeout(function(){window.open(u,'_blank')},350);
+}
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='hidden'&&shift){try{localStorage.setItem('hl_gps_background_at',String(Date.now()))}catch(e){}}
+  if(document.visibilityState==='visible'&&shift){
+    setTimeout(async function(){var ok=await connectGps(true);if(ok){startGpsWatch();await postGps(true);renderPresence();}showLuzAction('GPS resincronizado','Volví a conectar tu ubicación con el restaurante.');},180);
+  }
+});
+ensureMapControlsV101();
+
 restore();
 </script>
 </body></html>
