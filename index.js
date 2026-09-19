@@ -7280,6 +7280,10 @@ function kitchenMinutesSince(value) {
   if (!t || !isFinite(t)) return 0;
   return Math.max(0, Math.floor((Date.now() - t) / 60000));
 }
+function kitchenShortNumber(value) {
+  var n = Math.abs(parseInt(value,10) || 0) % 1000;
+  return String(n || value || "");
+}
 function kitchenProductionSummary(orders) {
   var map = {};
   (orders || []).filter(function(p){ return p.estado !== "listo"; }).forEach(function(p){
@@ -7287,7 +7291,7 @@ function kitchenProductionSummary(orders) {
       var key = i.nombre.toLowerCase().trim();
       if (!map[key]) map[key] = { nombre:i.nombre, cantidad:0, excepciones:[] };
       map[key].cantidad += i.cantidad;
-      if (i.nota) map[key].excepciones.push("#" + p.numero_pedido + ": " + i.nota);
+      if (i.nota) map[key].excepciones.push("#" + kitchenShortNumber(p.numero_pedido) + ": " + i.nota);
     });
   });
   return Object.keys(map).map(function(k){ return map[k]; }).sort(function(a,b){ return b.cantidad-a.cantidad; }).slice(0,25);
@@ -7324,10 +7328,10 @@ function kitchenCompactHistory(historial) {
 }
 function kitchenFindOrderFromText(mensaje, orders, focusedNum) {
   var low = kitchenNormText(mensaje), candidates = orders || [];
-  var nums = String(mensaje || "").match(/\b\d{2,6}\b/g) || [];
+  var nums = String(mensaje || "").match(/\b\d{1,6}\b/g) || [];
   for (var i=0;i<nums.length;i++) {
     var n = Number(nums[i]);
-    var byN = candidates.find(function(o){ return Number(o.numero_pedido) === n; });
+    var byN = candidates.find(function(o){ return Number(o.numero_pedido) === n || Number(o.numero_cocina) === n; });
     if (byN) return byN;
   }
   var byClient = candidates.filter(function(o){
@@ -7350,7 +7354,7 @@ function kitchenFallbackAgent(mensaje, state) {
   var ready = orders.filter(function(o){return o.estado === "listo";});
   var late = orders.filter(function(o){return o.estado !== "listo" && Number(o.minutos||0) >= 15;});
   var action = {name:"none",order_number:null,filter:null};
-  function pack(reply, focus){ return {ok:true,reply:reply,action:action,focus_order_number:focus||null,requires_confirmation:false,confirmation_prompt:null,memory_rule:null,source:"local"}; }
+  function pack(reply, focus){ return {ok:true,reply:reply,opinion_title:"Coordinación activa",urgency:"low",speak:false,action:action,focus_order_number:focus||null,requires_confirmation:false,confirmation_prompt:null,memory_rule:null,source:"local"}; }
   if (/\b(como vamos|resumen|situacion|estado de cocina)\b/.test(low)) {
     var r = "Tenemos "+confirmed.length+" nuevos, "+preparing.length+" preparando y "+ready.length+" listos.";
     r += late.length ? " Hay "+late.length+" atrasado"+(late.length!==1?"s":"")+" que requieren atención." : " Ninguno está atrasado.";
@@ -7359,14 +7363,14 @@ function kitchenFallbackAgent(mensaje, state) {
   if (/\b(que sigue|cual sigue|siguiente|prioridad|primero)\b/.test(low)) {
     var pool = orders.filter(function(o){return o.estado!=="listo";}).sort(function(a,b){return (Number(b.minutos||0)+(b.estado==="confirmado"?8:4))-(Number(a.minutos||0)+(a.estado==="confirmado"?8:4));});
     if (!pool.length) return pack("Estamos al día. No hay pedidos pendientes.");
-    action.name="focus_order"; action.order_number=pool[0].numero_pedido; return pack("Yo seguiría con el pedido "+pool[0].numero_pedido+". Lleva "+pool[0].minutos+" minutos.",pool[0].numero_pedido);
+    action.name="focus_order"; action.order_number=pool[0].numero_pedido; return pack("Yo seguiría con el pedido "+pool[0].numero_cocina+". Lleva "+pool[0].minutos+" minutos.",pool[0].numero_pedido);
   }
   if (/\b(muestra|muestrame|enfoca|abre|busca)\b/.test(low)) {
     if (/\b(domicilio|domicilios)\b/.test(low)){action.name="filter_orders";action.filter="domicilio";return pack("Te dejo solo los domicilios.");}
     if (/\b(mesa|mesas)\b/.test(low)){action.name="filter_orders";action.filter="mesa";return pack("Te dejo solo los pedidos de mesa.");}
     if (/\b(recoger|recogida)\b/.test(low)){action.name="filter_orders";action.filter="recoger";return pack("Te dejo solo los pedidos para recoger.");}
     if (/\b(todo|todos)\b/.test(low)){action.name="filter_orders";action.filter="all";return pack("Listo. Te muestro toda la operación.");}
-    if (selected){action.name="focus_order";action.order_number=selected.numero_pedido;return pack("Aquí está el pedido "+selected.numero_pedido+".",selected.numero_pedido);}
+    if (selected){action.name="focus_order";action.order_number=selected.numero_pedido;return pack("Aquí está el pedido "+selected.numero_cocina+".",selected.numero_pedido);}
   }
   if (/\b(produccion|agrupar|agrupa|juntar|junta)\b/.test(low)) { action.name="show_production"; return pack("Te muestro la producción agrupada para cocinar por volumen."); }
   var productHit = (state.produccion_pendiente || []).filter(function(g){
@@ -7392,14 +7396,14 @@ function kitchenFallbackAgent(mensaje, state) {
   if (selected && changeState) {
     if (selected.estado==="confirmado") wantsStart=true;
     else if (selected.estado==="en_preparacion") wantsReady=true;
-    else if (selected.estado==="listo") return pack("El pedido "+selected.numero_pedido+" ya está listo. Dime si ya fue retirado o entregado.",selected.numero_pedido);
+    else if (selected.estado==="listo") return pack("El pedido "+selected.numero_cocina+" ya está listo. Dime si ya fue retirado o entregado.",selected.numero_pedido);
   }
-  if (selected && wantsStart) { action.name="start_preparing";action.order_number=selected.numero_pedido;return pack("Listo. Inicio el pedido "+selected.numero_pedido+" y te lo sigo en preparación.",selected.numero_pedido); }
-  if (selected && wantsReady) { action.name="mark_ready";action.order_number=selected.numero_pedido;return pack("Perfecto. Marco el pedido "+selected.numero_pedido+" como listo.",selected.numero_pedido); }
-  if (selected && wantsDelivered) { action.name="mark_delivered";action.order_number=selected.numero_pedido;return pack("Entendido. Retiro el pedido "+selected.numero_pedido+" de cocina.",selected.numero_pedido); }
+  if (selected && wantsStart) { action.name="start_preparing";action.order_number=selected.numero_pedido;return pack("Listo. Inicio el pedido "+selected.numero_cocina+" y te lo sigo en preparación.",selected.numero_pedido); }
+  if (selected && wantsReady) { action.name="mark_ready";action.order_number=selected.numero_pedido;return pack("Perfecto. Marco el pedido "+selected.numero_cocina+" como listo.",selected.numero_pedido); }
+  if (selected && wantsDelivered) { action.name="mark_delivered";action.order_number=selected.numero_pedido;return pack("Entendido. Retiro el pedido "+selected.numero_cocina+" de cocina.",selected.numero_pedido); }
   if (selected && /\b(que tiene|que lleva|leeme|lee el pedido|detalle|contenido)\b/.test(low)) {
     var items = (selected.items||[]).map(function(i){return (i.cantidad>1?i.cantidad+" ":"")+i.nombre+(i.nota?", "+i.nota:"");});
-    return pack("El pedido "+selected.numero_pedido+" tiene "+(items.join(", ")||"sin productos visibles")+".",selected.numero_pedido);
+    return pack("El pedido "+selected.numero_cocina+" tiene "+(items.join(", ")||"sin productos visibles")+".",selected.numero_pedido);
   }
   return pack("Estoy contigo. Dime qué pedido quieres mover o qué necesitas saber de la cocina.", selected && selected.numero_pedido);
 }
@@ -7423,18 +7427,57 @@ async function kitchenCallClaude(systemPrompt, messages) {
 app.post("/api/cocina-luz", async function(req, res) {
   var restauranteId = String(req.body.restaurante_id || "").trim();
   var mensaje = String(req.body.mensaje || "").trim();
+  var mode = String(req.body.mode || "conversation").trim().toLowerCase();
   if (!restauranteId || !mensaje) return res.status(400).json({ ok:false, error:"Faltan datos" });
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey":svcKey, "Authorization":"Bearer "+svcKey };
     var hace18h = new Date(Date.now() - 18*60*60*1000).toISOString();
     var ordR = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + encodeURIComponent(restauranteId) + "&estado=in.(confirmado,en_preparacion,listo)&created_at=gte." + hace18h + "&order=created_at.asc&select=id,numero_pedido,cliente_nombre,cliente_tel,items,direccion,tipo_pedido,estado,created_at,updated_at,notas_especiales,domiciliario_nombre,metodo_pago,total", { headers:h });
-    var orders = (ordR.data || []).map(function(p){return {id:p.id,numero_pedido:p.numero_pedido,cliente:p.cliente_nombre||"",telefono:p.cliente_tel||"",estado:p.estado,tipo:kitchenTipoPedido(p),direccion:p.direccion||"",minutos:kitchenMinutesSince(p.created_at),items:kitchenNormalizeItems(p.items),notas:p.notas_especiales||"",domiciliario:p.domiciliario_nombre||"",metodo_pago:p.metodo_pago||"",total:Number(p.total||0)};});
+    var orders = (ordR.data || []).map(function(p){return {id:p.id,numero_pedido:p.numero_pedido,numero_cocina:kitchenShortNumber(p.numero_pedido),cliente:p.cliente_nombre||"",telefono:p.cliente_tel||"",estado:p.estado,tipo:kitchenTipoPedido(p),direccion:p.direccion||"",minutos:kitchenMinutesSince(p.created_at),items:kitchenNormalizeItems(p.items),notas:p.notas_especiales||"",domiciliario:p.domiciliario_nombre||"",metodo_pago:p.metodo_pago||"",total:Number(p.total||0)};});
     var production = kitchenProductionSummary(ordR.data || []), learned=[];
     try { var memR=await axios.get(SUPABASE_URL+"/rest/v1/luz_aprendizajes?restaurante_id=eq."+encodeURIComponent(restauranteId)+"&activo=eq.true&fuente=eq.cocina&order=created_at.desc&limit=25&select=contenido,tipo,created_at",{headers:h});learned=memR.data||[]; } catch(eMem) {}
     var focusedNum=req.body.focused_order_number==null?null:Number(req.body.focused_order_number), pending=req.body.pending_confirmation||null;
-    var state={hora_colombia:getHoraColombia().toLocaleString("es-CO"),focused_order_number:focusedNum,pending_confirmation:pending,pedidos:orders,produccion_pendiente:production,resumen:{nuevos:orders.filter(function(p){return p.estado==="confirmado";}).length,preparando:orders.filter(function(p){return p.estado==="en_preparacion";}).length,listos:orders.filter(function(p){return p.estado==="listo";}).length,atrasados:orders.filter(function(p){return p.estado!=="listo"&&p.minutos>=15;}).length},reglas_aprendidas:learned.map(function(x){return x.contenido;})};
-    var systemPrompt=`Eres Luz, la COORDINADORA OPERATIVA de la cocina de HOLA LUZ. Conversas como una compañera real, rápida y competente. Tu trabajo es reducir errores, toques y tiempo de decisión. Razona SOLO con el estado real de cocina recibido. Resuelve referencias naturales como "ese", "el actual", "el de Kevin", "el último", "el de hamburguesas", "el que lleva más tiempo" y "el siguiente" usando pedido enfocado e historial reciente.\n\nACCIONES: none | focus_order | start_preparing | mark_ready | mark_delivered | filter_orders | show_production | show_summary.\n- Si dicen "inicia el pedido" y existe un único nuevo razonable, inícialo.\n- Si dicen "cambia el estado" del enfocado: confirmado=>start_preparing; en_preparacion=>mark_ready; listo=>pregunta si ya fue retirado.\n- Solo mark_delivered con intención explícita de retirado/entregado/ya salió.\n- focus/filter/show_production son visuales y libres.\n- Si preguntan cantidades, calcula con produccion_pendiente e incluye excepciones importantes.\n- Si preguntan cómo vamos, resume y prioriza solo si aporta.\n- Si falta una sola aclaración, pregunta exactamente eso. Nunca digas "no entendí el comando".\n- Máximo 2 frases. Sin markdown.\n- Si el usuario dice recuerda/aprende/a partir de ahora, puedes devolver memory_rule.\n\nResponde SOLO JSON válido: {"reply":"...","action":{"name":"none","order_number":null,"filter":null},"focus_order_number":null,"requires_confirmation":false,"confirmation_prompt":null,"memory_rule":null}`;
+    var state={mode:mode,hora_colombia:getHoraColombia().toLocaleString("es-CO"),focused_order_number:focusedNum,pending_confirmation:pending,pedidos:orders,produccion_pendiente:production,resumen:{nuevos:orders.filter(function(p){return p.estado==="confirmado";}).length,preparando:orders.filter(function(p){return p.estado==="en_preparacion";}).length,listos:orders.filter(function(p){return p.estado==="listo";}).length,atrasados:orders.filter(function(p){return p.estado!=="listo"&&p.minutos>=15;}).length},reglas_aprendidas:learned.map(function(x){return x.contenido;})};
+    var systemPrompt=`Eres Luz, la COORDINADORA OPERATIVA de la cocina de HOLA LUZ. No eres un chatbot ni una voz de comandos: eres la jefa de flujo del turno. Hablas como una compañera real, competente, tranquila y con criterio. Observas pedidos, tiempos, notas, producción repetida, excepciones, tipo de servicio, pedidos listos esperando salida y reglas aprendidas. Tu trabajo es REDUCIR errores, anticiparte y mejorar el servicio.
+
+PERSONALIDAD Y CRITERIO:
+- Conversa naturalmente. Entiende referencias humanas: "ese", "el actual", "el de Kevin", "el último", "el siguiente", "el de hamburguesas", "el que lleva más tiempo".
+- Puedes OPINAR cuando aporte: "Yo haría primero... porque...", "Conviene agrupar...", "Ese pedido ya necesita atención". No seas pasiva.
+- Si una decisión depende de una regla que no conoces, haz una sola pregunta corta.
+- Si el cocinero propone algo claramente menos eficiente y el estado demuestra otra prioridad, puedes recomendar otra opción con respeto.
+- Usa las reglas aprendidas de cocina como conocimiento operativo real.
+- Aprende reglas estables cuando el cocinero diga cosas como "aquí siempre...", "nunca...", "primero hacemos...", "preferimos...", además de "recuerda/aprende". Devuelve memory_rule solo si parece una regla estable, nunca por una situación temporal.
+- Nunca inventes tiempos de cocción, disponibilidad ni estados que no aparecen en el contexto.
+
+IDENTIFICACIÓN DE PEDIDOS:
+- numero_pedido es el ID real del backend. numero_cocina es el número corto que VE y DICE el equipo.
+- En reply SIEMPRE habla usando numero_cocina (máximo 3 cifras), nunca el numero_pedido largo.
+- En action.order_number y focus_order_number devuelve SIEMPRE numero_pedido real para que las herramientas funcionen.
+
+ACCIONES DISPONIBLES:
+none | focus_order | start_preparing | mark_ready | mark_delivered | filter_orders | show_production | show_summary.
+- "inicia el pedido" con un único candidato razonable => start_preparing.
+- "cambia el estado" del enfocado: confirmado=>start_preparing; en_preparacion=>mark_ready; listo=>pregunta si fue retirado/entregado.
+- mark_delivered solo con intención explícita de retirado/entregado/ya salió.
+- focus/filter/show_production/show_summary son visuales y libres.
+- Si preguntan cantidades, usa produccion_pendiente y menciona excepciones que puedan causar errores.
+- Si preguntan "cómo vamos", no recites solo números: interpreta carga, atraso, cuellos de botella y da una recomendación si existe.
+
+MODO PROACTIVO:
+- Si mode=proactive, actúa como coordinadora sin que nadie te pregunte. Analiza toda la operación y elige UNA sola intervención de mayor valor.
+- No cambies estados automáticamente en modo proactive. Solo puedes action none | focus_order | show_production | show_summary.
+- speak=true solo si merece interrumpir a cocina: atraso importante, listo esperando demasiado, cambio delicado, cuello de botella o una oportunidad clara de agrupar producción. Para observaciones normales speak=false.
+- urgency: low | medium | high.
+- opinion_title debe ser muy corto (2-5 palabras) y útil en UI.
+
+RESPUESTA:
+- Para conversación: máximo 2 frases, natural y directa. Sin markdown.
+- Para modo proactive: máximo 2 frases; primera = situación, segunda = qué harías y por qué.
+- Nunca digas "comando", "herramienta", "JSON", "modelo" ni "sistema" al cocinero.
+
+Responde SOLO JSON válido:
+{"reply":"...","opinion_title":"Mi lectura","urgency":"low","speak":false,"action":{"name":"none","order_number":null,"filter":null},"focus_order_number":null,"requires_confirmation":false,"confirmation_prompt":null,"memory_rule":null}`;
     var messages=kitchenCompactHistory(req.body.historial);messages.push({role:"user",content:"ESTADO ACTUAL DE COCINA:\n"+JSON.stringify(state)+"\n\nCOCINERO: "+mensaje});
     var out=null,modelUsed=null;
     try { var aiR=await kitchenCallClaude(systemPrompt,messages);modelUsed=aiR.model;var aiText=(aiR.data&&aiR.data.content&&aiR.data.content.map(function(b){return b.text||"";}).join("\n"))||"";out=kitchenExtractJson(aiText);out.source="ai";out.model=modelUsed; }
@@ -7442,8 +7485,8 @@ app.post("/api/cocina-luz", async function(req, res) {
     var allowed=["none","focus_order","start_preparing","mark_ready","mark_delivered","filter_orders","show_production","show_summary"];if(!out.action||allowed.indexOf(out.action.name)===-1)out.action={name:"none",order_number:null,filter:null};
     if(out.action.order_number!=null)out.action.order_number=Number(out.action.order_number);if(out.focus_order_number!=null)out.focus_order_number=Number(out.focus_order_number);
     var filters=["all","domicilio","mesa","recoger","nuevos","preparando","listos","atrasados"];if(out.action.name==="filter_orders"&&filters.indexOf(out.action.filter)===-1)out.action.filter="all";
-    out.reply=String(out.reply||"Listo.").slice(0,460);out.requires_confirmation=!!out.requires_confirmation;out.confirmation_prompt=out.confirmation_prompt?String(out.confirmation_prompt).slice(0,220):null;out.memory_rule=out.memory_rule?String(out.memory_rule).slice(0,350):null;
-    if(out.memory_rule&&/\b(recuerda|recorda|aprende|a partir de ahora|desde ahora)\b/i.test(kitchenNormText(mensaje))){try{await axios.post(SUPABASE_URL+"/rest/v1/luz_aprendizajes",{restaurante_id:restauranteId,tipo:"regla_negocio",contenido:"[COCINA] "+out.memory_rule,fuente:"cocina",activo:true},{headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});out.memory_saved=true;}catch(eSave){out.memory_saved=false;}}
+    out.reply=String(out.reply||"Listo.").slice(0,460);out.opinion_title=String(out.opinion_title||"Mi lectura").slice(0,90);out.urgency=["low","medium","high"].includes(out.urgency)?out.urgency:"low";out.speak=!!out.speak;out.requires_confirmation=!!out.requires_confirmation;out.confirmation_prompt=out.confirmation_prompt?String(out.confirmation_prompt).slice(0,220):null;out.memory_rule=out.memory_rule?String(out.memory_rule).slice(0,350):null;
+    if(out.memory_rule&&/\b(recuerda|recorda|aprende|a partir de ahora|desde ahora|aqui siempre|aquí siempre|nunca|preferimos|primero hacemos|despues hacemos|después hacemos)\b/i.test(kitchenNormText(mensaje))){try{await axios.post(SUPABASE_URL+"/rest/v1/luz_aprendizajes",{restaurante_id:restauranteId,tipo:"regla_negocio",contenido:"[COCINA] "+out.memory_rule,fuente:"cocina",activo:true},{headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});out.memory_saved=true;}catch(eSave){out.memory_saved=false;}}
     out.ok=true;out.snapshot=state.resumen;res.json(out);
   } catch(e) {
     console.error("[cocina-luz] contexto no disponible:",e.response?JSON.stringify(e.response.data):e.message);
