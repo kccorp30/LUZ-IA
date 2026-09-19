@@ -8702,33 +8702,380 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
 </script>
 
 <style id="hlV13GlobalShellStyles">
-@media(min-width:901px){
-  #hlGlobalSidebar{position:fixed;left:0;top:0;bottom:0;width:238px;z-index:1350;display:flex;flex-direction:column;padding:22px 14px 17px;background:linear-gradient(180deg,#061128 0%,#030a1c 60%,#020716 100%);border-right:1px solid rgba(48,102,229,.24);box-shadow:18px 0 65px rgba(0,0,0,.24);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-  #hlGlobalSidebar .hlgs-brand{display:flex;align-items:center;gap:11px;padding:0 7px 22px;cursor:pointer}.hlgs-orb{position:relative;width:53px;height:53px;border-radius:50%;flex:0 0 53px;display:grid;place-items:center;background:radial-gradient(circle at 35% 28%,#fff 0 3%,#bb7dff 8%,#7751ff 33%,#1e62f2 62%,#071341 81%);box-shadow:0 0 0 1px rgba(142,114,255,.35),0 0 28px rgba(98,61,255,.58),0 0 58px rgba(39,97,255,.25)}.hlgs-orb:after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(99,74,255,.28);animation:hlgsOrbit 5s linear infinite}.hlgs-orb i{position:absolute;inset:-10px;border:1px solid rgba(62,213,255,.13);border-radius:50%;transform:rotate(22deg)}.hlgs-orb span{font-size:18px;color:#fff;text-shadow:0 0 15px #fff}@keyframes hlgsOrbit{to{transform:rotate(360deg)}}
-  .hlgs-brand strong{display:block;color:white;font-size:21px;letter-spacing:-.04em}.hlgs-brand small{display:block;margin-top:3px;color:#7892c9;font-size:6.5px;font-weight:850;letter-spacing:.15em}
-  .hlgs-nav{display:grid;gap:5px;margin-top:5px}.hlgs-nav button{height:47px;border:1px solid transparent;border-radius:12px;background:transparent;color:#8499c7;display:flex;align-items:center;gap:13px;padding:0 13px;font:750 12px inherit;cursor:pointer;text-align:left;transition:.2s}.hlgs-nav button span{width:22px;text-align:center;color:#7594d8;font-size:17px}.hlgs-nav button:hover{background:rgba(30,67,146,.18);color:white}.hlgs-nav button.active{color:white;background:linear-gradient(90deg,rgba(38,94,225,.42),rgba(78,63,210,.24));border-color:rgba(52,127,255,.34);box-shadow:inset 3px 0 0 #42baff,0 0 22px rgba(38,91,255,.13)}.hlgs-nav button.active span{color:#fff;text-shadow:0 0 14px #4da8ff}.hlgs-spacer{flex:1}.hlgs-luz{display:flex;gap:10px;align-items:center;width:100%;padding:11px;border:1px solid rgba(43,128,244,.3);border-radius:15px;background:linear-gradient(135deg,rgba(11,48,95,.66),rgba(16,27,72,.68));color:#d8e8ff;cursor:pointer;text-align:left}.hlgs-luz>span{width:39px;height:39px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#fff,#8e63ff 12%,#6548f5 45%,#145ad4 75%);box-shadow:0 0 20px rgba(102,70,255,.38)}.hlgs-luz b{display:block;font-size:10px}.hlgs-luz small{display:block;font-size:8px;color:#8eacd9;margin-top:2px}.hlgs-account{display:grid;grid-template-columns:39px 1fr auto;gap:9px;align-items:center;margin-top:12px;padding:10px 8px;border-radius:13px;background:rgba(7,20,49,.74);border:1px solid rgba(59,93,180,.16);cursor:pointer;color:#fff}.hlgs-account>span:first-child{width:37px;height:37px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#6f4eff,#2477db);font-size:10px;font-weight:900;border:2px solid rgba(136,113,255,.5)}.hlgs-account b{display:block;font-size:9px}.hlgs-account small{display:block;font-size:7px;color:#7890bd}.hlgs-version{padding:10px 7px 0;color:#526991;font-size:7px;letter-spacing:.12em}
-  body #app>.topbar-v3{left:238px!important;width:calc(100% - 238px)!important}.content{margin-left:238px!important;width:calc(100% - 238px)!important}.float-nav,.nav-more-panel{display:none!important}
-  #page-domis .d12-sidebar{display:none!important}#page-domis .d12-app{grid-template-columns:1fr!important}
-  body.d12-domis-active #page-domis.active{inset:0 0 0 238px!important}.d12-content{max-width:1600px!important}
+/* HOLA LUZ · V13.2 GLOBAL SHELL
+   Shell-only change: navigation/accessibility/official Luz identity.
+   Existing pages, loaders, Supabase flows and showTab() remain untouched. */
+#hlGlobalSidebar{
+  --hlgs-wide:238px;
+  --hlgs-compact:82px;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:#fff;
 }
+#hlGlobalSidebar .hlgs-brand{
+  display:flex;align-items:center;gap:11px;padding:0 7px 18px;cursor:pointer;min-height:58px;
+}
+#hlGlobalSidebar .hlgs-brand-aura{
+  width:53px;height:53px;flex:0 0 53px;margin:0;
+}
+#hlGlobalSidebar .hlgs-brand-copy{min-width:0}
+#hlGlobalSidebar .hlgs-brand strong{display:block;color:white;font-size:21px;letter-spacing:-.04em;white-space:nowrap}
+#hlGlobalSidebar .hlgs-brand small{display:block;margin-top:3px;color:#7892c9;font-size:6.5px;font-weight:850;letter-spacing:.15em;white-space:nowrap}
+#hlGlobalSidebar .hlgs-nav{
+  flex:1;display:grid;gap:5px;margin-top:3px;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 2px 4px;scrollbar-width:thin;scrollbar-color:rgba(98,129,218,.32) transparent;
+}
+#hlGlobalSidebar .hlgs-nav::-webkit-scrollbar{width:4px}
+#hlGlobalSidebar .hlgs-nav::-webkit-scrollbar-thumb{background:rgba(98,129,218,.28);border-radius:999px}
+#hlGlobalSidebar .hlgs-nav button{
+  position:relative;height:45px;min-height:45px;border:1px solid transparent;border-radius:12px;background:transparent;color:#8499c7;
+  display:flex;align-items:center;gap:13px;padding:0 13px;font:750 12px inherit;cursor:pointer;text-align:left;transition:.2s;white-space:nowrap;
+}
+#hlGlobalSidebar .hlgs-nav button .hlgs-icon{width:22px;min-width:22px;text-align:center;color:#7594d8;font-size:17px;line-height:1}
+#hlGlobalSidebar .hlgs-nav button .hlgs-label{overflow:hidden;text-overflow:ellipsis}
+#hlGlobalSidebar .hlgs-nav button:hover{background:rgba(30,67,146,.18);color:white}
+#hlGlobalSidebar .hlgs-nav button.active{
+  color:white;background:linear-gradient(90deg,rgba(38,94,225,.42),rgba(78,63,210,.24));border-color:rgba(52,127,255,.34);
+  box-shadow:inset 3px 0 0 #42baff,0 0 22px rgba(38,91,255,.13);
+}
+#hlGlobalSidebar .hlgs-nav button.active .hlgs-icon{color:#fff;text-shadow:0 0 14px #4da8ff}
+#hlGlobalSidebar .hlgs-nav button.hlgs-break{margin-top:5px}
+#hlGlobalSidebar .hlgs-nav button.hlgs-break:before{
+  content:"";position:absolute;left:10px;right:10px;top:-4px;height:1px;background:rgba(80,110,190,.12);
+}
+#hlGlobalSidebar .hlgs-badge{
+  margin-left:auto;min-width:17px;height:17px;padding:0 5px;border-radius:999px;display:none;place-items:center;
+  background:linear-gradient(135deg,#ff4d78,#ff7b55);color:#fff;font:900 8px/1 Inter,sans-serif;
+  box-shadow:0 0 12px rgba(255,77,120,.28);
+}
+#hlGlobalSidebar .hlgs-badge.show{display:grid}
+#hlGlobalSidebar .hlgs-spacer{flex:0 0 8px}
+#hlGlobalSidebar .hlgs-luz{
+  display:flex;gap:10px;align-items:center;width:100%;padding:10px;border:1px solid rgba(115,78,255,.30);border-radius:15px;
+  background:radial-gradient(circle at 18% 50%,rgba(123,63,255,.20),transparent 34%),linear-gradient(135deg,rgba(11,48,95,.66),rgba(16,27,72,.68));
+  color:#d8e8ff;cursor:pointer;text-align:left;box-shadow:0 0 26px rgba(93,67,255,.08);transition:.2s;
+}
+#hlGlobalSidebar .hlgs-luz:hover{border-color:rgba(117,89,255,.50);box-shadow:0 0 32px rgba(93,67,255,.14)}
+#hlGlobalSidebar .hlgs-luz-orb{width:42px;height:42px;flex:0 0 42px;margin:0}
+#hlGlobalSidebar .hlgs-luz-orb .hl-orb-core{font-size:15px}
+#hlGlobalSidebar .hlgs-luz b{display:block;font-size:10px}
+#hlGlobalSidebar .hlgs-luz small{display:block;font-size:8px;color:#8eacd9;margin-top:2px}
+#hlGlobalSidebar .hlgs-account{
+  display:grid;grid-template-columns:39px 1fr auto;gap:9px;align-items:center;margin-top:10px;padding:9px 8px;border-radius:13px;
+  background:rgba(7,20,49,.74);border:1px solid rgba(59,93,180,.16);cursor:pointer;color:#fff;
+}
+#hlGlobalSidebar .hlgs-account>span:first-child{
+  width:37px;height:37px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#6f4eff,#2477db);
+  font-size:10px;font-weight:900;border:2px solid rgba(136,113,255,.5);
+}
+#hlGlobalSidebar .hlgs-account b{display:block;font-size:9px}
+#hlGlobalSidebar .hlgs-account small{display:block;font-size:7px;color:#7890bd}
+#hlGlobalSidebar .hlgs-version{padding:9px 7px 0;color:#526991;font-size:7px;letter-spacing:.12em}
+#hlGlobalSidebar .hlgs-collapse{
+  position:absolute;right:-14px;top:22px;width:28px;height:28px;border-radius:10px;border:1px solid rgba(86,129,226,.35);
+  background:linear-gradient(145deg,rgba(10,28,65,.98),rgba(5,15,38,.98));color:#dfe9ff;display:grid;place-items:center;
+  cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.32),0 0 16px rgba(76,108,255,.10);font-size:17px;z-index:2;transition:.2s;
+}
+#hlGlobalSidebar .hlgs-collapse:hover{border-color:rgba(73,193,255,.52);color:#fff;transform:translateX(1px)}
 #hlGlobalMenuToggle{display:none}
-@media(max-width:900px){.float-nav,.nav-more-panel{display:none!important}#hlGlobalSidebar{position:fixed;z-index:1600;left:0;top:0;bottom:0;width:260px;padding:18px 13px;background:linear-gradient(180deg,#061128,#020716);transform:translateX(-104%);transition:.25s ease;box-shadow:28px 0 70px rgba(0,0,0,.55);display:flex;flex-direction:column}.hlgs-open #hlGlobalSidebar{transform:none}#hlGlobalMenuToggle{display:grid;place-items:center;position:fixed;z-index:1650;left:10px;top:76px;width:40px;height:40px;border-radius:12px;border:1px solid rgba(72,118,225,.3);background:rgba(4,15,40,.92);color:#e5edff;font-size:20px;box-shadow:0 8px 25px rgba(0,0,0,.3)}.content{padding-bottom:20px!important}}
+#hlGlobalMenuBackdrop{display:none}
+
+@media(min-width:901px){
+  #hlGlobalSidebar{
+    position:fixed;left:0;top:0;bottom:0;width:var(--hlgs-wide);z-index:1350;display:flex;flex-direction:column;
+    padding:22px 14px 17px;background:linear-gradient(180deg,#061128 0%,#030a1c 60%,#020716 100%);
+    border-right:1px solid rgba(48,102,229,.24);box-shadow:18px 0 65px rgba(0,0,0,.24);
+    transition:width .26s cubic-bezier(.2,.8,.2,1),padding .26s cubic-bezier(.2,.8,.2,1);
+  }
+  body #app>.topbar-v3{
+    left:var(--hlgs-wide)!important;width:calc(100% - var(--hlgs-wide))!important;
+    transition:left .26s cubic-bezier(.2,.8,.2,1),width .26s cubic-bezier(.2,.8,.2,1);
+  }
+  body .content{
+    margin-left:var(--hlgs-wide)!important;width:calc(100% - var(--hlgs-wide))!important;
+    transition:margin-left .26s cubic-bezier(.2,.8,.2,1),width .26s cubic-bezier(.2,.8,.2,1);
+  }
+  body.d12-domis-active #page-domis.active{
+    inset:0 0 0 var(--hlgs-wide)!important;
+    transition:left .26s cubic-bezier(.2,.8,.2,1);
+  }
+  .float-nav,.nav-more-panel{display:none!important}
+  #page-domis .d12-sidebar{display:none!important}
+  #page-domis .d12-app{grid-template-columns:1fr!important}
+  .d12-content{max-width:1600px!important}
+
+  body.hlgs-collapsed #hlGlobalSidebar{width:var(--hlgs-compact);padding-left:10px;padding-right:10px}
+  body.hlgs-collapsed #app>.topbar-v3{left:var(--hlgs-compact)!important;width:calc(100% - var(--hlgs-compact))!important}
+  body.hlgs-collapsed .content{margin-left:var(--hlgs-compact)!important;width:calc(100% - var(--hlgs-compact))!important}
+  body.hlgs-collapsed.d12-domis-active #page-domis.active{inset:0 0 0 var(--hlgs-compact)!important}
+
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-brand{justify-content:center;padding-left:0;padding-right:0}
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-brand-copy,
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-label,
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-luz-copy,
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-account-copy,
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-account>span:last-child,
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-version{display:none}
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-brand-aura{width:50px;height:50px;flex-basis:50px}
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-nav button{justify-content:center;padding:0;gap:0}
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-nav button .hlgs-icon{width:24px;min-width:24px}
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-nav button.active{box-shadow:inset 2px 0 0 #42baff,0 0 22px rgba(38,91,255,.13)}
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-badge{position:absolute;right:5px;top:5px;margin:0}
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-luz{justify-content:center;padding:8px}
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-account{display:flex;justify-content:center;padding:8px}
+  body.hlgs-collapsed #hlGlobalSidebar .hlgs-collapse{right:-14px}
+}
+
+@media(max-width:900px){
+  .float-nav,.nav-more-panel{display:none!important}
+  #hlGlobalSidebar{
+    position:fixed;z-index:1600;left:0;top:0;bottom:0;width:min(84vw,280px);padding:18px 13px 16px;
+    background:linear-gradient(180deg,#061128,#020716);transform:translateX(-104%);transition:.25s ease;
+    box-shadow:28px 0 70px rgba(0,0,0,.55);display:flex;flex-direction:column;
+  }
+  .hlgs-open #hlGlobalSidebar{transform:none}
+  #hlGlobalSidebar .hlgs-collapse{display:none}
+  #hlGlobalSidebar .hlgs-nav{flex:1}
+  #hlGlobalMenuToggle{
+    display:grid;place-items:center;position:fixed;z-index:1650;left:10px;top:76px;width:40px;height:40px;border-radius:12px;
+    border:1px solid rgba(72,118,225,.3);background:rgba(4,15,40,.92);color:#e5edff;font-size:20px;box-shadow:0 8px 25px rgba(0,0,0,.3);
+  }
+  #hlGlobalMenuBackdrop{
+    position:fixed;z-index:1590;inset:0;background:rgba(0,4,15,.58);backdrop-filter:blur(5px);opacity:0;pointer-events:none;display:block;transition:.25s;
+  }
+  .hlgs-open #hlGlobalMenuBackdrop{opacity:1;pointer-events:auto}
+  .content{padding-bottom:20px!important}
+}
+
 /* Evidence viewer should never silently hide a failed image */
 .d11-evidence-media img{background:linear-gradient(145deg,#07142f,#0a1838)}
 .comprobante-box{box-shadow:0 0 28px rgba(16,185,129,.07)}
 </style>
 <script id="hlV13GlobalShellJS">
 (function(){
-  function makeSidebar(){if(document.getElementById('hlGlobalSidebar'))return;var el=document.createElement('aside');el.id='hlGlobalSidebar';el.innerHTML='<div class="hlgs-brand" data-tab="pedidos"><div class="hlgs-orb"><span>✦</span><i></i></div><div><strong>HOLA LUZ</strong><small>RESTAURANTES SIN LÍMITES</small></div></div><nav class="hlgs-nav"><button data-tab="pedidos"><span>⌂</span>Inicio</button><button data-tab="orders"><span>▣</span>Pedidos</button><button data-tab="domis"><span>●</span>Despacho & Tracking</button><button data-tab="clientes"><span>♧</span>Clientes</button><button data-tab="menu"><span>♜</span>Menú</button><button data-tab="historial"><span>◷</span>Historial</button><button data-tab="finance"><span>⌁</span>Finanzas</button><button data-tab="config"><span>⚙</span>Configuración</button></nav><div class="hlgs-spacer"></div><button class="hlgs-luz" data-tab="luz-ia"><span>✦</span><div><b>¿Necesitas ayuda?</b><small>Habla con Luz</small></div></button><div class="hlgs-account" data-tab="config"><span id="hlgsAvatar">HL</span><div><b id="hlgsName">Restaurante</b><small>Restaurante</small></div><span>›</span></div><div class="hlgs-version">HOLA LUZ · OPERATIONS</div>';document.body.appendChild(el);var mt=document.createElement('button');mt.id='hlGlobalMenuToggle';mt.textContent='☰';mt.onclick=function(){document.body.classList.toggle('hlgs-open')};document.body.appendChild(mt);el.querySelectorAll('[data-tab]').forEach(function(x){x.onclick=function(){var t=this.getAttribute('data-tab');if(typeof showTab==='function')showTab(t);document.body.classList.remove('hlgs-open')}})}
-  function active(tab){document.querySelectorAll('#hlGlobalSidebar [data-tab]').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-tab')===tab)});try{var r=window.rest||rest;if(r){var n=r.nombre||'Restaurante',i=n.split(/\s+/).slice(0,2).map(function(x){return x[0]}).join('').toUpperCase();var ne=document.getElementById('hlgsName'),ae=document.getElementById('hlgsAvatar');if(ne)ne.textContent=n;if(ae)ae.textContent=i||'HL'}}catch(e){}}
-  makeSidebar();var old=window.showTab;if(old){window.showTab=function(n){var r=old.apply(this,arguments);active(n);return r}}setTimeout(function(){var a=document.querySelector('.page.active');active(a?a.id.replace('page-',''):'pedidos')},500);
+  var STORAGE_KEY='hl_sidebar_collapsed_v13_2';
+
+  function officialOrb(cls){
+    return '<div class="hl-orb '+cls+'" aria-hidden="true">'+
+      '<span class="hl-orb-core">✦</span>'+
+      '<span class="hl-orbit o1"></span><span class="hl-orbit o2"></span><span class="hl-orbit o3"></span>'+
+      '<span class="hl-particle p1"></span><span class="hl-particle p2"></span><span class="hl-particle p3"></span>'+
+    '</div>';
+  }
+
+  function navBtn(tab,icon,label,extra,badgeSource){
+    return '<button data-tab="'+tab+'" data-label="'+label+'" title="'+label+'"'+(extra?' class="'+extra+'"':'')+'>'+
+      '<span class="hlgs-icon">'+icon+'</span><span class="hlgs-label">'+label+'</span>'+
+      (badgeSource?'<span class="hlgs-badge" data-badge-source="'+badgeSource+'"></span>':'')+
+    '</button>';
+  }
+
+  function setCollapsed(on,save){
+    if(window.innerWidth<=900)return;
+    document.body.classList.toggle('hlgs-collapsed',!!on);
+    var b=document.getElementById('hlGlobalCollapse');
+    if(b){
+      b.textContent=on?'›':'‹';
+      b.title=on?'Expandir menú':'Contraer menú';
+      b.setAttribute('aria-label',b.title);
+    }
+    if(save!==false){try{localStorage.setItem(STORAGE_KEY,on?'1':'0')}catch(e){}}
+    setTimeout(function(){
+      try{
+        if(window.d9State&&d9State.map)d9State.map.invalidateSize(false);
+        if(window.d11&&d11.map)d11.map.invalidateSize(false);
+      }catch(e){}
+    },300);
+  }
+
+  function runRoute(tab){
+    if(tab==='domis-team'){
+      var domiTab=document.getElementById('tab-domis');
+      if(domiTab&&typeof domiTab.click==='function')domiTab.click();
+      else if(typeof showTab==='function')showTab('domis');
+      setTimeout(function(){
+        var team=document.getElementById('d9Team');
+        if(team)team.scrollIntoView({behavior:'smooth',block:'start'});
+        active('domis-team');
+      },220);
+    }else{
+      var legacy=document.getElementById('tab-'+tab);
+      if(legacy&&tab!=='luz-ia'&&typeof legacy.click==='function')legacy.click();
+      else if(typeof showTab==='function')showTab(tab);
+    }
+    document.body.classList.remove('hlgs-open');
+  }
+
+  function makeSidebar(){
+    if(document.getElementById('hlGlobalSidebar'))return;
+
+    var el=document.createElement('aside');
+    el.id='hlGlobalSidebar';
+    el.innerHTML=
+      '<button id="hlGlobalCollapse" class="hlgs-collapse" type="button" aria-label="Expandir menú" title="Expandir menú">›</button>'+
+      '<div class="hlgs-brand" data-tab="pedidos">'+
+        officialOrb('hl-orb-small hlgs-brand-aura')+
+        '<div class="hlgs-brand-copy"><strong>HOLA LUZ</strong><small>RESTAURANTES SIN LÍMITES</small></div>'+
+      '</div>'+
+      '<nav class="hlgs-nav" aria-label="Navegación principal">'+
+        navBtn('pedidos','⌂','Inicio','', '')+
+        navBtn('orders','▣','Pedidos','', 'pedidosBadge')+
+        navBtn('domis','●','Despacho & Tracking','', '')+
+        navBtn('domis-team','♙','Domiciliarios','', '')+
+        navBtn('clientes','♧','Clientes','hlgs-break','')+
+        navBtn('menu','♜','Menú','', '')+
+        navBtn('mesas','⌑','Mesas','', '')+
+        navBtn('chat','◌','Chats','', 'chatBadge')+
+        navBtn('promo','◇','Promos','', '')+
+        navBtn('historial','◷','Historial','hlgs-break','')+
+        navBtn('finance','⌁','Finanzas','', '')+
+        navBtn('cerebro','✦','Cerebro de Luz','', '')+
+        navBtn('config','⚙','Configuración','', '')+
+      '</nav>'+
+      '<div class="hlgs-spacer"></div>'+
+      '<button class="hlgs-luz" data-tab="luz-ia" type="button" title="Habla con Luz">'+
+        officialOrb('hl-orb-small hlgs-luz-orb')+
+        '<div class="hlgs-luz-copy"><b>¿Necesitas ayuda?</b><small>Habla con Luz</small></div>'+
+      '</button>'+
+      '<div class="hlgs-account" data-tab="config" title="Configuración del restaurante">'+
+        '<span id="hlgsAvatar">HL</span>'+
+        '<div class="hlgs-account-copy"><b id="hlgsName">Restaurante</b><small>Restaurante</small></div><span>›</span>'+
+      '</div>'+
+      '<div class="hlgs-version">HOLA LUZ · OPERATIONS</div>';
+
+    document.body.appendChild(el);
+
+    var mt=document.createElement('button');
+    mt.id='hlGlobalMenuToggle';
+    mt.type='button';
+    mt.textContent='☰';
+    mt.setAttribute('aria-label','Abrir menú');
+    mt.onclick=function(){document.body.classList.toggle('hlgs-open')};
+    document.body.appendChild(mt);
+
+    var backdrop=document.createElement('div');
+    backdrop.id='hlGlobalMenuBackdrop';
+    backdrop.onclick=function(){document.body.classList.remove('hlgs-open')};
+    document.body.appendChild(backdrop);
+
+    var collapse=document.getElementById('hlGlobalCollapse');
+    if(collapse){
+      collapse.onclick=function(e){
+        e.stopPropagation();
+        setCollapsed(!document.body.classList.contains('hlgs-collapsed'),true);
+      };
+    }
+
+    el.querySelectorAll('[data-tab]').forEach(function(x){
+      x.onclick=function(e){
+        if(this.id==='hlGlobalCollapse')return;
+        e.stopPropagation();
+        runRoute(this.getAttribute('data-tab'));
+      };
+    });
+
+    var saved=null;
+    try{saved=localStorage.getItem(STORAGE_KEY)}catch(e){}
+    setCollapsed(saved===null?true:saved==='1',false);
+    syncBadges();
+  }
+
+  function active(tab){
+    document.querySelectorAll('#hlGlobalSidebar [data-tab]').forEach(function(b){
+      b.classList.toggle('active',b.getAttribute('data-tab')===tab);
+    });
+    try{
+      var r=window.rest||rest;
+      if(r){
+        var n=r.nombre||'Restaurante';
+        var i=n.split(/\s+/).slice(0,2).map(function(x){return x[0]}).join('').toUpperCase();
+        var ne=document.getElementById('hlgsName'),ae=document.getElementById('hlgsAvatar');
+        if(ne)ne.textContent=n;
+        if(ae)ae.textContent=i||'HL';
+      }
+    }catch(e){}
+  }
+
+  function syncBadgeOne(sourceId){
+    var src=document.getElementById(sourceId);
+    var dst=document.querySelector('#hlGlobalSidebar [data-badge-source="'+sourceId+'"]');
+    if(!dst)return;
+    var show=!!(src&&src.classList.contains('show'));
+    dst.textContent=show?(src.textContent||''):'';
+    dst.classList.toggle('show',show);
+  }
+
+  function syncBadges(){
+    ['pedidosBadge','chatBadge'].forEach(function(id){
+      var src=document.getElementById(id);
+      syncBadgeOne(id);
+      if(src&&window.MutationObserver){
+        new MutationObserver(function(){syncBadgeOne(id)}).observe(src,{attributes:true,childList:true,characterData:true,subtree:true});
+      }
+    });
+  }
+
+  makeSidebar();
+
+  var old=window.showTab;
+  if(old){
+    window.showTab=function(n){
+      var r=old.apply(this,arguments);
+      active(n);
+      return r;
+    };
+  }
+
+  window.addEventListener('resize',function(){
+    if(window.innerWidth>900){
+      document.body.classList.remove('hlgs-open');
+      var saved=null;try{saved=localStorage.getItem(STORAGE_KEY)}catch(e){}
+      setCollapsed(saved===null?true:saved==='1',false);
+    }
+  });
+
+  setTimeout(function(){
+    var a=document.querySelector('.page.active');
+    active(a?a.id.replace('page-',''):'pedidos');
+    syncBadges();
+  },500);
 
   // Keep historical routes in the map instead of redirecting to Orders.
-  var oldHist=window.d11ShowHistoricalRoute;window.d11ShowHistoricalRoute=async function(pid){
-    try{if(typeof showTab==='function')showTab('domis');var d=await d9Json('/api/domi-admin/ruta-pedido?restaurante_id='+encodeURIComponent(rest.id)+'&pedido_id='+encodeURIComponent(pid)),pts=(d.puntos||[]).map(function(p){return [Number(p.lat),Number(p.lng)]}).filter(function(x){return isFinite(x[0])&&isFinite(x[1])});setTimeout(function(){d9InitMap();if(!d9State.map)return;if(window.d11HistoricalLayers){window.d11HistoricalLayers.forEach(function(l){try{d11.routeGroup.removeLayer(l)}catch(e){}})}if(pts.length<2){d9Notify('warn','Ruta no disponible','Este pedido no tiene suficientes puntos históricos guardados. Las nuevas entregas empezarán a guardar la ruta desde esta versión.');return}var glow=L.polyline(pts,{color:'#25e5ff',weight:15,opacity:.16,lineCap:'round'}).addTo(d11.routeGroup),line=L.polyline(pts,{color:'#25e5ff',weight:5,opacity:1,lineCap:'round'}).addTo(d11.routeGroup);window.d11HistoricalLayers=[glow,line];d9State.map.fitBounds(line.getBounds(),{padding:[55,55],maxZoom:16});d11.mapUserMoved=true;if(window.d11SetLuz)d11SetLuz('Ruta histórica cargada','Estoy mostrando el recorrido real del pedido #'+(d.pedido&&d.pedido.numero_pedido||'')+'.')},220)}catch(e){d9Notify('error','No pude abrir la ruta',e.message)}
+  var oldHist=window.d11ShowHistoricalRoute;
+  window.d11ShowHistoricalRoute=async function(pid){
+    try{
+      if(typeof showTab==='function')showTab('domis');
+      var d=await d9Json('/api/domi-admin/ruta-pedido?restaurante_id='+encodeURIComponent(rest.id)+'&pedido_id='+encodeURIComponent(pid)),
+          pts=(d.puntos||[]).map(function(p){return [Number(p.lat),Number(p.lng)]}).filter(function(x){return isFinite(x[0])&&isFinite(x[1])});
+      setTimeout(function(){
+        d9InitMap();
+        if(!d9State.map)return;
+        if(window.d11HistoricalLayers){
+          window.d11HistoricalLayers.forEach(function(l){try{d11.routeGroup.removeLayer(l)}catch(e){}});
+        }
+        if(pts.length<2){
+          d9Notify('warn','Ruta no disponible','Este pedido no tiene suficientes puntos históricos guardados. Las nuevas entregas empezarán a guardar la ruta desde esta versión.');
+          return;
+        }
+        var glow=L.polyline(pts,{color:'#25e5ff',weight:15,opacity:.16,lineCap:'round'}).addTo(d11.routeGroup),
+            line=L.polyline(pts,{color:'#25e5ff',weight:5,opacity:1,lineCap:'round'}).addTo(d11.routeGroup);
+        window.d11HistoricalLayers=[glow,line];
+        d9State.map.fitBounds(line.getBounds(),{padding:[55,55],maxZoom:16});
+        d11.mapUserMoved=true;
+        if(window.d11SetLuz)d11SetLuz('Ruta histórica cargada','Estoy mostrando el recorrido real del pedido #'+(d.pedido&&d.pedido.numero_pedido||'')+'.');
+      },220);
+    }catch(e){d9Notify('error','No pude abrir la ruta',e.message)}
   };
 
   // Repair map provider and size when operations opens.
-  var oldLoad=window.loadDomiPanel;window.loadDomiPanel=function(){var r=oldLoad?oldLoad.apply(this,arguments):undefined;setTimeout(function(){try{if(window.d12RepairMap)d12RepairMap();if(d9State.map){d9State.map.invalidateSize(false);d9RenderMap()}}catch(e){}},350);return r};
+  var oldLoad=window.loadDomiPanel;
+  window.loadDomiPanel=function(){
+    var r=oldLoad?oldLoad.apply(this,arguments):undefined;
+    setTimeout(function(){
+      try{
+        if(window.d12RepairMap)d12RepairMap();
+        if(d9State.map){d9State.map.invalidateSize(false);d9RenderMap()}
+      }catch(e){}
+    },350);
+    return r;
+  };
 })();
 </script>
