@@ -5528,6 +5528,26 @@ app.get("/api/zonas", async function(req, res) {
   } catch(e) { res.json([]); }
 });
 
+
+// PIN de Restaurante — verificación server-side con timeout. Evita que el navegador
+// dependa de una conexión directa a Supabase para entrar al panel.
+app.post("/api/restaurante-pin", async function(req, res) {
+  var pin = String(req.body.pin || "").trim();
+  if (!/^\d{4}$/.test(pin)) return res.status(400).json({ok:false,error:"PIN inválido"});
+  try {
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/restaurantes?pin=eq." + encodeURIComponent(pin) + "&select=*&limit=1",
+      { headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}, timeout:7000 }
+    );
+    res.setHeader("Cache-Control","no-store");
+    return res.json({ok:true,data:r.data||[]});
+  } catch(e) {
+    console.error("[restaurante-pin]", e.code||e.message);
+    return res.status(503).json({ok:false,error:"No se pudo verificar el PIN"});
+  }
+});
+
 app.get("/api/restaurante", async function(req, res) {
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
@@ -7346,9 +7366,41 @@ function kitchenFindOrderFromText(mensaje, orders, focusedNum) {
   }
   return null;
 }
+function kitchenFindOrderFromHistory(historial, orders) {
+  var hist = kitchenSafeHistory(historial || []).slice().reverse();
+  var candidates = orders || [];
+  for (var i=0;i<hist.length;i++) {
+    var text = String(hist[i].content || "");
+    var nums = text.match(/\b\d{1,6}\b/g) || [];
+    for (var j=0;j<nums.length;j++) {
+      var n=Number(nums[j]);
+      var byN=candidates.find(function(o){return Number(o.numero_pedido)===n||Number(o.numero_cocina)===n;});
+      if(byN)return byN;
+    }
+    var low=kitchenNormText(text);
+    var byClient=candidates.filter(function(o){var c=kitchenNormText(o.cliente||"");return c&&c.split(" ").some(function(part){return part.length>=3&&low.indexOf(part)!==-1;});});
+    if(byClient.length===1)return byClient[0];
+  }
+  return null;
+}
+function kitchenResolveOrderRef(ref, orders) {
+  if (ref == null) return null;
+  var candidates=orders||[];
+  if (typeof ref === "object") {
+    if (ref.order_id) { var byId=candidates.find(function(o){return String(o.id)===String(ref.order_id);}); if(byId)return byId; }
+    if (ref.id) { var byId2=candidates.find(function(o){return String(o.id)===String(ref.id);}); if(byId2)return byId2; }
+    if (ref.order_number!=null) ref=ref.order_number; else if(ref.numero_pedido!=null) ref=ref.numero_pedido;
+  }
+  if (typeof ref === "string" && ref.indexOf("-")!==-1) { var byId3=candidates.find(function(o){return String(o.id)===ref;}); if(byId3)return byId3; }
+  var n=Number(ref); if(!Number.isFinite(n))return null;
+  return candidates.find(function(o){return Number(o.numero_pedido)===n||Number(o.numero_cocina)===n;})||null;
+}
 function kitchenFallbackAgent(mensaje, state) {
   var low = kitchenNormText(mensaje), orders = state.pedidos || [], focused = state.focused_order_number;
   var selected = kitchenFindOrderFromText(mensaje, orders, focused);
+  if(!selected&&state.focused_order_id)selected=kitchenResolveOrderRef(state.focused_order_id,orders);
+  if(!selected&&state.last_referenced_order_id)selected=kitchenResolveOrderRef(state.last_referenced_order_id,orders);
+  if(!selected&&state.last_referenced_order_number)selected=kitchenResolveOrderRef(state.last_referenced_order_number,orders);
   var confirmed = orders.filter(function(o){return o.estado === "confirmado";});
   var preparing = orders.filter(function(o){return o.estado === "en_preparacion";});
   var ready = orders.filter(function(o){return o.estado === "listo";});
@@ -7437,8 +7489,9 @@ app.post("/api/cocina-luz", async function(req, res) {
     var orders = (ordR.data || []).map(function(p){return {id:p.id,numero_pedido:p.numero_pedido,numero_cocina:kitchenShortNumber(p.numero_pedido),cliente:p.cliente_nombre||"",telefono:p.cliente_tel||"",estado:p.estado,tipo:kitchenTipoPedido(p),direccion:p.direccion||"",minutos:kitchenMinutesSince(p.created_at),items:kitchenNormalizeItems(p.items),notas:p.notas_especiales||"",domiciliario:p.domiciliario_nombre||"",metodo_pago:p.metodo_pago||"",total:Number(p.total||0)};});
     var production = kitchenProductionSummary(ordR.data || []), learned=[];
     try { var memR=await axios.get(SUPABASE_URL+"/rest/v1/luz_aprendizajes?restaurante_id=eq."+encodeURIComponent(restauranteId)+"&activo=eq.true&fuente=eq.cocina&order=created_at.desc&limit=25&select=contenido,tipo,created_at",{headers:h});learned=memR.data||[]; } catch(eMem) {}
-    var focusedNum=req.body.focused_order_number==null?null:Number(req.body.focused_order_number), pending=req.body.pending_confirmation||null;
-    var state={mode:mode,hora_colombia:getHoraColombia().toLocaleString("es-CO"),focused_order_number:focusedNum,pending_confirmation:pending,pedidos:orders,produccion_pendiente:production,resumen:{nuevos:orders.filter(function(p){return p.estado==="confirmado";}).length,preparando:orders.filter(function(p){return p.estado==="en_preparacion";}).length,listos:orders.filter(function(p){return p.estado==="listo";}).length,atrasados:orders.filter(function(p){return p.estado!=="listo"&&p.minutos>=15;}).length},reglas_aprendidas:learned.map(function(x){return x.contenido;})};
+    var focusedNum=req.body.focused_order_number==null?null:Number(req.body.focused_order_number), focusedId=req.body.focused_order_id?String(req.body.focused_order_id):null, pending=req.body.pending_confirmation||null;
+    var historicalRef=kitchenFindOrderFromHistory(req.body.historial,orders);
+    var state={mode:mode,hora_colombia:getHoraColombia().toLocaleString("es-CO"),focused_order_number:focusedNum,focused_order_id:focusedId,last_referenced_order_number:historicalRef?historicalRef.numero_pedido:null,last_referenced_order_id:historicalRef?historicalRef.id:null,pending_confirmation:pending,pedidos:orders,produccion_pendiente:production,resumen:{nuevos:orders.filter(function(p){return p.estado==="confirmado";}).length,preparando:orders.filter(function(p){return p.estado==="en_preparacion";}).length,listos:orders.filter(function(p){return p.estado==="listo";}).length,atrasados:orders.filter(function(p){return p.estado!=="listo"&&p.minutos>=15;}).length},reglas_aprendidas:learned.map(function(x){return x.contenido;})};
     var systemPrompt=`Eres Luz, la COORDINADORA OPERATIVA de la cocina de HOLA LUZ. No eres un chatbot ni una voz de comandos: eres la jefa de flujo del turno. Hablas como una compañera real, competente, tranquila y con criterio. Observas pedidos, tiempos, notas, producción repetida, excepciones, tipo de servicio, pedidos listos esperando salida y reglas aprendidas. Tu trabajo es REDUCIR errores, anticiparte y mejorar el servicio.
 
 PERSONALIDAD Y CRITERIO:
@@ -7453,7 +7506,7 @@ PERSONALIDAD Y CRITERIO:
 IDENTIFICACIÓN DE PEDIDOS:
 - numero_pedido es el ID real del backend. numero_cocina es el número corto que VE y DICE el equipo.
 - En reply SIEMPRE habla usando numero_cocina (máximo 3 cifras), nunca el numero_pedido largo.
-- En action.order_number y focus_order_number devuelve SIEMPRE numero_pedido real para que las herramientas funcionen.
+- En action.order_number y focus_order_number devuelve SIEMPRE numero_pedido real. Si identificas un pedido, devuelve además su id UUID en action.order_id y focus_order_id. Nunca inventes IDs.
 
 ACCIONES DISPONIBLES:
 none | focus_order | start_preparing | mark_ready | mark_delivered | filter_orders | show_production | show_summary.
@@ -7477,13 +7530,24 @@ RESPUESTA:
 - Nunca digas "comando", "herramienta", "JSON", "modelo" ni "sistema" al cocinero.
 
 Responde SOLO JSON válido:
-{"reply":"...","opinion_title":"Mi lectura","urgency":"low","speak":false,"action":{"name":"none","order_number":null,"filter":null},"focus_order_number":null,"requires_confirmation":false,"confirmation_prompt":null,"memory_rule":null}`;
+{"reply":"...","opinion_title":"Mi lectura","urgency":"low","speak":false,"action":{"name":"none","order_id":null,"order_number":null,"filter":null},"focus_order_id":null,"focus_order_number":null,"requires_confirmation":false,"confirmation_prompt":null,"memory_rule":null}`;
     var messages=kitchenCompactHistory(req.body.historial);messages.push({role:"user",content:"ESTADO ACTUAL DE COCINA:\n"+JSON.stringify(state)+"\n\nCOCINERO: "+mensaje});
     var out=null,modelUsed=null;
     try { var aiR=await kitchenCallClaude(systemPrompt,messages);modelUsed=aiR.model;var aiText=(aiR.data&&aiR.data.content&&aiR.data.content.map(function(b){return b.text||"";}).join("\n"))||"";out=kitchenExtractJson(aiText);out.source="ai";out.model=modelUsed; }
     catch(eAI){ console.error("[cocina-luz] IA no disponible, usando respaldo operativo:",eAI.message);out=kitchenFallbackAgent(mensaje,state);out.degraded=true; }
-    var allowed=["none","focus_order","start_preparing","mark_ready","mark_delivered","filter_orders","show_production","show_summary"];if(!out.action||allowed.indexOf(out.action.name)===-1)out.action={name:"none",order_number:null,filter:null};
-    if(out.action.order_number!=null)out.action.order_number=Number(out.action.order_number);if(out.focus_order_number!=null)out.focus_order_number=Number(out.focus_order_number);
+    var allowed=["none","focus_order","start_preparing","mark_ready","mark_delivered","filter_orders","show_production","show_summary"];if(!out.action||allowed.indexOf(out.action.name)===-1)out.action={name:"none",order_id:null,order_number:null,filter:null};
+    // Canonicaliza cualquier referencia que devuelva la IA: UUID, número real o número corto.
+    var bodyFocus=kitchenResolveOrderRef({order_id:focusedId,order_number:focusedNum},orders);
+    var historyFocus=historicalRef||null;
+    var actionOrder=kitchenResolveOrderRef({order_id:out.action.order_id,order_number:out.action.order_number},orders);
+    var outputFocus=kitchenResolveOrderRef({order_id:out.focus_order_id,order_number:out.focus_order_number},orders);
+    var canonical=actionOrder||outputFocus||bodyFocus||historyFocus||null;
+    if(["start_preparing","mark_ready","mark_delivered"].indexOf(out.action.name)!==-1&&!canonical){
+      var pool=out.action.name==="start_preparing"?orders.filter(function(o){return o.estado==="confirmado";}):out.action.name==="mark_ready"?orders.filter(function(o){return o.estado==="en_preparacion";}):orders.filter(function(o){return o.estado==="listo";});
+      if(pool.length===1)canonical=pool[0];
+    }
+    if(canonical){out.action.order_id=canonical.id;out.action.order_number=canonical.numero_pedido;out.focus_order_id=canonical.id;out.focus_order_number=canonical.numero_pedido;}
+    else {out.action.order_id=null;if(out.action.order_number!=null)out.action.order_number=Number(out.action.order_number);out.focus_order_id=null;if(out.focus_order_number!=null)out.focus_order_number=Number(out.focus_order_number);}
     var filters=["all","domicilio","mesa","recoger","nuevos","preparando","listos","atrasados"];if(out.action.name==="filter_orders"&&filters.indexOf(out.action.filter)===-1)out.action.filter="all";
     out.reply=String(out.reply||"Listo.").slice(0,460);out.opinion_title=String(out.opinion_title||"Mi lectura").slice(0,90);out.urgency=["low","medium","high"].includes(out.urgency)?out.urgency:"low";out.speak=!!out.speak;out.requires_confirmation=!!out.requires_confirmation;out.confirmation_prompt=out.confirmation_prompt?String(out.confirmation_prompt).slice(0,220):null;out.memory_rule=out.memory_rule?String(out.memory_rule).slice(0,350):null;
     if(out.memory_rule&&/\b(recuerda|recorda|aprende|a partir de ahora|desde ahora|aqui siempre|aquí siempre|nunca|preferimos|primero hacemos|despues hacemos|después hacemos)\b/i.test(kitchenNormText(mensaje))){try{await axios.post(SUPABASE_URL+"/rest/v1/luz_aprendizajes",{restaurante_id:restauranteId,tipo:"regla_negocio",contenido:"[COCINA] "+out.memory_rule,fuente:"cocina",activo:true},{headers:{...h,"Content-Type":"application/json","Prefer":"return=minimal"}});out.memory_saved=true;}catch(eSave){out.memory_saved=false;}}
