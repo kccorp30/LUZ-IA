@@ -1958,7 +1958,7 @@ document.addEventListener("DOMContentLoaded", function(){
             <section class="d12-command-head">
               <div class="d12-title-wrap">
                 <div class="d12-title-icon">♞</div>
-                <div><span>OPERACIÓN DE REPARTO</span><h1>Centro de Domiciliarios</h1><p>Gestiona tu equipo, asigna pedidos y haz seguimiento en tiempo real.</p></div>
+                <div><span>OPERACIÓN DE REPARTO</span><h1>Despacho & Tracking</h1><p>Equipo, asignación, rutas y seguimiento en tiempo real desde un solo centro operativo.</p></div>
               </div>
               <div class="d12-auto-card">
                 <div class="d12-auto-symbol">✦</div>
@@ -8071,7 +8071,7 @@ window.renderOrdersV5=function(){
     var list=(domiciliariosList||[]).filter(function(x){return domiDisponibleUI(x)});var assignedId=p.domiciliario_id;var html='';
     if(assignedId||p.domiciliario_nombre){var ad=list.find(function(x){return String(x.id)===String(assignedId)})||{id:assignedId,nombre:p.domiciliario_nombre||'Domiciliario'};var loc=locForDomiV8(ad.id);html+='<div class="ov5-courier assigned">'+courierPhotoV8(ad)+'<div><b>'+escHtml(ad.nombre||'Asignado')+'</b><small><span class="ov8-domi-meta"><i class="ov8-online-dot ov8-busy-dot"></i>Asignado · '+escHtml(freshTextV8(loc))+'</span></small></div><button onclick="abrirDomiModal(\''+p.id+'\',\''+String(p.numero_pedido||'')+'\')">Cambiar</button></div>';}
     var opts=list.filter(function(x){return !assignedId||String(x.id)!==String(assignedId)}).slice(0,assignedId?3:5);
-    if(!opts.length&&!html){html='<div class="ov8-no-courier"><b>No hay domiciliarios en turno</b><p>Activa al equipo desde la sección Domiciliarios.</p><button class="orders-v5-btn" style="margin-top:9px" onclick="showTab(\'domis\')">Administrar equipo</button></div>';}
+    if(!opts.length&&!html){html='<div class="ov8-no-courier"><b>No hay domiciliarios en turno</b><p>Activa al equipo desde Despacho & Tracking.</p><button class="orders-v5-btn" style="margin-top:9px" onclick="showTab(\'domis\')">Administrar equipo</button></div>';}
     html+=opts.map(function(dom){var active=activeOrderForDomiV8(dom.id),loc=locForDomiV8(dom.id),status=active?('En ruta #'+(active.numero_pedido||'')):'Disponible';return '<div class="ov5-courier">'+courierPhotoV8(dom)+'<div><b>'+escHtml(dom.nombre||'Domiciliario')+'</b><small><span class="ov8-domi-meta"><i class="ov8-online-dot '+(active?'ov8-busy-dot':'')+'"></i>'+escHtml(status)+' · '+escHtml(freshTextV8(loc))+'</span></small></div><button onclick="assignCourierV5(\''+p.id+'\',\''+String(p.numero_pedido||'')+'\',\''+dom.id+'\',\''+encodeURIComponent(dom.nombre||'Domiciliario')+'\')">Asignar</button></div>'}).join('');
     box.innerHTML=html;refreshOrderDomiTrackingV8(p);
   };
@@ -8295,7 +8295,7 @@ window.renderOrdersV5=function(){
   function activeDomiOrderV82(id){return (ordersV2Data||[]).find(function(p){return String(p.domiciliario_id||'')===String(id)&&['listo','en_camino'].includes(String(p.estado||'').toLowerCase())});}
   function presenceForV82(d,loc){var active=activeDomiOrderV82(d.id),age=loc&&loc.updated_at?Date.now()-new Date(loc.updated_at).getTime():Infinity;if(d.habilitado===false)return {key:'off',label:'Acceso deshabilitado',detail:'No disponible'};if(!d.onboarding_completo)return {key:'off',label:'Por configurar',detail:'Debe completar su cuenta'};if(!d.turno_activo)return {key:'off',label:'Fuera de turno',detail:'No disponible'};if(active)return {key:'busy',label:'Ocupado',detail:'Pedido #'+(active.numero_pedido||'')};if(age<120000)return {key:'online',label:'Disponible',detail:'GPS en vivo'};if(age<600000)return {key:'stale',label:'En turno',detail:'GPS hace '+Math.max(2,Math.round(age/60000))+' min'};return {key:'stale',label:'GPS sin señal',detail:'Turno abierto · esperando GPS'};}
   function photoV82(d){return '<div class="hl-domi-photo">'+(d.foto_url?'<img src="'+escHtml(d.foto_url)+'" onerror="this.remove()">':escHtml(String(d.nombre||'D').charAt(0).toUpperCase()))+'</div>';}
-  window.renderCouriersV5=async function(p){var box=document.getElementById('ordersV5Couriers');if(!box)return;if(!p){box.innerHTML='<div class="ov8-no-courier"><b>Selecciona un pedido</b><p>El equipo de reparto aparecerá aquí.</p></div>';return;}if(!needsCourierV5(p)){box.innerHTML='<div class="ov8-no-courier"><b>No requiere domiciliario</b><p>Mesa y Recoger cierran directamente desde el flujo del pedido.</p></div>';if(window.refreshOrderDomiTrackingV8)refreshOrderDomiTrackingV8(p);return;}var locs=await locationsV82(),by={};locs.forEach(function(x){by[String(x.domiciliario_id)]=x});var list=(domiciliariosList||[]).slice();var assigned=String(p.domiciliario_id||'');list.sort(function(a,b){if(String(a.id)===assigned)return -1;if(String(b.id)===assigned)return 1;var pa=presenceForV82(a,by[String(a.id)]),pb=presenceForV82(b,by[String(b.id)]);var rank={online:0,busy:1,stale:2,off:3};return rank[pa.key]-rank[pb.key]||String(a.nombre).localeCompare(String(b.nombre));});var html='';list.forEach(function(d){var pr=presenceForV82(d,by[String(d.id)]),isAssigned=String(d.id)===assigned;var disabled=!isAssigned&&pr.key!=='online';html+='<div class="hl-domi-card '+(isAssigned?'assigned':'')+'" style="--presence-glow:'+(pr.key==='online'?'rgba(45,212,191,.20)':pr.key==='busy'?'rgba(96,165,250,.20)':pr.key==='stale'?'rgba(245,158,11,.14)':'rgba(100,116,139,.08)')+'">'+photoV82(d)+'<div class="hl-domi-main"><b>'+escHtml(d.nombre||'Domiciliario')+(isAssigned?' · Asignado':'')+'</b><small>'+(d.tipo?escHtml(d.tipo)+' · ':'')+escHtml(pr.detail)+'</small><span class="hl-presence '+pr.key+'"><i></i>'+escHtml(pr.label)+'</span></div><button class="hl-domi-btn" '+(disabled?'disabled style="opacity:.35;cursor:not-allowed"':'')+' onclick="assignCourierV5(\''+p.id+'\',\''+String(p.numero_pedido||'')+'\',\''+d.id+'\',\''+encodeURIComponent(d.nombre||'Domiciliario')+'\')">'+(isAssigned?'Asignado':disabled?'No disponible':'Asignar')+'</button></div>';});if(!html)html='<div class="ov8-no-courier"><b>No hay domiciliarios registrados</b><p>Activa o agrega el equipo desde Domiciliarios.</p></div>';box.innerHTML=html;if(window.refreshOrderDomiTrackingV8)refreshOrderDomiTrackingV8(p);};
+  window.renderCouriersV5=async function(p){var box=document.getElementById('ordersV5Couriers');if(!box)return;if(!p){box.innerHTML='<div class="ov8-no-courier"><b>Selecciona un pedido</b><p>El equipo de reparto aparecerá aquí.</p></div>';return;}if(!needsCourierV5(p)){box.innerHTML='<div class="ov8-no-courier"><b>No requiere domiciliario</b><p>Mesa y Recoger cierran directamente desde el flujo del pedido.</p></div>';if(window.refreshOrderDomiTrackingV8)refreshOrderDomiTrackingV8(p);return;}var locs=await locationsV82(),by={};locs.forEach(function(x){by[String(x.domiciliario_id)]=x});var list=(domiciliariosList||[]).slice();var assigned=String(p.domiciliario_id||'');list.sort(function(a,b){if(String(a.id)===assigned)return -1;if(String(b.id)===assigned)return 1;var pa=presenceForV82(a,by[String(a.id)]),pb=presenceForV82(b,by[String(b.id)]);var rank={online:0,busy:1,stale:2,off:3};return rank[pa.key]-rank[pb.key]||String(a.nombre).localeCompare(String(b.nombre));});var html='';list.forEach(function(d){var pr=presenceForV82(d,by[String(d.id)]),isAssigned=String(d.id)===assigned;var disabled=!isAssigned&&pr.key!=='online';html+='<div class="hl-domi-card '+(isAssigned?'assigned':'')+'" style="--presence-glow:'+(pr.key==='online'?'rgba(45,212,191,.20)':pr.key==='busy'?'rgba(96,165,250,.20)':pr.key==='stale'?'rgba(245,158,11,.14)':'rgba(100,116,139,.08)')+'">'+photoV82(d)+'<div class="hl-domi-main"><b>'+escHtml(d.nombre||'Domiciliario')+(isAssigned?' · Asignado':'')+'</b><small>'+(d.tipo?escHtml(d.tipo)+' · ':'')+escHtml(pr.detail)+'</small><span class="hl-presence '+pr.key+'"><i></i>'+escHtml(pr.label)+'</span></div><button class="hl-domi-btn" '+(disabled?'disabled style="opacity:.35;cursor:not-allowed"':'')+' onclick="assignCourierV5(\''+p.id+'\',\''+String(p.numero_pedido||'')+'\',\''+d.id+'\',\''+encodeURIComponent(d.nombre||'Domiciliario')+'\')">'+(isAssigned?'Asignado':disabled?'No disponible':'Asignar')+'</button></div>';});if(!html)html='<div class="ov8-no-courier"><b>No hay domiciliarios registrados</b><p>Activa o agrega el equipo desde Despacho & Tracking.</p></div>';box.innerHTML=html;if(window.refreshOrderDomiTrackingV8)refreshOrderDomiTrackingV8(p);};
   window.assignCourierV5=async function(pid,pnum,did,dnameEnc){var name=decodeURIComponent(dnameEnc||'Domiciliario'),p=orderByIdV5(pid),n=hlNotice('info','Asignando domiciliario','Conectando a '+name+' con el pedido #'+pnum+'…',0);try{var r=await fetch('/api/asignar-domiciliario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pedido_id:pid,domiciliario_id:did,domiciliario_nombre:name,restaurante_id:rest?rest.id:null})});if(!r.ok)await responseMessageV82(r);else await r.json().catch(function(){return {ok:true}});}catch(e){try{await proxyPatchV82(pid,{domiciliario_id:did,domiciliario_nombre:name,domiciliario_asignado_at:new Date().toISOString()})}catch(e2){resolveNoticeV82(n,'error','No se pudo asignar',String(e2.message||e2),4300);return}}if(p){p.domiciliario_id=did;p.domiciliario_nombre=name;p.domiciliario_asignado_at=new Date().toISOString()}resolveNoticeV82(n,'success',name+' asignado','Tracking preparado para el pedido #'+pnum+'.',3000);try{playSound('cambio_estado')}catch(e){}renderCouriersV5(p);refreshOrdersUiV82(pid);};
 
   window.cambiarTurnoDomi=async function(id,enTurno){var d=(domiciliariosList||[]).find(function(x){return String(x.id)===String(id)}),name=d?d.nombre:'Domiciliario',n=hlNotice('info',enTurno?'Abriendo turno':'Finalizando turno',name+'…',0);try{await fetch('/api/domi-admin/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest?rest.id:null,domiciliario_id:id,turno_activo:!!enTurno})}).then(responseMessageV82);if(d)d.turno_activo=!!enTurno;resolveNoticeV82(n,enTurno?'success':'warn',enTurno?name+' tiene el turno abierto':name+' terminó turno',enTurno?'Seguirá sin estar disponible hasta que su teléfono reporte GPS.':'Ya no recibirá nuevas entregas.',3200);await syncDomiTeamV82();var p=orderByIdV5(selectedOrderV5Id);if(p)renderCouriersV5(p);}catch(e){resolveNoticeV82(n,'error','No se pudo cambiar el turno',String(e.message||e),4200)}};
@@ -8419,7 +8419,7 @@ window.renderOrdersV5=function(){
  function dist10(a,b,c,d){if([a,b,c,d].some(function(x){return x==null||!isFinite(Number(x))}))return null;var R=6371,rad=Math.PI/180,dla=(c-a)*rad,dlo=(d-b)*rad,z=Math.sin(dla/2)*Math.sin(dla/2)+Math.cos(a*rad)*Math.cos(c*rad)*Math.sin(dlo/2)*Math.sin(dlo/2);return 2*R*Math.asin(Math.sqrt(z))}
  function domiFor10(p){return (d9State.team||[]).find(function(d){return String(d.id)===String(p&&p.domiciliario_id)})||null}
  function domiCard10(p){if(!p||(!p.domiciliario_id&&!p.domiciliario_nombre))return '';var d=domiFor10(p),name=(d&&d.nombre)||p.domiciliario_nombre||'Domiciliario',photo=d&&d.foto_url,veh=(d&&d.vehiculo)||'Domiciliario',presence=d&&typeof d9PresenceLabel==='function'?d9PresenceLabel(d):'Asignado',km=null;if(d&&d.ubicacion&&d9State.restaurantLat!=null)km=dist10(d9State.restaurantLat,d9State.restaurantLng,d.ubicacion.lat,d.ubicacion.lng);return '<div class="v10-domi-profile"><div class="v10-domi-avatar">'+(photo?'<img src="'+esc10(photo)+'" alt="'+esc10(name)+'">':esc10(name.charAt(0).toUpperCase()))+'</div><div class="v10-domi-copy"><b>'+esc10(name)+' · '+esc10(veh)+'</b><small>● '+esc10(presence)+(km!=null?' · '+km.toFixed(1)+' km del restaurante':'')+'</small></div><div class="v10-domi-actions"><button onclick="event.stopPropagation();showTab(\'domis\')">Tracking</button>'+(d&&d.telefono?'<button onclick="event.stopPropagation();location.href=\'tel:'+esc10(d.telefono)+'\'">Llamar</button>':'')+'<button onclick="event.stopPropagation();abrirDomiModal(\''+p.id+'\',\''+String(p.numero_pedido||'')+'\')">Reasignar</button></div></div>'}
- function nextCopy10(p){var st=String(p.estado||'confirmado').toLowerCase(),pick=isPickup10(p),delivery=!pick&&!isMesa10(p)&&needsCourierV5(p);if(st==='confirmado')return {b:'Enviar a Cocina',s:'El pedido ya está confirmado. El siguiente paso inicia preparación.',btn:'INICIAR PREPARACIÓN',cls:st,go:true};if(st==='en_preparacion')return {b:'Cocina está trabajando',s:'Cuando esté terminado, marca LISTO. Solo entonces se habilita despacho.',btn:'MARCAR LISTO',cls:st,go:true};if(st==='listo'&&pick)return {b:'Cliente recoge en el local',s:'Mantendré esta tarjeta resaltada hasta cerrar la entrega.',btn:'MARCAR ENTREGADO',cls:'en_preparacion',go:true};if(st==='listo'&&delivery&&!p.domiciliario_id)return d9State.auto?{b:'Luz está buscando domiciliario',s:'Comparo turno, GPS, disponibilidad y distancia al restaurante.',btn:'LUZ ESTÁ ASIGNANDO…',cls:'wait',go:false}:{b:'Pedido listo para despacho',s:'Elige un domiciliario activo para continuar.',btn:'ASIGNAR DOMICILIARIO',cls:st,assign:true};if(st==='listo'&&delivery&&p.domiciliario_id)return {b:'Domiciliario asignado',s:'La misión ya fue enviada al teléfono del domiciliario.',btn:'INICIAR ENTREGA',cls:st,go:true};if(st==='listo')return {b:'Pedido listo',s:'Está preparado para salir.',btn:'CONTINUAR',cls:st,go:true};if(st==='en_camino')return {b:'Entrega en curso',s:'Sigue el domiciliario desde el Centro de Domiciliarios.',btn:'MARCAR ENTREGADO',cls:st,go:true};return {b:'Pedido completado',s:'La operación ya quedó cerrada.',btn:'COMPLETADO ✓',cls:'entregado',go:false}}
+ function nextCopy10(p){var st=String(p.estado||'confirmado').toLowerCase(),pick=isPickup10(p),delivery=!pick&&!isMesa10(p)&&needsCourierV5(p);if(st==='confirmado')return {b:'Enviar a Cocina',s:'El pedido ya está confirmado. El siguiente paso inicia preparación.',btn:'INICIAR PREPARACIÓN',cls:st,go:true};if(st==='en_preparacion')return {b:'Cocina está trabajando',s:'Cuando esté terminado, marca LISTO. Solo entonces se habilita despacho.',btn:'MARCAR LISTO',cls:st,go:true};if(st==='listo'&&pick)return {b:'Cliente recoge en el local',s:'Mantendré esta tarjeta resaltada hasta cerrar la entrega.',btn:'MARCAR ENTREGADO',cls:'en_preparacion',go:true};if(st==='listo'&&delivery&&!p.domiciliario_id)return d9State.auto?{b:'Luz está buscando domiciliario',s:'Comparo turno, GPS, disponibilidad y distancia al restaurante.',btn:'LUZ ESTÁ ASIGNANDO…',cls:'wait',go:false}:{b:'Pedido listo para despacho',s:'Elige un domiciliario activo para continuar.',btn:'ASIGNAR DOMICILIARIO',cls:st,assign:true};if(st==='listo'&&delivery&&p.domiciliario_id)return {b:'Domiciliario asignado',s:'La misión ya fue enviada al teléfono del domiciliario.',btn:'INICIAR ENTREGA',cls:st,go:true};if(st==='listo')return {b:'Pedido listo',s:'Está preparado para salir.',btn:'CONTINUAR',cls:st,go:true};if(st==='en_camino')return {b:'Entrega en curso',s:'Sigue el domiciliario desde Despacho & Tracking.',btn:'MARCAR ENTREGADO',cls:st,go:true};return {b:'Pedido completado',s:'La operación ya quedó cerrada.',btn:'COMPLETADO ✓',cls:'entregado',go:false}}
  function injectDock10(p){var root=document.getElementById('ordersV5Detail');if(!root||!p)return;root.querySelectorAll('.v10-state-dock').forEach(function(n){n.remove()});var st=String(p.estado||'confirmado').toLowerCase(),info=stateInfoV5(p.estado),n=nextCopy10(p),kind=isPickup10(p)?'RECOGER':(isMesa10(p)?'MESA':'DOMICILIO'),dock=document.createElement('section');dock.className='v10-state-dock';dock.innerHTML='<div class="v10-state-row"><div class="v10-state-left"><span class="v10-state-order">#'+esc10(p.numero_pedido||'—')+'</span><span class="v10-state-kind">'+kind+'</span><span class="v10-state-chip '+esc10(st)+'"><i></i>'+esc10(info.label||st)+'</span></div></div>'+domiCard10(p)+'<div class="v10-next"><div class="v10-next-copy"><b>'+esc10(n.b)+'</b><small>'+esc10(n.s)+'</small></div><button class="v10-next-btn '+esc10(n.cls)+'" '+(!n.go&&!n.assign?'disabled':'')+'>'+esc10(n.btn)+'</button></div>';var btn=dock.querySelector('.v10-next-btn');if(btn&&!btn.disabled)btn.onclick=function(){if(n.assign){renderCouriersV5(p);var box=document.getElementById('ordersV5Couriers');if(box)box.scrollIntoView({behavior:'smooth',block:'center'});return}primaryOrderActionV5(p.id)};var main=root.querySelector('.ov8-main-detail');if(main)main.prepend(dock);else root.prepend(dock)}
  var prevDetail10=window.renderOrderDetailV5;window.renderOrderDetailV5=function(p){var r=prevDetail10?prevDetail10(p):undefined;if(p)setTimeout(function(){injectDock10(p)},0);return r}
  var prevCard10=window.orderCardHtmlV5;window.orderCardHtmlV5=function(p){var html=prevCard10?prevCard10(p):'';if(!html)return html;if(isPickup10(p)&&String(p.estado||'').toLowerCase()==='listo'){html=html.replace('orders-v5-card ','orders-v5-card v10-pickup-ready ');html=html.replace('<div class="ov5-top">','<div class="v10-pickup-badge"><i></i>LISTO · RECOGER EN LOCAL</div><div class="ov5-top">')}return html}
@@ -8845,6 +8845,74 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
   .content{padding-bottom:20px!important}
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HOLA LUZ V13.3 · DESPACHO & TRACKING UNIFICADO
+   El Operations Center vive dentro del shell global. No crea una segunda
+   pantalla fullscreen negra ni duplica la navegación de domiciliarios.
+   ══════════════════════════════════════════════════════════════════════════ */
+body.d12-domis-active{
+  overflow-x:hidden!important;overflow-y:auto!important;background:transparent!important;
+}
+body.d12-domis-active>.blobs,body.d12-domis-active>#mouseGlow{opacity:.55!important}
+body.d12-domis-active .topbar-v3{display:flex!important}
+body.d12-domis-active .content{
+  padding-top:60px!important;min-height:100vh!important;background:transparent!important;
+}
+body.d12-domis-active #page-domis.active{
+  display:block!important;position:relative!important;inset:auto!important;z-index:auto!important;
+  overflow:visible!important;background:transparent!important;width:100%!important;min-height:0!important;
+}
+#page-domis .d12-sidebar,#page-domis .d12-topbar{display:none!important}
+#page-domis .d12-app{display:block!important;min-height:0!important;background:transparent!important}
+#page-domis .d12-main{min-height:0!important;width:100%!important}
+#page-domis .d12-content{width:100%!important;max-width:1600px!important;margin:0 auto!important}
+
+@media(max-width:900px){
+  body.d12-domis-active .content{padding-top:60px!important;padding-bottom:82px!important}
+  #page-domis .d12-content{padding:16px 12px 104px!important}
+  #page-domis .d12-command-head{display:grid!important;grid-template-columns:1fr!important;gap:12px!important}
+  #page-domis .d12-title-wrap{align-items:center!important;gap:12px!important}
+  #page-domis .d12-title-icon{width:52px!important;height:52px!important;border-radius:16px!important;font-size:23px!important}
+  #page-domis .d12-title-wrap h1{font-size:27px!important;line-height:1.05!important}
+  #page-domis .d12-title-wrap p{font-size:11px!important;line-height:1.45!important;margin-top:6px!important}
+  #page-domis .d12-auto-card{grid-template-columns:42px minmax(0,1fr) auto!important;gap:10px!important;padding:13px!important}
+  #page-domis .d12-auto-copy small{white-space:normal!important;line-height:1.4!important}
+  #page-domis .d12-auto-btn{grid-column:1/-1!important;width:100%!important;min-height:42px!important}
+  #page-domis .d12-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+  #page-domis .d12-metric{min-width:0!important;padding:13px 11px!important}
+  #page-domis .d12-ops-grid{display:grid!important;grid-template-columns:1fr!important;gap:12px!important}
+  #page-domis .d12-team-panel{order:1!important;min-width:0!important}
+  #page-domis .d12-map-panel{order:2!important;min-width:0!important;min-height:0!important}
+  #page-domis .d12-right-stack{order:3!important;display:grid!important;grid-template-columns:1fr!important;gap:12px!important;min-width:0!important}
+  #page-domis .d12-team{max-height:380px!important;overflow:auto!important}
+  #page-domis .d12-map-stage{height:min(58vh,430px)!important;min-height:320px!important}
+  #page-domis .d12-map-legend{gap:8px!important;overflow-x:auto!important;white-space:nowrap!important;scrollbar-width:none!important}
+  #page-domis .d12-map-legend::-webkit-scrollbar{display:none!important}
+  #page-domis .d12-bottom-actions{grid-template-columns:1fr!important;gap:9px!important}
+  #page-domis .d12-map-panel.fullscreen{inset:8px!important;z-index:1900!important}
+  #page-domis .d12-map-panel.fullscreen .d12-map-stage{height:calc(100vh - 72px)!important}
+}
+@media(max-width:520px){
+  #page-domis .d12-content{padding-left:9px!important;padding-right:9px!important}
+  #page-domis .d12-title-wrap{align-items:flex-start!important}
+  #page-domis .d12-title-icon{width:45px!important;height:45px!important;flex:0 0 45px!important}
+  #page-domis .d12-title-wrap h1{font-size:23px!important}
+  #page-domis .d12-title-wrap>div>span{font-size:8px!important}
+  #page-domis .d12-auto-card{grid-template-columns:38px minmax(0,1fr)!important}
+  #page-domis .d9-switch{justify-self:end!important}
+  #page-domis .d12-auto-card>.d9-switch{grid-column:2!important;grid-row:2!important}
+  #page-domis .d12-metrics{grid-template-columns:1fr!important}
+  #page-domis .d12-metric{display:grid!important;grid-template-columns:42px 1fr!important;min-height:76px!important}
+  #page-domis .d12-panel>header{gap:8px!important;align-items:flex-start!important;flex-wrap:wrap!important}
+  #page-domis .d12-panel>header>button{margin-left:auto!important}
+  #page-domis .d12-map-stage{height:360px!important;min-height:300px!important}
+  #page-domis .d12-map-controls{top:10px!important;right:9px!important}
+  #page-domis .d12-map-controls button{width:34px!important;height:34px!important}
+  #page-domis .d12-map-credit{display:none!important}
+  #page-domis .d12-orders{max-height:none!important}
+}
+
 /* Evidence viewer should never silently hide a failed image */
 .d11-evidence-media img{background:linear-gradient(145deg,#07142f,#0a1838)}
 .comprobante-box{box-shadow:0 0 28px rgba(16,185,129,.07)}
@@ -8887,20 +8955,9 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
   }
 
   function runRoute(tab){
-    if(tab==='domis-team'){
-      var domiTab=document.getElementById('tab-domis');
-      if(domiTab&&typeof domiTab.click==='function')domiTab.click();
-      else if(typeof showTab==='function')showTab('domis');
-      setTimeout(function(){
-        var team=document.getElementById('d9Team');
-        if(team)team.scrollIntoView({behavior:'smooth',block:'start'});
-        active('domis-team');
-      },220);
-    }else{
-      var legacy=document.getElementById('tab-'+tab);
-      if(legacy&&tab!=='luz-ia'&&typeof legacy.click==='function')legacy.click();
-      else if(typeof showTab==='function')showTab(tab);
-    }
+    var legacy=document.getElementById('tab-'+tab);
+    if(legacy&&tab!=='luz-ia'&&typeof legacy.click==='function')legacy.click();
+    else if(typeof showTab==='function')showTab(tab);
     document.body.classList.remove('hlgs-open');
   }
 
@@ -8919,7 +8976,6 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
         navBtn('pedidos','⌂','Inicio','', '')+
         navBtn('orders','▣','Pedidos','', 'pedidosBadge')+
         navBtn('domis','●','Despacho & Tracking','', '')+
-        navBtn('domis-team','♙','Domiciliarios','', '')+
         navBtn('clientes','♧','Clientes','hlgs-break','')+
         navBtn('menu','♜','Menú','', '')+
         navBtn('mesas','⌑','Mesas','', '')+
