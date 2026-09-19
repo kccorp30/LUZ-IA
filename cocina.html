@@ -208,7 +208,8 @@ function orderType(p){let d=String(p.direccion||"").toUpperCase(),t=String(p.tip
 function orderSignature(p){return JSON.stringify({items:safeItems(p),notes:p.notas_especiales||"",estado:p.estado,dir:p.direccion||""})}
 function kitchenNo(value){let n=Math.abs(parseInt(value,10)||0)%1000;return String(n||value||"")}
 function orderDisplay(p){return kitchenNo(p&&p.numero_pedido)}
-function orderByNum(num){let n=Number(num);let all=Object.values(pedMap);return all.find(p=>Number(p.numero_pedido)===n)||all.find(p=>Number(kitchenNo(p.numero_pedido))===n)||null}
+function orderByNum(num){let n=Number(num),all=Object.values(pedMap);if(!Number.isFinite(n))return null;return all.find(p=>Number(p.numero_pedido)===n)||all.find(p=>Number(kitchenNo(p.numero_pedido))===n)||null}
+function orderByRef(ref){let all=Object.values(pedMap);if(!ref)return null;if(typeof ref==="string"&&ref.indexOf("-")!==-1){let byId=all.find(p=>String(p.id)===ref);if(byId)return byId}if(typeof ref==="object"){if(ref.order_id){let byId=all.find(p=>String(p.id)===String(ref.order_id));if(byId)return byId}if(ref.id){let byId=all.find(p=>String(p.id)===String(ref.id));if(byId)return byId}if(ref.order_number!=null)return orderByNum(ref.order_number)}return orderByNum(ref)}
 function stateLabel(s){return s==="confirmado"?"nuevo":s==="en_preparacion"?"preparando":s==="listo"?"listo":s}
 function setClock(){let d=new Date();q("clock").textContent=d.toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});q("date").textContent=d.toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short"})}
 setInterval(setClock,1000);setClock();
@@ -246,9 +247,9 @@ function renderInsight(all,priority,late){let title="Todo bajo control.",text="E
 function runInsightAction(){let all=Object.values(pedMap),p=getPriority(all);if(lastInsightAction==="priority"&&p){focusOrder(p.numero_pedido,true)}else if(lastInsightAction==="ready"){let r=all.find(x=>x.estado==="listo");if(r)focusOrder(r.numero_pedido,true)}else if(lastInsightAction==="production"){showProduction()}else askQuickSummary()}
 
 function selectOrder(ev,id){let p=pedMap[id];if(!p)return;currentFocusNum=p.numero_pedido;applyFocusVisual(id);q("topLuzStatus").textContent="Pedido #"+orderDisplay(p)+" enfocado · "+(p.cliente_nombre||orderType(p));if(window.innerWidth<=860)openDrawer(id)}
-function focusOrder(num,speak,showDetail){let p=orderByNum(num);if(!p){if(speak)speakLuz("No encuentro ese pedido activo.");return false}currentFocusNum=p.numero_pedido;if(window.innerWidth<=860){mobileLane=p.estado;setMobileLane(p.estado)}renderAll();setTimeout(()=>{let el=q("order-"+p.id);el&&el.scrollIntoView({behavior:"smooth",block:"center"});applyFocusVisual(p.id);if(showDetail)openDrawer(p.id)},80);if(speak)speakLuz("Aquí está el pedido "+orderDisplay(p)+". "+describeOrder(p));return true}
+function focusOrder(num,speak,showDetail){let p=orderByRef(num);if(!p){if(speak)speakLuz("No encuentro ese pedido activo.");return false}currentFocusNum=p.numero_pedido;currentFocusId=p.id;if(window.innerWidth<=860){mobileLane=p.estado;setMobileLane(p.estado)}renderAll();setTimeout(()=>{let el=q("order-"+p.id);el&&el.scrollIntoView({behavior:"smooth",block:"center"});applyFocusVisual(p.id);if(showDetail)openDrawer(p.id)},80);if(speak)speakLuz("Aquí está el pedido "+orderDisplay(p)+". "+describeOrder(p));return true}
 function applyFocusVisual(id){q("board").classList.add("has-focus");document.querySelectorAll(".order").forEach(el=>el.classList.toggle("focused",el.id==="order-"+id))}
-function clearFocus(render=true){currentFocusNum=null;q("board").classList.remove("has-focus");document.querySelectorAll(".order").forEach(el=>el.classList.remove("focused"));if(render)renderAll()}
+function clearFocus(render=true){currentFocusNum=null;currentFocusId=null;q("board").classList.remove("has-focus");document.querySelectorAll(".order").forEach(el=>el.classList.remove("focused"));if(render)renderAll()}
 function describeOrder(p){let items=safeItems(p).slice(0,4).map(raw=>{let i=normalizeItem(raw);return i.qty+" "+i.name+(i.note?" "+i.note:"")});return items.join(", ")+(safeItems(p).length>4?" y más":"")}
 function setMobileLane(state){mobileLane=state;document.querySelectorAll(".lane").forEach(l=>l.classList.toggle("mobile-active",l.dataset.lane===state));document.querySelectorAll(".mobile-tab").forEach(b=>b.classList.toggle("on",b.dataset.mobileLane===state))}
 document.querySelectorAll(".mobile-tab").forEach(b=>b.addEventListener("click",()=>setMobileLane(b.dataset.mobileLane)));
@@ -278,7 +279,7 @@ async function updateOrderState(p,target,source="manual"){
   if(!p)return false;
   let card=q("order-"+p.id);if(card){card.style.opacity=".45";card.style.pointerEvents="none"}
   let nextLane=target==="en_preparacion"?"en_preparacion":target==="listo"?"listo":null;
-  currentFocusNum=p.numero_pedido;
+  currentFocusNum=p.numero_pedido;currentFocusId=p.id;
   if(window.innerWidth<=860&&nextLane)setMobileLane(nextLane);
   setLuzState("acting","Ejecutando · pedido #"+orderDisplay(p));
   try{
@@ -292,7 +293,7 @@ async function updateOrderState(p,target,source="manual"){
       setTimeout(()=>focusOrder(moved.numero_pedido,false),120);
     }else if(window.innerWidth<=860){
       let all=Object.values(pedMap);let best=all.find(x=>x.estado==="listo")||all.find(x=>x.estado==="en_preparacion")||all.find(x=>x.estado==="confirmado");
-      if(best){setMobileLane(best.estado);currentFocusNum=best.numero_pedido;setTimeout(()=>focusOrder(best.numero_pedido,false),120)}else{currentFocusNum=null}
+      if(best){setMobileLane(best.estado);currentFocusNum=best.numero_pedido;setTimeout(()=>focusOrder(best.numero_pedido,false),120)}else{currentFocusNum=null;currentFocusId=null}
     }
     setLuzState(voiceActive?"listening":"idle","Operación actualizada · siguiendo pedido #"+orderDisplay(p));
     return true;
@@ -306,10 +307,11 @@ function renderConversation(){let el=q("conversation"),hist=conversationHistory.
 async function askLuz(text){
   text=String(text||"").trim();if(!text)return;unlockAudio();addConversation("user",text);q("voiceTitle").textContent="Luz está pensando…";q("voiceSubtitle").textContent='“'+text+'”';setLuzState("thinking","Razonando con la cocina en tiempo real");pauseRecognitionForSpeech();
   try{
-    let r=await fetch("/api/cocina-luz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:REST_ID,mensaje:text,historial:conversationHistory.slice(0,-1),focused_order_number:currentFocusNum,pending_confirmation:pendingConfirmation}),signal:AbortSignal.timeout?AbortSignal.timeout(20000):undefined});
+    let r=await fetch("/api/cocina-luz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:REST_ID,mensaje:text,historial:conversationHistory.slice(0,-1),focused_order_number:currentFocusNum,focused_order_id:currentFocusId,pending_confirmation:pendingConfirmation}),signal:AbortSignal.timeout?AbortSignal.timeout(20000):undefined});
     let d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Luz no disponible");
     pendingConfirmation=d.requires_confirmation?{prompt:d.confirmation_prompt,action:d.action}:null;
-    let actionResult=d.requires_confirmation?{ok:true}:await applyAgentAction(d.action,d.focus_order_number);
+    if(d.focus_order_id||d.focus_order_number){let rp=orderByRef({order_id:d.focus_order_id,order_number:d.focus_order_number});if(rp){currentFocusId=rp.id;currentFocusNum=rp.numero_pedido}}
+    let actionResult=d.requires_confirmation?{ok:true}:await applyAgentAction(d.action,{order_id:d.focus_order_id,order_number:d.focus_order_number});
     let reply=actionResult.overrideReply||d.confirmation_prompt||d.reply||"Listo.";
     addConversation("assistant",reply);q("voiceTitle").textContent=d.degraded?"Luz · Coordinadora":"Luz · Coordinadora";q("voiceSubtitle").textContent=reply;
     if(d.memory_saved){q("memoryBadge").textContent="Regla aprendida";toast("Luz recordó esa regla de cocina")}
@@ -319,8 +321,30 @@ async function askLuz(text){
     addConversation("assistant",reply);q("voiceTitle").textContent="Luz · Coordinadora";q("voiceSubtitle").textContent=reply;await speakLuz(reply,true);
   }
 }
-async function applyAgentAction(action,focusNum){action=action||{name:"none"};let num=action.order_number||focusNum||null;if(focusNum)focusOrder(focusNum,false);if(action.name==="focus_order"){if(num)focusOrder(num,false,true);return{ok:true}}if(action.name==="filter_orders"){currentFilter=action.filter||"all";renderAll();if(window.innerWidth<=860&&currentFilter==="nuevos")setMobileLane("confirmado");if(window.innerWidth<=860&&currentFilter==="preparando")setMobileLane("en_preparacion");if(window.innerWidth<=860&&currentFilter==="listos")setMobileLane("listo");return{ok:true}}if(action.name==="show_production"){showProduction();return{ok:true}}if(["start_preparing","mark_ready","mark_delivered"].includes(action.name)){let p=orderByNum(num);if(!p)return{ok:false,overrideReply:"No encuentro ese pedido activo ahora mismo."};let target=action.name==="start_preparing"?"en_preparacion":action.name==="mark_ready"?"listo":"listo_entrega";let ok=await updateOrderState(p,target,"luz");if(ok)return{ok:true};return{ok:false,overrideReply:"No pude cambiar el estado del pedido "+orderDisplay(p)+". Revísalo conmigo en pantalla."}}return{ok:true}}
-function findLocalOrder(text){let low=norm(text),peds=Object.values(pedMap),nums=String(text).match(/\b\d{2,6}\b/g)||[];for(let n of nums){let p=orderByNum(n);if(p)return p}let byClient=peds.filter(p=>{let c=norm(p.cliente_nombre||"");return c&&c.split(" ").some(w=>w.length>=3&&low.includes(w))});if(byClient.length===1)return byClient[0];if(currentFocusNum){let f=orderByNum(currentFocusNum);if(f)return f}return null}
+async function applyAgentAction(action,focusRef){
+  action=action||{name:"none"};
+  let ref={order_id:action.order_id||focusRef?.order_id||currentFocusId||null,order_number:action.order_number||focusRef?.order_number||currentFocusNum||null};
+  let referenced=orderByRef(ref);
+  if(referenced){currentFocusId=referenced.id;currentFocusNum=referenced.numero_pedido;}
+  if(action.name==="focus_order"){if(referenced)focusOrder(referenced.id,false,true);return{ok:!!referenced,overrideReply:referenced?null:"No encuentro ese pedido activo ahora mismo."}}
+  if(action.name==="filter_orders"){currentFilter=action.filter||"all";renderAll();if(window.innerWidth<=860&&currentFilter==="nuevos")setMobileLane("confirmado");if(window.innerWidth<=860&&currentFilter==="preparando")setMobileLane("en_preparacion");if(window.innerWidth<=860&&currentFilter==="listos")setMobileLane("listo");return{ok:true}}
+  if(action.name==="show_production"){showProduction();return{ok:true}}
+  if(["start_preparing","mark_ready","mark_delivered"].includes(action.name)){
+    let p=referenced;
+    if(!p){
+      let all=Object.values(pedMap),pool=action.name==="start_preparing"?all.filter(x=>x.estado==="confirmado"):action.name==="mark_ready"?all.filter(x=>x.estado==="en_preparacion"):all.filter(x=>x.estado==="listo");
+      if(pool.length===1)p=pool[0];
+    }
+    if(!p)return{ok:false,overrideReply:"No encuentro ese pedido activo ahora mismo."};
+    currentFocusId=p.id;currentFocusNum=p.numero_pedido;
+    let target=action.name==="start_preparing"?"en_preparacion":action.name==="mark_ready"?"listo":"listo_entrega";
+    let ok=await updateOrderState(p,target,"luz");
+    if(ok)return{ok:true};
+    return{ok:false,overrideReply:"No pude cambiar el estado del pedido "+orderDisplay(p)+". Revísalo conmigo en pantalla."}
+  }
+  return{ok:true}
+}
+function findLocalOrder(text){let low=norm(text),peds=Object.values(pedMap),nums=String(text).match(/\b\d{2,6}\b/g)||[];for(let n of nums){let p=orderByNum(n);if(p)return p}let byClient=peds.filter(p=>{let c=norm(p.cliente_nombre||"");return c&&c.split(" ").some(w=>w.length>=3&&low.includes(w))});if(byClient.length===1)return byClient[0];if(currentFocusId){let f=orderByRef(currentFocusId);if(f)return f}if(currentFocusNum){let f=orderByNum(currentFocusNum);if(f)return f}return null}
 function norm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9ñ ]+/g," ").replace(/\s+/g," ").trim()}
 async function localOperationalFallback(text){
   let low=norm(text),peds=Object.values(pedMap),p=findLocalOrder(text),news=peds.filter(x=>x.estado==="confirmado"),prep=peds.filter(x=>x.estado==="en_preparacion"),ready=peds.filter(x=>x.estado==="listo");
@@ -352,7 +376,7 @@ function toggleVoice(){unlockAudio();let SR=window.SpeechRecognition||window.web
 
 function kitchenFingerprint(peds){return (peds||[]).map(p=>[p.id,p.estado,Math.floor(nowMins(p)/3),String(p.notas_especiales||"").slice(0,40)].join(":" )).sort().join("|")}
 function scheduleSmartCoordinator(peds){let fp=kitchenFingerprint(peds),now=Date.now();if(!peds.length){lastCoordinatorFingerprint=fp;return}if(fp===lastCoordinatorFingerprint&&now-lastCoordinatorAt<90000)return;lastCoordinatorFingerprint=fp;if(coordinatorBusy)return;clearTimeout(scheduleSmartCoordinator.t);scheduleSmartCoordinator.t=setTimeout(()=>runSmartCoordinator(),1100)}
-async function runSmartCoordinator(){if(coordinatorBusy)return;let all=Object.values(pedMap);if(!all.length)return;coordinatorBusy=true;lastCoordinatorAt=Date.now();try{let r=await fetch("/api/cocina-luz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:REST_ID,mensaje:"Analiza la operación y coordina el siguiente mejor paso.",mode:"proactive",historial:conversationHistory.slice(-6),focused_order_number:currentFocusNum}),signal:AbortSignal.timeout?AbortSignal.timeout(18000):undefined});let d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"coordinator");if(d.reply){q("insightTitle").textContent=d.opinion_title||"Mi lectura de cocina";q("insightText").textContent=d.reply;q("mobileLuzStatus").textContent=d.reply;q("topLuzStatus").textContent=d.reply}if(d.focus_order_number){let p=orderByNum(d.focus_order_number);if(p&&d.urgency==="high"){currentFocusNum=p.numero_pedido;renderAll();setTimeout(()=>applyFocusVisual(p.id),40)}}if(d.action&&["show_production","focus_order"].includes(d.action.name)){lastInsightAction=d.action.name==="show_production"?"production":"priority"}if(d.speak&&audioUnlocked&&!muted&&Date.now()-lastCoordinatorSpeech>45000){lastCoordinatorSpeech=Date.now();await speakLuz(d.reply,false)}}catch(e){console.warn("[Luz coordinator]",e.message)}finally{coordinatorBusy=false}}
+async function runSmartCoordinator(){if(coordinatorBusy)return;let all=Object.values(pedMap);if(!all.length)return;coordinatorBusy=true;lastCoordinatorAt=Date.now();try{let r=await fetch("/api/cocina-luz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:REST_ID,mensaje:"Analiza la operación y coordina el siguiente mejor paso.",mode:"proactive",historial:conversationHistory.slice(-6),focused_order_number:currentFocusNum,focused_order_id:currentFocusId}),signal:AbortSignal.timeout?AbortSignal.timeout(18000):undefined});let d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"coordinator");if(d.reply){q("insightTitle").textContent=d.opinion_title||"Mi lectura de cocina";q("insightText").textContent=d.reply;q("mobileLuzStatus").textContent=d.reply;q("topLuzStatus").textContent=d.reply}if(d.focus_order_number){let p=orderByNum(d.focus_order_number);if(p&&d.urgency==="high"){currentFocusNum=p.numero_pedido;renderAll();setTimeout(()=>applyFocusVisual(p.id),40)}}if(d.action&&["show_production","focus_order"].includes(d.action.name)){lastInsightAction=d.action.name==="show_production"?"production":"priority"}if(d.speak&&audioUnlocked&&!muted&&Date.now()-lastCoordinatorSpeech>45000){lastCoordinatorSpeech=Date.now();await speakLuz(d.reply,false)}}catch(e){console.warn("[Luz coordinator]",e.message)}finally{coordinatorBusy=false}}
 
 function toggleTextCommand(force){q("textCommand").classList.toggle("on",force===true?true:!q("textCommand").classList.contains("on"));if(q("textCommand").classList.contains("on"))setTimeout(()=>q("textInput").focus(),80)}
 function sendTextCommand(){let v=q("textInput").value.trim();if(!v)return;q("textInput").value="";q("textCommand").classList.remove("on");askLuz(v)}q("textInput").addEventListener("keydown",e=>{if(e.key==="Enter")sendTextCommand()});
