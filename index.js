@@ -1163,13 +1163,38 @@ async function verificarComprobante(mediaId, totalEsperado) {
     var text = (resp.data?.content?.[0]?.text) || "{}";
     console.log("[comprobante] Claude respuesta:", text.substring(0,100));
     var start = text.indexOf("{"); var end2 = text.lastIndexOf("}");
-    if (start === -1 || end2 === -1) return { valido: true }; // Si no parsea, aceptar
+    if (start === -1 || end2 === -1) return { valido: null, razon: "No se pudo interpretar la verificación" };
     var result = JSON.parse(text.substring(start, end2 + 1));
     console.log("[comprobante] resultado:", JSON.stringify(result));
     return result;
   } catch(e) {
     console.error("[comprobante] error:", e.message);
-    return { valido: true }; // Si falla la verificación, aceptar el comprobante
+    return { valido: null, razon: "No se pudo verificar automáticamente" };
+  }
+}
+
+async function persistirComprobanteStorage(mediaId) {
+  try {
+    if (!mediaId) return null;
+    var imgData = await descargarImagenMeta(mediaId);
+    if (!imgData || typeof imgData !== "string" || !imgData.startsWith("data:")) return null;
+    var parts = imgData.split(",");
+    var b64 = parts[1];
+    var mime = (parts[0].split(":")[1] || "image/jpeg").split(";")[0];
+    if (!b64) return null;
+    var buffer = Buffer.from(b64, "base64");
+    var ext = mime.indexOf("png") !== -1 ? "png" : mime.indexOf("webp") !== -1 ? "webp" : "jpg";
+    var fileName = "comprobantes/" + mediaId + "." + ext;
+    var svc = SUPABASE_SERVICE_KEY_VAL;
+    await axios.post(SUPABASE_URL + "/storage/v1/object/media/" + fileName, buffer, {
+      headers: { "apikey": svc, "Authorization": "Bearer " + svc, "Content-Type": mime, "x-upsert": "true" }
+    });
+    var url = SUPABASE_URL + "/storage/v1/object/public/media/" + fileName;
+    console.log("[comprobante] ✅ Persistido antes de confirmar:", url);
+    return url;
+  } catch(e) {
+    console.warn("[comprobante] No se pudo persistir antes de confirmar:", e.message);
+    return null;
   }
 }
 
@@ -1342,13 +1367,15 @@ function parseReply(reply, from) {
       });
       var prevAddress = (orderState[from] ? orderState[from].address : null) || preParsedDir;
       var prevPayment = orderState[from] ? orderState[from].paymentMethod : null;
+      var taggedPayment = pagoMatch ? String(pagoMatch[1] || "").trim().toLowerCase() : "";
+      if (["pendiente","sin definir","null","undefined"].indexOf(taggedPayment) !== -1) taggedPayment = "";
       orderState[from] = {
         status: prevAddress ? "esperando_pago" : "esperando_direccion",
         orderNumber: nextOrderNumber(),
         items, desechables: desech, domicilio, total,
         notasEspeciales: notasArr.length > 0 ? notasArr.join(" | ") : null,
         address: prevAddress || null,
-        paymentMethod: prevPayment || null
+        paymentMethod: prevPayment || taggedPayment || null
       };
       console.log("orderState #" + orderState[from].orderNumber + " creado para:", from);
       sideEffect = "pedido_registrado";
@@ -5968,23 +5995,44 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     }
 
     var esComprobante = false;
+    var imagenPagoEvaluada = false;
+    var comprobanteVerificacion = null;
+
+    // Memorizar el método elegido ANTES de que llegue la imagen.
+    if (!esImagen && orderState[from] && orderState[from].status === "esperando_pago") {
+      var pagoTxt = String(userText || "").toLowerCase();
+      if (/\bnequi\b/.test(pagoTxt)) orderState[from].paymentMethod = "nequi";
+      else if (/\bbancolombia\b|transferencia\s*bancolombia/.test(pagoTxt)) orderState[from].paymentMethod = "bancolombia";
+    }
+
     if (esImagen && mediaId) {
       var estadoActual = orderState[from] ? orderState[from].status : null;
-      
       if (estadoActual === "esperando_pago") {
-        // ONLY here do we verify as comprobante
-        esComprobante = true;
-        userText = "[El cliente envio una imagen mientras espera pagar. Probablemente es su comprobante.]";
+        // CRÍTICO: validar ANTES de pedir una respuesta a Luz.
+        imagenPagoEvaluada = true;
+        var totalPedidoPre = Number(orderState[from].total || 0);
+        comprobanteVerificacion = await verificarComprobante(mediaId, totalPedidoPre);
+        if (comprobanteVerificacion && comprobanteVerificacion.valido === true) {
+          esComprobante = true;
+          orderState[from].comprobanteMediaId = mediaId;
+          orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
+          var stableProofUrl = await persistirComprobanteStorage(mediaId);
+          if (stableProofUrl) orderState[from].comprobanteUrl = stableProofUrl;
+          userText = "[COMPROBANTE DE PAGO VALIDADO por el sistema. Confirma el pedido y escribe PAGO_CONFIRMADO. No vuelvas a pedir el comprobante.]";
+        } else {
+          esComprobante = false;
+          userText = "[La imagen recibida durante el pago NO pudo validarse como comprobante. NO confirmes el pedido y NO escribas PAGO_CONFIRMADO. Pide al cliente una captura o foto clara del comprobante de la transferencia.]";
+        }
       } else {
-        esComprobante = false;
         userText = "[El cliente envio una imagen]";
       }
     }
 
     if (!conversations[from]) conversations[from] = [];
 
-    // ── Si hay imagen, descargarla y pasarla a Claude Vision ─────────────────
-    if (esImagen && mediaId && !esComprobante) {
+    // ── Si hay imagen normal, pasarla a Claude Vision. Las imágenes de pago ya
+    // fueron evaluadas por el validador dedicado y NO se reinterpretan aquí. ──
+    if (esImagen && mediaId && !imagenPagoEvaluada) {
       var imgData = null;
       try {
         imgData = await descargarImagenMeta(mediaId);
@@ -6266,39 +6314,22 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     var sideEffect = parsed.sideEffect;
     console.log("[parse] sideEffect:", sideEffect, "| orderState despues:", JSON.stringify(orderState[from]||null).substring(0,100));
 
-    if (esComprobante && mediaId && orderState[from]) {
-      var totalPedido = orderState[from].total || 0;
-      var verificacion = await verificarComprobante(mediaId, totalPedido);
-      console.log("Verificacion comprobante resultado:", JSON.stringify(verificacion), "| valido:", verificacion.valido);
-      if (verificacion.valido === false) {
-        userText = "[El cliente envio una imagen en la etapa de pago pero no parece ser un comprobante. Dile amablemente que necesitas el comprobante de la transferencia para confirmar su pedido.]";
-        esComprobante = false;
-      } else {
-        // valido:true O valido:null → confirmar igual
-        orderState[from].comprobanteMediaId = mediaId;
-        orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
-        orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
+    // La decisión de pago ya fue tomada ANTES de Claude. Nunca permitimos que
+    // una respuesta del modelo contradiga el resultado del validador.
+    if (imagenPagoEvaluada && orderState[from]) {
+      if (esComprobante) {
         orderState[from].status = "confirmado";
+        orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
+        orderState[from].comprobanteMediaId = mediaId;
+        orderState[from].comprobanteUrl = orderState[from].comprobanteUrl || ("/api/comprobante/" + mediaId);
         sideEffect = "pago_confirmado";
-        userText = "[El cliente envio su comprobante de pago. Confirma el pedido con calidez y agradece.]";
-        // Guardar imagen en Supabase Storage para que no expire con Meta
-        (async function() {
-          try {
-            var imgData2 = await descargarImagenMeta(mediaId);
-            if (imgData2 && imgData2.startsWith("data:")) {
-              var mParts = imgData2.split(","); var b64 = mParts[1];
-              var mimeComp = (mParts[0].split(":")[1]||"image/jpeg").split(";")[0];
-              var buf = Buffer.from(b64, "base64");
-              var fname2 = "comprobantes/" + mediaId + ".jpg";
-              var svcK2 = SUPABASE_SERVICE_KEY_VAL;
-              await axios.post(SUPABASE_URL + "/storage/v1/object/media/" + fname2, buf,
-                { headers: { "apikey": svcK2, "Authorization": "Bearer " + svcK2, "Content-Type": mimeComp, "x-upsert": "true" } });
-              var publicUrl = SUPABASE_URL + "/storage/v1/object/public/media/" + fname2;
-              if (orderState[from]) orderState[from].comprobanteUrl = publicUrl;
-              console.log("[comprobante] ✅ Guardado en Supabase Storage:", publicUrl);
-            }
-          } catch(eSave) { console.warn("[comprobante] No se pudo guardar en Storage:", eSave.message); }
-        })();
+        cleanReply = "Listo! Recibimos tu comprobante, tu pedido entra a preparación ahora mismo. Te avisamos cuando esté listo y cuando salga el domiciliario.";
+      } else {
+        // Bloqueo duro: aunque el modelo haya escrito PAGO_CONFIRMADO por error,
+        // el backend NO crea el pedido hasta recibir una evidencia validada.
+        orderState[from].status = "esperando_pago";
+        sideEffect = null;
+        cleanReply = "Recibí la imagen, pero no pude validar el comprobante con suficiente seguridad. Envíame por favor una captura o foto clara donde se vea la transferencia para poder confirmar tu pedido.";
       }
     }
 
