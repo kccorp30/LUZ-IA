@@ -2783,7 +2783,6 @@ function luzHablarWebSpeech(texto){
   if(primera.length > 80) primera = primera.substring(0,80);
   if(!primera) return;
   window.speechSynthesis.cancel();
-  try{window.speechSynthesis.resume()}catch(e){}
   var u = new SpeechSynthesisUtterance(primera);
   u.lang="es-CO"; u.rate=1.05; u.pitch=1.15; u.volume=0.88;
   var voices = window.speechSynthesis.getVoices();
@@ -2909,6 +2908,7 @@ function mostrarRegistroUSA(){
 
 // ── PIN FUNCTIONS ─────────────────────────────────────────────────────────────
 // (pin ya declarado como var rest=null,pin="" arriba — no redeclarar)
+var pinVerificando=false;
 function pinKey(k){if(pin.length>=4)return;pin+=k;dots();if(pin.length===4)setTimeout(chkPin,150);}
 function dots(){for(var i=0;i<4;i++){var d=document.getElementById("d"+i);if(d){i<pin.length?d.classList.add("filled"):d.classList.remove("filled");}}}
 
@@ -2916,32 +2916,40 @@ for(var _i=0;_i<=9;_i++){(function(n){var el=document.getElementById("k"+n);if(e
 document.getElementById("kdel").addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
 
 async function getRestaurantePorPinSeguro(pinValue){
-  var filtro="pin=eq."+encodeURIComponent(pinValue)+"&select=*";
-  var directUrl=SU+"/rest/v1/restaurantes?"+filtro;
-
-  // Primera vía: consulta directa con la publishable key que este mismo panel ya usa.
-  // No cambia tabla, filtro ni datos; solo evita que el login dependa del salto Railway -> Supabase.
+  // V13.6: verificación server-side. La versión anterior intentaba primero una
+  // conexión directa navegador → Supabase sin timeout; en algunos Chrome/PC esa
+  // petición podía quedar pendiente y dejar "Verificando acceso…" para siempre.
+  var controller=new AbortController();
+  var timer=setTimeout(function(){try{controller.abort()}catch(e){}},8000);
   try{
-    var rd=await fetch(directUrl,{
-      method:"GET",
-      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Accept":"application/json"},
-      cache:"no-store"
+    var r=await fetch("/api/restaurante-pin",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Accept":"application/json"},
+      body:JSON.stringify({pin:pinValue}),
+      cache:"no-store",
+      signal:controller.signal
     });
-    if(rd.ok){
-      var dd=await rd.json();
-      if(Array.isArray(dd)) return dd;
-    }else{
-      console.warn("[PIN] lectura directa HTTP",rd.status);
-    }
-  }catch(eDirect){
-    console.warn("[PIN] lectura directa falló; usando proxy legacy",eDirect&&eDirect.message?eDirect.message:eDirect);
+    clearTimeout(timer);
+    if(r.ok){var d=await r.json();if(d&&d.ok&&Array.isArray(d.data))return d.data;}
+    throw new Error("PIN endpoint HTTP "+r.status);
+  }catch(e){
+    clearTimeout(timer);
+    console.warn("[PIN] endpoint dedicado falló; usando proxy REST",e&&e.message?e.message:e);
   }
-
-  // Segunda vía: flujo original de producción, sin cambios.
-  return get("restaurantes",filtro);
+  // Respaldo: proxy backend existente, también con límite de tiempo.
+  var c2=new AbortController();
+  var t2=setTimeout(function(){try{c2.abort()}catch(e){}},6500);
+  try{
+    var filtro="pin=eq."+encodeURIComponent(pinValue)+"&select=*";
+    var rr=await fetch("/api/supabase/restaurantes?"+filtro,{cache:"no-store",signal:c2.signal});
+    clearTimeout(t2);
+    if(!rr.ok)throw new Error("Proxy HTTP "+rr.status);
+    var dd=await rr.json();return Array.isArray(dd)?dd:[];
+  }finally{clearTimeout(t2)}
 }
 
 async function chkPin(){
+  if(pinVerificando)return;pinVerificando=true;
   var errEl=document.getElementById("pinErr");
   var verifyEl=document.getElementById("pinVerify");
   if(tipoActual==="charr"){
@@ -2951,13 +2959,13 @@ async function chkPin(){
       if(d.ok){
         localStorage.setItem("charr_account",JSON.stringify(d.account));
         document.getElementById("pinScreen").style.display="none";
-        notif("✅ Bienvenido, "+d.account.nombre_negocio);
+        notif("✅ Bienvenido, "+d.account.nombre_negocio);pinVerificando=false;
       } else {
         if(errEl)errEl.textContent="PIN incorrecto";
         var b=document.querySelector(".pin-box");if(b){b.classList.add("pin-shake");setTimeout(function(){b.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}
-        pin="";dots();
+        pin="";dots();pinVerificando=false;
       }
-    }catch(e){if(errEl)errEl.textContent="Error de conexión";pin="";dots();}
+    }catch(e){pinVerificando=false;if(errEl)errEl.textContent="Error de conexión";pin="";dots();}
   } else {
     if(verifyEl)verifyEl.classList.add("active");
     try{
@@ -2967,16 +2975,17 @@ async function chkPin(){
         var restauranteData=d[0];
         if(restauranteData.estado==="suspendido"){
           if(errEl)errEl.textContent="Cuenta suspendida. Contacta a HOLA LUZ.";
-          pin="";dots();return;
+          pin="";dots();pinVerificando=false;return;
         }
-        enterApp(restauranteData);
+        pinVerificando=false;enterApp(restauranteData);
       }else{
         if(errEl)errEl.textContent="PIN incorrecto";
         var box=document.querySelector(".pin-box");
         if(box){box.classList.add("pin-shake");setTimeout(function(){box.classList.remove("pin-shake");if(errEl)errEl.textContent="";},500);}
-        pin="";dots();
+        pin="";dots();pinVerificando=false;
       }
     }catch(e){
+      pinVerificando=false;
       if(verifyEl)verifyEl.classList.remove("active");
       console.error("[chkPin] ambas rutas fallaron:",e);
       if(errEl)errEl.textContent="No se pudo verificar el PIN. Intenta nuevamente.";
@@ -8300,18 +8309,7 @@ window.renderOrdersV5=function(){
   window.autoAsignarTodos=async function(){await syncDomiTeamV82();var activos=(domiciliariosList||[]).filter(function(d){return d.presence==='online'});if(!activos.length){hlNotice('warn','Sin equipo disponible','No hay domiciliarios en turno.',3200);return}var pendientes=(ordersV2Data||[]).filter(function(p){return needsCourierV5(p)&&!p.domiciliario_id&&['confirmado','en_preparacion','listo'].includes(String(p.estado||'').toLowerCase())});if(!pendientes.length){hlNotice('info','Todo asignado','No hay domicilios pendientes sin domiciliario.',2800);return}var n=hlNotice('info','Auto-asignando','Distribuyendo '+pendientes.length+' pedido(s) entre el equipo activo…',0),ok=0;for(var i=0;i<pendientes.length;i++){var p=pendientes[i],d=activos[i%activos.length];try{await fetch('/api/asignar-domiciliario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pedido_id:p.id,domiciliario_id:d.id,domiciliario_nombre:d.nombre,restaurante_id:rest?rest.id:null})}).then(responseMessageV82);p.domiciliario_id=d.id;p.domiciliario_nombre=d.nombre;ok++}catch(e){}}resolveNoticeV82(n,ok?'success':'error',ok+' pedido(s) asignados',ok?'El reparto quedó distribuido.':'No se pudieron completar las asignaciones.',3300);refreshOrdersUiV82(selectedOrderV5Id);};
 
   async function syncDomiTeamV82(){if(!rest)return domiciliariosList||[];try{var rr=await fetch('/api/domi-admin/list?restaurante_id='+encodeURIComponent(rest.id),{cache:'no-store'});if(!rr.ok)return domiciliariosList||[];var dd=await rr.json();if(dd&&Array.isArray(dd.domiciliarios)){d9State.team=dd.domiciliarios;domiciliariosList=dd.domiciliarios.filter(function(x){return x.habilitado!==false});}return domiciliariosList||[]}catch(e){return domiciliariosList||[]}}
-  async function pollPresenceV82(){if(!rest)return;await syncDomiTeamV82();if(!(domiciliariosList||[]).length)return;var locs=await locationsV82(),by={};locs.forEach(function(x){by[String(x.domiciliario_id)]=x});(domiciliariosList||[]).forEach(function(d){var pr=presenceForV82(d,by[String(d.id)]),old=presenceV82[String(d.id)];presenceV82[String(d.id)]=pr.key;if(presenceInitV82&&old&&old!==pr.key){
-      if(pr.key==='online'){
-        hlNotice('success',d.nombre+' está disponible','GPS conectado y listo para recibir pedidos.',2600);
-        if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:'domi_online',titulo:'Domiciliario conectado',mensaje:d.nombre+' está disponible y reportando ubicación en tiempo real.'},false);
-      }else if(pr.key==='busy'){
-        hlNotice('info',d.nombre+' está en entrega',pr.detail+'. Tracking activo.',2600);
-        if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:'domi_busy',titulo:'Entrega en curso',mensaje:d.nombre+' inició '+pr.detail.toLowerCase()+'. El tracking está activo.'},false);
-      }else if(pr.key==='off'){
-        hlNotice('warn',d.nombre+' salió de turno','Ya no recibirá nuevas asignaciones.',2600);
-        if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:'domi_offline',titulo:'Turno finalizado',mensaje:d.nombre+' salió de turno y dejó de recibir nuevas asignaciones.'},false);
-      }
-    }});presenceInitV82=true;var p=orderByIdV5(selectedOrderV5Id);if(p&&document.getElementById('page-orders')&&document.getElementById('page-orders').classList.contains('active'))renderCouriersV5(p);}
+  async function pollPresenceV82(){if(!rest)return;await syncDomiTeamV82();if(!(domiciliariosList||[]).length)return;var locs=await locationsV82(),by={};locs.forEach(function(x){by[String(x.domiciliario_id)]=x});(domiciliariosList||[]).forEach(function(d){var pr=presenceForV82(d,by[String(d.id)]),old=presenceV82[String(d.id)];presenceV82[String(d.id)]=pr.key;if(presenceInitV82&&old&&old!==pr.key){if(pr.key==='online')hlNotice('success',d.nombre+' está disponible','GPS conectado y listo para recibir pedidos.',2600);else if(pr.key==='busy')hlNotice('info',d.nombre+' está en entrega',pr.detail+'. Tracking activo.',2600);else if(pr.key==='off')hlNotice('warn',d.nombre+' salió de turno','Ya no recibirá nuevas asignaciones.',2600)}});presenceInitV82=true;var p=orderByIdV5(selectedOrderV5Id);if(p&&document.getElementById('page-orders')&&document.getElementById('page-orders').classList.contains('active'))renderCouriersV5(p);}
   setInterval(pollPresenceV82,12000);setTimeout(pollPresenceV82,1800);
 })();
 </script>
@@ -8459,9 +8457,9 @@ window.renderOrdersV5=function(){
 /* ===== V10.1 · LUZ VISIBLE/VOICE + SILENT ORDER POLLING ===== */
 (function(){
   var voiceUnlocked10=false,lastOrdersSig101='';
-  function unlock10(){if(voiceUnlocked10)return;voiceUnlocked10=true;window.hlVoiceUnlocked=true;try{if(window.speechSynthesis){var u=new SpeechSynthesisUtterance('');u.volume=0;window.speechSynthesis.speak(u)}}catch(e){}try{var c=document.querySelector('#hlGlobalSidebar .hlgs-luz'),v=document.getElementById('hlgsLuzVoiceState');if(c)c.classList.add('voice-ready');if(v)v.textContent='Voz activa'}catch(e){}}
+  function unlock10(){if(voiceUnlocked10)return;voiceUnlocked10=true;try{if(window.speechSynthesis){var u=new SpeechSynthesisUtterance('');u.volume=0;window.speechSynthesis.speak(u)}}catch(e){}}
   ['pointerdown','touchstart','keydown'].forEach(function(ev){document.addEventListener(ev,unlock10,{once:true,passive:true})});
-  async function speak10(text){if(!voiceUnlocked10||!text)return;var clean=String(text).replace(/[✨✓🛵📍⚠️✦]/g,'').replace(/\s+/g,' ').trim();if(!clean)return;try{if(typeof luzHablarElevenLabs==='function'){await luzHablarElevenLabs(clean);return}}catch(e){}if(!window.speechSynthesis)return;try{window.speechSynthesis.cancel();try{window.speechSynthesis.resume()}catch(_e){}var u=new SpeechSynthesisUtterance(clean.length>190?clean.slice(0,190):clean);u.lang='es-CO';u.rate=1.02;u.pitch=1.08;u.volume=.92;var vs=window.speechSynthesis.getVoices()||[],v=vs.find(function(x){return x.lang==='es-CO'||x.lang==='es-419'})||vs.find(function(x){return /^es/i.test(x.lang)&&/paulina|monica|laura|sofia|female|mujer/i.test(x.name)})||vs.find(function(x){return /^es/i.test(x.lang)});if(v)u.voice=v;window.speechSynthesis.speak(u)}catch(e){}}
+  async function speak10(text){if(!voiceUnlocked10||!text)return;var clean=String(text).replace(/[✨✓🛵📍⚠️✦]/g,'').replace(/\s+/g,' ').trim();if(!clean)return;try{if(typeof luzHablarElevenLabs==='function'){await luzHablarElevenLabs(clean);return}}catch(e){}if(!window.speechSynthesis)return;try{window.speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(clean.length>190?clean.slice(0,190):clean);u.lang='es-CO';u.rate=1.02;u.pitch=1.08;u.volume=.92;var vs=window.speechSynthesis.getVoices()||[],v=vs.find(function(x){return x.lang==='es-CO'||x.lang==='es-419'})||vs.find(function(x){return /^es/i.test(x.lang)&&/paulina|monica|laura|sofia|female|mujer/i.test(x.name)})||vs.find(function(x){return /^es/i.test(x.lang)});if(v)u.voice=v;window.speechSynthesis.speak(u)}catch(e){}}
   var prevSpeak=window.v10SpeakLuz;
   window.v10SpeakLuz=function(evt,silent){
     if(prevSpeak)prevSpeak(evt,silent);
@@ -8732,14 +8730,7 @@ window.renderOrdersV5=function(){
   function refreshAux(){mountLuz();d11RenderOrders(false);d11LoadEvents();var auto=document.getElementById('d11AutoBtnText');if(auto)auto.textContent=d9State.auto?'Luz está a cargo':'Activar asignación automática';}
   var oldLoadPanel=window.loadDomiPanel;window.loadDomiPanel=function(){if(oldLoadPanel)oldLoadPanel();mountLuz();try{loadPedidos()}catch(e){}clearInterval(d11.auxTimer);refreshAux();d11.auxTimer=setInterval(function(){var pg=document.getElementById('page-domis');if(pg&&pg.classList.contains('active'))refreshAux()},4500);setTimeout(function(){d11.mapUserMoved=false;d9RenderMap()},240)};
   var oldRefresh=window.d9Refresh;window.d9Refresh=async function(show){var r=oldRefresh?await oldRefresh(show):undefined;refreshAux();return r};
-  var oldSpeak=window.v10SpeakLuz;window.v10SpeakLuz=function(evt,silent){
-    if(oldSpeak)oldSpeak(evt,silent);
-    if(evt)d11SetLuz(evt.titulo||'Luz',evt.mensaje||'Estoy supervisando la operación.');
-    var card=document.querySelector('#hlGlobalSidebar .hlgs-luz'),status=document.getElementById('hlgsLuzStatus'),voice=document.getElementById('hlgsLuzVoiceState');
-    if(status&&evt)status.textContent=evt.titulo||'Luz está activa';
-    if(voice)voice.textContent=silent?'Actualización silenciosa':(window.hlVoiceUnlocked?'Hablando ahora':'Toca el panel para activar voz');
-    if(card&&!silent){card.classList.add('speaking');setTimeout(function(){card.classList.remove('speaking');if(voice)voice.textContent=window.hlVoiceUnlocked?'Voz activa':'Toca para activar voz'},2400)}
-  };
+  var oldSpeak=window.v10SpeakLuz;window.v10SpeakLuz=function(evt,silent){if(oldSpeak)oldSpeak(evt,silent);if(evt)d11SetLuz(evt.titulo||'Luz',evt.mensaje||'Estoy supervisando la operación.');};
   document.addEventListener('keydown',function(e){if(e.key==='Escape'){var mp=document.getElementById('d11MapPanel');if(mp&&mp.classList.contains('fullscreen')){mp.classList.remove('fullscreen');setTimeout(function(){if(d9State.map)d9State.map.invalidateSize()},150)}d11CloseEvidence()}});
   setTimeout(function(){mountLuz();refreshAux()},1000);
 })();
@@ -8837,9 +8828,9 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
 /* HOLA LUZ · V13.2 GLOBAL SHELL
    Shell-only change: navigation/accessibility/official Luz identity.
    Existing pages, loaders, Supabase flows and showTab() remain untouched. */
-:root{--hlgs-wide:238px;--hlgs-compact:82px;--hlgs-current:var(--hlgs-wide)}
-body.hlgs-collapsed{--hlgs-current:var(--hlgs-compact)}
 #hlGlobalSidebar{
+  --hlgs-wide:238px;
+  --hlgs-compact:82px;
   font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   color:#fff;
 }
@@ -8912,21 +8903,21 @@ body.hlgs-collapsed{--hlgs-current:var(--hlgs-compact)}
 
 @media(min-width:901px){
   #hlGlobalSidebar{
-    position:fixed;left:0;top:0;bottom:0;width:var(--hlgs-current);z-index:1350;display:flex;flex-direction:column;
+    position:fixed;left:0;top:0;bottom:0;width:var(--hlgs-wide);z-index:1350;display:flex;flex-direction:column;
     padding:22px 14px 17px;background:linear-gradient(180deg,#061128 0%,#030a1c 60%,#020716 100%);
     border-right:1px solid rgba(48,102,229,.24);box-shadow:18px 0 65px rgba(0,0,0,.24);
     transition:width .26s cubic-bezier(.2,.8,.2,1),padding .26s cubic-bezier(.2,.8,.2,1);
   }
   body #app>.topbar-v3{
-    left:var(--hlgs-current)!important;width:calc(100% - var(--hlgs-current))!important;
+    left:var(--hlgs-wide)!important;width:calc(100% - var(--hlgs-wide))!important;
     transition:left .26s cubic-bezier(.2,.8,.2,1),width .26s cubic-bezier(.2,.8,.2,1);
   }
   body .content{
-    margin-left:var(--hlgs-current)!important;width:calc(100% - var(--hlgs-current))!important;
+    margin-left:var(--hlgs-wide)!important;width:calc(100% - var(--hlgs-wide))!important;
     transition:margin-left .26s cubic-bezier(.2,.8,.2,1),width .26s cubic-bezier(.2,.8,.2,1);
   }
   body.d12-domis-active #page-domis.active{
-    inset:0 0 0 var(--hlgs-current)!important;
+    inset:0 0 0 var(--hlgs-wide)!important;
     transition:left .26s cubic-bezier(.2,.8,.2,1);
   }
   .float-nav,.nav-more-panel{display:none!important}
@@ -8934,10 +8925,10 @@ body.hlgs-collapsed{--hlgs-current:var(--hlgs-compact)}
   #page-domis .d12-app{grid-template-columns:1fr!important}
   .d12-content{max-width:1600px!important}
 
-  body.hlgs-collapsed #hlGlobalSidebar{padding-left:10px;padding-right:10px}
-  body.hlgs-collapsed #app>.topbar-v3{left:var(--hlgs-current)!important;width:calc(100% - var(--hlgs-current))!important}
-  body.hlgs-collapsed .content{margin-left:var(--hlgs-current)!important;width:calc(100% - var(--hlgs-current))!important}
-  body.hlgs-collapsed.d12-domis-active #page-domis.active{inset:0 0 0 var(--hlgs-current)!important}
+  body.hlgs-collapsed #hlGlobalSidebar{width:var(--hlgs-compact);padding-left:10px;padding-right:10px}
+  body.hlgs-collapsed #app>.topbar-v3{left:var(--hlgs-compact)!important;width:calc(100% - var(--hlgs-compact))!important}
+  body.hlgs-collapsed .content{margin-left:var(--hlgs-compact)!important;width:calc(100% - var(--hlgs-compact))!important}
+  body.hlgs-collapsed.d12-domis-active #page-domis.active{inset:0 0 0 var(--hlgs-compact)!important}
 
   body.hlgs-collapsed #hlGlobalSidebar .hlgs-brand{justify-content:center;padding-left:0;padding-right:0}
   body.hlgs-collapsed #hlGlobalSidebar .hlgs-brand-copy,
@@ -8954,30 +8945,7 @@ body.hlgs-collapsed{--hlgs-current:var(--hlgs-compact)}
   body.hlgs-collapsed #hlGlobalSidebar .hlgs-luz{justify-content:center;padding:8px}
   body.hlgs-collapsed #hlGlobalSidebar .hlgs-account{display:flex;justify-content:center;padding:8px}
   body.hlgs-collapsed #hlGlobalSidebar .hlgs-collapse{right:-14px}
-
-  /* Smart compact rail: contextual labels without stealing workspace */
-  body.hlgs-collapsed #hlGlobalSidebar .hlgs-nav button::after{
-    content:attr(data-label);position:absolute;left:calc(100% + 14px);top:50%;transform:translate(8px,-50%);
-    padding:8px 11px;border-radius:10px;white-space:nowrap;pointer-events:none;opacity:0;visibility:hidden;
-    color:#edf5ff;background:linear-gradient(145deg,rgba(7,20,49,.98),rgba(5,12,34,.98));
-    border:1px solid rgba(91,132,244,.28);box-shadow:0 12px 34px rgba(0,0,0,.42),0 0 20px rgba(57,91,255,.10);
-    font-size:10px;font-weight:800;letter-spacing:.01em;transition:opacity .16s ease,transform .16s ease;z-index:1705;
-  }
-  body.hlgs-collapsed #hlGlobalSidebar .hlgs-nav button:hover::after{opacity:1;visibility:visible;transform:translate(0,-50%)}
-  body.hlgs-collapsed #hlGlobalSidebar .hlgs-nav button.active .hlgs-icon{color:#f5f8ff;filter:drop-shadow(0 0 8px rgba(73,177,255,.72))}
-  body.hlgs-collapsed #hlGlobalSidebar .hlgs-luz{position:relative;overflow:visible}
-  body.hlgs-collapsed #hlGlobalSidebar .hlgs-luz::after{content:'Luz';position:absolute;left:calc(100% + 14px);top:50%;transform:translate(8px,-50%);padding:8px 11px;border-radius:10px;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;background:rgba(6,17,43,.98);border:1px solid rgba(117,89,255,.34);color:#e9e7ff;font-size:10px;font-weight:850;transition:.16s;box-shadow:0 12px 34px rgba(0,0,0,.4)}
-  body.hlgs-collapsed #hlGlobalSidebar .hlgs-luz:hover::after{opacity:1;visibility:visible;transform:translate(0,-50%)}
 }
-
-#hlGlobalSidebar .hlgs-nav button.active{animation:hlgsActiveBreath 3.8s ease-in-out infinite}
-#hlGlobalSidebar .hlgs-luz.speaking{border-color:rgba(61,235,211,.5);box-shadow:0 0 35px rgba(77,103,255,.17),0 0 26px rgba(61,235,211,.12)}
-#hlGlobalSidebar .hlgs-luz.speaking .hlgs-luz-orb{filter:brightness(1.18) saturate(1.15);animation:hlgsLuzSpeak 1s ease-in-out infinite}
-#hlGlobalSidebar .hlgs-luz-copy small{display:flex;align-items:center;gap:5px}
-#hlGlobalSidebar .hlgs-voice-dot{width:6px;height:6px;border-radius:50%;background:#f7b955;box-shadow:0 0 9px rgba(247,185,85,.55);display:inline-block;transition:.2s}
-#hlGlobalSidebar .hlgs-luz.voice-ready .hlgs-voice-dot{background:#36e3b2;box-shadow:0 0 9px rgba(54,227,178,.8)}
-@keyframes hlgsActiveBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(1.08)}}
-@keyframes hlgsLuzSpeak{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 
 @media(max-width:900px){
   .float-nav,.nav-more-panel{display:none!important}
@@ -9021,7 +8989,8 @@ body.hlgs-collapsed{--hlgs-current:var(--hlgs-compact)}
  body.d12-domis-active>.blobs,body.d12-domis-active>#mouseGlow{opacity:.18!important}
  body.d12-domis-active .topbar-v3,body.d12-domis-active .float-nav,body.d12-domis-active .nav-more-panel{display:none!important}
  body.d12-domis-active .content{margin-left:0!important;width:100%!important;padding:0!important;min-height:100vh!important;background:#020713!important}
- body.d12-domis-active #page-domis.active{display:block!important;position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:var(--hlgs-current)!important;z-index:340!important;overflow:auto!important;background:radial-gradient(circle at 55% -10%,rgba(39,92,255,.11),transparent 34%),#020713!important;opacity:1!important;visibility:visible!important;transform:none!important}
+ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:var(--hlgs-wide)!important;z-index:340!important;overflow:auto!important;background:radial-gradient(circle at 55% -10%,rgba(39,92,255,.11),transparent 34%),#020713!important;opacity:1!important;visibility:visible!important;transform:none!important}
+ body.hlgs-collapsed.d12-domis-active #page-domis.active{left:var(--hlgs-compact)!important}
  body.d12-domis-active #page-domis .d12-content{padding:18px 18px 30px!important}
 }
 @media(max-width:900px){
@@ -9118,7 +9087,6 @@ body.hlgs-collapsed{--hlgs-current:var(--hlgs-compact)}
   function setCollapsed(on,save){
     if(window.innerWidth<=900)return;
     document.body.classList.toggle('hlgs-collapsed',!!on);
-    document.body.setAttribute('data-hl-sidebar',on?'compact':'expanded');
     var b=document.getElementById('hlGlobalCollapse');
     if(b){
       b.textContent=on?'›':'‹';
@@ -9126,15 +9094,12 @@ body.hlgs-collapsed{--hlgs-current:var(--hlgs-compact)}
       b.setAttribute('aria-label',b.title);
     }
     if(save!==false){try{localStorage.setItem(STORAGE_KEY,on?'1':'0')}catch(e){}}
-    function refreshLayoutAfterSidebar(){
+    setTimeout(function(){
       try{
         if(window.d9State&&d9State.map)d9State.map.invalidateSize(false);
         if(window.d11&&d11.map)d11.map.invalidateSize(false);
-        window.dispatchEvent(new Event('resize'));
       }catch(e){}
-    }
-    requestAnimationFrame(refreshLayoutAfterSidebar);
-    setTimeout(refreshLayoutAfterSidebar,290);
+    },300);
   }
 
   function runRoute(tab){
@@ -9172,7 +9137,7 @@ body.hlgs-collapsed{--hlgs-current:var(--hlgs-compact)}
       '<div class="hlgs-spacer"></div>'+
       '<button class="hlgs-luz" data-tab="luz-ia" type="button" title="Habla con Luz">'+
         officialOrb('hl-orb-small hlgs-luz-orb')+
-        '<div class="hlgs-luz-copy"><b id="hlgsLuzStatus">Luz está activa</b><small><i class="hlgs-voice-dot"></i><span id="hlgsLuzVoiceState">Toca para activar voz</span></small></div>'+
+        '<div class="hlgs-luz-copy"><b>¿Necesitas ayuda?</b><small>Habla con Luz</small></div>'+
       '</button>'+
       '<div class="hlgs-account" data-tab="config" title="Configuración del restaurante">'+
         '<span id="hlgsAvatar">HL</span>'+
