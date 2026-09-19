@@ -4747,19 +4747,74 @@ app.get("/api/domi-admin/live-routes", async function(req,res){
   }catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
 });
 app.get("/api/domi-admin/evidencias", async function(req,res){
-  var rid=req.query.restaurante_id;if(!rid)return res.status(400).json({ok:false,error:"Falta restaurante_id"});
-  var limit=Math.max(1,Math.min(200,Number(req.query.limit||80)));
+  var rid=req.query.restaurante_id;
+  if(!rid)return res.status(400).json({ok:false,error:"Falta restaurante_id"});
+  // El Centro de Evidencias es un expediente de pedidos, no solo una galería.
+  // Trae pedidos reales y superpone el archivo histórico de pedido_evidencias.
+  var limit=Math.max(1,Math.min(1000,Number(req.query.limit||1000)));
   try{
-    var er=await finderRpc("hl_list_evidencias",{p_secret:FINDER_SERVER_SECRET,p_restaurante_id:rid,p_limit:limit});
-    var grouped={};(er.data||[]).forEach(function(e){
-      var k=String(e.pedido_id),g=grouped[k]||(grouped[k]={id:e.pedido_id,numero_pedido:e.numero_pedido,cliente_nombre:e.cliente_nombre,domiciliario_nombre:e.domiciliario_nombre,metodo_pago:e.metodo_pago,created_at:e.created_at,updated_at:e.created_at,entregado_at:e.created_at,foto_entrega:null,comprobante_url:null,comprobante_media_id:null});
-      if(e.tipo==="foto_entrega")g.foto_entrega=e.url;
-      if(e.tipo==="comprobante_pago"){g.comprobante_url=e.url;g.comprobante_media_id=e.media_id||null;}
-      if(new Date(e.created_at)>new Date(g.updated_at))g.updated_at=e.created_at;
+    var h=sbPrivilegedHeaders();
+    var select=[
+      "id","numero_pedido","cliente_tel","cliente_nombre","items","subtotal","desechables","domicilio","total",
+      "direccion","metodo_pago","estado","created_at","updated_at","tipo_pedido","canal","notas_especiales",
+      "domiciliario_id","domiciliario_nombre","domiciliario_asignado_at","en_ruta_at","entregado_at",
+      "foto_entrega","comprobante_url","comprobante_media_id","lat_destino","lng_destino","valoracion"
+    ].join(",");
+    var pr=await axios.get(
+      SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+encodeURIComponent(rid)+
+      "&order=created_at.desc&limit="+limit+"&select="+select,
+      {headers:h}
+    );
+
+    var archiveRows=[];
+    try{
+      var er=await finderRpc("hl_list_evidencias",{
+        p_secret:FINDER_SERVER_SECRET,
+        p_restaurante_id:rid,
+        p_limit:Math.min(1000,limit*2)
+      });
+      archiveRows=er.data||[];
+    }catch(rpcErr){
+      // Fallback de servidor: el panel no debe quedarse vacío si el RPC falla.
+      try{
+        var ar=await axios.get(
+          SUPABASE_URL+"/rest/v1/pedido_evidencias?restaurante_id=eq."+encodeURIComponent(rid)+
+          "&order=created_at.desc&limit="+Math.min(1000,limit*2)+
+          "&select=pedido_id,numero_pedido,tipo,url,media_id,cliente_nombre,domiciliario_nombre,metodo_pago,metadata,created_at,updated_at",
+          {headers:h}
+        );
+        archiveRows=ar.data||[];
+      }catch(_fallbackErr){ archiveRows=[]; }
+    }
+
+    var grouped={};
+    archiveRows.forEach(function(e){
+      var k=String(e.pedido_id||"");
+      if(!k)return;
+      var g=grouped[k]||(grouped[k]={foto_entrega:null,comprobante_url:null,comprobante_media_id:null,archivo_actualizado_at:null});
+      if(e.tipo==="foto_entrega"&&e.url)g.foto_entrega=e.url;
+      if(e.tipo==="comprobante_pago"){
+        if(e.url)g.comprobante_url=e.url;
+        if(e.media_id)g.comprobante_media_id=e.media_id;
+      }
+      var dt=e.updated_at||e.created_at;
+      if(dt&&(!g.archivo_actualizado_at||new Date(dt)>new Date(g.archivo_actualizado_at)))g.archivo_actualizado_at=dt;
     });
-    var out=Object.values(grouped).sort(function(a,b){return new Date(b.updated_at)-new Date(a.updated_at)}).slice(0,limit);
-    res.json({ok:true,evidencias:out});
-  }catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
+
+    var out=(pr.data||[]).map(function(p){
+      var a=grouped[String(p.id)]||{};
+      return Object.assign({},p,{
+        foto_entrega:p.foto_entrega||a.foto_entrega||null,
+        comprobante_url:p.comprobante_url||a.comprobante_url||null,
+        comprobante_media_id:p.comprobante_media_id||a.comprobante_media_id||null,
+        evidencia_archivada:!!grouped[String(p.id)],
+        evidencia_actualizada_at:a.archivo_actualizado_at||p.updated_at||p.created_at
+      });
+    });
+    res.json({ok:true,evidencias:out,total:out.length});
+  }catch(e){
+    res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});
+  }
 });
 app.get("/api/domi-admin/ruta-pedido", async function(req,res){
   var rid=req.query.restaurante_id,pid=req.query.pedido_id;if(!rid||!pid)return res.status(400).json({ok:false,error:"Faltan datos"});
