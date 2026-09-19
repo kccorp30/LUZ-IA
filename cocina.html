@@ -62,6 +62,27 @@ body{background:radial-gradient(70% 48% at 12% -8%,rgba(101,58,255,.24),transpar
 @media(max-width:1150px){.workspace{grid-template-columns:minmax(0,1fr) 290px}.topbar{grid-template-columns:minmax(230px,1fr) minmax(300px,auto) auto}.clock{display:none}.board{grid-template-columns:repeat(3,minmax(240px,1fr))}}
 @media(max-width:860px){:root{--top-h:66px;--dock-h:68px}.topbar{grid-template-columns:1fr auto;padding:0 12px}.coordinator-head,.online,.clock{display:none}.brandmark{width:43px;height:43px}.brand h1{font-size:18px}.brand small{display:none}.scorebar{display:flex;overflow-x:auto;scrollbar-width:none;padding:9px 10px 0;gap:7px}.scorebar::-webkit-scrollbar{display:none}.score{min-width:138px;min-height:58px;padding:8px 10px}.score-ico{width:37px;height:37px}.score b{font-size:20px}.mobile-tabs{display:flex;gap:6px;padding:8px 10px 0;overflow-x:auto;scrollbar-width:none}.mobile-tabs::-webkit-scrollbar{display:none}.mobile-tab{min-width:105px;padding:9px 12px;border-radius:13px;border:1px solid rgba(101,128,219,.15);background:rgba(7,18,45,.78);color:#7287ae;font-size:9px;font-weight:900}.mobile-tab.on{color:#fff;border-color:rgba(70,203,255,.35);background:linear-gradient(145deg,rgba(25,67,106,.65),rgba(45,32,105,.58))}.workspace{display:block;padding:8px 10px 8px}.board{height:100%;display:block}.lane{height:100%;display:none}.lane.mobile-active{display:flex}.rail{position:fixed;z-index:210;inset:calc(var(--top-h) + 12px) 10px calc(var(--dock-h) + 22px + var(--safe)) 10px;transform:translateY(112%);transition:.3s cubic-bezier(.2,.8,.2,1);box-shadow:0 25px 80px rgba(0,0,0,.55)}body.luz-open .rail{transform:translateY(0)}.mobile-luz{display:grid;position:fixed;z-index:180;right:14px;bottom:calc(var(--dock-h) + 22px + var(--safe));width:48px;height:48px;border-radius:50%;place-items:center;border:1px solid rgba(125,83,255,.4);background:rgba(25,18,71,.94);box-shadow:0 0 28px rgba(111,68,255,.28)}.mobile-luz .hl-orb{width:42px;height:42px}.mobile-luz .hl-core{font-size:12px}.voice-dock{margin:0 9px calc(8px + var(--safe));padding:6px 8px;grid-template-columns:auto 1fr auto;border-radius:19px}.voice-button{width:52px;height:52px}.voice-copy b{font-size:11px}.voice-copy span{font-size:8px}.dock-btn{height:42px;padding:0 10px}.dock-tools .dock-btn:first-child{display:none}.order-num{font-size:24px}.order-main{padding:13px}.main-action{min-height:56px;font-size:13px}.lane-head{padding:13px}.lane-scroll{padding:8px}.toast{top:calc(env(safe-area-inset-top,0px) + 10px)}}
 @media(max-width:430px){.brand h1{font-size:17px}.brandmark{width:42px;height:42px}.score{min-width:128px}.score span{font-size:8px}.score b{font-size:19px}.workspace{padding-left:8px;padding-right:8px}.voice-copy span{max-width:180px}.order-tags{max-width:50%}.item-name{font-size:12px}.actions{grid-template-columns:1fr 48px}.more{width:48px}.drawer{width:100%}}
+
+/* V3 · Living Kitchen refinement */
+.mobile-coordinator{display:none}
+body:before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:none;background:conic-gradient(from 180deg at 50% 40%,transparent,rgba(93,65,255,.055),transparent 28%,rgba(37,214,255,.045),transparent 58%,rgba(224,77,255,.035),transparent);animation:ambientDrift 18s linear infinite;filter:blur(30px)}
+@keyframes ambientDrift{to{transform:rotate(360deg) scale(1.05)}}
+.topbar{position:relative;overflow:hidden}.topbar:after{content:"";position:absolute;left:28%;right:28%;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(53,220,255,.48),rgba(139,92,255,.55),transparent);box-shadow:0 0 18px rgba(91,96,255,.28)}
+.coordinator-head{padding:6px 16px;border-radius:20px;background:radial-gradient(circle at 14% 50%,rgba(123,73,255,.14),transparent 33%),rgba(255,255,255,.018);border:1px solid rgba(113,104,255,.09)}
+.lane{background:radial-gradient(circle at 50% -15%,rgba(74,87,255,.075),transparent 35%),linear-gradient(180deg,rgba(9,19,48,.88),rgba(4,10,28,.82))}.lane.prep{box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 0 35px rgba(37,172,255,.025)}
+.order{background:radial-gradient(circle at 100% 0,rgba(61,117,255,.07),transparent 32%),linear-gradient(150deg,rgba(13,29,69,.98),rgba(6,14,38,.96))}.order.focused:before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:linear-gradient(135deg,var(--cyan),var(--violet),transparent 70%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;pointer-events:none;animation:focusFlow 2s linear infinite}@keyframes focusFlow{50%{filter:hue-rotate(30deg) brightness(1.2)}}
+.rail{background:radial-gradient(circle at 50% 0,rgba(112,61,255,.13),transparent 28%),linear-gradient(180deg,rgba(7,15,39,.96),rgba(4,9,27,.95))}
+.voice-dock{position:relative;overflow:hidden}.voice-dock:before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 20%,rgba(92,83,255,.055),transparent 48%);transform:translateX(-120%);animation:dockSheen 7s ease infinite}@keyframes dockSheen{45%,100%{transform:translateX(120%)}}
+@media(max-width:860px){
+  :root{--top-h:72px;--dock-h:78px}
+  .topbar{height:var(--top-h);background:linear-gradient(180deg,rgba(3,8,24,.985),rgba(5,11,31,.94));border-bottom:0}.brandmark{display:none}.brand h1{font-size:20px}.top-actions{gap:5px}.top-actions .icon-btn{display:none}
+  .mobile-coordinator{display:grid;grid-template-columns:54px 1fr 48px;align-items:center;gap:10px;margin:8px 10px 0;padding:8px 10px;border-radius:20px;border:1px solid rgba(107,91,255,.22);background:radial-gradient(circle at 10% 50%,rgba(113,66,255,.18),transparent 34%),linear-gradient(135deg,rgba(9,20,51,.94),rgba(9,12,39,.92));box-shadow:0 14px 40px rgba(0,0,0,.22),0 0 26px rgba(100,70,255,.06)}
+  .mobile-coordinator .hl-orb{width:50px;height:50px}.mobile-coordinator .hl-core{font-size:15px}.mobile-coord-copy{min-width:0}.mobile-coord-copy b{display:block;font-size:12px;letter-spacing:.02em}.mobile-coord-copy span{display:block;color:#8298c0;font-size:9px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mobile-coordinator button{width:44px;height:44px;border-radius:14px;border:1px solid rgba(55,215,255,.24);background:rgba(32,91,142,.17);color:#aeeeff;font-size:18px}
+  .scorebar{padding-top:8px}.score{min-width:118px;border-radius:16px;background:linear-gradient(145deg,rgba(10,24,58,.94),rgba(7,14,39,.92))}.score-ico{width:34px;height:34px}.score b{font-size:18px}
+  .mobile-tabs{position:relative;z-index:30;padding-top:8px}.mobile-tab{min-width:116px;padding:11px 14px;border-radius:999px}.mobile-tab.on{box-shadow:0 0 24px rgba(53,220,255,.08)}
+  .workspace{padding-top:8px}.lane{border-radius:24px}.lane-head{padding:14px 16px}.lane-scroll{padding:10px}.order{border-radius:22px}.order-main{padding:15px}.order-num{font-size:27px}.main-action{min-height:62px;border-radius:17px;font-size:14px;box-shadow:0 10px 28px rgba(0,0,0,.18)}
+  .voice-dock{margin:8px 9px calc(8px + var(--safe));height:auto;min-height:72px;border-radius:22px}.voice-button{width:56px;height:56px}.voice-copy b{font-size:12px}.voice-copy span{font-size:9px;max-width:210px}.mobile-luz{display:none}
+}
 </style>
 </head>
 <body>
@@ -75,6 +96,12 @@ body{background:radial-gradient(70% 48% at 12% -8%,rgba(101,58,255,.24),transpar
     </div>
     <div class="top-actions"><div class="clock"><b id="clock">--:--</b><span id="date">—</span></div><div class="online"><i></i>Cocina online</div><button class="icon-btn" id="topMic" onclick="toggleVoice()" aria-label="Voz">◉</button></div>
   </header>
+
+  <section class="mobile-coordinator" id="mobileCoordinator">
+    <div class="hl-orb" data-luz-orb><span class="hl-core">✦</span><span class="hl-orbit o1"></span><span class="hl-orbit o2"></span><span class="hl-p p1"></span><span class="hl-p p2"></span></div>
+    <div class="mobile-coord-copy"><b>LUZ · Coordinando</b><span id="mobileLuzStatus">Observando pedidos, tiempos y producción</span></div>
+    <button onclick="toggleVoice()" aria-label="Hablar con Luz">🎙</button>
+  </section>
 
   <section class="scorebar">
     <div class="score new" data-state-tab="confirmado"><div class="score-ico">▤</div><div><b id="countNew">0</b><span>Nuevos</span></div></div>
@@ -139,7 +166,7 @@ function stateLabel(s){return s==="confirmado"?"nuevo":s==="en_preparacion"?"pre
 function setClock(){let d=new Date();q("clock").textContent=d.toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});q("date").textContent=d.toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short"})}
 setInterval(setClock,1000);setClock();
 
-function setLuzState(state,label){luzState=state||"idle";document.querySelectorAll("[data-luz-orb]").forEach(el=>{el.classList.remove("listening","thinking","speaking","acting","alert");if(state&&state!=="idle")el.classList.add(state)});q("voiceDock").classList.toggle("listening",state==="listening");if(label){q("topLuzStatus").textContent=label;q("railState").textContent=label}}
+function setLuzState(state,label){luzState=state||"idle";document.querySelectorAll("[data-luz-orb]").forEach(el=>{el.classList.remove("listening","thinking","speaking","acting","alert");if(state&&state!=="idle")el.classList.add(state)});q("voiceDock").classList.toggle("listening",state==="listening");if(label){q("topLuzStatus").textContent=label;q("railState").textContent=label;let m=q("mobileLuzStatus");if(m)m.textContent=label}}
 function unlockAudio(){if(audioUnlocked)return;audioUnlocked=true;try{if(window.speechSynthesis){let u=new SpeechSynthesisUtterance("");u.volume=0;window.speechSynthesis.speak(u)}}catch(e){}}
 ["pointerdown","touchstart","keydown"].forEach(ev=>document.addEventListener(ev,unlockAudio,{once:true,passive:true}));
 
@@ -184,15 +211,69 @@ function openDrawer(id){let p=pedMap[id];if(!p)return;let items=safeItems(p).map
 function closeDrawer(){q("orderBackdrop").classList.remove("on")}
 function toggleLuzSheet(){document.body.classList.toggle("luz-open")}
 
-async function updateOrderState(p,target,source="manual"){if(!p)return false;let card=q("order-"+p.id);if(card){card.style.opacity=".45";card.style.pointerEvents="none"}setLuzState("acting","Ejecutando · pedido #"+p.numero_pedido);try{let r=await fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:p.id,estado:target,telefono_cliente:p.cliente_tel,numero_pedido:p.numero_pedido,restaurante_id:REST_ID,direccion:p.direccion})});if(!r.ok)throw new Error("HTTP "+r.status);toast(target==="en_preparacion"?"Pedido #"+p.numero_pedido+" en preparación":target==="listo"?"Pedido #"+p.numero_pedido+" listo":"Pedido #"+p.numero_pedido+" retirado");await cargarPedidos();setLuzState(voiceActive?"listening":"idle","Operación actualizada");return true}catch(e){if(card){card.style.opacity="1";card.style.pointerEvents="auto"}setLuzState("alert","No pude actualizar el pedido");toast("No pude cambiar el estado");return false}}
+async function updateOrderState(p,target,source="manual"){
+  if(!p)return false;
+  let card=q("order-"+p.id);if(card){card.style.opacity=".45";card.style.pointerEvents="none"}
+  let nextLane=target==="en_preparacion"?"en_preparacion":target==="listo"?"listo":null;
+  currentFocusNum=p.numero_pedido;
+  if(window.innerWidth<=860&&nextLane)setMobileLane(nextLane);
+  setLuzState("acting","Ejecutando · pedido #"+p.numero_pedido);
+  try{
+    let r=await fetch("/api/pedido-estado",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:p.id,estado:target,telefono_cliente:p.cliente_tel,numero_pedido:p.numero_pedido,restaurante_id:REST_ID,direccion:p.direccion})});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    toast(target==="en_preparacion"?"Pedido #"+p.numero_pedido+" → Preparando":target==="listo"?"Pedido #"+p.numero_pedido+" → Listo":"Pedido #"+p.numero_pedido+" salió de cocina");
+    await cargarPedidos();
+    let moved=orderByNum(p.numero_pedido);
+    if(moved){
+      if(window.innerWidth<=860)setMobileLane(moved.estado);
+      setTimeout(()=>focusOrder(moved.numero_pedido,false),120);
+    }else if(window.innerWidth<=860){
+      let all=Object.values(pedMap);let best=all.find(x=>x.estado==="listo")||all.find(x=>x.estado==="en_preparacion")||all.find(x=>x.estado==="confirmado");
+      if(best){setMobileLane(best.estado);currentFocusNum=best.numero_pedido;setTimeout(()=>focusOrder(best.numero_pedido,false),120)}else{currentFocusNum=null}
+    }
+    setLuzState(voiceActive?"listening":"idle","Operación actualizada · siguiendo pedido #"+p.numero_pedido);
+    return true;
+  }catch(e){if(card){card.style.opacity="1";card.style.pointerEvents="auto"}setLuzState("alert","No pude actualizar el pedido");toast("No pude cambiar el estado");return false}
+}
 async function manualState(id,target){let p=pedMap[id];if(!p)return;let ok=await updateOrderState(p,target,"manual");if(ok){let msg=target==="en_preparacion"?"Pedido "+p.numero_pedido+" en preparación.":target==="listo"?"Pedido "+p.numero_pedido+" listo. Cliente y operación actualizados.":"Pedido "+p.numero_pedido+" retirado de cocina.";speakLuz(msg)}}
 
 function addConversation(role,content){conversationHistory.push({role,content:String(content).slice(0,700)});conversationHistory=conversationHistory.slice(-12);try{localStorage.setItem("hl_kitchen_conversation",JSON.stringify(conversationHistory))}catch(e){}renderConversation()}
 function renderConversation(){let el=q("conversation"),hist=conversationHistory.slice(-6);if(!hist.length){el.innerHTML='<p style="font-size:9px;color:#60769e">Habla con Luz y mantendré el contexto de esta sesión.</p>';return}el.innerHTML=hist.map(m=>'<div class="bubble '+(m.role==="assistant"?"luz":"user")+'">'+esc(m.content)+'</div>').join("");el.scrollTop=el.scrollHeight}
 
-async function askLuz(text){text=String(text||"").trim();if(!text)return;unlockAudio();addConversation("user",text);q("voiceTitle").textContent="Luz está pensando…";q("voiceSubtitle").textContent='“'+text+'”';setLuzState("thinking","Razonando con el estado real de cocina");pauseRecognitionForSpeech();try{let r=await fetch("/api/cocina-luz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:REST_ID,mensaje:text,historial:conversationHistory.slice(0,-1),focused_order_number:currentFocusNum,pending_confirmation:pendingConfirmation}),signal:AbortSignal.timeout?AbortSignal.timeout(18000):undefined});let d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Luz no disponible");pendingConfirmation=d.requires_confirmation?{prompt:d.confirmation_prompt,action:d.action}:null;let actionResult=d.requires_confirmation?{ok:true}:{...await applyAgentAction(d.action,d.focus_order_number)};let reply=actionResult.overrideReply||d.confirmation_prompt||d.reply||"Listo.";addConversation("assistant",reply);q("voiceTitle").textContent="Luz · Coordinadora";q("voiceSubtitle").textContent=reply;if(d.memory_saved){q("memoryBadge").textContent="Regla aprendida";toast("Luz recordó esa regla de cocina")}await speakLuz(reply,true)}catch(e){console.error("[Luz Cocina]",e);let fallback=localFallback(text);addConversation("assistant",fallback);q("voiceTitle").textContent="Luz · Coordinadora";q("voiceSubtitle").textContent=fallback;await speakLuz(fallback,true)}}
-async function applyAgentAction(action,focusNum){action=action||{name:"none"};let num=action.order_number||focusNum||null;if(focusNum)focusOrder(focusNum,false);if(action.name==="focus_order"){if(num)focusOrder(num,false);return{ok:true}}if(action.name==="filter_orders"){currentFilter=action.filter||"all";renderAll();if(window.innerWidth<=860&&currentFilter==="nuevos")setMobileLane("confirmado");if(window.innerWidth<=860&&currentFilter==="preparando")setMobileLane("en_preparacion");if(window.innerWidth<=860&&currentFilter==="listos")setMobileLane("listo");return{ok:true}}if(action.name==="show_production"){showProduction();return{ok:true}}if(["start_preparing","mark_ready","mark_delivered"].includes(action.name)){let p=orderByNum(num);if(!p)return{ok:false,overrideReply:"No encuentro ese pedido activo ahora mismo."};let target=action.name==="start_preparing"?"en_preparacion":action.name==="mark_ready"?"listo":"listo_entrega";let ok=await updateOrderState(p,target,"luz");if(ok){currentFocusNum=p.numero_pedido;setTimeout(()=>focusOrder(p.numero_pedido,false),250);return{ok:true}}return{ok:false,overrideReply:"No pude cambiar el estado del pedido "+p.numero_pedido+". Déjame que lo revisemos manualmente."}}return{ok:true}}
-function localFallback(text){let peds=Object.values(pedMap),low=text.toLowerCase();if((low.includes("cómo vamos")||low.includes("como vamos"))){return kitchenSummary()}if(low.includes("qué sigue")||low.includes("que sigue")){let p=getPriority(peds);if(p){focusOrder(p.numero_pedido,false);return"Yo seguiría con el pedido "+p.numero_pedido+". Lleva "+nowMins(p)+" minutos."}return"Estamos al día; no hay nada pendiente."}return"Te escuché, pero ahora mismo no pude consultar mi cerebro de cocina. La operación sigue visible y puedes volver a intentarlo."}
+async function askLuz(text){
+  text=String(text||"").trim();if(!text)return;unlockAudio();addConversation("user",text);q("voiceTitle").textContent="Luz está pensando…";q("voiceSubtitle").textContent='“'+text+'”';setLuzState("thinking","Razonando con la cocina en tiempo real");pauseRecognitionForSpeech();
+  try{
+    let r=await fetch("/api/cocina-luz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:REST_ID,mensaje:text,historial:conversationHistory.slice(0,-1),focused_order_number:currentFocusNum,pending_confirmation:pendingConfirmation}),signal:AbortSignal.timeout?AbortSignal.timeout(20000):undefined});
+    let d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Luz no disponible");
+    pendingConfirmation=d.requires_confirmation?{prompt:d.confirmation_prompt,action:d.action}:null;
+    let actionResult=d.requires_confirmation?{ok:true}:await applyAgentAction(d.action,d.focus_order_number);
+    let reply=actionResult.overrideReply||d.confirmation_prompt||d.reply||"Listo.";
+    addConversation("assistant",reply);q("voiceTitle").textContent=d.degraded?"Luz · Coordinadora":"Luz · Coordinadora";q("voiceSubtitle").textContent=reply;
+    if(d.memory_saved){q("memoryBadge").textContent="Regla aprendida";toast("Luz recordó esa regla de cocina")}
+    await speakLuz(reply,true);
+  }catch(e){
+    console.error("[Luz Cocina] backend:",e);let local=await localOperationalFallback(text);let reply=local.reply;
+    addConversation("assistant",reply);q("voiceTitle").textContent="Luz · Coordinadora";q("voiceSubtitle").textContent=reply;await speakLuz(reply,true);
+  }
+}
+async function applyAgentAction(action,focusNum){action=action||{name:"none"};let num=action.order_number||focusNum||null;if(focusNum)focusOrder(focusNum,false);if(action.name==="focus_order"){if(num)focusOrder(num,false);return{ok:true}}if(action.name==="filter_orders"){currentFilter=action.filter||"all";renderAll();if(window.innerWidth<=860&&currentFilter==="nuevos")setMobileLane("confirmado");if(window.innerWidth<=860&&currentFilter==="preparando")setMobileLane("en_preparacion");if(window.innerWidth<=860&&currentFilter==="listos")setMobileLane("listo");return{ok:true}}if(action.name==="show_production"){showProduction();return{ok:true}}if(["start_preparing","mark_ready","mark_delivered"].includes(action.name)){let p=orderByNum(num);if(!p)return{ok:false,overrideReply:"No encuentro ese pedido activo ahora mismo."};let target=action.name==="start_preparing"?"en_preparacion":action.name==="mark_ready"?"listo":"listo_entrega";let ok=await updateOrderState(p,target,"luz");if(ok)return{ok:true};return{ok:false,overrideReply:"No pude cambiar el estado del pedido "+p.numero_pedido+". Revísalo conmigo en pantalla."}}return{ok:true}}
+function findLocalOrder(text){let low=norm(text),peds=Object.values(pedMap),nums=String(text).match(/\b\d{2,6}\b/g)||[];for(let n of nums){let p=peds.find(x=>Number(x.numero_pedido)===Number(n));if(p)return p}let byClient=peds.filter(p=>{let c=norm(p.cliente_nombre||"");return c&&c.split(" ").some(w=>w.length>=3&&low.includes(w))});if(byClient.length===1)return byClient[0];if(currentFocusNum){let f=orderByNum(currentFocusNum);if(f)return f}return null}
+function norm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9ñ ]+/g," ").replace(/\s+/g," ").trim()}
+async function localOperationalFallback(text){
+  let low=norm(text),peds=Object.values(pedMap),p=findLocalOrder(text),news=peds.filter(x=>x.estado==="confirmado"),prep=peds.filter(x=>x.estado==="en_preparacion"),ready=peds.filter(x=>x.estado==="listo");
+  if((low.includes("como vamos")||low.includes("resumen")))return{reply:kitchenSummary()};
+  if(low.includes("que sigue")||low.includes("cual sigue")){let x=getPriority(peds);if(x){focusOrder(x.numero_pedido,false);return{reply:"Yo seguiría con el pedido "+x.numero_pedido+". Lleva "+nowMins(x)+" minutos."}}return{reply:"Estamos al día. No hay pedidos pendientes."}}
+  if(low.includes("muestr")||low.includes("enfoca")||low.includes("abre")){if(p){focusOrder(p.numero_pedido,false);return{reply:"Aquí está el pedido "+p.numero_pedido+"."}}}
+  let productGroups=getProductionGroups(peds),hits=productGroups.filter(g=>norm(g.name).split(" ").some(w=>w.length>=4&&low.includes(w.replace(/s$/, ""))));
+  if((low.includes("cuanto")||low.includes("cuantos")||low.includes("cuantas")||low.includes("tenemos")||low.includes("faltan"))&&hits.length){let total=hits.reduce((a,g)=>a+g.qty,0);return{reply:"Tenemos "+total+" de "+hits[0].name+" pendientes."}}
+  let start=/\b(inicia|iniciar|empieza|arranca|prepara|preparar)\b/.test(low),done=/\b(listo|lista|termine|terminamos|acabamos|terminado|finaliza)\b/.test(low),change=low.includes("cambia")&&low.includes("estado");
+  if(!p&&start&&news.length===1)p=news[0];if(!p&&done&&prep.length===1)p=prep[0];if(!p&&change&&peds.length===1)p=peds[0];
+  if(p&&change){if(p.estado==="confirmado")start=true;else if(p.estado==="en_preparacion")done=true;else return{reply:"El pedido "+p.numero_pedido+" ya está listo. Dime si ya fue retirado."}}
+  if(p&&start){let ok=await updateOrderState(p,"en_preparacion","fallback");return{reply:ok?"Listo. Pedido "+p.numero_pedido+" en preparación.":"No pude iniciar el pedido "+p.numero_pedido+"."}}
+  if(p&&done){let ok=await updateOrderState(p,"listo","fallback");return{reply:ok?"Perfecto. Pedido "+p.numero_pedido+" listo.":"No pude marcar listo el pedido "+p.numero_pedido+"."}}
+  if(p&&(low.includes("que tiene")||low.includes("que lleva")||low.includes("leeme"))){return{reply:"El pedido "+p.numero_pedido+" lleva "+describeOrder(p)+"."}}
+  return{reply:"Estoy contigo. Dime qué pedido quieres mover, buscar o revisar."};
+}
 function kitchenSummary(){let p=Object.values(pedMap),n=p.filter(x=>x.estado==="confirmado").length,pr=p.filter(x=>x.estado==="en_preparacion").length,rd=p.filter(x=>x.estado==="listo").length,late=p.filter(x=>x.estado!=="listo"&&nowMins(x)>=15).length;let s="Tenemos "+n+" nuevos, "+pr+" preparando y "+rd+" listos.";if(late)s+=" Hay "+late+" atrasado"+(late!==1?"s":"")+" que requieren atención.";else s+=" Ninguno está atrasado.";return s}
 function showProduction(){document.body.classList.add("luz-open");q("luzRail").scrollIntoView&&q("luzRail").scrollIntoView({behavior:"smooth",block:"nearest"});q("productionList").closest(".intel-card").style.boxShadow="0 0 34px rgba(54,221,255,.15)";setTimeout(()=>q("productionList").closest(".intel-card").style.boxShadow="",1600)}
 function askQuickSummary(){askLuz("Luz, ¿cómo vamos en cocina?")}
