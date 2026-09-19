@@ -7533,8 +7533,16 @@ Responde SOLO JSON válido:
 {"reply":"...","opinion_title":"Mi lectura","urgency":"low","speak":false,"action":{"name":"none","order_id":null,"order_number":null,"filter":null},"focus_order_id":null,"focus_order_number":null,"requires_confirmation":false,"confirmation_prompt":null,"memory_rule":null}`;
     var messages=kitchenCompactHistory(req.body.historial);messages.push({role:"user",content:"ESTADO ACTUAL DE COCINA:\n"+JSON.stringify(state)+"\n\nCOCINERO: "+mensaje});
     var out=null,modelUsed=null;
-    try { var aiR=await kitchenCallClaude(systemPrompt,messages);modelUsed=aiR.model;var aiText=(aiR.data&&aiR.data.content&&aiR.data.content.map(function(b){return b.text||"";}).join("\n"))||"";out=kitchenExtractJson(aiText);out.source="ai";out.model=modelUsed; }
-    catch(eAI){ console.error("[cocina-luz] IA no disponible, usando respaldo operativo:",eAI.message);out=kitchenFallbackAgent(mensaje,state);out.degraded=true; }
+    var fastLocal=kitchenFallbackAgent(mensaje,state);
+    var simpleActionNames=["start_preparing","mark_ready","mark_delivered","focus_order","filter_orders","show_production","show_summary"];
+    var isSimpleAction=simpleActionNames.indexOf(fastLocal.action&&fastLocal.action.name)!==-1;
+    var isDetailQuestion=/\b(que tiene|que lleva|leeme|lee el pedido|detalle|contenido|inici|prepara|listo|cambia.*estado|muestr|enfoca|abre|cuanto|cuantos|cuantas|faltan|tenemos|como vamos|resumen|situacion|estado de cocina|que sigue|cual sigue|siguiente|prioridad|primero)\b/i.test(kitchenNormText(mensaje));
+    if(mode!=="proactive" && (isSimpleAction || isDetailQuestion)){
+      out=fastLocal; out.fast_path=true;
+    } else {
+      try { var aiR=await kitchenCallClaude(systemPrompt,messages);modelUsed=aiR.model;var aiText=(aiR.data&&aiR.data.content&&aiR.data.content.map(function(b){return b.text||"";}).join("\n"))||"";out=kitchenExtractJson(aiText);out.source="ai";out.model=modelUsed; }
+      catch(eAI){ console.error("[cocina-luz] IA no disponible, usando respaldo operativo:",eAI.message);out=fastLocal;out.degraded=true; }
+    }
     var allowed=["none","focus_order","start_preparing","mark_ready","mark_delivered","filter_orders","show_production","show_summary"];if(!out.action||allowed.indexOf(out.action.name)===-1)out.action={name:"none",order_id:null,order_number:null,filter:null};
     // Canonicaliza cualquier referencia que devuelva la IA: UUID, número real o número corto.
     var bodyFocus=kitchenResolveOrderRef({order_id:focusedId,order_number:focusedNum},orders);
