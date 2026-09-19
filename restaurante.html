@@ -8353,9 +8353,36 @@ window.renderOrdersV5=function(){
   window.orderCardHtmlV5=function(p){if(!orderReadyV83(p))return '';var html=prevCardV83?prevCardV83(p):'';var proof=proofUrlV83(p),method=String(p.metodo_pago||'Pago');var pay='<div class="ov83-payline '+(proof?'proof':'')+'"><div class="left"><i class="ov83-paydot"></i><div><b>'+escHtml(method)+'</b><small> · pedido confirmado</small></div></div><span class="ov83-confirmed-mark"><i></i>'+(proof?'Comprobante':'Pago listo')+'</span></div>';return html.replace('<div class="ov5-actions">',pay+'<div class="ov5-actions">');};
 
   var prevDetailV83=window.renderOrderDetailV5;
-  window.renderOrderDetailV5=function(p){if(p&&!orderReadyV83(p)){return prevDetailV83?prevDetailV83(null):undefined;}var r=prevDetailV83?prevDetailV83(p):undefined;if(!p)return r;setTimeout(function(){try{var root=document.getElementById('ordersV5Detail');if(!root||root.querySelector('.ov83-proof'))return;var proof=proofUrlV83(p),src=(typeof sourceInfoV5==='function'?sourceInfoV5(p):{label:(p.canal||'Pedido')});var method=escHtml(String(p.metodo_pago||'Pago confirmado'));var html='';if(proof){html='<div class="ov83-proof"><div class="ov83-proof-copy"><div class="ov83-proof-kicker">Evidencia de pago recibida</div><h4>'+method+' · comprobante adjunto</h4><p>El pedido entró a operación con el método de pago confirmado y su soporte disponible para revisión.</p><div class="ov83-proof-meta"><span class="ov83-proof-pill">Comprobante recibido</span><span class="ov83-proof-pill channel">'+escHtml(src.label||'Hola Luz')+'</span></div></div><div class="ov83-proof-media" onclick="openProofV5(\''+encodeURIComponent(proof)+'\')"><img src="'+escHtml(proof)+'" alt="Comprobante de pago" onerror="this.parentElement.style.display=\'none\'"></div></div>';}else{html='<div class="ov83-proof no-proof"><div class="ov83-proof-copy"><div class="ov83-proof-kicker">Pago confirmado</div><h4>'+method+'</h4><p>Este método no requiere comprobante adjunto. El pedido ya fue confirmado antes de entrar a operación.</p><div class="ov83-proof-meta"><span class="ov83-proof-pill">Método confirmado</span><span class="ov83-proof-pill channel">'+escHtml(src.label||'Hola Luz')+'</span></div></div></div>';}
+  window.renderOrderDetailV5=function(p){
+    if(p&&!orderReadyV83(p)){return prevDetailV83?prevDetailV83(null):undefined;}
+    var r=prevDetailV83?prevDetailV83(p):undefined;if(!p)return r;
+    setTimeout(async function(){try{
+      var root=document.getElementById('ordersV5Detail');if(!root||root.querySelector('.ov83-proof'))return;
+      var proof=proofUrlV83(p),src=(typeof sourceInfoV5==='function'?sourceInfoV5(p):{label:(p.canal||'Pedido')});
+      // Fallback: si el vínculo directo del pedido falta, recuperar el soporte del archivo persistente.
+      if(!proof&&p.id&&rest&&rest.id){
+        try{
+          var er=await fetch('/api/domi-admin/evidencias?restaurante_id='+encodeURIComponent(rest.id)+'&limit=200',{cache:'no-store'});
+          if(er.ok){
+            var ed=await er.json(),hit=(ed.evidencias||[]).find(function(x){return String(x.id)===String(p.id)});
+            if(hit){proof=proofUrlV83(hit);if(proof){p.comprobante_url=hit.comprobante_url||proof;p.comprobante_media_id=hit.comprobante_media_id||p.comprobante_media_id;}}
+          }
+        }catch(_e){}
+      }
+      var rawMethod=String(p.metodo_pago||'').toLowerCase();
+      var method=escHtml(String(p.metodo_pago||'Pago confirmado'));
+      var transferLike=/nequi|bancolombia|digital|transfer/.test(rawMethod);
+      var html='';
+      if(proof){
+        html='<div class="ov83-proof"><div class="ov83-proof-copy"><div class="ov83-proof-kicker">Evidencia de pago recibida</div><h4>'+method+' · comprobante adjunto</h4><p>El comprobante está vinculado al pedido y archivado para futuras revisiones.</p><div class="ov83-proof-meta"><span class="ov83-proof-pill">Comprobante recibido</span><span class="ov83-proof-pill channel">'+escHtml(src.label||'Hola Luz')+'</span></div></div><div class="ov83-proof-media" onclick="openProofV5(\''+encodeURIComponent(proof)+'\')"><img src="'+escHtml(proof)+'" alt="Comprobante de pago" onerror="this.closest(\'.ov83-proof-media\').classList.add(\'load-error\')"></div></div>';
+      }else if(transferLike){
+        html='<div class="ov83-proof no-proof" style="border-color:rgba(245,158,11,.32);background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(239,68,68,.04))"><div class="ov83-proof-copy"><div class="ov83-proof-kicker" style="color:#fbbf24">Comprobante pendiente de vincular</div><h4>'+method+'</h4><p>Este método sí requiere soporte. HOLA LUZ no encontró un comprobante vinculado al pedido; revisa el chat o el Centro de Evidencias antes de continuar.</p><div class="ov83-proof-meta"><span class="ov83-proof-pill" style="color:#fbbf24">Revisión requerida</span><span class="ov83-proof-pill channel">'+escHtml(src.label||'Hola Luz')+'</span></div></div></div>';
+      }else{
+        html='<div class="ov83-proof no-proof"><div class="ov83-proof-copy"><div class="ov83-proof-kicker">Pago confirmado</div><h4>'+method+'</h4><p>Este método no requiere comprobante previo para entrar a operación.</p><div class="ov83-proof-meta"><span class="ov83-proof-pill">Método confirmado</span><span class="ov83-proof-pill channel">'+escHtml(src.label||'Hola Luz')+'</span></div></div></div>';
+      }
       var strip=root.querySelector('.ov8-strip');if(strip)strip.insertAdjacentHTML('afterend',html);else{var hero=root.querySelector('.ov8-hero');if(hero)hero.insertAdjacentHTML('afterend',html);}
-    }catch(e){}},0);return r;};
+    }catch(e){console.warn('[proof-card]',e)}},20);return r;
+  };
 
   /* Keep already-loaded arrays clean if this build hot-replaces over V8.2 */
   setTimeout(function(){try{if(Array.isArray(window.ordersV2Data))window.ordersV2Data=window.ordersV2Data.filter(orderReadyV83);if(Array.isArray(window.ordersV5ActiveRows))window.ordersV5ActiveRows=window.ordersV5ActiveRows.filter(orderReadyV83);if(typeof filterOrdersV5==='function')filterOrdersV5();}catch(e){}},600);
