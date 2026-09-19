@@ -109,6 +109,29 @@ async function enviarPushPorRol(restauranteId, rol, payload) {
     }
   } catch (e) { console.error("enviarPush error:", e.message); }
 }
+
+async function enviarPushDomiciliario(restauranteId, domiciliario, payload) {
+  if (!VAPID_PUBLIC || !domiciliario) return;
+  var tel = String(domiciliario.telefono || "").replace(/[^0-9]/g, "").replace(/^57/, "");
+  if (!tel) return;
+  try {
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/push_subscriptions?restaurante_id=eq." + restauranteId +
+      "&rol=eq.domiciliario&nombre=eq." + encodeURIComponent(tel) + "&activo=eq.true&select=*",
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+    );
+    for (var sub of (r.data || [])) {
+      var result = await enviarPushSuscripcion(JSON.parse(sub.subscription), payload);
+      if (result === "expired") {
+        await axios.patch(SUPABASE_URL + "/rest/v1/push_subscriptions?id=eq." + sub.id,
+          { activo:false },
+          { headers:{ "apikey":svcKey, "Authorization":"Bearer "+svcKey, "Content-Type":"application/json" } }
+        ).catch(function(){});
+      }
+    }
+  } catch (e) { console.error("enviarPushDomiciliario:", e.message); }
+}
 app.use(express.urlencoded({ extended: false }));
 // Raw body parser for storage upload proxy (must be before json parser)
 app.use("/api/storage-upload", express.raw({ type: "*/*", limit: "10mb" }));
@@ -1871,24 +1894,44 @@ app.post("/api/esp32-registro", async function(req, res) {
   }
 });
 
-// ── SERVICE WORKER — requerido para instalación PWA ───────────────────────────
+// ── SERVICE WORKER — PWA + WEB PUSH ──────────────────────────────────────────
+// Importante: este worker NO se desregistra. Mantiene Push/Notifications activo
+// y no intercepta fetch, así que no altera los flujos de red que ya funcionan.
 app.get("/sw.js", function(req, res) {
   res.setHeader("Content-Type", "application/javascript");
-  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Service-Worker-Allowed", "/");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   res.send(`
-self.addEventListener('install', function(e) { self.skipWaiting(); });
-self.addEventListener('activate', function(e) {
-  e.waitUntil(
-    caches.keys().then(function(keys) {
-      return Promise.all(keys.map(function(k) { return caches.delete(k); }));
-    }).then(function() {
-      return self.registration.unregister();
-    }).then(function() {
-      return self.clients.matchAll();
-    }).then(function(clients) {
-      clients.forEach(function(c) { c.navigate(c.url); });
-    })
-  );
+self.addEventListener('install', function() { self.skipWaiting(); });
+self.addEventListener('activate', function(event) {
+  event.waitUntil(self.clients.claim());
+});
+self.addEventListener('push', function(event) {
+  var data = {};
+  try { data = event.data ? event.data.json() : {}; }
+  catch (e) { try { data = { body: event.data ? event.data.text() : '' }; } catch (_) {} }
+  var title = data.title || 'HOLA LUZ';
+  var options = {
+    body: data.body || 'Tienes una actualización.',
+    icon: data.icon || '/icon-192.png',
+    badge: data.badge || '/icon-192.png',
+    tag: data.tag || 'hola-luz',
+    renotify: data.renotify !== false,
+    vibrate: data.vibrate || [180, 80, 180],
+    data: { url: data.url || '/' }
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  var target = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(self.clients.matchAll({ type:'window', includeUncontrolled:true }).then(function(list) {
+    for (var i=0;i<list.length;i++) {
+      var c=list[i];
+      if ('focus' in c) { try { c.navigate(target); } catch(e) {} return c.focus(); }
+    }
+    return self.clients.openWindow ? self.clients.openWindow(target) : null;
+  }));
 });
   `.trim());
 });
@@ -2205,7 +2248,7 @@ async function asignarPedidoInterno(pedido,domi,restauranteId,fuente){
     registrarEventoLuz(restauranteId,pedido.id,"restaurante",null,"domi_asignado","Luz asignó el pedido #"+(pedido.numero_pedido||""),domi.nombre+" recibió la entrega"+(dist!=null?" · "+dist+" km del restaurante":"")+".",{domiciliario_id:domi.id,domiciliario_nombre:domi.nombre,fuente:origen,distance_km:dist},"luz",null),
     registrarEventoLuz(restauranteId,pedido.id,"domiciliario",domi.id,"mision_asignada","Nueva misión asignada · #"+(pedido.numero_pedido||""),"Luz te asignó una nueva entrega. Ábrela para ver cliente, ruta y pago.",{fuente:origen,distance_km:dist},"luz",null)
   ]);
-  try{enviarPushPorRol(restauranteId,"domiciliario",{title:"✨ Luz · Nueva misión",body:"Pedido #"+(pedido.numero_pedido||"")+" asignado a "+domi.nombre,icon:"/icons/icon-192.png",vibrate:[220,90,220],tag:"domi-"+pedido.id,url:"/domiciliario"});}catch(e){}
+  try{enviarPushDomiciliario(restauranteId,domi,{title:"✨ Luz · Nueva misión",body:"Pedido #"+(pedido.numero_pedido||"")+" ya está en tu panel.",icon:"/icon-192.png",vibrate:[220,90,220],tag:"domi-"+pedido.id,url:"/domiciliario"});}catch(e){}
   return {id:domi.id,nombre:domi.nombre,fuente:origen,distance_km:dist};
 }
 async function autoAsignarPedidoSeguro(pedidoId,restauranteId){
@@ -2657,6 +2700,18 @@ app.get("/manifest-cocina.json", function(req, res) {
 app.get("/manifest-restaurante.json", function(req, res) {
   res.json(Object.assign({}, PWA_BASE, { name: "Panel · La Curva", short_name: "Panel", start_url: "/restaurante" }));
 });
+app.get("/manifest-domi.json", function(req, res) {
+  res.json(Object.assign({}, PWA_BASE, {
+    id: "/domiciliario",
+    name: "HOLA LUZ · Domiciliario",
+    short_name: "HOLA LUZ",
+    start_url: "/domiciliario",
+    scope: "/",
+    display: "standalone",
+    theme_color: "#050a1d",
+    background_color: "#020611"
+  }));
+});
 
 // ── GEOCODIFICACIÓN — Nominatim OpenStreetMap (gratuito, sin API key) ─────────
 app.get("/api/geocode", async function(req, res) {
@@ -2750,6 +2805,7 @@ app.get("/health", function(req, res) {
 });
 
 app.get("/cocina",      function(req, res) { res.sendFile(path.join(__dirname, "cocina.html")); });
+app.get("/domiciliario",function(req, res) { res.sendFile(path.join(__dirname, "domiciliario.html")); });
 app.get("/domi",        function(req, res) { res.sendFile(path.join(__dirname, "domiciliario.html")); });
 app.get("/encontrarme", function(req, res) { res.sendFile(path.join(__dirname, "cliente_ubicacion.html")); });
 app.get("/mesero",      function(req, res) { res.sendFile(path.join(__dirname, "mesero2.html")); });
