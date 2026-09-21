@@ -4926,15 +4926,12 @@ app.get("/api/domi-admin/evidencias", async function(req,res){
   var limit=Math.max(1,Math.min(1000,Number(req.query.limit||1000)));
   try{
     var h=sbPrivilegedHeaders();
-    var select=[
-      "id","numero_pedido","cliente_tel","cliente_nombre","items","subtotal","desechables","domicilio","total",
-      "direccion","metodo_pago","estado","created_at","updated_at","tipo_pedido","canal","notas_especiales",
-      "domiciliario_id","domiciliario_nombre","domiciliario_asignado_at","en_ruta_at","entregado_at",
-      "foto_entrega","comprobante_url","comprobante_media_id","lat_destino","lng_destino","valoracion"
-    ].join(",");
+    // IMPORTANTE: usar select=* mantiene el Centro de Evidencias compatible con
+    // restaurantes creados antes/después de nuevas columnas. Una columna opcional
+    // inexistente en un select explícito hace que PostgREST rechace TODO el expediente.
     var pr=await axios.get(
       SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+encodeURIComponent(rid)+
-      "&order=created_at.desc&limit="+limit+"&select="+select,
+      "&order=created_at.desc&limit="+limit+"&select=*",
       {headers:h}
     );
 
