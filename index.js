@@ -5714,15 +5714,21 @@ app.post("/api/restaurante-pin", async function(req, res) {
   var pin = String(req.body.pin || "").trim();
   if (!/^\d{4}$/.test(pin)) return res.status(400).json({ok:false,error:"PIN inválido"});
   try {
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    // PIN STABLE PATH: restaurantes is currently readable with the project publishable key.
+    // Do NOT route this through SUPABASE_SERVICE_KEY_VAL: Railway may not have a service-role
+    // and opaque sb_publishable keys are not JWT bearer tokens.
+    var publicKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_KEY || SUPABASE_KEY;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/restaurantes?pin=eq." + encodeURIComponent(pin) + "&select=*&limit=1",
-      { headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}, timeout:7000 }
+      { headers:{"apikey":publicKey,"Accept":"application/json"}, timeout:4500 }
     );
+    var rows = Array.isArray(r.data) ? r.data : [];
+    // Never return the PIN itself to the browser.
+    rows = rows.map(function(row){ var clean=Object.assign({},row); delete clean.pin; return clean; });
     res.setHeader("Cache-Control","no-store");
-    return res.json({ok:true,data:r.data||[]});
+    return res.json({ok:true,data:rows});
   } catch(e) {
-    console.error("[restaurante-pin]", e.code||e.message);
+    console.error("[restaurante-pin]", e.response&&e.response.status ? ("HTTP "+e.response.status) : (e.code||e.message));
     return res.status(503).json({ok:false,error:"No se pudo verificar el PIN"});
   }
 });
