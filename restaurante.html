@@ -2916,36 +2916,30 @@ for(var _i=0;_i<=9;_i++){(function(n){var el=document.getElementById("k"+n);if(e
 document.getElementById("kdel").addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
 
 async function getRestaurantePorPinSeguro(pinValue){
-  // V13.6: verificación server-side. La versión anterior intentaba primero una
-  // conexión directa navegador → Supabase sin timeout; en algunos Chrome/PC esa
-  // petición podía quedar pendiente y dejar "Verificando acceso…" para siempre.
+  // PIN RESTAURANTE: navegador -> Supabase directo.
+  // NO depende de Railway. La publishable key debe ir en `apikey` solamente;
+  // sb_publishable_* no es un JWT y no debe enviarse como Bearer.
+  var filtro="pin=eq."+encodeURIComponent(pinValue)+"&select=*";
+  var directUrl=SU+"/rest/v1/restaurantes?"+filtro;
   var controller=new AbortController();
-  var timer=setTimeout(function(){try{controller.abort()}catch(e){}},8000);
+  var timer=setTimeout(function(){try{controller.abort()}catch(e){}},5500);
   try{
-    var r=await fetch("/api/restaurante-pin",{
-      method:"POST",
-      headers:{"Content-Type":"application/json","Accept":"application/json"},
-      body:JSON.stringify({pin:pinValue}),
+    var r=await fetch(directUrl,{
+      method:"GET",
+      headers:{"apikey":SK,"Accept":"application/json"},
       cache:"no-store",
       signal:controller.signal
     });
+    if(!r.ok){
+      var msg="";
+      try{msg=await r.text()}catch(e){}
+      throw new Error("Supabase PIN HTTP "+r.status+(msg?" · "+msg.slice(0,180):""));
+    }
+    var d=await r.json();
+    return Array.isArray(d)?d:[];
+  }finally{
     clearTimeout(timer);
-    if(r.ok){var d=await r.json();if(d&&d.ok&&Array.isArray(d.data))return d.data;}
-    throw new Error("PIN endpoint HTTP "+r.status);
-  }catch(e){
-    clearTimeout(timer);
-    console.warn("[PIN] endpoint dedicado falló; usando proxy REST",e&&e.message?e.message:e);
   }
-  // Respaldo: proxy backend existente, también con límite de tiempo.
-  var c2=new AbortController();
-  var t2=setTimeout(function(){try{c2.abort()}catch(e){}},6500);
-  try{
-    var filtro="pin=eq."+encodeURIComponent(pinValue)+"&select=*";
-    var rr=await fetch("/api/supabase/restaurantes?"+filtro,{cache:"no-store",signal:c2.signal});
-    clearTimeout(t2);
-    if(!rr.ok)throw new Error("Proxy HTTP "+rr.status);
-    var dd=await rr.json();return Array.isArray(dd)?dd:[];
-  }finally{clearTimeout(t2)}
 }
 
 async function chkPin(){
