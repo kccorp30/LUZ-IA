@@ -3340,11 +3340,52 @@ app.post("/api/push-test", async function(req, res) {
   res.json({ ok: true });
 });
 
+
+async function cocinaHandoffPedidoSeguro(pedidoId, restauranteId, actor) {
+  var svcKey = SUPABASE_SERVICE_KEY_VAL;
+  var h0 = {"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+  var hw = {"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};
+  var rr = await axios.get(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+encodeURIComponent(pedidoId)+"&select=id,restaurante_id,numero_pedido,estado,tipo_pedido,direccion,domicilio,domiciliario_id,domiciliario_nombre,cocina_handoff_at,cocina_handoff_to,cliente_nombre",{headers:h0});
+  var ped = rr.data && rr.data[0];
+  if(!ped){var e0=new Error("Pedido no encontrado");e0.status=404;throw e0;}
+  if(restauranteId && String(ped.restaurante_id)!==String(restauranteId)){var e1=new Error("Pedido no pertenece al restaurante");e1.status=403;throw e1;}
+  if(ped.cocina_handoff_at) return {pedido:ped,already:true};
+  if(String(ped.estado||"").toLowerCase()!=="listo"){var e2=new Error("El pedido debe estar LISTO antes de salir de Cocina");e2.status=409;throw e2;}
+  var dir=String(ped.direccion||"").toUpperCase(),tipo=String(ped.tipo_pedido||"").toLowerCase();
+  var isMesa=dir.indexOf("MESA")!==-1;
+  var isPickup=tipo==="recoger"||dir.indexOf("RECOGER")===0;
+  var isDelivery=!isMesa&&!isPickup;
+  if(isDelivery&&!ped.domiciliario_id){var e3=new Error("Todavía no hay domiciliario asignado. Cocina no puede hacer el handoff aún.");e3.status=409;throw e3;}
+  var handoffTo=isDelivery?"domiciliario":isMesa?"sala":"cliente";
+  var now=new Date().toISOString();
+  var pr=await axios.patch(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+encodeURIComponent(pedidoId),{cocina_handoff_at:now,cocina_handoff_to:handoffTo,cocina_handoff_by:actor||"cocina"},{headers:hw});
+  var out=pr.data&&pr.data[0]||Object.assign({},ped,{cocina_handoff_at:now,cocina_handoff_to:handoffTo});
+  var rid=restauranteId||ped.restaurante_id;
+  try{await registrarEventoLuz(rid,pedidoId,"restaurante",null,"cocina_handoff","Cocina completó su parte",isDelivery?("El pedido #"+ped.numero_pedido+" fue entregado a "+(ped.domiciliario_nombre||"su domiciliario")+". La entrega al cliente sigue activa."):("El pedido #"+ped.numero_pedido+" salió de Cocina."),{numero_pedido:ped.numero_pedido,handoff_to:handoffTo,domiciliario_id:ped.domiciliario_id||null,domiciliario_nombre:ped.domiciliario_nombre||null},"cocina",null);}catch(e){}
+  if(isDelivery&&ped.domiciliario_id){
+    try{await registrarEventoDomi(rid,ped.domiciliario_id,pedidoId,"recogido",{numero_pedido:ped.numero_pedido,source:"cocina_handoff"});}catch(e){}
+    try{await enviarPushDomiciliario(rid,{id:ped.domiciliario_id,nombre:ped.domiciliario_nombre},{title:"✨ Pedido listo en tus manos",body:"Cocina entregó el pedido #"+ped.numero_pedido+". Ya puedes iniciar la ruta.",icon:"/icons/icon-192.png",tag:"handoff-"+pedidoId,url:"/domiciliario"});}catch(e){}
+  }
+  return {pedido:out,already:false};
+}
+
+app.post("/api/cocina-handoff", async function(req,res){
+  var id=req.body.id, rid=req.body.restaurante_id;
+  if(!id||!rid)return res.status(400).json({ok:false,error:"Faltan datos"});
+  try{var out=await cocinaHandoffPedidoSeguro(id,rid,req.body.actor||"cocina");res.json({ok:true,handoff:out});}
+  catch(e){res.status(e.status||500).json({ok:false,error:e.message});}
+});
+
 app.post("/api/pedido-estado", async function(req, res) {
   var { id, estado, telefono_cliente, numero_pedido, restaurante_id } = req.body;
   if (!id || !estado) return res.status(400).json({ error: "Faltan datos" });
   var svcKey = SUPABASE_SERVICE_KEY_VAL;
-  var estadoReal = estado === "listo_entrega" ? "listo_entrega" : estado;
+  // Compatibilidad: listo_entrega en Cocina significa handoff, NO entrega final al cliente.
+  if (estado === "listo_entrega") {
+    try { var hh = await cocinaHandoffPedidoSeguro(id, restaurante_id, "cocina_legacy"); return res.json({ ok:true, kitchen_handoff:true, handoff:hh }); }
+    catch(eHandoff){ return res.status(eHandoff.status||500).json({ok:false,error:eHandoff.message}); }
+  }
+  var estadoReal = estado;
   // Auto-actualizar LED de mesa si viene la dirección
   if (restaurante_id && req.body.direccion) {
     actualizarEstadoMesa(restaurante_id, req.body.direccion, estado).catch(function(){});
@@ -3356,7 +3397,7 @@ app.post("/api/pedido-estado", async function(req, res) {
     } catch(ePatch) {
       // Si el estado no está en el CHECK constraint, usar el más cercano
       var fallbackEstado = null;
-      if (estadoReal === "listo_entrega") fallbackEstado = "entregado";
+      if (estadoReal === "listo_entrega") fallbackEstado = "listo";
       if (estadoReal === "servido" || estadoReal === "sirviendo") fallbackEstado = "listo";
       if (fallbackEstado) {
         await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id, { estado: fallbackEstado },
@@ -4994,6 +5035,7 @@ app.get("/api/cocina-pedidos", async function(req, res) {
     var r = await axios.get(
       SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
       "&estado=in.(confirmado,en_preparacion,listo)"+
+      "&cocina_handoff_at=is.null"+
       "&created_at=gte."+hace18h+
       "&order=created_at.asc&select=*",
       {headers:h}
@@ -5017,7 +5059,7 @@ app.get("/api/cocina-historial", async function(req, res) {
     if(new Date().getUTCHours()<5) hoy.setUTCDate(hoy.getUTCDate()-1);
     var r = await axios.get(
       SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+restaurante_id+
-      "&estado=in.(listo,listo_entrega,en_camino,entregado)"+
+      "&estado=in.(listo,en_camino,entregado)"+
       "&created_at=gte."+hoy.toISOString()+
       "&order=updated_at.desc&limit=80&select=id,numero_pedido,items,created_at,updated_at,tipo_pedido,direccion",
       {headers:h}
@@ -7550,11 +7592,11 @@ function kitchenFallbackAgent(mensaje, state) {
   if (selected && changeState) {
     if (selected.estado==="confirmado") wantsStart=true;
     else if (selected.estado==="en_preparacion") wantsReady=true;
-    else if (selected.estado==="listo") return pack("El pedido "+selected.numero_cocina+" ya está listo. Dime si ya fue retirado o entregado.",selected.numero_pedido);
+    else if (selected.estado==="listo") return pack("El pedido "+selected.numero_cocina+" ya está listo. Dime si Cocina ya lo entregó al domiciliario, a sala o al cliente que recoge.",selected.numero_pedido);
   }
   if (selected && wantsStart) { action.name="start_preparing";action.order_number=selected.numero_pedido;return pack("Listo. Inicio el pedido "+selected.numero_cocina+" y te lo sigo en preparación.",selected.numero_pedido); }
   if (selected && wantsReady) { action.name="mark_ready";action.order_number=selected.numero_pedido;return pack("Perfecto. Marco el pedido "+selected.numero_cocina+" como listo.",selected.numero_pedido); }
-  if (selected && wantsDelivered) { action.name="mark_delivered";action.order_number=selected.numero_pedido;return pack("Entendido. Retiro el pedido "+selected.numero_cocina+" de cocina.",selected.numero_pedido); }
+  if (selected && wantsDelivered) { action.name="mark_delivered";action.order_number=selected.numero_pedido;return pack("Entendido. Registro el handoff del pedido "+selected.numero_cocina+" y lo retiro solo de Cocina.",selected.numero_pedido); }
   if (selected && /\b(que tiene|que lleva|leeme|lee el pedido|detalle|contenido)\b/.test(low)) {
     var items = (selected.items||[]).map(function(i){return (i.cantidad>1?i.cantidad+" ":"")+i.nombre+(i.nota?", "+i.nota:"");});
     return pack("El pedido "+selected.numero_cocina+" tiene "+(items.join(", ")||"sin productos visibles")+".",selected.numero_pedido);
@@ -7587,8 +7629,8 @@ app.post("/api/cocina-luz", async function(req, res) {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey":svcKey, "Authorization":"Bearer "+svcKey };
     var hace18h = new Date(Date.now() - 18*60*60*1000).toISOString();
-    var ordR = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + encodeURIComponent(restauranteId) + "&estado=in.(confirmado,en_preparacion,listo)&created_at=gte." + hace18h + "&order=created_at.asc&select=id,numero_pedido,cliente_nombre,cliente_tel,items,direccion,tipo_pedido,estado,created_at,updated_at,notas_especiales,domiciliario_nombre,metodo_pago,total", { headers:h });
-    var orders = (ordR.data || []).map(function(p){return {id:p.id,numero_pedido:p.numero_pedido,numero_cocina:kitchenShortNumber(p.numero_pedido),cliente:p.cliente_nombre||"",telefono:p.cliente_tel||"",estado:p.estado,tipo:kitchenTipoPedido(p),direccion:p.direccion||"",minutos:kitchenMinutesSince(p.created_at),items:kitchenNormalizeItems(p.items),notas:p.notas_especiales||"",domiciliario:p.domiciliario_nombre||"",metodo_pago:p.metodo_pago||"",total:Number(p.total||0)};});
+    var ordR = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + encodeURIComponent(restauranteId) + "&estado=in.(confirmado,en_preparacion,listo)&cocina_handoff_at=is.null&created_at=gte." + hace18h + "&order=created_at.asc&select=id,numero_pedido,cliente_nombre,cliente_tel,items,direccion,tipo_pedido,estado,created_at,updated_at,notas_especiales,domiciliario_id,domiciliario_nombre,metodo_pago,total,cocina_handoff_at", { headers:h });
+    var orders = (ordR.data || []).map(function(p){return {id:p.id,numero_pedido:p.numero_pedido,numero_cocina:kitchenShortNumber(p.numero_pedido),cliente:p.cliente_nombre||"",telefono:p.cliente_tel||"",estado:p.estado,tipo:kitchenTipoPedido(p),direccion:p.direccion||"",minutos:kitchenMinutesSince(p.created_at),items:kitchenNormalizeItems(p.items),notas:p.notas_especiales||"",domiciliario_id:p.domiciliario_id||null,domiciliario:p.domiciliario_nombre||"",metodo_pago:p.metodo_pago||"",total:Number(p.total||0)};});
     var production = kitchenProductionSummary(ordR.data || []), learned=[];
     try { var memR=await axios.get(SUPABASE_URL+"/rest/v1/luz_aprendizajes?restaurante_id=eq."+encodeURIComponent(restauranteId)+"&activo=eq.true&fuente=eq.cocina&order=created_at.desc&limit=25&select=contenido,tipo,created_at",{headers:h});learned=memR.data||[]; } catch(eMem) {}
     var focusedNum=req.body.focused_order_number==null?null:Number(req.body.focused_order_number), focusedId=req.body.focused_order_id?String(req.body.focused_order_id):null, pending=req.body.pending_confirmation||null;
@@ -7614,7 +7656,7 @@ ACCIONES DISPONIBLES:
 none | focus_order | start_preparing | mark_ready | mark_delivered | filter_orders | show_production | show_summary.
 - "inicia el pedido" con un único candidato razonable => start_preparing.
 - "cambia el estado" del enfocado: confirmado=>start_preparing; en_preparacion=>mark_ready; listo=>pregunta si fue retirado/entregado.
-- mark_delivered solo con intención explícita de retirado/entregado/ya salió.
+- mark_delivered significa ÚNICAMENTE handoff de Cocina: el pedido salió físicamente de Cocina hacia domiciliario/sala/cliente. NUNCA significa entregado al cliente final. Úsalo solo con intención explícita de retirado/entregado desde Cocina/ya salió de Cocina.
 - focus/filter/show_production/show_summary son visuales y libres.
 - Si preguntan cantidades, usa produccion_pendiente y menciona excepciones que puedan causar errores.
 - Si preguntan "cómo vamos", no recites solo números: interpreta carga, atraso, cuellos de botella y da una recomendación si existe.
