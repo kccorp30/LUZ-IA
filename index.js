@@ -5670,33 +5670,19 @@ app.get("/api/zonas", async function(req, res) {
 // No depende de que Railway tenga service-role y no hace consultas directas
 // desde el navegador a Supabase. Mantener este flujo separado del resto del panel.
 app.post("/api/restaurante-pin", async function(req, res) {
-  var pin = String((req.body && req.body.pin) || "").trim();
+  var pin = String(req.body.pin || "").trim();
   if (!/^\d{4}$/.test(pin)) return res.status(400).json({ok:false,error:"PIN inválido"});
-  res.setHeader("Cache-Control","no-store, no-cache, must-revalidate");
   try {
-    var edge = await axios.post(
-      SUPABASE_URL + "/functions/v1/hl-restaurant-pin",
-      { pin: pin },
-      {
-        headers:{
-          "Content-Type":"application/json",
-          "Accept":"application/json",
-          "apikey": SUPABASE_KEY
-        },
-        timeout:4500
-      }
+    var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/restaurantes?pin=eq." + encodeURIComponent(pin) + "&select=*&limit=1",
+      { headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}, timeout:7000 }
     );
-    var payload = edge && edge.data ? edge.data : null;
-    if (!payload || payload.ok !== true || !Array.isArray(payload.data)) {
-      return res.status(502).json({ok:false,error:"Respuesta inválida del verificador de PIN"});
-    }
-    return res.json({ok:true,data:payload.data});
+    res.setHeader("Cache-Control","no-store");
+    return res.json({ok:true,data:r.data||[]});
   } catch(e) {
-    var status = e && e.response && e.response.status;
-    console.error("[restaurante-pin]", status || "NO_HTTP", e.code || e.message);
-    // IMPORTANTE: no ejecutar un segundo fallback aquí. El frontend tiene un
-    // timeout de 8 s; encadenar otra consulta provocaba el AbortError visto en Chrome.
-    return res.status(503).json({ok:false,error:"No se pudo verificar el PIN",upstream_status:status||null});
+    console.error("[restaurante-pin]", e.code||e.message);
+    return res.status(503).json({ok:false,error:"No se pudo verificar el PIN"});
   }
 });
 
