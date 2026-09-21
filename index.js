@@ -5670,37 +5670,33 @@ app.get("/api/zonas", async function(req, res) {
 // No depende de que Railway tenga service-role y no hace consultas directas
 // desde el navegador a Supabase. Mantener este flujo separado del resto del panel.
 app.post("/api/restaurante-pin", async function(req, res) {
-  var pin = String(req.body.pin || "").trim();
+  var pin = String((req.body && req.body.pin) || "").trim();
   if (!/^\d{4}$/.test(pin)) return res.status(400).json({ok:false,error:"PIN inválido"});
-  res.setHeader("Cache-Control","no-store");
+  res.setHeader("Cache-Control","no-store, no-cache, must-revalidate");
   try {
     var edge = await axios.post(
       SUPABASE_URL + "/functions/v1/hl-restaurant-pin",
       { pin: pin },
-      { headers:{"Content-Type":"application/json"}, timeout:7000 }
-    );
-    if (!edge.data || edge.data.ok !== true || !Array.isArray(edge.data.data)) {
-      throw new Error("Respuesta inválida de hl-restaurant-pin");
-    }
-    return res.json({ok:true,data:edge.data.data});
-  } catch(e) {
-    console.error("[restaurante-pin edge]", e.response&&e.response.status, e.code||e.message);
-    // Respaldo SOLO si Railway realmente dispone de una clave privilegiada.
-    // Nunca volver a depender de publishable/anon para leer restaurantes por PIN.
-    if (hasPrivilegedSupabaseKey()) {
-      try {
-        var svcKey = SUPABASE_SERVICE_KEY_VAL;
-        var r = await axios.get(
-          SUPABASE_URL + "/rest/v1/restaurantes?pin=eq." + encodeURIComponent(pin) + "&select=*&limit=1",
-          { headers:sbPrivilegedHeaders(), timeout:5000 }
-        );
-        var clean=(r.data||[]).map(function(x){var y=Object.assign({},x);delete y.pin;return y;});
-        return res.json({ok:true,data:clean});
-      } catch(e2) {
-        console.error("[restaurante-pin fallback]", e2.response&&e2.response.status, e2.code||e2.message);
+      {
+        headers:{
+          "Content-Type":"application/json",
+          "Accept":"application/json",
+          "apikey": SUPABASE_KEY
+        },
+        timeout:4500
       }
+    );
+    var payload = edge && edge.data ? edge.data : null;
+    if (!payload || payload.ok !== true || !Array.isArray(payload.data)) {
+      return res.status(502).json({ok:false,error:"Respuesta inválida del verificador de PIN"});
     }
-    return res.status(503).json({ok:false,error:"No se pudo verificar el PIN"});
+    return res.json({ok:true,data:payload.data});
+  } catch(e) {
+    var status = e && e.response && e.response.status;
+    console.error("[restaurante-pin]", status || "NO_HTTP", e.code || e.message);
+    // IMPORTANTE: no ejecutar un segundo fallback aquí. El frontend tiene un
+    // timeout de 8 s; encadenar otra consulta provocaba el AbortError visto en Chrome.
+    return res.status(503).json({ok:false,error:"No se pudo verificar el PIN",upstream_status:status||null});
   }
 });
 
