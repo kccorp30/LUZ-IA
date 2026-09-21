@@ -2916,30 +2916,26 @@ for(var _i=0;_i<=9;_i++){(function(n){var el=document.getElementById("k"+n);if(e
 document.getElementById("kdel").addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
 
 async function getRestaurantePorPinSeguro(pinValue){
-  // PIN RESTAURANTE: navegador -> Supabase directo.
-  // NO depende de Railway. La publishable key debe ir en `apikey` solamente;
-  // sb_publishable_* no es un JWT y no debe enviarse como Bearer.
   var filtro="pin=eq."+encodeURIComponent(pinValue)+"&select=*";
   var directUrl=SU+"/rest/v1/restaurantes?"+filtro;
-  var controller=new AbortController();
-  var timer=setTimeout(function(){try{controller.abort()}catch(e){}},5500);
+
+  // FLUJO PIN CONGELADO — restaurado desde la versión estable.
   try{
-    var r=await fetch(directUrl,{
+    var rd=await fetch(directUrl,{
       method:"GET",
-      headers:{"apikey":SK,"Accept":"application/json"},
-      cache:"no-store",
-      signal:controller.signal
+      headers:{"apikey":SK,"Authorization":"Bearer "+SK,"Accept":"application/json"},
+      cache:"no-store"
     });
-    if(!r.ok){
-      var msg="";
-      try{msg=await r.text()}catch(e){}
-      throw new Error("Supabase PIN HTTP "+r.status+(msg?" · "+msg.slice(0,180):""));
+    if(rd.ok){
+      var dd=await rd.json();
+      if(Array.isArray(dd)) return dd;
+    }else{
+      console.warn("[PIN] lectura directa HTTP",rd.status);
     }
-    var d=await r.json();
-    return Array.isArray(d)?d:[];
-  }finally{
-    clearTimeout(timer);
+  }catch(eDirect){
+    console.warn("[PIN] lectura directa falló; usando proxy legacy",eDirect&&eDirect.message?eDirect.message:eDirect);
   }
+  return get("restaurantes",filtro);
 }
 
 async function chkPin(){
@@ -9382,7 +9378,34 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
  var seeded=false,seen=new Set(),timer=null,closingTimer=null;
  function shortNo(n){var x=Math.abs(parseInt(n,10)||0)%1000;return String(x||n||'—')}
  window.hlCloseDeliveryComplete=function(){var o=document.getElementById('hlDeliveryComplete');if(o)o.classList.remove('on');if(closingTimer){clearTimeout(closingTimer);closingTimer=null}};
- function show(p){var o=document.getElementById('hlDeliveryComplete');if(!o)return;document.getElementById('hlDTitle').textContent='Pedido #'+shortNo(p.numero_pedido)+' entregado';document.getElementById('hlDSub').textContent=(p.domiciliario_nombre||'El domiciliario')+' completó la entrega al cliente. Luz cerró tracking y actualizó la operación.';document.getElementById('hlDDomi').textContent=p.domiciliario_nombre||'Domiciliario';document.getElementById('hlDOrder').textContent='#'+shortNo(p.numero_pedido);document.getElementById('hlDClient').textContent=p.cliente_nombre||'Cliente';document.getElementById('hlDAddress').textContent=p.direccion||'Destino confirmado';o.classList.add('on');try{playSound('pedido_cerrado')}catch(e){}try{if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:'pedido_entregado',titulo:'Entrega completada',mensaje:(p.domiciliario_nombre||'El domiciliario')+' completó el pedido '+shortNo(p.numero_pedido)+'. Evidencia guardada y operación cerrada.'},false)}catch(e){};if(closingTimer)clearTimeout(closingTimer);closingTimer=setTimeout(window.hlCloseDeliveryComplete,6500)}
+ function retireDeliveredFromLive(p){
+   if(!p||!p.id)return;
+   var pid=String(p.id),previous=null;
+   try{
+     if(Array.isArray(window.ordersV2Data))previous=window.ordersV2Data.find(function(x){return String(x.id)===pid})||null;
+     if(!previous&&Array.isArray(window.ordersV5ActiveRows))previous=window.ordersV5ActiveRows.find(function(x){return String(x.id)===pid})||null;
+     var delivered=Object.assign({},previous||{},p,{estado:'entregado',entregado_at:p.entregado_at||new Date().toISOString(),updated_at:p.entregado_at||new Date().toISOString()});
+     if(Array.isArray(window.ordersV5ActiveRows))window.ordersV5ActiveRows=window.ordersV5ActiveRows.filter(function(x){return String(x.id)!==pid&&String(x.estado||'').toLowerCase()!=='entregado'});
+     if(Array.isArray(window.ordersV5DeliveredRows)){
+       window.ordersV5DeliveredRows=window.ordersV5DeliveredRows.filter(function(x){return String(x.id)!==pid});
+       window.ordersV5DeliveredRows.unshift(delivered);
+     }
+     if(Array.isArray(window.ordersV2Data)){
+       var next=[];window.ordersV2Data.forEach(function(x){if(String(x.id)!==pid)next.push(x)});next.push(delivered);window.ordersV2Data=next;
+     }
+     if(String(window.selectedOrderV5Id||'')===pid){
+       var nxt=(window.ordersV5ActiveRows||[]).find(function(x){return !['entregado','cancelado','cuenta'].includes(String(x.estado||'').toLowerCase())});
+       window.selectedOrderV5Id=nxt?nxt.id:null;
+     }
+     if(typeof window.updateOrdersCountsV5==='function')window.updateOrdersCountsV5();
+     if(typeof window.filterOrdersV5==='function')window.filterOrdersV5();
+     if(typeof window.renderCouriersV5==='function')window.renderCouriersV5(window.selectedOrderV5Id&&typeof window.orderByIdV5==='function'?window.orderByIdV5(window.selectedOrderV5Id):null);
+     if(typeof window.d9Refresh==='function')window.d9Refresh(false);
+   }catch(e){console.warn('[delivery-live-cleanup]',e.message||e)}
+   setTimeout(function(){try{if(typeof window.loadPedidos==='function')window.loadPedidos()}catch(e){}},120);
+   setTimeout(function(){try{if(typeof window.loadPedidos==='function')window.loadPedidos()}catch(e){}},1100);
+ }
+ function show(p){var o=document.getElementById('hlDeliveryComplete');if(!o)return;retireDeliveredFromLive(p);document.getElementById('hlDTitle').textContent='Pedido #'+shortNo(p.numero_pedido)+' entregado';document.getElementById('hlDSub').textContent=(p.domiciliario_nombre||'El domiciliario')+' completó la entrega al cliente. Luz cerró tracking y actualizó la operación.';document.getElementById('hlDDomi').textContent=p.domiciliario_nombre||'Domiciliario';document.getElementById('hlDOrder').textContent='#'+shortNo(p.numero_pedido);document.getElementById('hlDClient').textContent=p.cliente_nombre||'Cliente';document.getElementById('hlDAddress').textContent=p.direccion||'Destino confirmado';o.classList.add('on');try{playSound('pedido_cerrado')}catch(e){}try{if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:'pedido_entregado',titulo:'Entrega completada',mensaje:(p.domiciliario_nombre||'El domiciliario')+' completó el pedido '+shortNo(p.numero_pedido)+'. Evidencia guardada y operación cerrada.'},false)}catch(e){};if(closingTimer)clearTimeout(closingTimer);closingTimer=setTimeout(window.hlCloseDeliveryComplete,6500)}
  async function poll(){if(!window.rest||!rest.id||typeof get!=='function')return;try{var since=new Date(Date.now()-20*60*1000).toISOString();var rows=await get('pedidos','restaurante_id=eq.'+rest.id+'&estado=eq.entregado&domiciliario_id=not.is.null&entregado_at=gte.'+encodeURIComponent(since)+'&order=entregado_at.desc&limit=8&select=id,numero_pedido,cliente_nombre,direccion,domiciliario_id,domiciliario_nombre,entregado_at,foto_entrega');rows=Array.isArray(rows)?rows:[];if(!seeded){rows.forEach(function(p){seen.add(String(p.id))});seeded=true;return}var fresh=rows.slice().reverse().filter(function(p){return !seen.has(String(p.id))});fresh.forEach(function(p){seen.add(String(p.id));show(p)});}catch(e){console.warn('[delivery-complete-watch]',e.message||e)}}
  function start(){if(timer)return;poll();timer=setInterval(poll,3500)}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(start,1800)});else setTimeout(start,1800);
