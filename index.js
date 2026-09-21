@@ -2267,7 +2267,7 @@ async function asignarPedidoInterno(pedido,domi,restauranteId,fuente){
   var patch=await axios.patch(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+pedido.id+"&estado=eq.listo&domiciliario_id=is.null",
     {domiciliario_id:domi.id,domiciliario_nombre:domi.nombre,domiciliario_asignado_at:ahora,updated_at:ahora},{headers:h});
   if(!patch.data||!patch.data[0])throw new Error("pedido_ya_asignado_o_no_listo");
-  await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+domi.id,{ultima_asignacion_at:ahora},{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"}}).catch(function(){});
+  await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+domi.id,{ultima_asignacion_at:ahora,pedido_activo_id:pedido.id,pedido_activo_updated_at:ahora},{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"}}).catch(function(ePtr){console.warn("[domi-mission-pointer] no se pudo fijar",ePtr.message);});
   var origen=fuente||"manual",dist=domi.distance_km==null?null:Number(domi.distance_km.toFixed(2));
   console.log("[domi-dispatch] "+origen+" pedido #"+(pedido.numero_pedido||pedido.id)+" -> "+domi.nombre+(dist!=null?" · "+dist+" km":""));
   await registrarEventoDomi(restauranteId,domi.id,pedido.id,"asignado",{fuente:origen,numero_pedido:pedido.numero_pedido||null,distance_km:dist});
@@ -2832,8 +2832,8 @@ app.get("/health", function(req, res) {
 });
 
 app.get("/cocina",      function(req, res) { res.sendFile(path.join(__dirname, "cocina.html")); });
-app.get("/domiciliario",function(req, res) { res.sendFile(path.join(__dirname, "domiciliario.html")); });
-app.get("/domi",        function(req, res) { res.sendFile(path.join(__dirname, "domiciliario.html")); });
+app.get("/domiciliario",function(req, res) { res.set("Cache-Control","no-store, no-cache, must-revalidate");res.sendFile(path.join(__dirname, "domiciliario.html")); });
+app.get("/domi",        function(req, res) { res.set("Cache-Control","no-store, no-cache, must-revalidate");res.sendFile(path.join(__dirname, "domiciliario.html")); });
 app.get("/encontrarme", function(req, res) { res.sendFile(path.join(__dirname, "cliente_ubicacion.html")); });
 app.get("/mesero",      function(req, res) { res.sendFile(path.join(__dirname, "mesero2.html")); });
 // /sw.js se sirve arriba como Service Worker único con soporte Push. Ruta duplicada eliminada.
@@ -3388,6 +3388,9 @@ app.post("/api/pedido-estado", async function(req, res) {
         var pedEvtR = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + id + "&select=domiciliario_id", { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
         var evtDid = pedEvtR.data && pedEvtR.data[0] && pedEvtR.data[0].domiciliario_id;
         if (evtDid) {
+          if(estado === "entregado"){
+            axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+encodeURIComponent(evtDid)+"&pedido_activo_id=eq."+encodeURIComponent(id),{pedido_activo_id:null,pedido_activo_updated_at:new Date().toISOString()},{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"}}).catch(function(){});
+          }
           registrarEventoDomi(restaurante_id, evtDid, id, estado === "en_camino" ? "en_ruta" : "entregado", { numero_pedido: numero_pedido || null }).catch(function(){});
           registrarEventoLuz(restaurante_id,id,"domiciliario",evtDid,estado === "en_camino" ? "pedido_en_ruta" : "pedido_entregado",estado === "en_camino" ? "Ruta iniciada" : "Entrega completada",estado === "en_camino" ? "El restaurante y el cliente ya fueron actualizados. Continúa hacia el destino." : "Excelente trabajo. La entrega quedó cerrada y vuelves a estar disponible.",{numero_pedido:numero_pedido||null},"luz",null).catch(function(){});
         }
@@ -3641,13 +3644,31 @@ async function guardarUbicacionDomi(body){
 }
 async function obtenerMisionDomiciliario(restauranteId, domiciliarioId) {
   if (!restauranteId || !domiciliarioId) return null;
-  var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};
-  var r=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+encodeURIComponent(restauranteId)+"&domiciliario_id=eq."+encodeURIComponent(domiciliarioId)+"&estado=in.(listo,en_camino)&order=domiciliario_asignado_at.desc.nullslast,created_at.desc&limit=1&select=*",{headers:h});
-  return r.data&&r.data[0]?Object.assign({},r.data[0],{assignment_state:"assigned"}):null;
+  var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey},closed={entregado:1,cancelado:1,anulado:1,rechazado:1};
+  // 1) Fuente canónica: puntero explícito del domiciliario.
+  try{
+    var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+encodeURIComponent(domiciliarioId)+"&restaurante_id=eq."+encodeURIComponent(restauranteId)+"&select=id,pedido_activo_id,pedido_activo_updated_at",{headers:h});
+    var d=dr.data&&dr.data[0];
+    if(d&&d.pedido_activo_id){
+      var pr=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+encodeURIComponent(d.pedido_activo_id)+"&restaurante_id=eq."+encodeURIComponent(restauranteId)+"&domiciliario_id=eq."+encodeURIComponent(domiciliarioId)+"&select=*",{headers:h});
+      var p=pr.data&&pr.data[0];
+      if(p&&!closed[String(p.estado||'').toLowerCase()])return Object.assign({},p,{assignment_state:"assigned",mission_source:"pointer"});
+      // Puntero viejo/cerrado: límpialo para no resucitar misiones.
+      await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+encodeURIComponent(domiciliarioId),{pedido_activo_id:null,pedido_activo_updated_at:new Date().toISOString()},{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"}}).catch(function(){});
+    }
+  }catch(ePtr){console.warn("[domi-mission-pointer]",ePtr.message);}
+  // 2) Recuperación: cualquier pedido asignado no cerrado, sin depender de un estado exacto.
+  var r=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+encodeURIComponent(restauranteId)+"&domiciliario_id=eq."+encodeURIComponent(domiciliarioId)+"&order=domiciliario_asignado_at.desc.nullslast,updated_at.desc.nullslast,created_at.desc&limit=20&select=*",{headers:h});
+  var rows=r.data||[],mission=rows.find(function(x){return !closed[String(x.estado||'').toLowerCase()];})||null;
+  if(mission){
+    await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+encodeURIComponent(domiciliarioId),{pedido_activo_id:mission.id,pedido_activo_updated_at:new Date().toISOString()},{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"}}).catch(function(){});
+    return Object.assign({},mission,{assignment_state:"assigned",mission_source:"recovered"});
+  }
+  return null;
 }
 app.get("/api/domi/mision-actual", async function(req,res){
   var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
-  try{var mission=await obtenerMisionDomiciliario(t.rid,t.did);res.set("Cache-Control","no-store");res.json({ok:true,mision:mission});}catch(e){res.status(500).json({ok:false,error:e.message});}
+  try{var mission=await obtenerMisionDomiciliario(t.rid,t.did);res.set("Cache-Control","no-store, no-cache, must-revalidate");res.json({ok:true,mision:mission,server_at:new Date().toISOString(),domiciliario_id:t.did});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 app.post("/api/domi-ubicacion",async function(req,res){
   try{
@@ -3656,7 +3677,7 @@ app.post("/api/domi-ubicacion",async function(req,res){
     var at=await guardarUbicacionDomi(body),auto=null;
     if(body.trigger_dispatch&&body.restaurante_id&&body.domiciliario_id){try{auto=await autoAsignarPendienteParaDomi(body.restaurante_id,body.domiciliario_id);}catch(eAuto){console.warn("[gps-auto-dispatch]",eAuto.message);}}
     var mission=null;if(body.restaurante_id&&body.domiciliario_id){try{mission=await obtenerMisionDomiciliario(body.restaurante_id,body.domiciliario_id);}catch(eMission){console.warn("[gps-mission]",eMission.message);}}
-    res.json({ok:true,updated_at:at,auto_asignacion:auto,mision:mission});
+    res.json({ok:true,updated_at:at,auto_asignacion:auto,mision:mission,server_at:new Date().toISOString(),domiciliario_id:body.domiciliario_id||null});
   }catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 app.post("/api/ubicacion-domiciliario",async function(req,res){try{var at=await guardarUbicacionDomi(req.body);res.json({ok:true,updated_at:at});}catch(e){res.status(500).json({ok:false,error:e.message});}});
