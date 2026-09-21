@@ -5759,11 +5759,10 @@ app.all("/api/supabase/*", async function(req, res) {
     var qs = require("url").parse(req.url).query;
     if (qs) targetUrl += (targetUrl.indexOf("?") === -1 ? "?" : "&") + qs;
 
-    var headers = {
-      "apikey": svcKey,
-      "Authorization": "Bearer " + svcKey,
-      "Content-Type": "application/json"
-    };
+    // LOGIN/PANEL PROXY CONGELADO: usar el helper central.
+    // Si Railway solo tiene una sb_publishable_, NO enviarla como Bearer JWT.
+    // Si existe service_role JWT/sb_secret_, sbPrivilegedHeaders la usa correctamente.
+    var headers = sbPrivilegedHeaders({ "Content-Type": "application/json" });
     // Forward Prefer header if present in request
     var prefer = req.headers["prefer"] || req.body?._prefer;
     if (prefer) headers["Prefer"] = prefer;
@@ -5803,7 +5802,7 @@ app.get("/api/proxy-db", async function(req, res) {
     if (q.indexOf("..") !== -1) return res.status(400).json({ error: "Invalid query" });
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/" + q,
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+      { headers: sbPrivilegedHeaders() }
     );
     res.json(r.data || []);
   } catch(e) {
