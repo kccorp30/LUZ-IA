@@ -5666,21 +5666,40 @@ app.get("/api/zonas", async function(req, res) {
 });
 
 
-// PIN de Restaurante — verificación server-side con timeout. Evita que el navegador
-// dependa de una conexión directa a Supabase para entrar al panel.
+// PIN de Restaurante — verificación aislada en Edge Function.
+// No depende de que Railway tenga service-role y no hace consultas directas
+// desde el navegador a Supabase. Mantener este flujo separado del resto del panel.
 app.post("/api/restaurante-pin", async function(req, res) {
   var pin = String(req.body.pin || "").trim();
   if (!/^\d{4}$/.test(pin)) return res.status(400).json({ok:false,error:"PIN inválido"});
+  res.setHeader("Cache-Control","no-store");
   try {
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var r = await axios.get(
-      SUPABASE_URL + "/rest/v1/restaurantes?pin=eq." + encodeURIComponent(pin) + "&select=*&limit=1",
-      { headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}, timeout:7000 }
+    var edge = await axios.post(
+      SUPABASE_URL + "/functions/v1/hl-restaurant-pin",
+      { pin: pin },
+      { headers:{"Content-Type":"application/json"}, timeout:7000 }
     );
-    res.setHeader("Cache-Control","no-store");
-    return res.json({ok:true,data:r.data||[]});
+    if (!edge.data || edge.data.ok !== true || !Array.isArray(edge.data.data)) {
+      throw new Error("Respuesta inválida de hl-restaurant-pin");
+    }
+    return res.json({ok:true,data:edge.data.data});
   } catch(e) {
-    console.error("[restaurante-pin]", e.code||e.message);
+    console.error("[restaurante-pin edge]", e.response&&e.response.status, e.code||e.message);
+    // Respaldo SOLO si Railway realmente dispone de una clave privilegiada.
+    // Nunca volver a depender de publishable/anon para leer restaurantes por PIN.
+    if (hasPrivilegedSupabaseKey()) {
+      try {
+        var svcKey = SUPABASE_SERVICE_KEY_VAL;
+        var r = await axios.get(
+          SUPABASE_URL + "/rest/v1/restaurantes?pin=eq." + encodeURIComponent(pin) + "&select=*&limit=1",
+          { headers:sbPrivilegedHeaders(), timeout:5000 }
+        );
+        var clean=(r.data||[]).map(function(x){var y=Object.assign({},x);delete y.pin;return y;});
+        return res.json({ok:true,data:clean});
+      } catch(e2) {
+        console.error("[restaurante-pin fallback]", e2.response&&e2.response.status, e2.code||e2.message);
+      }
+    }
     return res.status(503).json({ok:false,error:"No se pudo verificar el PIN"});
   }
 });
