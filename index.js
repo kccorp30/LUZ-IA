@@ -3273,6 +3273,10 @@ app.post("/api/pedido-estado", async function(req, res) {
         throw ePatch;
       }
     }
+    // V14: confirmar que el estado realmente quedó persistido antes de responder éxito.
+    var estadoPersistido=null;
+    try{var vr=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+id+"&select=id,estado",{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}});estadoPersistido=vr.data&&vr.data[0]&&vr.data[0].estado||null;}catch(eVerify){}
+    if(estadoReal==="entregado" && estadoPersistido!=="entregado") return res.status(409).json({ok:false,error:"El pedido no confirmó el estado entregado en base de datos",estado_actual:estadoPersistido});
     var autoAsignacionDomi = null;
     if (estado === "listo" && restaurante_id) {
       try {
@@ -4717,6 +4721,7 @@ app.get("/api/domi-admin/ruta-pedido", async function(req,res){
 });
 
 app.get("/api/domi-pedido-activo", async function(req,res){
+  res.set("Cache-Control","no-store, no-cache, must-revalidate, proxy-revalidate");
   var rid=req.query.restaurante_id,did=req.query.domiciliario_id;if(!rid||!did)return res.status(400).json({error:"Faltan restaurante_id o domiciliario_id"});
   try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var rAsig=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+rid+"&domiciliario_id=eq."+encodeURIComponent(did)+"&estado=in.(listo,en_camino)&order=domiciliario_asignado_at.desc.nullslast,created_at.desc&limit=1&select=*",{headers:h});if(rAsig.data&&rAsig.data[0])return res.json(Object.assign({},rAsig.data[0],{assignment_state:"assigned"}));res.json(null);}catch(e){res.status(500).json({error:e.message});}
 });
