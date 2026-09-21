@@ -9311,5 +9311,59 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
  setInterval(function(){mountButton();load(false)},5000);setTimeout(function(){mountButton();load(false)},1300);
 })();
 </script>
+
+<style id="hlDispatchRecoveryLayoutFix">
+/* HOLA LUZ · Layout authority + dispatch recovery V2 */
+:root{--hlgs-wide:238px;--hlgs-compact:82px;--hlgs-current:238px}
+@media(min-width:901px){
+  body{--hlgs-current:var(--hlgs-wide)}
+  body.hlgs-collapsed{--hlgs-current:var(--hlgs-compact)}
+  #hlGlobalSidebar{width:var(--hlgs-current)!important}
+  body #app>.topbar-v3{
+    left:var(--hlgs-current)!important;right:auto!important;width:calc(100vw - var(--hlgs-current))!important;
+    margin:0!important;padding-left:22px!important;padding-right:22px!important;transform:none!important
+  }
+  body .content{margin-left:var(--hlgs-current)!important;width:calc(100vw - var(--hlgs-current))!important}
+  body.d12-domis-active #page-domis.active{left:var(--hlgs-current)!important;right:0!important}
+}
+</style>
+<script id="hlDispatchRecoveryWatchdog">
+(function(){
+  var running=false,lastSuccess=0;
+  function deliveryReady(){
+    var rows=Array.isArray(window.ordersV2Data)?window.ordersV2Data:[];
+    return rows.filter(function(p){
+      var st=String(p&&p.estado||'').toLowerCase();
+      var needs=typeof window.needsCourierV5==='function'?window.needsCourierV5(p):true;
+      return needs&&st==='listo'&&!p.domiciliario_id;
+    });
+  }
+  async function recover(){
+    if(running||document.hidden)return;
+    var rid=null;try{rid=window.rest&&rest.id?rest.id:null}catch(e){}
+    if(!rid||!window.d9State||!d9State.auto)return;
+    var pending=deliveryReady();if(!pending.length)return;
+    running=true;
+    try{
+      var controller=new AbortController(),timer=setTimeout(function(){controller.abort()},6000);
+      var r=await fetch('/api/domi-admin/dispatch-ready',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rid,recovery:true}),signal:controller.signal,cache:'no-store'});
+      clearTimeout(timer);var d={};try{d=await r.json()}catch(e){}
+      if(r.ok&&d.ok&&Array.isArray(d.asignaciones)&&d.asignaciones.length){
+        lastSuccess=Date.now();
+        try{if(typeof loadPedidos==='function')await loadPedidos()}catch(e){}
+        try{if(typeof d9Refresh==='function')await d9Refresh(false)}catch(e){}
+        if(typeof hlNotice==='function')hlNotice('success','Luz completó el despacho',d.asignaciones.length+' pedido(s) asignado(s) automáticamente.',2600);
+        if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:'domi_asignado',titulo:'Despacho completado',mensaje:'Ya encontré un domiciliario disponible y envié la misión.'},false);
+      }
+    }catch(e){/* silencioso: volverá a intentar */}
+    finally{running=false}
+  }
+  setInterval(recover,7000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)setTimeout(recover,500)});
+  window.addEventListener('online',function(){setTimeout(recover,500)});
+  setTimeout(recover,2200);
+})();
+</script>
+
 </body>
 </html>
