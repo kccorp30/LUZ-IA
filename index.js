@@ -7845,9 +7845,16 @@ async function hlSettlementSummary(restauranteId,domiId,day){
   return {fecha_operacion:operationDay,jornada_inicio:startAt,jornada_fin:endAt,pedidos_count:rows.length,pedido_ids:rows.map(function(x){return x.id;}),efectivo_esperado:cash,pagos_digitales:digital,pagos_datafono:card,domicilios_ganados:earn,total_recaudado:total,pedidos:rows};
 }
 function hlReceiptCode(){return 'HL-'+hlColombiaDateString().replace(/-/g,'')+'-'+crypto.randomBytes(3).toString('hex').toUpperCase();}
+async function hlSettlementEdge(action,payload){
+  var key=process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||SUPABASE_KEY;
+  var h={'Content-Type':'application/json','apikey':key,'x-hl-settlement-server':FINDER_SERVER_SECRET};
+  if(!/^sb_(publishable|secret)_/i.test(String(key||'')))h.Authorization='Bearer '+key;
+  var r=await axios.post(SUPABASE_URL+'/functions/v1/hl-settlement',Object.assign({action:action},payload||{}),{headers:h,timeout:10000});
+  if(!r.data||!r.data.ok)throw new Error((r.data&&r.data.error)||'Cuadre no disponible');
+  return r.data;
+}
 async function hlGetOpenSettlement(rid,did,day){
-  var h=sbPrivilegedHeaders(),q=SUPABASE_URL+'/rest/v1/domiciliario_cuadres?restaurante_id=eq.'+encodeURIComponent(rid)+'&domiciliario_id=eq.'+encodeURIComponent(did)+'&fecha_operacion=eq.'+encodeURIComponent(day)+'&estado=in.(iniciado,presentado,diferencia)&order=iniciado_at.desc&limit=1&select=*';
-  var r=await axios.get(q,{headers:h});return (r.data||[])[0]||null;
+  var r=await hlSettlementEdge('open',{rid:rid,did:did,day:day});return r.row||null;
 }
 app.get('/api/domi-cuadre/resumen',async function(req,res){
   var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:'Sesión inválida'});
@@ -7858,9 +7865,7 @@ app.post('/api/domi-cuadre/iniciar',async function(req,res){
   try{
     var s=await hlSettlementSummary(t.rid,t.did,req.body&&req.body.fecha);if(!s.pedidos_count)return res.status(400).json({ok:false,error:'No hay entregas completadas en esta jornada para cuadrar'});var h=sbPrivilegedHeaders(),open=await hlGetOpenSettlement(t.rid,t.did,s.fecha_operacion),dr=await axios.get(SUPABASE_URL+'/rest/v1/domiciliarios?id=eq.'+encodeURIComponent(t.did)+'&select=nombre&limit=1',{headers:h}),name=(dr.data&&dr.data[0]&&dr.data[0].nombre)||'Domiciliario';
     var body={restaurante_id:t.rid,domiciliario_id:t.did,domiciliario_nombre:name,fecha_operacion:s.fecha_operacion,estado:'iniciado',pedidos_count:s.pedidos_count,pedido_ids:s.pedido_ids,efectivo_esperado:s.efectivo_esperado,pagos_digitales:s.pagos_digitales,pagos_datafono:s.pagos_datafono,domicilios_ganados:s.domicilios_ganados,total_recaudado:s.total_recaudado,resumen:{pedidos:s.pedidos},updated_at:new Date().toISOString()};
-    var row;
-    if(open){var pr=await axios.patch(SUPABASE_URL+'/rest/v1/domiciliario_cuadres?id=eq.'+open.id,body,{headers:Object.assign({},h,{'Content-Type':'application/json','Prefer':'return=representation'})});row=pr.data&&pr.data[0];}
-    else{var cr=await axios.post(SUPABASE_URL+'/rest/v1/domiciliario_cuadres',body,{headers:Object.assign({},h,{'Content-Type':'application/json','Prefer':'return=representation'})});row=cr.data&&cr.data[0];}
+    var er=await hlSettlementEdge('upsert_start',{existing_id:open&&open.id||null,row:body}),row=er.row;
     await registrarEventoLuz(t.rid,null,'restaurante',null,'cuadre_iniciado','Cuadre en proceso',name+' inició el cuadre del día.',{cuadre_id:row&&row.id,domiciliario_id:t.did},'domiciliario',t.did).catch(function(){});
     res.json({ok:true,cuadre:row,resumen:s});
   }catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
@@ -7868,25 +7873,25 @@ app.post('/api/domi-cuadre/iniciar',async function(req,res){
 app.post('/api/domi-cuadre/presentar',async function(req,res){
   var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:'Sesión inválida'});
   try{
-    var id=String(req.body&&req.body.cuadre_id||''),amount=Number(req.body&&req.body.efectivo_entregado||0),notes=String(req.body&&req.body.notas||'').slice(0,500),h=sbPrivilegedHeaders();if(!id)return res.status(400).json({ok:false,error:'Falta cuadre_id'});
-    var rr=await axios.get(SUPABASE_URL+'/rest/v1/domiciliario_cuadres?id=eq.'+encodeURIComponent(id)+'&domiciliario_id=eq.'+encodeURIComponent(t.did)+'&restaurante_id=eq.'+encodeURIComponent(t.rid)+'&select=*',{headers:h}),row=rr.data&&rr.data[0];if(!row)return res.status(404).json({ok:false,error:'Cuadre no encontrado'});
+    var id=String(req.body&&req.body.cuadre_id||''),amount=Number(req.body&&req.body.efectivo_entregado||0),notes=String(req.body&&req.body.notas||'').slice(0,500);if(!id)return res.status(400).json({ok:false,error:'Falta cuadre_id'});
+    var rr=await hlSettlementEdge('get',{id:id,did:t.did,rid:t.rid}),row=rr.row;if(!row)return res.status(404).json({ok:false,error:'Cuadre no encontrado'});
     var s=await hlSettlementSummary(t.rid,t.did,row.fecha_operacion),diff=amount-Number(s.efectivo_esperado||0),patch={estado:'presentado',pedidos_count:s.pedidos_count,pedido_ids:s.pedido_ids,efectivo_esperado:s.efectivo_esperado,efectivo_entregado:amount,pagos_digitales:s.pagos_digitales,pagos_datafono:s.pagos_datafono,domicilios_ganados:s.domicilios_ganados,total_recaudado:s.total_recaudado,diferencia:diff,notas_domiciliario:notes,resumen:{pedidos:s.pedidos},presentado_at:new Date().toISOString(),updated_at:new Date().toISOString()};
-    var pr=await axios.patch(SUPABASE_URL+'/rest/v1/domiciliario_cuadres?id=eq.'+id,patch,{headers:Object.assign({},h,{'Content-Type':'application/json','Prefer':'return=representation'})}),out=pr.data&&pr.data[0];
+    var pr=await hlSettlementEdge('patch',{id:id,did:t.did,rid:t.rid,patch:patch}),out=pr.row;
     await registrarEventoLuz(t.rid,null,'restaurante',null,'cuadre_presentado','Cuadre listo para revisar',(row.domiciliario_nombre||'Domiciliario')+' presentó su cuadre: efectivo $'+Math.round(amount).toLocaleString('es-CO')+'.',{cuadre_id:id,diferencia:diff},'domiciliario',t.did).catch(function(){});
     res.json({ok:true,cuadre:out});
   }catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
 });
 app.get('/api/domi-cuadre/actual',async function(req,res){
   var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:'Sesión inválida'});
-  try{var day=String(req.query.fecha||hlColombiaDateString()),h=sbPrivilegedHeaders(),r=await axios.get(SUPABASE_URL+'/rest/v1/domiciliario_cuadres?restaurante_id=eq.'+encodeURIComponent(t.rid)+'&domiciliario_id=eq.'+encodeURIComponent(t.did)+'&fecha_operacion=eq.'+encodeURIComponent(day)+'&order=iniciado_at.desc&limit=1&select=*',{headers:h});res.set('Cache-Control','no-store');res.json({ok:true,cuadre:(r.data||[])[0]||null});}catch(e){res.status(500).json({ok:false,error:e.message});}
+  try{var day=String(req.query.fecha||hlColombiaDateString()),r=await hlSettlementEdge('current',{rid:t.rid,did:t.did,day:day});res.set('Cache-Control','no-store');res.json({ok:true,cuadre:r.row||null});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 app.get('/api/domi-admin/cuadres',async function(req,res){
   var rid=String(req.query.restaurante_id||'');if(!rid)return res.status(400).json({ok:false,error:'Falta restaurante_id'});
-  try{var h=sbPrivilegedHeaders(),day=String(req.query.fecha||hlColombiaDateString()),r=await axios.get(SUPABASE_URL+'/rest/v1/domiciliario_cuadres?restaurante_id=eq.'+encodeURIComponent(rid)+'&fecha_operacion=eq.'+encodeURIComponent(day)+'&order=iniciado_at.desc&select=*',{headers:h});res.set('Cache-Control','no-store');res.json({ok:true,cuadres:r.data||[]});}catch(e){res.status(500).json({ok:false,error:e.message});}
+  try{var day=String(req.query.fecha||hlColombiaDateString()),r=await hlSettlementEdge('list',{rid:rid,day:day});res.set('Cache-Control','no-store');res.json({ok:true,cuadres:r.rows||[]});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 app.post('/api/domi-admin/cuadre/confirmar',async function(req,res){
   var rid=String(req.body&&req.body.restaurante_id||''),id=String(req.body&&req.body.cuadre_id||''),received=Number(req.body&&req.body.efectivo_recibido||0),notes=String(req.body&&req.body.notas||'').slice(0,500);if(!rid||!id)return res.status(400).json({ok:false,error:'Faltan datos'});
-  try{var h=sbPrivilegedHeaders(),rr=await axios.get(SUPABASE_URL+'/rest/v1/domiciliario_cuadres?id=eq.'+encodeURIComponent(id)+'&restaurante_id=eq.'+encodeURIComponent(rid)+'&select=*',{headers:h}),row=rr.data&&rr.data[0];if(!row)return res.status(404).json({ok:false,error:'Cuadre no encontrado'});var diff=received-Number(row.efectivo_esperado||0),status='confirmado',code=row.receipt_code||hlReceiptCode(),patch={estado:status,efectivo_entregado:received,diferencia:diff,notas_restaurante:notes,receipt_code:code,confirmado_at:new Date().toISOString(),updated_at:new Date().toISOString()};var pr=await axios.patch(SUPABASE_URL+'/rest/v1/domiciliario_cuadres?id=eq.'+id,patch,{headers:Object.assign({},h,{'Content-Type':'application/json','Prefer':'return=representation'})}),out=pr.data&&pr.data[0];await registrarEventoLuz(rid,null,'domiciliario',row.domiciliario_id,'cuadre_confirmado',Math.abs(diff)<1?'Cuadre confirmado':'Cuadre confirmado con diferencia',Math.abs(diff)<1?'El restaurante confirmó tu cuadre. Recibo '+code+'.':'El restaurante confirmó el cuadre con una diferencia de $'+Math.round(diff).toLocaleString('es-CO')+'. Recibo '+code+'.',{cuadre_id:id,receipt_code:code,diferencia:diff},'restaurante',rid).catch(function(){});res.json({ok:true,cuadre:out});}catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
+  try{var rr=await hlSettlementEdge('get',{id:id,rid:rid}),row=rr.row;if(!row)return res.status(404).json({ok:false,error:'Cuadre no encontrado'});var diff=received-Number(row.efectivo_esperado||0),status='confirmado',code=row.receipt_code||hlReceiptCode(),patch={estado:status,efectivo_entregado:received,diferencia:diff,notas_restaurante:notes,receipt_code:code,confirmado_at:new Date().toISOString(),updated_at:new Date().toISOString()};var pr=await hlSettlementEdge('patch',{id:id,rid:rid,patch:patch}),out=pr.row;await registrarEventoLuz(rid,null,'domiciliario',row.domiciliario_id,'cuadre_confirmado',Math.abs(diff)<1?'Cuadre confirmado':'Cuadre confirmado con diferencia',Math.abs(diff)<1?'El restaurante confirmó tu cuadre. Recibo '+code+'.':'El restaurante confirmó el cuadre con una diferencia de $'+Math.round(diff).toLocaleString('es-CO')+'. Recibo '+code+'.',{cuadre_id:id,receipt_code:code,diferencia:diff},'restaurante',rid).catch(function(){});res.json({ok:true,cuadre:out});}catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
 });
 
 // Dedicated reliable order editor. Whitelists fields and creates an audit event.
