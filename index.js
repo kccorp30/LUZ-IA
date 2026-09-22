@@ -242,7 +242,7 @@ function nextOrderNumber() { return ++orderCounter; }
 
 // ── COLA PARALELA ─────────────────────────────────────────────────────────────
 const colasPorCliente = new Map();
-var DELAY_RESPUESTA_MS = 10000; // 10 segundos para simular persona real
+var DELAY_RESPUESTA_MS = Math.max(250, Number(process.env.LUZ_CHAT_DEBOUNCE_MS || 350)); // respuesta fluida; configurable
 
 function procesarEnCola(from, tarea) {
   if (!colasPorCliente.has(from)) colasPorCliente.set(from, Promise.resolve());
@@ -624,15 +624,16 @@ RECOMENDACIONES Y NOTAS ESPECIALES DEL CLIENTE:
 - Si el cliente pide algo especial como salsas extras, sin ingrediente, doble porcion, instruccion de preparacion o cualquier preferencia: incluirlo en los ITEMS del pedido entre parentesis.
 - Ejemplo: "La Especial $18.900 (sin cebolla, extra chimichurri)"
 PEDIDO ADICIONAL O MODIFICACION DE ORDEN YA CONFIRMADA:
-- Si el cliente ya tiene un pedido confirmado y quiere agregar algo, NO crees un pedido nuevo.
-- Escribe MODIFICAR_PEDIDO:[numero]|AGREGAR:[item y precio]
-- Si el cliente pide una preferencia, nota o instruccion especial (salsas aparte, sin cebolla, bien cocido, etc.) escribe MODIFICAR_PEDIDO:[numero]|NOTA:[instruccion exacta del cliente]
-- Ejemplo notas: "salsas aparte" -> MODIFICAR_PEDIDO:123|NOTA:salsas aparte | "sin cebolla" -> MODIFICAR_PEDIDO:123|NOTA:sin cebolla | "bbq y ajo aparte" -> MODIFICAR_PEDIDO:123|NOTA:bbq y ajo aparte
-- SIEMPRE usa MODIFICAR_PEDIDO para cualquier cambio o nota en pedido ya confirmado. NUNCA digas "anotado" sin escribir el tag.
+- Si el cliente quiere AGREGAR, QUITAR, cambiar una nota o dirección del MISMO pedido activo, usa MODIFICAR_PEDIDO:[numero]|AGREGAR/ELIMINAR/NOTA/DIRECCION:[detalle].
+- Si el cliente dice claramente que quiere OTRO pedido, un pedido APARTE o una orden ADICIONAL independiente, crea el nuevo flujo normal de PEDIDO_LISTO y añade PEDIDO_ADICIONAL_DE:[numero del pedido original]. NO lo mezcles con el pedido anterior.
+- Una orden adicional conserva el mismo cliente/teléfono y debe quedar vinculada al pedido original.
+- Si el cliente pide una preferencia, nota o instruccion especial (salsas aparte, sin cebolla, bien cocido, etc.) escribe MODIFICAR_PEDIDO:[numero]|NOTA:[instruccion exacta del cliente].
+- NUNCA digas "anotado" o "ya quedó" si no emitiste el tag correspondiente.
 IMAGENES:
-- Si el cliente envia una imagen Y tiene un pedido activo esperando pago: es probablemente un comprobante. Confirma el pedido.
-- Si el cliente envia una imagen SIN pedido activo: responde "Hola! Vi que enviaste una imagen. Puedes contarme que necesitas?"
-- NUNCA confirmes un pedido por una imagen si no hay pedido activo pendiente de pago.
+- Si hay un pedido esperando pago, el BACKEND valida la evidencia antes de permitir PAGO_CONFIRMADO. Nunca asumas que una captura es auténtica solo porque parece comprobante.
+- Si NO está esperando pago, analiza la imagen en contexto: puede ser captura del menú, producto, conversación, ubicación u otra referencia. Usa el menú activo y el historial para responder con naturalidad.
+- Si la imagen no permite entender la intención, haz UNA pregunta breve de aclaración.
+- NUNCA conviertas una imagen normal en comprobante de pago fuera del flujo de pago.
 PREGUNTAS SIN RESPUESTA:
 - Si no puedes responder con certeza: "Un momento, ya te confirmo ese detalle." y escribe: ALERTA_PREGUNTA:[la pregunta]
 FLUJO:
@@ -665,7 +666,7 @@ POST-CONFIRMACION:
 - Si el cliente pregunta cuanto demora: di "Tu pedido esta en preparacion, en cuanto este listo te avisamos y el domiciliario sale de inmediato. Normalmente entre 30 y 50 minutos desde que confirmas."
 - NUNCA digas "va en camino" o "el domiciliario ya salio" a menos que el sistema te haya enviado el mensaje de estado "en_camino". Solo el sistema puede confirmar ese estado.
 - NUNCA inventes tiempos exactos. Si insisten: "Dependera del trafico y la preparacion, pero te avisamos cada paso."
-- NO reinicies el flujo ni tomes un nuevo pedido si el cliente ya tiene un pedido activo confirmado. Si el cliente saluda de nuevo o pregunta algo, responde en contexto del pedido activo.
+- Si el cliente ya tiene un pedido activo, conserva ese contexto. Solo inicia un pedido nuevo cuando el cliente diga explícitamente que quiere OTRO pedido/APARTE; en ese caso vincúlalo con PEDIDO_ADICIONAL_DE.
 - Si el cliente quiere AGREGAR productos a su pedido activo: di "Claro, que quieres agregar?" y cuando lo diga escribe MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[producto y precio]
 - Si el cliente quiere CANCELAR su pedido: di "Entendido, voy a avisar al equipo para cancelar tu pedido #[numero]. Ten en cuenta que si ya esta en preparacion puede que no sea posible." y escribe CANCELAR_PEDIDO:[numero_pedido]
 - Si el cliente quiere cambiar la direccion de entrega: toma la nueva direccion y escribe MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
@@ -679,6 +680,7 @@ TOTAL: [numero sin puntos ni signos]
 METODO_PAGO: [nequi|bancolombia|efectivo|datafono — el que el cliente menciono, o "pendiente" si no ha dicho]
 Al confirmar direccion: DIRECCION_LISTA:[direccion completa]
 Telefono adicional: TELEFONO_ADICIONAL:[numero]
+Nombre del cliente cuando lo conozcas: NOMBRE_CLIENTE:[nombre]
 Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
 Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
 Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
@@ -818,15 +820,86 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
   }
 }
 
+// ── CHAT LIVE HUB · persistence first, realtime second ────────────────────────
+var chatLiveStreams = new Map();
+var seenInboundMessageIds = new Map();
+function chatTelKey(v){ var d=String(v||"").replace(/\D/g,""); if(d.startsWith("57")&&d.length===12)d=d.slice(2); return d.slice(-10); }
+function chatLiveKey(restauranteId,telefono){ return String(restauranteId||"")+":"+chatTelKey(telefono); }
+function chatLiveEmit(restauranteId,telefono,row){
+  var payload="event: chat\ndata: "+JSON.stringify(Object.assign({telefono:chatTelKey(telefono)},row||{}))+"\n\n";
+  [chatLiveKey(restauranteId,telefono),String(restauranteId||"")+":*"].forEach(function(key){
+    var set=chatLiveStreams.get(key);if(!set||!set.size)return;
+    set.forEach(function(res){try{res.write(payload)}catch(e){}});
+  });
+}
+function chatSeenInbound(id){
+  if(!id)return false;var now=Date.now();
+  for(var [k,t] of seenInboundMessageIds){if(now-t>15*60*1000)seenInboundMessageIds.delete(k)}
+  if(seenInboundMessageIds.has(String(id)))return true;seenInboundMessageIds.set(String(id),now);return false;
+}
 async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo, comprobanteMediaId, comprobanteUrl) {
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var mensajeSafe = String(mensaje||"").substring(0, 2000);
-    var payload = { restaurante_id: restauranteId, telefono, mensaje: mensajeSafe, tipo, comprobante_media_id: comprobanteMediaId || null };
+    var mensajeSafe = String(mensaje||"").substring(0, 4000);
+    var payload = { restaurante_id: restauranteId, telefono: chatTelKey(telefono), mensaje: mensajeSafe, tipo, comprobante_media_id: comprobanteMediaId || null };
     if (comprobanteUrl) payload.comprobante_url = comprobanteUrl;
-    await axios.post(SUPABASE_URL + "/rest/v1/mensajes", payload,
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } });
-  } catch (e) { console.error("guardarMensaje:", e.message); }
+    var r=await axios.post(SUPABASE_URL + "/rest/v1/mensajes", payload,
+      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" } });
+    var row=r.data&&r.data[0]||payload;chatLiveEmit(restauranteId,telefono,row);return row;
+  } catch (e) { console.error("guardarMensaje:", e.message); return null; }
+}
+
+app.get("/api/chat-stream/:telefono",function(req,res){
+  var rid=String(req.query.restaurante_id||"");if(!rid)return res.status(400).end();
+  var tel=chatTelKey(req.params.telefono),key=chatLiveKey(rid,tel);
+  res.setHeader("Content-Type","text/event-stream");res.setHeader("Cache-Control","no-cache, no-transform");res.setHeader("Connection","keep-alive");
+  if(res.flushHeaders)res.flushHeaders();
+  var set=chatLiveStreams.get(key);if(!set){set=new Set();chatLiveStreams.set(key,set)}set.add(res);
+  res.write("event: ready\ndata: {\"ok\":true}\n\n");
+  var hb=setInterval(function(){try{res.write(": ping\n\n")}catch(e){}},20000);
+  req.on("close",function(){clearInterval(hb);var s=chatLiveStreams.get(key);if(s){s.delete(res);if(!s.size)chatLiveStreams.delete(key)}});
+});
+
+app.get("/api/chat-stream",function(req,res){
+  var rid=String(req.query.restaurante_id||"");if(!rid)return res.status(400).end();
+  var key=rid+":*";
+  res.setHeader("Content-Type","text/event-stream");res.setHeader("Cache-Control","no-cache, no-transform");res.setHeader("Connection","keep-alive");
+  if(res.flushHeaders)res.flushHeaders();
+  var set=chatLiveStreams.get(key);if(!set){set=new Set();chatLiveStreams.set(key,set)}set.add(res);
+  res.write("event: ready\ndata: {\"ok\":true,\"scope\":\"restaurant\"}\n\n");
+  var hb=setInterval(function(){try{res.write(": ping\n\n")}catch(e){}},20000);
+  req.on("close",function(){clearInterval(hb);var x=chatLiveStreams.get(key);if(x){x.delete(res);if(!x.size)chatLiveStreams.delete(key)}});
+});
+
+async function guardarNombreClienteDetectado(restauranteId,telefono,nombre){
+  nombre=String(nombre||"").replace(/[\[\]<>]/g,"").trim().replace(/\s+/g," ");
+  if(!restauranteId||nombre.length<2||nombre.length>80||/^\d+$/.test(nombre))return false;
+  try{
+    var svc=SUPABASE_SERVICE_KEY_VAL,tel=chatTelKey(telefono);
+    await axios.post(SUPABASE_URL+"/rest/v1/clientes_frecuentes?on_conflict=restaurante_id,telefono",
+      {restaurante_id:restauranteId,telefono:tel,nombre_cliente:nombre,updated_at:new Date().toISOString()},
+      {headers:{"apikey":svc,"Authorization":"Bearer "+svc,"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=minimal"}});
+    return true;
+  }catch(e){console.warn("[cliente-nombre]",e.message);return false}
+}
+
+async function prepararMensajeEntrante(msg,from,phoneNumberId,channelId){
+  var restaurante=await getRestaurante(phoneNumberId,channelId);if(!restaurante)return {restaurante:null,duplicate:false};
+  var telLocal=chatTelKey(from),owner=restaurante.telefono_dueno&&chatTelKey(restaurante.telefono_dueno)===telLocal;
+  if(owner)return {restaurante:restaurante,duplicate:false,owner:true};
+  if(chatSeenInbound(msg&&msg.id))return {restaurante:restaurante,duplicate:true};
+  var tipo=String(msg&&msg.type||"text"),mediaId=null,txt="";
+  if(tipo==="text")txt=msg.text&&msg.text.body||"";
+  else if(tipo==="image"||tipo==="document"||tipo==="sticker"){
+    mediaId=msg.image&&msg.image.id||msg.document&&msg.document.id||null;var cap=msg.image&&msg.image.caption||msg.document&&msg.document.caption||"";
+    txt=(cap?cap+" · ":"")+"📷 Imagen del cliente";
+  }else if(tipo==="location"){var l=msg.location||{};txt="📍 Ubicación: "+String(l.name||"")+" "+String(l.latitude||"")+","+String(l.longitude||"")}
+  else if(tipo==="audio")txt="🎤 Audio del cliente";
+  else if(tipo==="interactive")txt=msg.interactive&&((msg.interactive.button_reply&&msg.interactive.button_reply.title)||(msg.interactive.list_reply&&msg.interactive.list_reply.title))||"";
+  var durableMediaUrl=null;
+  if(mediaId&&phoneNumberId){try{durableMediaUrl=await persistirComprobanteStorage(mediaId,phoneNumberId,restaurante.id)}catch(_media){}}
+  if(txt) {var row=await guardarMensajeSupabase(restaurante.id,telLocal,txt,"cliente",mediaId,durableMediaUrl);msg._hlStoredRowId=row&&row.id||null;msg._hlPersisted=true;msg._hlMediaUrl=durableMediaUrl;}
+  msg._hlRestaurante=restaurante;return {restaurante:restaurante,duplicate:false};
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1137,104 +1210,87 @@ function getMenuUrl(restaurante) {
   return base;
 }
 
-async function descargarImagenMeta(mediaId) {
+async function descargarImagenMeta(mediaId, phoneNumberId, restauranteId) {
   try {
-    var token = process.env.WHATSAPP_TOKEN;
-    if (!token) { console.error("[comprobante] WHATSAPP_TOKEN no configurado"); return null; }
-    // Intentar con v21.0 primero, luego v20.0 como fallback
-    var mediaUrl = null;
-    for (var ver of ["v21.0", "v20.0", "v22.0"]) {
+    var creds=await resolveWhatsAppCredentials(restauranteId||null,phoneNumberId||null);
+    var token=creds.token;
+    if (!token) { console.error("[comprobante] token WhatsApp no configurado"); return null; }
+    var mediaUrl=null;
+    for (var ver of [META_GRAPH_VERSION,"v24.0","v23.0"]) {
       try {
-        var urlRes = await axios.get("https://graph.facebook.com/" + ver + "/" + mediaId, {
-          headers: { "Authorization": "Bearer " + token },
-          timeout: 8000
-        });
-        mediaUrl = urlRes.data?.url;
-        if (mediaUrl) break;
-      } catch(ev) {
-        console.warn("[comprobante] Meta API " + ver + " falló:", ev.response?.status, ev.message?.substring(0,60));
-      }
+        var urlRes=await axios.get("https://graph.facebook.com/"+ver+"/"+mediaId,{headers:{"Authorization":"Bearer "+token},timeout:8000});
+        mediaUrl=urlRes.data?.url;if(mediaUrl)break;
+      } catch(ev) { console.warn("[comprobante] Meta API "+ver+" falló:",ev.response?.status,ev.message?.substring(0,60)); }
     }
-    if (!mediaUrl) { console.error("[comprobante] No se obtuvo URL del mediaId:", mediaId); return null; }
-    var imgRes = await axios.get(mediaUrl, {
-      headers: { "Authorization": "Bearer " + token },
-      responseType: "arraybuffer",
-      timeout: 20000,
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity
-    });
-    return "data:" + (imgRes.headers["content-type"] || "image/jpeg") + ";base64," + Buffer.from(imgRes.data).toString("base64");
-  } catch (e) {
-    console.error("[comprobante] descargarImagenMeta error:", e.response?.status, e.message?.substring(0,80));
-    return null;
-  }
+    if(!mediaUrl){console.error("[comprobante] No se obtuvo URL del mediaId:",mediaId);return null;}
+    var imgRes=await axios.get(mediaUrl,{headers:{"Authorization":"Bearer "+token},responseType:"arraybuffer",timeout:20000,maxContentLength:Infinity,maxBodyLength:Infinity});
+    return "data:"+(imgRes.headers["content-type"]||"image/jpeg")+";base64,"+Buffer.from(imgRes.data).toString("base64");
+  } catch(e) { console.error("[comprobante] descargarImagenMeta error:",e.response?.status,e.message?.substring(0,80));return null; }
 }
 
-async function sendWhatsAppImage(to, imageUrl, caption, phoneId) {
-  var pid = phoneId || process.env.WHATSAPP_PHONE_ID;
-  var token = process.env.WHATSAPP_TOKEN;
-  var payload = {
-    messaging_product: "whatsapp",
-    to: to,
-    type: "image",
-    image: { link: imageUrl, caption: caption || "" }
-  };
-  var r = await axios.post("https://graph.facebook.com/v20.0/" + pid + "/messages", payload, {
-    headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" }
-  });
+async function sendWhatsAppImage(to, imageUrl, caption, phoneId, restauranteId) {
+  var creds=await resolveWhatsAppCredentials(restauranteId||null,phoneId||null);
+  var pid=creds.phone_number_id,token=creds.token;
+  if(!pid||!token)throw new Error("WhatsApp no configurado para este restaurante");
+  var payload={messaging_product:"whatsapp",to:normalizarWhatsAppDestino(to),type:"image",image:{link:imageUrl,caption:caption||""}};
+  var r=await axios.post("https://graph.facebook.com/"+META_GRAPH_VERSION+"/"+pid+"/messages",payload,{headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"}});
   return r.data;
 }
 
-async function verificarComprobante(mediaId, totalEsperado) {
+async function verificarComprobante(mediaId, totalEsperado, phoneNumberId, restauranteId, telefono) {
   try {
-    var imgData = await descargarImagenMeta(mediaId);
-    if (!imgData) return { valido: null };
+    var imgData = await descargarImagenMeta(mediaId, phoneNumberId, restauranteId);
+    if (!imgData) return { valido:false, decision:"revision_manual", razon:"No se pudo descargar la imagen" };
     var base64, mediaType;
-    if (typeof imgData === "string" && imgData.startsWith("data:")) {
-      var parts = imgData.split(",");
-      base64 = parts[1];
-      mediaType = (parts[0].split(":")[1] || "image/jpeg").split(";")[0];
-    } else {
-      base64 = Buffer.from(imgData).toString("base64");
-      mediaType = "image/jpeg";
-    }
-    if (!base64 || base64.length < 100) return { valido: null };
-    console.log("[comprobante] verificando imagen, size:", base64.length);
-    var totalFmt = Number(totalEsperado).toLocaleString("es-CO");
-    var prompt = "Analiza esta imagen. ¿Es algún tipo de comprobante, recibo, captura de pantalla de pago, transferencia bancaria, Nequi, Bancolombia, o cualquier imagen que el cliente haya enviado para pagar? "
-      + "Acepta como válido: capturas de Nequi, Bancolombia, efecty, depósito, foto de efectivo, o cualquier imagen que parezca ser evidencia de un pago. "
-      + "Solo rechaza si es claramente una foto de comida, personas, objetos cotidianos, o algo completamente ajeno a un pago. "
-      + "Si tienes duda, responde valido:true. Monto esperado: $" + totalFmt + " COP. "
-      + "Responde SOLO con JSON: {valido:true o false, razon:string}.";
-    var resp = await axios.post(
-      "https://api.anthropic.com/v1/messages",
-      {
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 150,
-        messages: [{ role: "user", content: [
-          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-          { type: "text", text: prompt }
-        ]}]
-      },
-      { headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" } }
-    );
-    var text = (resp.data?.content?.[0]?.text) || "{}";
-    console.log("[comprobante] Claude respuesta:", text.substring(0,100));
-    var start = text.indexOf("{"); var end2 = text.lastIndexOf("}");
-    if (start === -1 || end2 === -1) return { valido: null, razon: "No se pudo interpretar la verificación" };
-    var result = JSON.parse(text.substring(start, end2 + 1));
-    console.log("[comprobante] resultado:", JSON.stringify(result));
+    if (typeof imgData === "string" && imgData.startsWith("data:")) {var parts=imgData.split(",");base64=parts[1];mediaType=(parts[0].split(":")[1]||"image/jpeg").split(";")[0];}
+    else {base64=Buffer.from(imgData).toString("base64");mediaType="image/jpeg";}
+    if(!base64||base64.length<100)return {valido:false,decision:"revision_manual",razon:"Imagen vacía o ilegible"};
+    var rawBuf=Buffer.from(base64,"base64"),sha256=channelCrypto.createHash("sha256").update(rawBuf).digest("hex");
+    var paymentCfg={};
+    try{var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+encodeURIComponent(restauranteId)+"&select=nombre,metodo_pago_nequi,metodo_pago_banco,metodo_pago_nombre",{headers:sbPrivilegedHeaders()});paymentCfg=rr.data&&rr.data[0]||{}}catch(_e){}
+    var prompt=[
+      "Eres un extractor forense de evidencia de pago. NO decides si el dinero existe realmente: una imagen puede ser falsificada.",
+      "Lee SOLO lo visible. Si un dato no se ve con claridad devuelve null. Nunca completes ni inventes referencias, montos, nombres o estados.",
+      "Monto esperado COP: "+String(Number(totalEsperado||0))+".",
+      "Destino esperado si aparece en pantalla: negocio="+String(paymentCfg.nombre||"")+", titular="+String(paymentCfg.metodo_pago_nombre||"")+", Nequi="+String(paymentCfg.metodo_pago_nequi||"")+", Banco="+String(paymentCfg.metodo_pago_banco||"")+".",
+      "Extrae: es_comprobante, monto, moneda, entidad, referencia, fecha_hora, destinatario, cuenta_destino, estado_pago (exitoso|pendiente|fallido|desconocido), señales_manipulacion (ninguna|posible|alta), confianza_lectura de 0 a 1 y razon.",
+      "Una captura que solo muestre formulario, saldo, chat, comprobante recortado sin monto/referencia o transferencia pendiente NO es evidencia suficiente.",
+      "Responde SOLO JSON válido."
+    ].join(" ");
+    var resp=await axios.post("https://api.anthropic.com/v1/messages",{model:"claude-haiku-4-5-20251001",max_tokens:400,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mediaType,data:base64}},{type:"text",text:prompt}]}]},{headers:{"x-api-key":process.env.ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","Content-Type":"application/json"}});
+    var outText=resp.data&&resp.data.content&&resp.data.content[0]&&resp.data.content[0].text||"{}",a=outText.indexOf("{"),b=outText.lastIndexOf("}");if(a<0||b<a)throw new Error("JSON de visión inválido");
+    var v=JSON.parse(outText.slice(a,b+1));
+    function moneyN(x){if(x==null||x==='')return null;if(typeof x==='number')return Math.round(x);var s=String(x).replace(/[^0-9]/g,'');return s?Number(s):null}
+    var monto=moneyN(v.monto),esperado=Math.round(Number(totalEsperado||0)),tol=Math.max(100,Math.round(esperado*0.002));
+    var montoCoincide=esperado>0&&monto!=null&&Math.abs(monto-esperado)<=tol;
+    var estado=String(v.estado_pago||'desconocido').toLowerCase(),estadoOk=['exitoso','completado','aprobado','realizado'].indexOf(estado)!==-1;
+    var referencia=String(v.referencia||'').trim(),refOk=referencia.length>=4;
+    var conf=Math.max(0,Math.min(1,Number(v.confianza_lectura||0))),manip=String(v.señales_manipulacion||v.senales_manipulacion||'ninguna').toLowerCase();
+    function normText(x){return String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'')}
+    function digits(x){return String(x||'').replace(/\D/g,'')}
+    var dst=normText(v.destinatario),acct=digits(v.cuenta_destino),expectedName=normText(paymentCfg.metodo_pago_nombre||paymentCfg.nombre||''),nequiDigits=digits(paymentCfg.metodo_pago_nequi),bankDigits=digits(paymentCfg.metodo_pago_banco);
+    var recipientMatch=!!(expectedName&&dst&&(dst.indexOf(expectedName)!==-1||expectedName.indexOf(dst)!==-1));
+    var accountMatch=!!(acct&&((nequiDigits&&acct.endsWith(nequiDigits.slice(-4)))||(bankDigits&&acct.endsWith(bankDigits.slice(-4)))));
+    var hasDestinationConfig=!!(expectedName||nequiDigits||bankDigits),destinationOk=!hasDestinationConfig||recipientMatch||accountMatch;
+    var fechaRaw=String(v.fecha_hora||'').trim(),fechaOk=false,fechaMs=NaN;
+    if(fechaRaw){fechaMs=Date.parse(fechaRaw);if(Number.isFinite(fechaMs)){var age=Date.now()-fechaMs;fechaOk=age>=-24*60*60*1000&&age<=72*60*60*1000}}
+    var duplicate=false,duplicateReason='';
+    try{var ev=await axios.get(SUPABASE_URL+"/rest/v1/luz_eventos?restaurante_id=eq."+encodeURIComponent(restauranteId)+"&tipo=eq.comprobante_verificado&order=created_at.desc&limit=200&select=metadata,created_at",{headers:sbPrivilegedHeaders()});(ev.data||[]).some(function(e){var m=e.metadata||{};if(typeof m==='string'){try{m=JSON.parse(m)}catch(_){m={}}}if(m.sha256===sha256){duplicate=true;duplicateReason='imagen reutilizada';return true}if(refOk&&m.referencia&&String(m.referencia).trim()===referencia){duplicate=true;duplicateReason='referencia reutilizada';return true}return false})}catch(_dup){}
+    var score=0;if(v.es_comprobante===true)score+=15;if(montoCoincide)score+=25;if(estadoOk)score+=15;if(refOk)score+=12;if(destinationOk)score+=12;if(fechaOk)score+=10;if(conf>=.92)score+=11;else if(conf>=.86)score+=6;if(manip==='posible')score-=30;if(manip==='alta')score-=65;if(duplicate)score-=75;
+    // Screenshot-only validation can reduce fraud risk but cannot prove bank settlement.
+    // Auto-confirm is intentionally strict: full amount/status/reference + recent date + recipient/account evidence.
+    var strictPass=v.es_comprobante===true&&montoCoincide&&estadoOk&&refOk&&destinationOk&&fechaOk&&conf>=.88&&!duplicate&&manip==='ninguna';
+    var result={valido:strictPass,decision:strictPass?'evidencia_consistente':(v.es_comprobante===true?'revision_manual':'rechazado'),score:Math.max(0,Math.min(100,score)),monto:monto,monto_esperado:esperado,monto_coincide:montoCoincide,entidad:v.entidad||null,referencia:referencia||null,fecha_hora:v.fecha_hora||null,fecha_valida:fechaOk,destinatario:v.destinatario||null,cuenta_destino:v.cuenta_destino||null,destino_coincide:destinationOk,recipient_match:recipientMatch,account_match:accountMatch,estado_pago:estado,confianza:conf,duplicado:duplicate,senales_manipulacion:manip,razon:duplicate?("Posible fraude: "+duplicateReason):String(v.razon||'')};
+    try{await registrarEventoLuz(restauranteId,null,"restaurante",null,"comprobante_verificado","Comprobante evaluado",result.razon||result.decision,{sha256:sha256,referencia:result.referencia,monto:result.monto,monto_esperado:esperado,score:result.score,decision:result.decision,duplicado:duplicate,telefono:chatTelKey(telefono)},"cliente",chatTelKey(telefono))}catch(_evt){}
+    console.log("[comprobante-strict]",JSON.stringify({decision:result.decision,score:result.score,monto:result.monto,esperado:esperado,dup:duplicate}));
     return result;
-  } catch(e) {
-    console.error("[comprobante] error:", e.message);
-    return { valido: null, razon: "No se pudo verificar automáticamente" };
-  }
+  } catch(e) {console.error("[comprobante] error:",e.message);return {valido:false,decision:"revision_manual",razon:"No se pudo verificar automáticamente con seguridad"};}
 }
 
-async function persistirComprobanteStorage(mediaId) {
+async function persistirComprobanteStorage(mediaId, phoneNumberId, restauranteId) {
   try {
     if (!mediaId) return null;
-    var imgData = await descargarImagenMeta(mediaId);
+    var imgData = await descargarImagenMeta(mediaId, phoneNumberId, restauranteId);
     if (!imgData || typeof imgData !== "string" || !imgData.startsWith("data:")) return null;
     var parts = imgData.split(",");
     var b64 = parts[1];
@@ -1254,6 +1310,110 @@ async function persistirComprobanteStorage(mediaId) {
     console.warn("[comprobante] No se pudo persistir antes de confirmar:", e.message);
     return null;
   }
+}
+
+
+// ============================================================================
+// HOLA LUZ — WHATSAPP CHANNEL MANAGER V1
+// Multi-restaurant isolation: each restaurant can own its Meta Cloud API token.
+// Tokens are AES-256-GCM encrypted at rest. Browser never receives credentials.
+// ============================================================================
+var channelCrypto = require("crypto");
+var META_GRAPH_VERSION = process.env.META_GRAPH_VERSION || "v25.0";
+var META_APP_ID_CHANNEL = process.env.META_APP_ID || "959419306767112";
+
+function channelEncryptionSecret(){
+  return process.env.CHANNEL_TOKEN_ENCRYPTION_KEY || process.env.META_APP_SECRET || process.env.ADMIN_SECRET || "";
+}
+function channelSessionSecret(){
+  return process.env.CHANNEL_SESSION_SECRET || process.env.META_APP_SECRET || process.env.ADMIN_SECRET || FINDER_SERVER_SECRET || "";
+}
+function channelEncryptToken(token){
+  var secret=channelEncryptionSecret();
+  if(!secret)throw new Error("CHANNEL_TOKEN_ENCRYPTION_KEY no configurada");
+  var key=channelCrypto.createHash("sha256").update(String(secret)).digest();
+  var iv=channelCrypto.randomBytes(12);
+  var cipher=channelCrypto.createCipheriv("aes-256-gcm",key,iv);
+  var enc=Buffer.concat([cipher.update(String(token),"utf8"),cipher.final()]);
+  var tag=cipher.getAuthTag();
+  return {token_ciphertext:enc.toString("base64"),token_iv:iv.toString("base64"),token_tag:tag.toString("base64"),token_version:1,token_last_rotated_at:new Date().toISOString()};
+}
+function channelDecryptToken(row){
+  if(!row||!row.token_ciphertext||!row.token_iv||!row.token_tag)return null;
+  var secret=channelEncryptionSecret();
+  if(!secret)throw new Error("CHANNEL_TOKEN_ENCRYPTION_KEY no configurada");
+  var key=channelCrypto.createHash("sha256").update(String(secret)).digest();
+  var decipher=channelCrypto.createDecipheriv("aes-256-gcm",key,Buffer.from(row.token_iv,"base64"));
+  decipher.setAuthTag(Buffer.from(row.token_tag,"base64"));
+  return Buffer.concat([decipher.update(Buffer.from(row.token_ciphertext,"base64")),decipher.final()]).toString("utf8");
+}
+function channelSafe(row){
+  if(!row)return null;
+  return {
+    id:row.id,restaurante_id:row.restaurante_id,provider:row.provider,status:row.status,
+    display_phone:row.display_phone,phone_number_id:row.phone_number_id,waba_id:row.waba_id,
+    business_id:row.business_id,verified_name:row.verified_name,quality_rating:row.quality_rating,
+    messaging_limit_tier:row.messaging_limit_tier,webhook_subscribed:!!row.webhook_subscribed,
+    connected_at:row.connected_at,last_health_check_at:row.last_health_check_at,
+    last_webhook_at:row.last_webhook_at,last_error:row.last_error,updated_at:row.updated_at
+  };
+}
+async function channelGetByPhoneId(phoneId){
+  if(!phoneId)return null;
+  var r=await axios.get(SUPABASE_URL+"/rest/v1/restaurant_channels?provider=eq.meta_whatsapp_cloud&phone_number_id=eq."+encodeURIComponent(String(phoneId))+"&limit=1&select=*",{headers:sbPrivilegedHeaders()});
+  return r.data&&r.data[0]||null;
+}
+async function channelGetByRestaurant(restauranteId){
+  if(!restauranteId)return null;
+  var r=await axios.get(SUPABASE_URL+"/rest/v1/restaurant_channels?provider=eq.meta_whatsapp_cloud&restaurante_id=eq."+encodeURIComponent(String(restauranteId))+"&limit=1&select=*",{headers:sbPrivilegedHeaders()});
+  return r.data&&r.data[0]||null;
+}
+async function channelUpsert(data){
+  var body=Object.assign({provider:"meta_whatsapp_cloud",updated_at:new Date().toISOString()},data||{});
+  var r=await axios.post(SUPABASE_URL+"/rest/v1/restaurant_channels?on_conflict=restaurante_id,provider",body,{headers:sbPrivilegedHeaders({"Content-Type":"application/json","Prefer":"resolution=merge-duplicates,return=representation"})});
+  return r.data&&r.data[0]||null;
+}
+async function channelEvent(restauranteId,channelId,eventType,severity,payload){
+  try{
+    await axios.post(SUPABASE_URL+"/rest/v1/restaurant_channel_events",{restaurante_id:restauranteId,channel_id:channelId||null,event_type:eventType,severity:severity||"info",payload:payload||{}},{headers:sbPrivilegedHeaders({"Content-Type":"application/json","Prefer":"return=minimal"})});
+  }catch(e){console.warn("[channel-event]",eventType,e.message);}
+}
+async function resolveWhatsAppCredentials(restauranteId,phoneNumberId){
+  var row=null;
+  try{
+    if(phoneNumberId)row=await channelGetByPhoneId(phoneNumberId);
+    if(!row&&restauranteId)row=await channelGetByRestaurant(restauranteId);
+    if(row&&row.token_ciphertext){
+      var token=channelDecryptToken(row);
+      if(token&&row.phone_number_id)return {token:token,phone_number_id:row.phone_number_id,channel:row,source:"restaurant_channel"};
+    }
+  }catch(e){console.warn("[channel-resolve] fallback legacy:",e.message);}
+  return {token:process.env.WHATSAPP_TOKEN||"",phone_number_id:phoneNumberId||process.env.WHATSAPP_PHONE_ID||"",channel:row,source:"legacy_env"};
+}
+function channelB64url(input){return Buffer.from(input).toString("base64").replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");}
+function channelIssueSession(restauranteId){
+  var secret=channelSessionSecret();if(!secret)throw new Error("CHANNEL_SESSION_SECRET no configurada");
+  var payload=channelB64url(JSON.stringify({rid:String(restauranteId),exp:Date.now()+30*60*1000}));
+  var sig=channelCrypto.createHmac("sha256",secret).update(payload).digest("hex");
+  return payload+"."+sig;
+}
+function channelVerifySession(raw){
+  try{
+    var parts=String(raw||"").split(".");if(parts.length!==2)return null;
+    var secret=channelSessionSecret();if(!secret)return null;
+    var expected=channelCrypto.createHmac("sha256",secret).update(parts[0]).digest("hex");
+    var a=Buffer.from(expected,"hex"),b=Buffer.from(parts[1],"hex");
+    if(a.length!==b.length||!channelCrypto.timingSafeEqual(a,b))return null;
+    var txt=parts[0].replace(/-/g,"+").replace(/_/g,"/");while(txt.length%4)txt+="=";
+    var data=JSON.parse(Buffer.from(txt,"base64").toString("utf8"));
+    if(!data.exp||Date.now()>data.exp)return null;return data;
+  }catch(e){return null;}
+}
+function requireChannelSession(req,res,next){
+  var raw=req.headers["x-channel-session"]||"";var data=channelVerifySession(raw);
+  var rid=String((req.body&&req.body.restaurante_id)||(req.query&&req.query.restaurante_id)||"");
+  if(!data||!rid||String(data.rid)!==rid)return res.status(401).json({ok:false,error:"Sesión de conexión inválida"});
+  req.channelSession=data;next();
 }
 
 function normalizarWhatsAppDestino(to) {
@@ -1288,21 +1448,21 @@ async function sendWhatsAppMessage(to, message, phoneNumberId, whapiToken) {
     }
   }
 
-  // ── Meta Cloud API (default) ──────────────────────────────────────────────
-  var token = process.env.WHATSAPP_TOKEN;
-  var pid   = phoneNumberId || process.env.WHATSAPP_PHONE_ID;
-  if (!token || !pid) { console.error("Faltan WHATSAPP_TOKEN o PHONE_ID"); return { ok:false, provider:"meta", error:"WhatsApp no configurado" }; }
-  try {
-    var resp = await axios.post("https://graph.facebook.com/v20.0/" + pid + "/messages",
-      { messaging_product: "whatsapp", to: toNum, type: "text", text: { body: message } },
-      { headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } });
-    console.log("[Meta] Enviado a " + toNum + " OK - id:", resp.data?.messages?.[0]?.id || "?");
-    return { ok:true, provider:"meta", id:resp.data?.messages?.[0]?.id || null };
-  } catch (e) {
-    var errData = e.response ? e.response.data : null;
-    console.error("[Meta] sendWA ERROR a " + toNum + ":", JSON.stringify(errData) || e.message);
-    console.error("[Meta] status:", e.response?.status, "| pid:", pid);
-    return { ok:false, provider:"meta", status:e.response?.status || null, error:errData || e.message };
+  // ── Meta Cloud API — credenciales aisladas por restaurante/canal ───────────
+  var creds=await resolveWhatsAppCredentials(null,phoneNumberId||null);
+  var token=creds.token,pid=creds.phone_number_id;
+  if(!token||!pid){console.error("Faltan credenciales WhatsApp");return {ok:false,provider:"meta",error:"WhatsApp no configurado"};}
+  if(creds.channel&&["restricted","disconnected","error"].indexOf(String(creds.channel.status||""))!==-1){return {ok:false,provider:"meta",error:"Canal WhatsApp no disponible: "+creds.channel.status};}
+  try{
+    var resp=await axios.post("https://graph.facebook.com/"+META_GRAPH_VERSION+"/"+pid+"/messages",{messaging_product:"whatsapp",to:toNum,type:"text",text:{body:message}},{headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"}});
+    if(creds.channel)channelEvent(creds.channel.restaurante_id,creds.channel.id,"message_sent","success",{phone_number_id:pid}).catch(function(){});
+    console.log("[Meta] Enviado a "+toNum+" OK - id:",resp.data?.messages?.[0]?.id||"?");
+    return {ok:true,provider:"meta",id:resp.data?.messages?.[0]?.id||null,credential_source:creds.source};
+  }catch(e){
+    var errData=e.response?e.response.data:null;
+    console.error("[Meta] sendWA ERROR a "+toNum+":",JSON.stringify(errData)||e.message);
+    if(creds.channel)channelEvent(creds.channel.restaurante_id,creds.channel.id,"message_send_failed","error",{status:e.response?.status||null,error:errData||e.message}).catch(function(){});
+    return {ok:false,provider:"meta",status:e.response?.status||null,error:errData||e.message};
   }
 }
 
@@ -1474,16 +1634,7 @@ function parseReply(reply, from) {
     var addMatch = reply.match(/PEDIDO_ADICIONAL_DE:(.+)/);
     if (addMatch) {
       var numAdicional = addMatch[1].trim();
-      // Redirect to MODIFICAR_PEDIDO instead of creating new order
-      if (orderState[from] && orderState[from].orderNumber) {
-        // Convert to modification - extract new items from current orderState
-        var itemsNuevos = Array.isArray(orderState[from].items) ? orderState[from].items.filter(function(i){ return i.toString().indexOf('➕') !== 0; }) : [];
-        sideEffect = "modificar_pedido";
-        if (!orderState[from].modificarPedido) {
-          orderState[from].modificarPedido = { numero: numAdicional || orderState[from].orderNumber, accion: "AGREGAR:" + itemsNuevos.slice(-3).join(", ") };
-        }
-        console.log("PEDIDO_ADICIONAL_DE interceptado y convertido a MODIFICAR_PEDIDO");
-      }
+      // Pedido APARTE: conservar como nueva orden vinculada; no mezclarla con el pedido activo.
       if (orderState[from]) orderState[from].pedidoAdicionalDe = numAdicional;
       else orderState[from] = { pedidoAdicionalDe: numAdicional, status: "esperando_direccion" };
     }
@@ -2497,87 +2648,106 @@ app.post("/api/admin/cambiar-plan", requireAdmin, async function(req, res) {
   res.status(500).json({ ok: false, error: errors.join(" | "), hint: "Verifica RLS en tabla restaurantes en Supabase" });
 });
 
-// ── WHATSAPP EMBEDDED SIGNUP — callback automático ────────────────────────────
-app.post("/api/whatsapp/embedded-signup", requireAdmin, async function(req, res) {
-  try {
-    var { code, restaurante_id } = req.body;
-    if (!code || !restaurante_id) return res.status(400).json({ ok: false, error: "Faltan datos" });
+// ── WHATSAPP CHANNEL MANAGER + EMBEDDED SIGNUP ───────────────────────────────
+async function getRestaurantChannelSafe(restauranteId){
+  var row=await channelGetByRestaurant(restauranteId);return channelSafe(row);
+}
+async function refreshRestaurantChannelHealth(restauranteId){
+  var row=await channelGetByRestaurant(restauranteId);if(!row)return null;
+  var token=channelDecryptToken(row);if(!token||!row.phone_number_id)return channelSafe(row);
+  try{
+    var hr=await axios.get("https://graph.facebook.com/"+META_GRAPH_VERSION+"/"+row.phone_number_id,{params:{fields:"id,display_phone_number,verified_name,quality_rating"},headers:{Authorization:"Bearer "+token},timeout:10000});
+    var d=hr.data||{};var upd=await channelUpsert({restaurante_id:restauranteId,status:row.webhook_subscribed?"connected":"degraded",display_phone:d.display_phone_number||row.display_phone,verified_name:d.verified_name||row.verified_name,quality_rating:d.quality_rating||row.quality_rating,last_health_check_at:new Date().toISOString(),last_error:null});
+    return channelSafe(upd||row);
+  }catch(e){
+    await channelUpsert({restaurante_id:restauranteId,status:row.status==="restricted"?"restricted":"degraded",last_health_check_at:new Date().toISOString(),last_error:(e.response&&JSON.stringify(e.response.data))||e.message});
+    await channelEvent(restauranteId,row.id,"health_check_failed","warning",{status:e.response?.status||null});
+    return channelSafe(await channelGetByRestaurant(restauranteId));
+  }
+}
 
-    var META_APP_ID = "959419306767112";
-    var META_APP_SECRET = process.env.META_APP_SECRET;
-    if (!META_APP_SECRET) return res.status(500).json({ ok: false, error: "META_APP_SECRET no configurado en Railway" });
+var channelPinAttempts=new Map();
+function channelPinAttemptKey(req,rid){return String((req.headers["x-forwarded-for"]||req.ip||req.socket&&req.socket.remoteAddress||"").split(",")[0]).trim()+":"+String(rid||"");}
+function channelPinRateCheck(req,rid){
+  var key=channelPinAttemptKey(req,rid),now=Date.now(),x=channelPinAttempts.get(key);
+  if(!x||now-x.started>15*60*1000){x={started:now,count:0};channelPinAttempts.set(key,x);}
+  return {key:key,state:x,blocked:x.count>=6};
+}
+function channelPinFail(rate){rate.state.count++;channelPinAttempts.set(rate.key,rate.state);}
+function channelPinSuccess(rate){channelPinAttempts.delete(rate.key);}
 
-    // 1. Intercambiar code por access_token
-    var tokenR = await axios.get("https://graph.facebook.com/v20.0/oauth/access_token", {
-      params: {
-        client_id: META_APP_ID,
-        client_secret: META_APP_SECRET,
-        code: code,
-        redirect_uri: "https://luz-ia-production-4cff.up.railway.app/restaurante"
-      }
-    });
-    var accessToken = tokenR.data.access_token;
-    if (!accessToken) return res.json({ ok: false, error: "No se pudo obtener access token de Meta" });
+app.post("/api/whatsapp/channel/session",async function(req,res){
+  try{
+    var restauranteId=req.body&&req.body.restaurante_id,pinValue=String(req.body&&req.body.pin||"");
+    if(!restauranteId||!/^[0-9]{4}$/.test(pinValue))return res.status(400).json({ok:false,error:"Datos inválidos"});
+    var rate=channelPinRateCheck(req,restauranteId);if(rate.blocked)return res.status(429).json({ok:false,error:"Demasiados intentos. Intenta nuevamente más tarde."});
+    var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+encodeURIComponent(restauranteId)+"&select=id,pin,estado,nombre&limit=1",{headers:sbPrivilegedHeaders()});
+    var r=rr.data&&rr.data[0];if(!r||String(r.estado||"")==="suspendido")return res.status(403).json({ok:false,error:"Restaurante no disponible"});
+    var a=Buffer.from(String(r.pin||"")),b=Buffer.from(pinValue);if(a.length!==b.length||!channelCrypto.timingSafeEqual(a,b)){channelPinFail(rate);return res.status(401).json({ok:false,error:"PIN inválido"});}
+    channelPinSuccess(rate);res.json({ok:true,session:channelIssueSession(restauranteId),expires_in:1800});
+  }catch(e){res.status(500).json({ok:false,error:e.message});}
+});
 
-    // 2. Obtener WhatsApp Business Account (WABA) del usuario
-    var wabaR = await axios.get("https://graph.facebook.com/v20.0/me/businesses", {
-      params: { access_token: accessToken, fields: "id,name,whatsapp_business_accounts" }
-    });
-    var businesses = wabaR.data.data || [];
-    if (!businesses.length) return res.json({ ok: false, error: "No se encontró cuenta de WhatsApp Business" });
+app.get("/api/whatsapp/channel/bootstrap",requireChannelSession,async function(req,res){
+  try{
+    var rid=req.query.restaurante_id;var channel=await getRestaurantChannelSafe(rid);
+    res.json({ok:true,meta:{app_id:META_APP_ID_CHANNEL,config_id:process.env.META_EMBEDDED_SIGNUP_CONFIG_ID||"",graph_version:META_GRAPH_VERSION},channel:channel});
+  }catch(e){res.status(500).json({ok:false,error:e.message});}
+});
 
-    var waba = null;
-    var phone = null;
-    // Buscar el WABA con números de teléfono
-    for (var b of businesses) {
-      if (b.whatsapp_business_accounts && b.whatsapp_business_accounts.data) {
-        for (var wa of b.whatsapp_business_accounts.data) {
-          // Obtener phone numbers de este WABA
-          try {
-            var phonesR = await axios.get("https://graph.facebook.com/v20.0/" + wa.id + "/phone_numbers", {
-              params: { access_token: accessToken, fields: "id,display_phone_number,verified_name" }
-            });
-            if (phonesR.data.data && phonesR.data.data.length) {
-              waba = wa;
-              phone = phonesR.data.data[0]; // tomar el primero
-              break;
-            }
-          } catch(e) { console.warn("[embedded-signup] Error phones:", e.message); }
-        }
-        if (phone) break;
+app.post("/api/whatsapp/channel/refresh-health",requireChannelSession,async function(req,res){
+  try{res.json({ok:true,channel:await refreshRestaurantChannelHealth(req.body.restaurante_id)});}catch(e){res.status(500).json({ok:false,error:e.message});}
+});
+
+async function processWhatsAppEmbeddedSignup(payload){
+  var code=payload.code,restaurante_id=payload.restaurante_id;
+  if(!code||!restaurante_id)throw new Error("Faltan datos");
+  var META_APP_SECRET=process.env.META_APP_SECRET;if(!META_APP_SECRET)throw new Error("META_APP_SECRET no configurado en Railway");
+  var redirectUri=process.env.META_REDIRECT_URI||"https://luz-ia-production-4cff.up.railway.app/restaurante";
+  var tokenR=await axios.get("https://graph.facebook.com/"+META_GRAPH_VERSION+"/oauth/access_token",{params:{client_id:META_APP_ID_CHANNEL,client_secret:META_APP_SECRET,code:code,redirect_uri:redirectUri},timeout:12000});
+  var accessToken=tokenR.data&&tokenR.data.access_token;if(!accessToken)throw new Error("No se pudo obtener el business token de Meta");
+
+  var wabaId=payload.waba_id||null,phoneId=payload.phone_number_id||null,businessId=payload.business_id||null,phone=null;
+  if(wabaId&&phoneId){
+    try{var p0=await axios.get("https://graph.facebook.com/"+META_GRAPH_VERSION+"/"+phoneId,{params:{fields:"id,display_phone_number,verified_name,quality_rating"},headers:{Authorization:"Bearer "+accessToken},timeout:10000});phone=p0.data||null;}catch(e0){console.warn("[embedded-signup] phone detail:",e0.message);}
+  }
+  if(!wabaId||!phoneId){
+    // Compatibilidad con el flujo anterior: descubrir WABA/teléfono server-side.
+    var wabaR=await axios.get("https://graph.facebook.com/"+META_GRAPH_VERSION+"/me/businesses",{params:{access_token:accessToken,fields:"id,name,whatsapp_business_accounts"},timeout:12000});
+    var businesses=wabaR.data&&wabaR.data.data||[];
+    for(var i=0;i<businesses.length&&!phoneId;i++){
+      var b0=businesses[i];if(!businessId)businessId=b0.id;
+      var was=b0.whatsapp_business_accounts&&b0.whatsapp_business_accounts.data||[];
+      for(var j=0;j<was.length;j++){
+        try{var pr=await axios.get("https://graph.facebook.com/"+META_GRAPH_VERSION+"/"+was[j].id+"/phone_numbers",{params:{fields:"id,display_phone_number,verified_name,quality_rating"},headers:{Authorization:"Bearer "+accessToken},timeout:10000});if(pr.data&&pr.data.data&&pr.data.data.length){wabaId=was[j].id;phone=pr.data.data[0];phoneId=phone.id;break;}}catch(ep){console.warn("[embedded-signup] phone discovery:",ep.message);}
       }
     }
-
-    if (!phone || !waba) return res.json({ ok: false, error: "No se encontró número de WhatsApp Business. Asegúrate de tener un número verificado." });
-
-    // 3. Suscribir el número al webhook de tu app
-    try {
-      await axios.post("https://graph.facebook.com/v20.0/" + waba.id + "/subscribed_apps",
-        { access_token: accessToken },
-        { headers: { "Content-Type": "application/json" } }
-      );
-    } catch(e) { console.warn("[embedded-signup] Webhook subscribe warning:", e.message); }
-
-    // 4. Guardar en Supabase
-    var svcKey = SUPABASE_SERVICE_KEY_VAL;
-    var phoneNum = phone.display_phone_number.replace(/[^0-9]/g, "");
-    await axios.patch(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restaurante_id,
-      {
-        whatsapp: phoneNum,
-        whatsapp_phone_id: phone.id,
-        waba_id: waba.id
-      },
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
-    );
-
-    invalidarCacheRestaurante();
-    console.log("[embedded-signup] ✅ Conectado:", phone.display_phone_number, "phone_id:", phone.id, "waba:", waba.id);
-    res.json({ ok: true, phone_number: phone.display_phone_number, phone_number_id: phone.id, waba_id: waba.id });
-
-  } catch(e) {
-    console.error("[embedded-signup]", e.message, e.response && JSON.stringify(e.response.data));
-    res.status(500).json({ ok: false, error: e.response ? JSON.stringify(e.response.data) : e.message });
   }
+  if(!wabaId||!phoneId)throw new Error("Meta no devolvió un WABA y número válidos");
+  if(!phone){
+    var p1=await axios.get("https://graph.facebook.com/"+META_GRAPH_VERSION+"/"+phoneId,{params:{fields:"id,display_phone_number,verified_name,quality_rating"},headers:{Authorization:"Bearer "+accessToken},timeout:10000});phone=p1.data||{};
+  }
+
+  var subscribed=false,subscribeError=null;
+  try{await axios.post("https://graph.facebook.com/"+META_GRAPH_VERSION+"/"+wabaId+"/subscribed_apps",{}, {headers:{Authorization:"Bearer "+accessToken,"Content-Type":"application/json"},timeout:10000});subscribed=true;}catch(es){subscribeError=(es.response&&JSON.stringify(es.response.data))||es.message;console.warn("[embedded-signup] webhook subscribe:",subscribeError);}
+
+  var encrypted=channelEncryptToken(accessToken),now=new Date().toISOString();
+  var saved=await channelUpsert(Object.assign({restaurante_id:restaurante_id,status:subscribed?"connected":"degraded",display_phone:phone.display_phone_number||null,phone_number_id:String(phoneId),waba_id:String(wabaId),business_id:businessId?String(businessId):null,verified_name:phone.verified_name||null,quality_rating:phone.quality_rating||null,webhook_subscribed:subscribed,connected_at:now,last_health_check_at:now,last_error:subscribeError,metadata:{oauth_token_type:tokenR.data&&tokenR.data.token_type||"bearer",oauth_expires_in:tokenR.data&&tokenR.data.expires_in||null,onboarding:"embedded_signup"}},encrypted));
+
+  var phoneNum=String(phone.display_phone_number||"").replace(/[^0-9]/g,"");
+  await axios.patch(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+encodeURIComponent(restaurante_id),{whatsapp:phoneNum||null,whatsapp_phone_id:String(phoneId),waba_id:String(wabaId)},{headers:sbPrivilegedHeaders({"Content-Type":"application/json","Prefer":"return=minimal"})});
+  invalidarCacheRestaurante();
+  await channelEvent(restaurante_id,saved&&saved.id,"channel_connected",subscribed?"success":"warning",{phone_number_id:String(phoneId),waba_id:String(wabaId),webhook_subscribed:subscribed,quality_rating:phone.quality_rating||null});
+  return channelSafe(saved);
+}
+
+app.post("/api/whatsapp/channel/connect",requireChannelSession,async function(req,res){
+  try{var channel=await processWhatsAppEmbeddedSignup(req.body||{});res.json({ok:true,channel:channel});}catch(e){console.error("[channel-connect]",e.response?JSON.stringify(e.response.data):e.message);res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
+});
+
+// Compatibilidad con el onboarding administrativo existente.
+app.post("/api/whatsapp/embedded-signup",requireAdmin,async function(req,res){
+  try{var channel=await processWhatsAppEmbeddedSignup(req.body||{});res.json({ok:true,channel:channel,phone_number:channel&&channel.display_phone,phone_number_id:channel&&channel.phone_number_id,waba_id:channel&&channel.waba_id});}catch(e){console.error("[embedded-signup]",e.response?JSON.stringify(e.response.data):e.message);res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
 });
 
 // ── SISTEMA IA — editor de prompts por tipo de negocio ────────────────────────
@@ -3701,27 +3871,27 @@ app.post("/enviar-imagen-cliente", async function(req, res) {
   var { telefono, restaurante_id, imagen, mime } = req.body;
   if (!telefono || !imagen) return res.status(400).json({ error: "Faltan datos" });
   try {
-    var token = process.env.WHATSAPP_TOKEN;
-    var pid = process.env.WHATSAPP_PHONE_ID;
-    if (!token || !pid) return res.status(500).json({ error: "Sin credenciales WA" });
+    var creds=await resolveWhatsAppCredentials(restaurante_id||null,null);
+    var token=creds.token,pid=creds.phone_number_id;
+    if(!token||!pid)return res.status(500).json({error:"Sin credenciales WhatsApp para este restaurante"});
     var buf = Buffer.from(imagen, "base64");
     var FormData = require("form-data");
     var form = new FormData();
     form.append("file", buf, { filename: "imagen.jpg", contentType: mime || "image/jpeg" });
     form.append("messaging_product", "whatsapp");
     var uploadRes = await axios.post(
-      "https://graph.facebook.com/v20.0/" + pid + "/media",
+      "https://graph.facebook.com/"+META_GRAPH_VERSION+"/" + pid + "/media",
       form, { headers: { "Authorization": "Bearer " + token, ...form.getHeaders() } }
     );
     var mediaId = uploadRes.data?.id;
     if (!mediaId) return res.status(500).json({ error: "No se pudo subir imagen" });
     var toNum = telefono.replace(/[^0-9]/g, "");
     if (!toNum.startsWith("57") && toNum.length === 10) toNum = "57" + toNum;
-    await axios.post("https://graph.facebook.com/v20.0/" + pid + "/messages",
+    await axios.post("https://graph.facebook.com/"+META_GRAPH_VERSION+"/" + pid + "/messages",
       { messaging_product: "whatsapp", to: toNum, type: "image", image: { id: mediaId } },
       { headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } }
     );
-    if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono, "📷 Imagen enviada desde el panel", "restaurante", null);
+    if (restaurante_id) guardarMensajeSupabase(restaurante_id, telefono, "📷 Imagen enviada desde el panel", "restaurante", mediaId, null);
     res.json({ ok: true });
   } catch (e) {
     console.error("enviarImagen:", e.response ? JSON.stringify(e.response.data) : e.message);
@@ -3933,6 +4103,7 @@ app.post("/api/pedido-manual", async function(req, res) {
   var nivel_fidelidad = req.body.nivel_fidelidad || null;
   var barrio = req.body.barrio || null;
   var tipo_pedido = req.body.tipo_pedido || "domicilio";
+  var pedido_adicional_de = req.body.pedido_adicional_de || null;
   // Agregar nota de descuento por rango si aplica
   if (descuento_rango > 0 && nivel_fidelidad) {
     var notaDesc = "💎 DESCUENTO " + nivel_fidelidad.toUpperCase() + " " + descuento_rango + "%";
@@ -3945,6 +4116,7 @@ app.post("/api/pedido-manual", async function(req, res) {
     var subtotal = req.body.subtotal || (Number(total) - Number(desechables) - Number(domicilio) + Number(descuento));
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var itemsArr = Array.isArray(items) ? items : items.split("\n").filter(function(l){return l.trim();});
+    if(!nombre_cliente){try{var tloc=chatTelKey(telefono),cr=await axios.get(SUPABASE_URL+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+restaurante_id+"&telefono=eq."+encodeURIComponent(tloc)+"&select=nombre_cliente&limit=1",{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}});if(cr.data&&cr.data[0])nombre_cliente=cr.data[0].nombre_cliente||null}catch(e){}}
     var payload = {
       restaurante_id: restaurante_id,
       numero_pedido: num,
@@ -3958,6 +4130,7 @@ app.post("/api/pedido-manual", async function(req, res) {
       metodo_pago: metodo_pago,
       estado: "confirmado",
       notas_especiales: notas_especiales,
+      pedido_adicional_de: pedido_adicional_de || null,
       canal: "web"
     };
     if (nombre_cliente) payload.cliente_nombre = nombre_cliente;
@@ -3969,7 +4142,8 @@ app.post("/api/pedido-manual", async function(req, res) {
       headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
     });
     if (direccion && direccion !== "Por confirmar") guardarDireccionFrecuente(restaurante_id, telefono, direccion);
-    console.log("[pedido-manual] ✅ Pedido #" + num + " desde WEB | " + nombre_cliente + " | " + metodo_pago + " | $" + total);
+    console.log("[pedido-manual] ✅ Pedido #" + num + " desde WEB | " + nombre_cliente + " | " + metodo_pago + " | $" + total + (pedido_adicional_de?" | adicional de #"+pedido_adicional_de:""));
+    if(pedido_adicional_de)guardarMensajeSupabase(restaurante_id,telefono,"🧾 Pedido adicional #"+num+" vinculado al pedido #"+pedido_adicional_de,"estado_luz",null).catch(function(){});
     // Auto-actualizar LED de mesa si es pedido de mesa
     if (direccion) actualizarEstadoMesa(restaurante_id, direccion, "confirmado").catch(function(){});
 
@@ -4144,22 +4318,17 @@ app.get("/api/comprobante/:mediaId", async function(req, res) {
     // 2. Buscar en Supabase Storage (guardado cuando llegó el comprobante)
     try {
       var svcKey = SUPABASE_SERVICE_KEY_VAL;
-      var storagePath = "comprobantes/" + mediaId + ".jpg";
-      var storageUrl = SUPABASE_URL + "/storage/v1/object/public/media/" + storagePath;
-      var sResp = await axios.get(storageUrl, { responseType: "arraybuffer", timeout: 5000 });
-      if (sResp.status === 200 && sResp.data) {
-        var buf2 = Buffer.from(sResp.data);
-        comprobanteCache[mediaId] = { mime: "image/jpeg", buffer: buf2, ts: Date.now() };
-        res.setHeader("Content-Type", "image/jpeg");
-        res.setHeader("Cache-Control", "public, max-age=604800");
-        return res.send(buf2);
+      var foundStored=null;
+      for(var extTry of ["jpg","png","webp"]){
+        try{var storagePath="comprobantes/"+mediaId+"."+extTry,storageUrl=SUPABASE_URL+"/storage/v1/object/public/media/"+storagePath;var sResp=await axios.get(storageUrl,{responseType:"arraybuffer",timeout:3500});if(sResp.status===200&&sResp.data){foundStored={data:sResp.data,mime:extTry==="png"?"image/png":extTry==="webp"?"image/webp":"image/jpeg"};break}}catch(_e){}
       }
+      if(foundStored){var buf2=Buffer.from(foundStored.data);comprobanteCache[mediaId]={mime:foundStored.mime,buffer:buf2,ts:Date.now()};res.setHeader("Content-Type",foundStored.mime);res.setHeader("Cache-Control","public, max-age=604800");return res.send(buf2)}
     } catch(eStorage) {
       // No está en Storage, intentar Meta
     }
 
     // 3. Descargar de Meta API
-    var imgData = await descargarImagenMeta(mediaId);
+    var imgData = await descargarImagenMeta(mediaId, null, req.query.restaurante_id || null);
     if (!imgData) return res.status(404).send("Imagen no disponible — puede haber expirado");
     var matches = imgData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches) return res.status(500).send("Formato inválido");
@@ -4201,7 +4370,7 @@ app.get("/api/chat/:telefono", async function(req, res) {
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + req.query.restaurante_id +
       "&or=(telefono.eq." + encodeURIComponent(telLocal) + ",telefono.eq." + encodeURIComponent(telFull) + ")" +
-      "&order=created_at.asc&limit=200",
+      "&order=created_at.asc,id.asc&limit=300",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
     res.json({ ok: true, mensajes: r.data || [] });
   } catch (e) { res.json({ ok: true, mensajes: [] }); }
@@ -4631,6 +4800,7 @@ TOTAL: [numero sin puntos ni signos]
 METODO_PAGO: [nequi|bancolombia|efectivo|datafono — el que el cliente menciono, o "pendiente" si no ha dicho]
 Al confirmar direccion: DIRECCION_LISTA:[direccion completa]
 Telefono adicional: TELEFONO_ADICIONAL:[numero]
+Nombre del cliente cuando lo conozcas: NOMBRE_CLIENTE:[nombre]
 Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
 Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
 Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
@@ -4869,7 +5039,12 @@ app.get("/api/domi-auth/me", async function(req,res){
 
 app.post("/api/domi-turno", async function(req,res){
   var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
-  try{var activo=!!req.body.activo,now=new Date().toISOString(),svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};var patch={turno_activo:activo,ultimo_acceso_at:now};if(activo)patch.turno_inicio_at=now;else patch.turno_fin_at=now;await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did,patch,{headers:h});var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did+"&select=nombre",{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}}).catch(function(){return{data:[]};});var nombre=dr.data&&dr.data[0]&&dr.data[0].nombre||"Domiciliario";var auto=null;if(activo){try{auto=await autoAsignarPendienteParaDomi(t.rid,t.did);}catch(e){}}await registrarEventoDomi(t.rid,t.did,null,activo?"turno_iniciado":"turno_finalizado",{});await registrarEventoLuz(t.rid,null,"restaurante",null,activo?"domi_turno_iniciado":"domi_turno_finalizado",activo?nombre+" inició turno":nombre+" finalizó turno",activo?"Luz lo tendrá en cuenta para nuevas asignaciones cuando el GPS esté sincronizado.":"Dejó de recibir nuevas misiones.",{domiciliario_id:t.did},"domiciliario",t.did);res.json({ok:true,turno_activo:activo,auto_asignacion:auto});}catch(e){res.status(500).json({ok:false,error:e.message});}
+
+  // ====================================================
+  // HOLA LUZ — PREMIUM SHIFT SETTLEMENT
+  // ====================================================
+  if(!req.body.activo)return res.status(409).json({ok:false,error:"Completa el cierre bilateral con el restaurante. El turno sigue abierto."});
+  try{var activo=!!req.body.activo,now=new Date().toISOString(),svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};var patch={turno_activo:activo,ultimo_acceso_at:now};if(activo)patch.turno_inicio_at=now;else patch.turno_fin_at=now;var sr=await axios.post(SUPABASE_URL+"/rest/v1/rpc/hl_premium_start_shift",{p_rid:t.rid,p_did:t.did},{headers:sbPrivilegedHeaders()});now=sr.data.turno_inicio_at;if(!sr.data.started)return res.json({ok:true,turno_activo:true,turno_inicio_at:now,auto_asignacion:null});var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did+"&select=nombre",{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}}).catch(function(){return{data:[]};});var nombre=dr.data&&dr.data[0]&&dr.data[0].nombre||"Domiciliario";var auto=null;if(activo){try{auto=await autoAsignarPendienteParaDomi(t.rid,t.did);}catch(e){}}await registrarEventoDomi(t.rid,t.did,null,activo?"turno_iniciado":"turno_finalizado",{});await registrarEventoLuz(t.rid,null,"restaurante",null,activo?"domi_turno_iniciado":"domi_turno_finalizado",activo?nombre+" inició turno":nombre+" finalizó turno",activo?"Luz lo tendrá en cuenta para nuevas asignaciones cuando el GPS esté sincronizado.":"Dejó de recibir nuevas misiones.",{domiciliario_id:t.did},"domiciliario",t.did);res.json({ok:true,turno_activo:activo,turno_inicio_at:now,auto_asignacion:auto});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
 app.post("/api/domi-perfil", async function(req,res){
@@ -5857,7 +6032,11 @@ app.post("/webhook", function(req, res) {
     var msg = value.messages[0];
     var from = msg.from;
     var phoneNumberId = value.metadata?.phone_number_id;
-    procesarEnCola(from, function() { return procesarMensaje(msg, from, phoneNumberId, null); });
+    (async function(){
+      var prep=await prepararMensajeEntrante(msg,from,phoneNumberId,null);if(prep&&prep.duplicate)return;
+      var qk=((prep&&prep.restaurante&&prep.restaurante.id)||phoneNumberId||"meta")+":"+chatTelKey(from);
+      procesarEnCola(qk, function() { return procesarMensaje(msg, from, phoneNumberId, null); });
+    })().catch(function(e){console.error("[webhook-prepersist]",e.message)});
   } catch (e) { console.error("Error webhook Meta:", e.message); }
 });
 
@@ -5924,7 +6103,11 @@ app.post("/webhook/whapi", function(req, res) {
       interactive: msg.interactive || undefined
     };
     console.log("[Whapi] Msg de", from, "canal:", channelId, "tipo:", metaMsg.type);
-    procesarEnCola(from, function() { return procesarMensaje(metaMsg, from, null, channelId); });
+    (async function(){
+      var prep=await prepararMensajeEntrante(metaMsg,from,null,channelId);if(prep&&prep.duplicate)return;
+      var qk=((prep&&prep.restaurante&&prep.restaurante.id)||channelId||"whapi")+":"+chatTelKey(from);
+      procesarEnCola(qk, function() { return procesarMensaje(metaMsg, from, null, channelId); });
+    })().catch(function(e){console.error("[whapi-prepersist]",e.message)});
   } catch(e) { console.error("Error webhook Whapi:", e.message); }
 });
 
@@ -6199,7 +6382,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     if (!userText) return;
 
     // ── DETECTAR SI ES EL DUEÑO ESCRIBIENDO ──────────────────────────────────
-    var restaurante = await getRestaurante(phoneNumberId, channelId);
+    var restaurante = msg._hlRestaurante || await getRestaurante(phoneNumberId, channelId);
     var whapiToken = restaurante ? restaurante.whapi_token : null;
     if (restaurante && restaurante.telefono_dueno) {
       var telDueno = stripCountryCode(restaurante.telefono_dueno);
@@ -6246,7 +6429,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
               ? "Gracias " + estrellasStr + ". Tomamos nota para mejorar. ¡La próxima será mejor! 💪"
               : "Lamentamos que no fue lo esperado " + estrellasStr + ". ¿Qué podemos mejorar?";
             await sendWhatsAppMessage(from, respRating, restauranteRating.whatsapp_phone_id || phoneNumberId);
-            guardarMensajeSupabase(restauranteRating.id, telRating, trimmedText, "cliente", null).catch(function(){});
+            if(!msg._hlPersisted)guardarMensajeSupabase(restauranteRating.id, telRating, trimmedText, "cliente", null).catch(function(){});
             guardarMensajeSupabase(restauranteRating.id, telRating, respRating, "restaurante", null).catch(function(){});
             console.log("[rating] ⭐ Pedido #" + pedNum + " = " + estrellas + "★ por " + telRating);
             return;
@@ -6261,7 +6444,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       if (saved) { orderState[from] = saved; console.log("orderState recuperado para:", from); }
     }
 
-    var restaurante = await getRestaurante(phoneNumberId, channelId);
+    restaurante = msg._hlRestaurante || restaurante || await getRestaurante(phoneNumberId, channelId);
     if (restaurante) {
       if (restaurante.estado !== "activo") { console.log("Restaurante inactivo"); return; }
       if (!estaEnHorario(restaurante)) {
@@ -6297,7 +6480,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
           var msgFuera = getMensaje(restaurante, "msg_fuera_horario",
             "Hola! En este momento estamos cerrados. Nuestro horario es de " + to12h(horaAp) + " a " + to12h(horaCi) + " (" + diasAct + "). Con gusto te atendemos en ese horario!");
           await sendWhatsAppMessage(from, msgFuera, phoneNumberId);
-          if (restaurante) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), userText, "cliente", null).catch(function(){});
+          if (restaurante&&!msg._hlPersisted) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), userText, "cliente", null).catch(function(){});
           if (restaurante) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), msgFuera, "restaurante", null).catch(function(){});
           return;
         }
@@ -6305,7 +6488,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       var silencio = await estaEnSilencio(restaurante.id, from);
       if (silencio) {
         console.log("SILENCIO para:", from);
-        guardarMensajeSupabase(restaurante.id, stripCountryCode(from), userText, "cliente", esImagen ? mediaId : null).catch(function(){});
+        if(!msg._hlPersisted)guardarMensajeSupabase(restaurante.id, stripCountryCode(from), userText, "cliente", esImagen ? mediaId : null).catch(function(){});
         return;
       }
     }
@@ -6327,17 +6510,22 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
         // CRÍTICO: validar ANTES de pedir una respuesta a Luz.
         imagenPagoEvaluada = true;
         var totalPedidoPre = Number(orderState[from].total || 0);
-        comprobanteVerificacion = await verificarComprobante(mediaId, totalPedidoPre);
+        comprobanteVerificacion = await verificarComprobante(mediaId, totalPedidoPre, phoneNumberId, restaurante&&restaurante.id, from);
         if (comprobanteVerificacion && comprobanteVerificacion.valido === true) {
           esComprobante = true;
+          if(restaurante)guardarMensajeSupabase(restaurante.id,stripCountryCode(from),"🛡️ Evidencia de pago pasó controles visuales estrictos · $"+Number(comprobanteVerificacion.monto||0).toLocaleString("es-CO")+" · Ref. "+String(comprobanteVerificacion.referencia||"—"),"estado_luz",null).catch(function(){});
           orderState[from].comprobanteMediaId = mediaId;
           orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
-          var stableProofUrl = await persistirComprobanteStorage(mediaId);
+          var stableProofUrl = await persistirComprobanteStorage(mediaId, phoneNumberId, restaurante&&restaurante.id);
           if (stableProofUrl) orderState[from].comprobanteUrl = stableProofUrl;
           userText = "[COMPROBANTE DE PAGO VALIDADO por el sistema. Confirma el pedido y escribe PAGO_CONFIRMADO. No vuelvas a pedir el comprobante.]";
         } else {
           esComprobante = false;
-          userText = "[La imagen recibida durante el pago NO pudo validarse como comprobante. NO confirmes el pedido y NO escribas PAGO_CONFIRMADO. Pide al cliente una captura o foto clara del comprobante de la transferencia.]";
+          var vr=comprobanteVerificacion||{};
+          if(restaurante){var secMsg=vr.duplicado?"🛡️ POSIBLE FRAUDE · comprobante/referencia reutilizado":(vr.monto!=null&&vr.monto_coincide===false?"🛡️ PAGO NO COINCIDE · evidencia $"+Number(vr.monto).toLocaleString("es-CO")+" / pedido $"+Number(totalPedidoPre).toLocaleString("es-CO"):"🛡️ COMPROBANTE REQUIERE REVISIÓN · no pasó todos los controles");guardarMensajeSupabase(restaurante.id,stripCountryCode(from),secMsg,"alerta_pregunta",null).catch(function(){});}
+          if(vr.duplicado) userText="[SEGURIDAD DE PAGO: esta evidencia coincide con un comprobante/referencia ya utilizado. NO confirmes el pedido. Indica que el pago requiere revisión del restaurante.]";
+          else if(vr.monto!=null&&vr.monto_coincide===false) userText="[SEGURIDAD DE PAGO: el comprobante muestra $"+Number(vr.monto).toLocaleString("es-CO")+" pero el pedido requiere $"+Number(totalPedidoPre).toLocaleString("es-CO")+". NO confirmes; explica la diferencia.]";
+          else userText="[La imagen parece evidencia de pago pero NO pasó la validación estricta (monto, estado, referencia y legibilidad). NO confirmes el pedido ni escribas PAGO_CONFIRMADO. Pide una captura completa y clara o indica que requiere revisión del restaurante.]";
         }
       } else {
         userText = "[El cliente envio una imagen]";
@@ -6351,7 +6539,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     if (esImagen && mediaId && !imagenPagoEvaluada) {
       var imgData = null;
       try {
-        imgData = await descargarImagenMeta(mediaId);
+        imgData = await descargarImagenMeta(mediaId, phoneNumberId, restaurante&&restaurante.id);
       } catch(eImg) {
         console.warn("[vision] No se pudo descargar imagen:", eImg.message);
       }
@@ -6369,7 +6557,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
           if (captionText) {
             userContent.push({ type: "text", text: captionText });
           } else {
-            userContent.push({ type: "text", text: "El cliente envió esta imagen. Responde con naturalidad según el contexto." });
+            userContent.push({ type: "text", text: "El cliente envió esta imagen. Analízala visualmente en el contexto de la conversación y del MENÚ ACTIVO que recibirás en el sistema: si es una captura del menú identifica productos/textos visibles y responde la duda; si es un producto compáralo con el menú sin inventar; si la intención no está clara haz una sola pregunta breve. No la trates como comprobante salvo que el backend indique que está en flujo de pago." });
           }
           conversations[from].push({ role: "user", content: userContent });
           console.log("[vision] ✅ Imagen enviada a Claude, mime:", mimeType, "size:", b64Data.length);
@@ -6418,7 +6606,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       : "No hay direccion previa registrada para este cliente.";
     var nombreClienteTexto = nombreCliente
       ? "El cliente se llama " + nombreCliente + ". Usalo naturalmente en la conversacion cuando sea apropiado, no en cada mensaje."
-      : "No tenemos el nombre de este cliente registrado.";
+      : "No tenemos el nombre de este cliente registrado. Preguntale su nombre de forma natural una sola vez al inicio de la atención (sin frenar una urgencia). Si el cliente ya dijo su nombre o responde a esa pregunta, NO vuelvas a preguntarlo: identifica el nombre y escribe al final NOMBRE_CLIENTE:[nombre] para guardarlo. Ese tag es interno y el cliente no debe verlo.";
 
     var nivelClienteTexto = nivelCliente && nivelCliente !== "bronce"
       ? "Este cliente es nivel " + nivelCliente.toUpperCase() + " en el programa de fidelidad."
@@ -6619,6 +6807,9 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     }
 
     var rawReply = claudeResponse.data.content[0].text;
+    var detectedNameMatch=rawReply.match(/NOMBRE_CLIENTE:\s*\[?([^\]\n]{2,80})\]?/i);
+    if(detectedNameMatch&&restaurante){var detectedName=String(detectedNameMatch[1]||"").trim();await guardarNombreClienteDetectado(restaurante.id,from,detectedName);nombreCliente=detectedName;}
+    rawReply=rawReply.replace(/NOMBRE_CLIENTE:\s*\[?[^\]\n]{2,80}\]?/ig,"").trim();
     console.log("RAW:", rawReply.substring(0, 600));
     console.log("[parse] tienePEDIDO_LISTO:", rawReply.indexOf("PEDIDO_LISTO") !== -1);
     console.log("[parse] tieneDIRECCION_LISTA:", rawReply.indexOf("DIRECCION_LISTA:") !== -1);
@@ -6645,7 +6836,10 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
         // el backend NO crea el pedido hasta recibir una evidencia validada.
         orderState[from].status = "esperando_pago";
         sideEffect = null;
-        cleanReply = "Recibí la imagen, pero no pude validar el comprobante con suficiente seguridad. Envíame por favor una captura o foto clara donde se vea la transferencia para poder confirmar tu pedido.";
+        var vr2=comprobanteVerificacion||{};
+        if(vr2.duplicado)cleanReply="Recibí el comprobante, pero el sistema detectó que esa evidencia o referencia ya fue utilizada. El restaurante debe revisarla antes de confirmar el pago.";
+        else if(vr2.monto!=null&&vr2.monto_coincide===false)cleanReply="Recibí el comprobante. Detecté un valor de $"+Number(vr2.monto).toLocaleString("es-CO")+" y el pedido es por $"+Number(orderState[from].total||0).toLocaleString("es-CO")+". Necesito que revises el valor o envíes el comprobante correcto.";
+        else cleanReply="Recibí la imagen, pero todavía no puedo validar el pago con suficiente seguridad. Envíame una captura completa y clara donde se vean el valor, el estado exitoso y la referencia de la transacción.";
       }
     }
 
@@ -6762,7 +6956,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     console.log("Luz: " + cleanReply.substring(0, 100));
 
     if (restaurante) {
-      guardarMensajeSupabase(restaurante.id, stripCountryCode(from), esComprobante ? "📎 Comprobante de pago" : userText, "cliente", esImagen ? mediaId : null, esComprobante && orderState[from] ? orderState[from].comprobanteUrl : null).catch(function(){});
+      if(!msg._hlPersisted) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), esComprobante ? "📎 Comprobante de pago" : userText, "cliente", esImagen ? mediaId : null, esComprobante && orderState[from] ? orderState[from].comprobanteUrl : null).catch(function(){});
       guardarMensajeSupabase(restaurante.id, stripCountryCode(from), cleanReply, "restaurante", null).catch(function(){});
     }
 
