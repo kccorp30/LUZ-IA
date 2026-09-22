@@ -2228,6 +2228,44 @@ function leerDomiToken(req){
     var data=JSON.parse(domiFromB64url(p[0]));if(!data.exp||Date.now()>data.exp)return null;return data;
   }catch(e){return null;}
 }
+
+// DOMI SESSION BRIDGE V14.3
+// Primero valida localmente para conservar el camino rápido existente.
+// Si Railway y Supabase no comparten exactamente la misma clave de firma,
+// delega SOLO la validación de esa sesión a domi-auth-direct. No altera GPS,
+// dispatch, pedidos, Finder, cuadre ni estados.
+var domiEdgeSessionCache=new Map();
+async function resolverDomiToken(req){
+  var local=leerDomiToken(req);
+  if(local)return local;
+  try{
+    var raw=(req.headers.authorization||"").replace(/^Bearer\s+/i,"")||req.headers["x-domi-token"]||"";
+    if(!raw)return null;
+    var cached=domiEdgeSessionCache.get(raw);
+    if(cached&&cached.until>Date.now())return cached.token;
+    var key=process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||SUPABASE_KEY;
+    var headers={"Content-Type":"application/json","apikey":key};
+    if(!/^sb_(publishable|secret)_/i.test(String(key||"")))headers.Authorization="Bearer "+key;
+    var r=await axios.post(
+      SUPABASE_URL+"/functions/v1/domi-auth-direct?v=4",
+      {action:"me",token:raw},
+      {headers:headers,timeout:6000,validateStatus:function(st){return st>=200&&st<500;}}
+    );
+    if(!r.data||!r.data.ok||!r.data.domiciliario)return null;
+    var d=r.data.domiciliario;
+    if(!d.id||!d.restaurante_id||d.habilitado===false)return null;
+    var verified={did:d.id,rid:d.restaurante_id,exp:Date.now()+5*60*1000,verified_by:"supabase_edge"};
+    domiEdgeSessionCache.set(raw,{token:verified,until:Date.now()+60*1000});
+    if(domiEdgeSessionCache.size>300){
+      var now=Date.now();
+      domiEdgeSessionCache.forEach(function(v,k){if(!v||v.until<=now)domiEdgeSessionCache.delete(k);});
+    }
+    return verified;
+  }catch(e){
+    console.warn("[domi-session-bridge]",e.response?JSON.stringify(e.response.data):e.message);
+    return null;
+  }
+}
 async function registrarEventoDomi(restauranteId,domiId,pedidoId,tipo,metadata){
   try{
     var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};
@@ -3365,7 +3403,7 @@ app.post("/api/menu-from-photo", requireAdmin, async function(req, res) {
 
 app.post("/api/push-subscribe", async function(req, res) {
   var body=req.body||{}, restaurante_id=body.restaurante_id, rol=String(body.rol||""), subscription=body.subscription, nombre=body.nombre||rol;
-  var domiToken=leerDomiToken(req);
+  var domiToken=await resolverDomiToken(req);
   var domiciliario_id=body.domiciliario_id||null;
   if (rol === "domiciliario" && domiToken) {
     restaurante_id = domiToken.rid;
@@ -3768,12 +3806,12 @@ async function obtenerMisionDomiciliario(restauranteId, domiciliarioId) {
   return null;
 }
 app.get("/api/domi/mision-actual", async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
   try{var mission=await obtenerMisionDomiciliario(t.rid,t.did);res.set("Cache-Control","no-store, no-cache, must-revalidate");res.json({ok:true,mision:mission,server_at:new Date().toISOString(),domiciliario_id:t.did});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 app.post("/api/domi-ubicacion",async function(req,res){
   try{
-    var t=leerDomiToken(req),body=Object.assign({},req.body||{});
+    var t=await resolverDomiToken(req),body=Object.assign({},req.body||{});
     if(t){body.restaurante_id=t.rid;body.domiciliario_id=t.did;}
     var at=await guardarUbicacionDomi(body),auto=null;
     if(body.trigger_dispatch&&body.restaurante_id&&body.domiciliario_id){try{auto=await autoAsignarPendienteParaDomi(body.restaurante_id,body.domiciliario_id);}catch(eAuto){console.warn("[gps-auto-dispatch]",eAuto.message);}}
@@ -4825,22 +4863,22 @@ app.post("/api/domi-auth/login", async function(req,res){
 });
 
 app.get("/api/domi-auth/me", async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
   try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did+"&habilitado=eq.true&select=*",{headers:h});var d=dr.data&&dr.data[0];if(!d)return res.status(401).json({ok:false,error:"Cuenta deshabilitada"});res.json({ok:true,domiciliario:domiSafe(d)});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
 app.post("/api/domi-turno", async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
   try{var activo=!!req.body.activo,now=new Date().toISOString(),svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};var patch={turno_activo:activo,ultimo_acceso_at:now};if(activo)patch.turno_inicio_at=now;else patch.turno_fin_at=now;await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did,patch,{headers:h});var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did+"&select=nombre",{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}}).catch(function(){return{data:[]};});var nombre=dr.data&&dr.data[0]&&dr.data[0].nombre||"Domiciliario";var auto=null;if(activo){try{auto=await autoAsignarPendienteParaDomi(t.rid,t.did);}catch(e){}}await registrarEventoDomi(t.rid,t.did,null,activo?"turno_iniciado":"turno_finalizado",{});await registrarEventoLuz(t.rid,null,"restaurante",null,activo?"domi_turno_iniciado":"domi_turno_finalizado",activo?nombre+" inició turno":nombre+" finalizó turno",activo?"Luz lo tendrá en cuenta para nuevas asignaciones cuando el GPS esté sincronizado.":"Dejó de recibir nuevas misiones.",{domiciliario_id:t.did},"domiciliario",t.did);res.json({ok:true,turno_activo:activo,auto_asignacion:auto});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
 app.post("/api/domi-perfil", async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
   try{var patch={},nombre=String(req.body.nombre||"").trim(),veh=String(req.body.vehiculo||"").toLowerCase(),placa=String(req.body.placa||"").trim().toUpperCase(),email=String(req.body.email||"").trim();if(nombre.length>=2)patch.nombre=nombre;if(["moto","bici","carro","otro"].includes(veh))patch.vehiculo=veh;patch.placa=placa||null;patch.email=email||null;patch.perfil_actualizado_at=new Date().toISOString();var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};var rr=await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did,patch,{headers:h});res.json({ok:true,domiciliario:domiSafe(rr.data&&rr.data[0]||patch)});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
 app.post("/api/domi-evento", async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
   var tipo=String(req.body.tipo||"");var permitidos=["recogido","llegue_cliente","problema","navegacion_iniciada"];if(permitidos.indexOf(tipo)<0)return res.status(400).json({ok:false,error:"Evento no permitido"});
   var pid=req.body.pedido_id||null,meta=req.body.metadata||{};
   if(pid && (tipo==="recogido" || tipo==="llegue_cliente")){
@@ -4864,7 +4902,7 @@ app.get("/api/domi-eventos", async function(req,res){
 
 // ── V10 · LUZ EVENT STREAM + UBICACIÓN OPERATIVA ─────────────────────────────
 app.get("/api/domi-notificaciones", async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
   try{
     var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};
     var lr=await axios.get(SUPABASE_URL+"/rest/v1/luz_eventos?restaurante_id=eq."+t.rid+"&destinatario_tipo=eq.domiciliario&destinatario_id=eq."+t.did+"&order=created_at.desc&limit=60&select=*",{headers:h}).catch(function(){return{data:[]};});
@@ -4988,7 +5026,7 @@ async function finderSessionRowByPedido(pedidoId){
   var r=await axios.get(SUPABASE_URL+"/rest/v1/luz_finder_sessions?pedido_id=eq."+encodeURIComponent(pedidoId)+"&select=*",{headers:h});return r.data&&r.data[0]||null;
 }
 app.post("/api/luz-finder/session", async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
   var pedidoId=req.body&&req.body.pedido_id;if(!pedidoId)return res.status(400).json({ok:false,error:"Falta pedido_id"});
   try{
     var p=await finderOrderForDomi(pedidoId,t);if(!p)return res.status(404).json({ok:false,error:"Esta misión no pertenece al domiciliario"});
@@ -5007,7 +5045,7 @@ app.post("/api/luz-finder/session", async function(req,res){
   }catch(e){var st=e.response&&e.response.status||500;res.status(st===401?503:500).json({ok:false,error:st===401?"Finder no pudo autenticarse con la base de datos. Revisa la clave privada de Supabase del servidor.":(e.response?JSON.stringify(e.response.data):e.message)});}
 });
 app.get("/api/luz-finder/status", async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});var pedidoId=req.query.pedido_id;if(!pedidoId)return res.status(400).json({ok:false,error:"Falta pedido_id"});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});var pedidoId=req.query.pedido_id;if(!pedidoId)return res.status(400).json({ok:false,error:"Falta pedido_id"});
   try{var p=await finderOrderForDomi(pedidoId,t);if(!p)return res.status(404).json({ok:false,error:"Misión no encontrada"});var row=await finderSessionRowByPedido(pedidoId),live=finderFresh(row)&&row.client_lat!=null&&row.client_lng!=null&&row.client_updated_at&&Date.now()-new Date(row.client_updated_at).getTime()<25000;res.json({ok:true,active:finderFresh(row),live:!!live,client:live?{lat:row.client_lat,lng:row.client_lng,accuracy:row.client_accuracy,heading:row.client_heading,updated_at:row.client_updated_at}:null,fallback:p.lat_destino!=null&&p.lng_destino!=null?{lat:p.lat_destino,lng:p.lng_destino}:null,expires_at:row&&row.expires_at||null});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 app.get("/api/luz-finder/public", async function(req,res){
@@ -5021,7 +5059,7 @@ app.post("/api/luz-finder/public/stop", async function(req,res){
   var raw=req.body&&req.body.token;if(!raw)return res.status(400).json({ok:false,error:"Enlace inválido"});try{var hash=finderHashToken(raw),svcKey=SUPABASE_SERVICE_KEY_VAL,h=finderDbHeaders({"Content-Type":"application/json","Prefer":"return=minimal"});await axios.patch(SUPABASE_URL+"/rest/v1/luz_finder_sessions?token_hash=eq."+hash,{active:false,updated_at:new Date().toISOString()},{headers:h});res.json({ok:true});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 app.get("/api/domi-ruta-pedido", async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});var pedidoId=req.query.pedido_id;if(!pedidoId)return res.status(400).json({ok:false,error:"Falta pedido_id"});try{var p=await finderOrderForDomi(pedidoId,t);if(!p)return res.status(404).json({ok:false,error:"Misión no encontrada"});var svcKey=SUPABASE_SERVICE_KEY_VAL,h=finderDbHeaders();var r=await axios.get(SUPABASE_URL+"/rest/v1/domiciliario_ruta_puntos?pedido_id=eq."+encodeURIComponent(pedidoId)+"&domiciliario_id=eq."+encodeURIComponent(t.did)+"&order=created_at.asc&limit=2000&select=lat,lng,accuracy,created_at",{headers:h});res.json({ok:true,puntos:r.data||[]});}catch(e){res.status(500).json({ok:false,error:e.message});}
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});var pedidoId=req.query.pedido_id;if(!pedidoId)return res.status(400).json({ok:false,error:"Falta pedido_id"});try{var p=await finderOrderForDomi(pedidoId,t);if(!p)return res.status(404).json({ok:false,error:"Misión no encontrada"});var svcKey=SUPABASE_SERVICE_KEY_VAL,h=finderDbHeaders();var r=await axios.get(SUPABASE_URL+"/rest/v1/domiciliario_ruta_puntos?pedido_id=eq."+encodeURIComponent(pedidoId)+"&domiciliario_id=eq."+encodeURIComponent(t.did)+"&order=created_at.asc&limit=2000&select=lat,lng,accuracy,created_at",{headers:h});res.json({ok:true,puntos:r.data||[]});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
 app.get("/api/domi-historial", async function(req,res){
@@ -7779,11 +7817,11 @@ function domiRouteLocalAgent(message,plan){
   return out(plan.summary);
 }
 app.get("/api/domi-route-plan",async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
   try{var plan=await buildDomiRoutePlan(t);res.json({ok:true,plan:plan});}catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
 });
 app.post("/api/domi-route-claim-next",async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
   try{
     var plan=await buildDomiRoutePlan(t);if(plan.current)return res.status(409).json({ok:false,error:"Termina la entrega actual antes de tomar otra."});
     var wanted=req.body&&req.body.pedido_id?String(req.body.pedido_id):null;var cand=wanted?(plan.queue||[]).find(function(x){return String(x.id)===wanted;}):(plan.queue&&plan.queue[0]);
@@ -7796,7 +7834,7 @@ app.post("/api/domi-route-claim-next",async function(req,res){
   }catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
 });
 app.post("/api/domi-luz",async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
   var message=String(req.body&&req.body.mensaje||"").trim();if(!message)return res.status(400).json({ok:false,error:"Falta mensaje"});
   try{
     var plan=await buildDomiRoutePlan(t),local=domiRouteLocalAgent(message,plan),low=kitchenNormText(message);
@@ -7879,11 +7917,11 @@ async function hlGetOpenSettlement(rid,did,day){
   var r=await hlSettlementEdge('open',{rid:rid,did:did,day:day});return r.row||null;
 }
 app.get('/api/domi-cuadre/resumen',async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:'Sesión inválida'});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:'Sesión inválida'});
   try{var s=await hlSettlementSummary(t.rid,t.did,req.query.fecha);var open=await hlGetOpenSettlement(t.rid,t.did,s.fecha_operacion);res.set('Cache-Control','no-store');res.json({ok:true,resumen:s,cuadre:open});}catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
 });
 app.post('/api/domi-cuadre/iniciar',async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:'Sesión inválida'});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:'Sesión inválida'});
   try{
     var s=await hlSettlementSummary(t.rid,t.did,req.body&&req.body.fecha);if(!s.pedidos_count)return res.status(400).json({ok:false,error:'No hay entregas completadas en esta jornada para cuadrar'});var h=sbPrivilegedHeaders(),open=await hlGetOpenSettlement(t.rid,t.did,s.fecha_operacion),dr=await axios.get(SUPABASE_URL+'/rest/v1/domiciliarios?id=eq.'+encodeURIComponent(t.did)+'&select=nombre&limit=1',{headers:h}),name=(dr.data&&dr.data[0]&&dr.data[0].nombre)||'Domiciliario';
     var body={restaurante_id:t.rid,domiciliario_id:t.did,domiciliario_nombre:name,fecha_operacion:s.fecha_operacion,estado:'iniciado',pedidos_count:s.pedidos_count,pedido_ids:s.pedido_ids,efectivo_esperado:s.efectivo_esperado,pagos_digitales:s.pagos_digitales,pagos_datafono:s.pagos_datafono,domicilios_ganados:s.domicilios_ganados,total_recaudado:s.total_recaudado,resumen:{pedidos:s.pedidos},updated_at:new Date().toISOString()};
@@ -7893,7 +7931,7 @@ app.post('/api/domi-cuadre/iniciar',async function(req,res){
   }catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
 });
 app.post('/api/domi-cuadre/presentar',async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:'Sesión inválida'});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:'Sesión inválida'});
   try{
     var id=String(req.body&&req.body.cuadre_id||''),amount=Number(req.body&&req.body.efectivo_entregado||0),notes=String(req.body&&req.body.notas||'').slice(0,500);if(!id)return res.status(400).json({ok:false,error:'Falta cuadre_id'});
     var rr=await hlSettlementEdge('get',{id:id,did:t.did,rid:t.rid}),row=rr.row;if(!row)return res.status(404).json({ok:false,error:'Cuadre no encontrado'});
@@ -7904,7 +7942,7 @@ app.post('/api/domi-cuadre/presentar',async function(req,res){
   }catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
 });
 app.get('/api/domi-cuadre/actual',async function(req,res){
-  var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:'Sesión inválida'});
+  var t=await resolverDomiToken(req);if(!t)return res.status(401).json({ok:false,error:'Sesión inválida'});
   try{var day=String(req.query.fecha||hlColombiaDateString()),r=await hlSettlementEdge('current',{rid:t.rid,did:t.did,day:day});res.set('Cache-Control','no-store');res.json({ok:true,cuadre:r.row||null});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 app.get('/api/domi-admin/cuadres',async function(req,res){
