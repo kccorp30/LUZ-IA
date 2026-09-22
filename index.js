@@ -64,6 +64,26 @@ function finderRpcHeaders(extra) {
 async function finderRpc(name,payload){
   return axios.post(SUPABASE_URL+"/rest/v1/rpc/"+name,payload,{headers:finderRpcHeaders()});
 }
+
+// AUTH TRANSPORT V16 — normalización mínima y segura para Supabase.
+// Las claves nuevas sb_secret_/sb_publishable_ NO son JWT y no deben viajar como Bearer.
+// Este interceptor NO agrega permisos, NO agrega x-finder-server y NO toca URLs externas.
+// Solo elimina un Authorization inválido cuando el mismo request ya lleva apikey.
+axios.interceptors.request.use(function(config){
+  try{
+    var url=String(config&&config.url||"");
+    if(url.indexOf(SUPABASE_URL)!==0)return config;
+    config.headers=config.headers||{};
+    var auth=config.headers.Authorization||config.headers.authorization||"";
+    var m=String(auth).match(/^Bearer\s+(sb_(?:secret|publishable)_[^\s]+)$/i);
+    if(m){
+      delete config.headers.Authorization;
+      delete config.headers.authorization;
+      if(!config.headers.apikey)config.headers.apikey=m[1];
+    }
+  }catch(e){}
+  return config;
+});
 console.log("[Supabase] URL:", SUPABASE_URL);
 console.log("[Supabase] KEY tipo:", SUPABASE_KEY.startsWith("sb_publishable") ? "anon/publishable" : "service_role");
 console.log("[Supabase] SERVICE KEY tipo:", SUPABASE_SERVICE_KEY_VAL.startsWith("sb_publishable") ? "anon/publishable (igual que KEY)" : "service_role ✅");
@@ -277,8 +297,12 @@ function getMedionocheColombiaISO() {
 
 
 function sbH(svc) {
-  var k = svc ? (SUPABASE_SERVICE_KEY_VAL) : SUPABASE_KEY;
-  return { "apikey": k, "Authorization": "Bearer " + k };
+  var k = svc ? SUPABASE_SERVICE_KEY_VAL : SUPABASE_KEY;
+  var h = { "apikey": k };
+  if (!/^sb_(secret|publishable)_/i.test(String(k || ""))) {
+    h.Authorization = "Bearer " + k;
+  }
+  return h;
 }
 
 // ── RESTAURANTE ───────────────────────────────────────────────────────────────
@@ -4567,21 +4591,24 @@ app.get("/api/domi-login", async function(req,res){
 app.post("/api/domi-auth/start", async function(req,res){
   try{
     var tel=normalizarTelefonoDomi(req.body.telefono),rid=req.body.restaurante_id||null;if(tel.length!==10)return res.status(400).json({ok:false,error:"Número de teléfono inválido"});
-    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+    var h=sbPrivilegedHeaders({"Accept":"application/json"});
     var q="/rest/v1/domiciliarios?telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=*"+(rid?"&restaurante_id=eq."+encodeURIComponent(rid):"");
     var dr=await axios.get(SUPABASE_URL+q,{headers:h,timeout:7000});var ds=dr.data||[];
     if(!ds.length)return res.status(404).json({ok:false,code:"not_invited",error:"Este número todavía no tiene una invitación de un restaurante."});
     var ids=[...new Set(ds.map(function(d){return d.restaurante_id;}).filter(Boolean))],names={};
     if(ids.length){var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=in.("+ids.join(",")+")&select=id,nombre,logo_url,ciudad",{headers:h,timeout:7000});(rr.data||[]).forEach(function(r){names[r.id]=r;});}
     res.json({ok:true,accounts:ds.map(function(d){var r=names[d.restaurante_id]||{};return Object.assign(d,{restaurante_nombre:r.nombre||"Restaurante",restaurante_logo:r.logo_url||null,restaurante_ciudad:r.ciudad||null});})});
-  }catch(e){res.status(500).json({ok:false,error:e.message});}
+  }catch(e){
+    console.error("[domi-auth/start]", e.response&&e.response.status, e.response&&e.response.data ? e.response.data : e.message);
+    res.status(502).json({ok:false,error:"No se pudo consultar tu cuenta. Intenta nuevamente."});
+  }
 });
 
 app.post("/api/domi-auth/complete", async function(req,res){
   try{
     var tel=normalizarTelefonoDomi(req.body.telefono),did=req.body.domiciliario_id,nombre=String(req.body.nombre||"").trim(),pin=String(req.body.pin||""),vehiculo=String(req.body.vehiculo||"moto").toLowerCase(),placa=String(req.body.placa||"").trim().toUpperCase();
     if(!did||tel.length!==10||nombre.length<2||!/^[0-9]{4,6}$/.test(pin))return res.status(400).json({ok:false,error:"Completa teléfono, nombre y un PIN de 4 a 6 dígitos."});
-    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};
+    var h=sbPrivilegedHeaders({"Content-Type":"application/json","Prefer":"return=representation"});
     var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+did+"&telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=*",{headers:h});var d=dr.data&&dr.data[0];if(!d)return res.status(404).json({ok:false,error:"Invitación no válida"});
     var upd={nombre:nombre,pin_hash:domiHashPin(pin),onboarding_completo:true,vehiculo:["moto","bici","carro","otro"].includes(vehiculo)?vehiculo:"moto",placa:placa||null,perfil_actualizado_at:new Date().toISOString(),ultimo_acceso_at:new Date().toISOString()};
     var pr=await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+did,upd,{headers:h});var out=(pr.data&&pr.data[0])||Object.assign({},d,upd);res.json({ok:true,token:crearDomiToken(out),domiciliario:domiSafe(out)});
@@ -4591,7 +4618,7 @@ app.post("/api/domi-auth/complete", async function(req,res){
 app.post("/api/domi-auth/login", async function(req,res){
   try{
     var tel=normalizarTelefonoDomi(req.body.telefono),did=req.body.domiciliario_id,pin=String(req.body.pin||"");if(tel.length!==10||!did||!pin)return res.status(400).json({ok:false,error:"Faltan datos"});
-    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};
+    var h=sbPrivilegedHeaders({"Content-Type":"application/json","Prefer":"return=representation"});
     var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+did+"&telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=*",{headers:h});var d=dr.data&&dr.data[0];if(!d)return res.status(404).json({ok:false,error:"Cuenta no encontrada"});
     if(!d.onboarding_completo||!d.pin_hash)return res.status(409).json({ok:false,code:"setup_required",error:"Debes terminar la configuración de tu cuenta."});
     if(!domiVerifyPin(pin,d.pin_hash))return res.status(401).json({ok:false,error:"PIN incorrecto"});
@@ -5462,7 +5489,7 @@ app.get("/api/restaurante-pin", async function(req, res) {
     // Camino estable del proyecto: publishable/anon + x-finder-server,
     // o service key real cuando Railway sí dispone de ella.
     var r = await axios.get(url, {
-      headers: finderDbHeaders({ "Accept":"application/json" }),
+      headers: sbPrivilegedHeaders({ "Accept":"application/json" }),
       timeout: 8000,
       validateStatus: function(status) {
         return status >= 200 && status < 300;
@@ -5475,8 +5502,9 @@ app.get("/api/restaurante-pin", async function(req, res) {
     var upstreamData = e && e.response ? e.response.data : null;
 
     console.error(
-      "[AUTH V15.1 restaurante-pin]",
+      "[AUTH V16 restaurante-pin]",
       "status=" + (upstreamStatus || "network"),
+      "keyType=" + (/^sb_secret_/i.test(String(SUPABASE_SERVICE_KEY_VAL||"")) ? "sb_secret" : /^sb_publishable_/i.test(String(SUPABASE_SERVICE_KEY_VAL||"")) ? "sb_publishable" : String(SUPABASE_SERVICE_KEY_VAL||"").startsWith("eyJ") ? "legacy_jwt" : "unknown"),
       upstreamData || (e && e.message) || e
     );
 
