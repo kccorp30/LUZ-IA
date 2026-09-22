@@ -4587,12 +4587,12 @@ app.get("/api/domi-login", async function(req,res){
 app.post("/api/domi-auth/start", async function(req,res){
   try{
     var tel=normalizarTelefonoDomi(req.body.telefono),rid=req.body.restaurante_id||null;if(tel.length!==10)return res.status(400).json({ok:false,error:"Número de teléfono inválido"});
-    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+    var h=sbPrivilegedHeaders({"Accept":"application/json"});
     var q="/rest/v1/domiciliarios?telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=id,restaurante_id,nombre,telefono,foto_url,onboarding_completo,vehiculo,placa,turno_activo"+(rid?"&restaurante_id=eq."+rid:"");
-    var dr=await axios.get(SUPABASE_URL+q,{headers:h});var ds=dr.data||[];
+    var dr=await axios.get(SUPABASE_URL+q,{headers:h,timeout:7000});var ds=dr.data||[];
     if(!ds.length)return res.status(404).json({ok:false,code:"not_invited",error:"Este número todavía no tiene una invitación de un restaurante."});
     var ids=[...new Set(ds.map(function(d){return d.restaurante_id;}).filter(Boolean))],names={};
-    if(ids.length){var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=in.("+ids.join(",")+")&select=id,nombre,logo_url,ciudad",{headers:h});(rr.data||[]).forEach(function(r){names[r.id]=r;});}
+    if(ids.length){var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=in.("+ids.join(",")+")&select=id,nombre,logo_url,ciudad",{headers:h,timeout:7000});(rr.data||[]).forEach(function(r){names[r.id]=r;});}
     res.json({ok:true,accounts:ds.map(function(d){var r=names[d.restaurante_id]||{};return Object.assign(d,{restaurante_nombre:r.nombre||"Restaurante",restaurante_logo:r.logo_url||null,restaurante_ciudad:r.ciudad||null});})});
   }catch(e){res.status(500).json({ok:false,error:e.message});}
 });
@@ -4611,7 +4611,7 @@ app.post("/api/domi-auth/complete", async function(req,res){
 app.post("/api/domi-auth/login", async function(req,res){
   try{
     var tel=normalizarTelefonoDomi(req.body.telefono),did=req.body.domiciliario_id,pin=String(req.body.pin||"");if(tel.length!==10||!did||!pin)return res.status(400).json({ok:false,error:"Faltan datos"});
-    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};
+    var h=sbPrivilegedHeaders({"Content-Type":"application/json","Prefer":"return=representation"});
     var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+did+"&telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=*",{headers:h});var d=dr.data&&dr.data[0];if(!d)return res.status(404).json({ok:false,error:"Cuenta no encontrada"});
     if(!d.onboarding_completo||!d.pin_hash)return res.status(409).json({ok:false,code:"setup_required",error:"Debes terminar la configuración de tu cuenta."});
     if(!domiVerifyPin(pin,d.pin_hash))return res.status(401).json({ok:false,error:"PIN incorrecto"});
@@ -4622,7 +4622,7 @@ app.post("/api/domi-auth/login", async function(req,res){
 
 app.get("/api/domi-auth/me", async function(req,res){
   var t=leerDomiToken(req);if(!t)return res.status(401).json({ok:false,error:"Sesión inválida"});
-  try{var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did+"&habilitado=eq.true&select=*",{headers:h});var d=dr.data&&dr.data[0];if(!d)return res.status(401).json({ok:false,error:"Cuenta deshabilitada"});res.json({ok:true,domiciliario:domiSafe(d)});}catch(e){res.status(500).json({ok:false,error:e.message});}
+  try{var h=sbPrivilegedHeaders({"Accept":"application/json"});var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did+"&habilitado=eq.true&select=*",{headers:h});var d=dr.data&&dr.data[0];if(!d)return res.status(401).json({ok:false,error:"Cuenta deshabilitada"});res.json({ok:true,domiciliario:domiSafe(d)});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
 app.post("/api/domi-turno", async function(req,res){
@@ -5452,20 +5452,19 @@ app.get("/api/zonas", async function(req, res) {
   } catch(e) { res.json([]); }
 });
 
-// V14.1 same-origin restaurant PIN lookup. Avoids browser -> Supabase CORS entirely.
+// AUTH V15 — RESTAURANTE: browser never talks to Supabase directly.
+// Same-origin Railway endpoint, bounded timeout, centralized Supabase headers.
 app.get("/api/restaurante-pin", async function(req, res) {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   try {
     var pin = String(req.query.pin || "").replace(/[^0-9]/g, "").slice(0, 12);
     if (!pin) return res.status(400).json({ ok:false, error:"PIN requerido" });
-    var r = await axios.get(
-      SUPABASE_URL + "/rest/v1/restaurantes?pin=eq." + encodeURIComponent(pin) + "&select=*&limit=1",
-      { headers: finderDbHeaders({ "Accept":"application/json" }) }
-    );
-    res.set("Cache-Control", "no-store");
-    res.json(r.data || []);
+    var url = SUPABASE_URL + "/rest/v1/restaurantes?pin=eq." + encodeURIComponent(pin) + "&select=*&limit=1";
+    var r = await axios.get(url, { headers: sbPrivilegedHeaders({"Accept":"application/json"}), timeout: 7000 });
+    return res.json(Array.isArray(r.data) ? r.data : []);
   } catch(e) {
-    console.error("[restaurante-pin]", e.response && e.response.data ? e.response.data : e.message);
-    res.status(e.response ? e.response.status : 500).json({ ok:false, error:"No se pudo verificar el PIN" });
+    console.error("[AUTH restaurant]", e.response && e.response.data ? e.response.data : e.message);
+    return res.status(503).json({ ok:false, error:"No se pudo verificar el acceso. Intenta nuevamente." });
   }
 });
 
