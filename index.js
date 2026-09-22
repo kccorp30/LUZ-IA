@@ -45,29 +45,9 @@ function hasPrivilegedSupabaseKey() {
 }
 const FINDER_SERVER_SECRET = process.env.FINDER_SERVER_SECRET || "1dcLIWVzcBU4eUkNV4F0TdErKozdrPFU_YoRJlUXvTRQWcRlTlxKdGybgz7UGhCK";
 
-// V14.1 AUTH TRANSPORT FIX — backend only.
-// Supabase sb_secret_/sb_publishable_ keys are opaque API keys, NOT JWTs.
-// Older routes still build `Authorization: Bearer <key>`; strip that invalid
-// header centrally without changing the working business flows.
-axios.interceptors.request.use(function(config){
-  try {
-    if (config && config.url && String(config.url).indexOf(SUPABASE_URL) === 0) {
-      config.headers = config.headers || {};
-      var apiKey = String(config.headers.apikey || config.headers["apikey"] || "");
-      var auth = String(config.headers.Authorization || config.headers.authorization || "");
-      if (/^sb_(secret|publishable)_/i.test(apiKey) && auth === "Bearer " + apiKey) {
-        try { delete config.headers.Authorization; } catch(e) {}
-        try { delete config.headers.authorization; } catch(e) {}
-      }
-      // If Railway only exposes a publishable key, preserve the server-side
-      // Finder/RLS signal already used by this project. Never expose it to browser.
-      if (/^sb_publishable_/i.test(apiKey) && FINDER_SERVER_SECRET && !config.headers["x-finder-server"]) {
-        config.headers["x-finder-server"] = FINDER_SERVER_SECRET;
-      }
-    }
-  } catch(e) {}
-  return config;
-});
+// AUTH TRANSPORT — scoped helpers only.
+// IMPORTANT: no global Axios interceptor here. V10.2 worked with each route
+// controlling its own Supabase headers; global mutation broke login/auth flows.
 function finderDbHeaders(extra) {
   if (hasPrivilegedSupabaseKey()) return sbPrivilegedHeaders(extra);
   var key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || SUPABASE_KEY;
@@ -4587,8 +4567,8 @@ app.get("/api/domi-login", async function(req,res){
 app.post("/api/domi-auth/start", async function(req,res){
   try{
     var tel=normalizarTelefonoDomi(req.body.telefono),rid=req.body.restaurante_id||null;if(tel.length!==10)return res.status(400).json({ok:false,error:"Número de teléfono inválido"});
-    var h=sbPrivilegedHeaders({"Accept":"application/json"});
-    var q="/rest/v1/domiciliarios?telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=id,restaurante_id,nombre,telefono,foto_url,onboarding_completo,vehiculo,placa,turno_activo"+(rid?"&restaurante_id=eq."+rid:"");
+    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey};
+    var q="/rest/v1/domiciliarios?telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=*"+(rid?"&restaurante_id=eq."+encodeURIComponent(rid):"");
     var dr=await axios.get(SUPABASE_URL+q,{headers:h,timeout:7000});var ds=dr.data||[];
     if(!ds.length)return res.status(404).json({ok:false,code:"not_invited",error:"Este número todavía no tiene una invitación de un restaurante."});
     var ids=[...new Set(ds.map(function(d){return d.restaurante_id;}).filter(Boolean))],names={};
@@ -4601,7 +4581,7 @@ app.post("/api/domi-auth/complete", async function(req,res){
   try{
     var tel=normalizarTelefonoDomi(req.body.telefono),did=req.body.domiciliario_id,nombre=String(req.body.nombre||"").trim(),pin=String(req.body.pin||""),vehiculo=String(req.body.vehiculo||"moto").toLowerCase(),placa=String(req.body.placa||"").trim().toUpperCase();
     if(!did||tel.length!==10||nombre.length<2||!/^[0-9]{4,6}$/.test(pin))return res.status(400).json({ok:false,error:"Completa teléfono, nombre y un PIN de 4 a 6 dígitos."});
-    var svcKey=SUPABASE_SERVICE_KEY_VAL,h=sbPrivilegedHeaders({"Content-Type":"application/json","Prefer":"return=representation"});
+    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};
     var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+did+"&telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=*",{headers:h});var d=dr.data&&dr.data[0];if(!d)return res.status(404).json({ok:false,error:"Invitación no válida"});
     var upd={nombre:nombre,pin_hash:domiHashPin(pin),onboarding_completo:true,vehiculo:["moto","bici","carro","otro"].includes(vehiculo)?vehiculo:"moto",placa:placa||null,perfil_actualizado_at:new Date().toISOString(),ultimo_acceso_at:new Date().toISOString()};
     var pr=await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+did,upd,{headers:h});var out=(pr.data&&pr.data[0])||Object.assign({},d,upd);res.json({ok:true,token:crearDomiToken(out),domiciliario:domiSafe(out)});
@@ -4611,7 +4591,7 @@ app.post("/api/domi-auth/complete", async function(req,res){
 app.post("/api/domi-auth/login", async function(req,res){
   try{
     var tel=normalizarTelefonoDomi(req.body.telefono),did=req.body.domiciliario_id,pin=String(req.body.pin||"");if(tel.length!==10||!did||!pin)return res.status(400).json({ok:false,error:"Faltan datos"});
-    var h=sbPrivilegedHeaders({"Content-Type":"application/json","Prefer":"return=representation"});
+    var svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};
     var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+did+"&telefono=eq."+encodeURIComponent(tel)+"&habilitado=eq.true&select=*",{headers:h});var d=dr.data&&dr.data[0];if(!d)return res.status(404).json({ok:false,error:"Cuenta no encontrada"});
     if(!d.onboarding_completo||!d.pin_hash)return res.status(409).json({ok:false,code:"setup_required",error:"Debes terminar la configuración de tu cuenta."});
     if(!domiVerifyPin(pin,d.pin_hash))return res.status(401).json({ok:false,error:"PIN incorrecto"});
