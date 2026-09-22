@@ -2914,16 +2914,17 @@ for(var _i=0;_i<=9;_i++){(function(n){var el=document.getElementById("k"+n);if(e
 document.getElementById("kdel").addEventListener("click",function(){pin=pin.slice(0,-1);dots();});
 
 async function getRestaurantePorPinSeguro(pinValue){
-  var directUrl=SU+"/rest/v1/restaurantes?pin=eq."+encodeURIComponent(pinValue)+"&select=*&limit=1";
-  var rd=await fetch(directUrl,{
-    method:"GET",
-    headers:{"apikey":SK,"Accept":"application/json"},
-    cache:"no-store"
+  var edgeUrl=SU+"/functions/v1/hl-restaurant-pin";
+  var rd=await fetch(edgeUrl,{
+    method:"POST",
+    headers:{"apikey":SK,"Content-Type":"application/json","Accept":"application/json"},
+    cache:"no-store",
+    body:JSON.stringify({pin:String(pinValue||"")})
   });
-  var txt=await rd.text(),dd=[];
-  try{dd=txt?JSON.parse(txt):[];}catch(e){}
-  if(!rd.ok)throw new Error((dd&&dd.message)||txt||("Supabase HTTP "+rd.status));
-  return Array.isArray(dd)?dd:[];
+  var txt=await rd.text(),dd={};
+  try{dd=txt?JSON.parse(txt):{};}catch(e){}
+  if(!rd.ok||!dd||dd.ok!==true)throw new Error((dd&&dd.error)||txt||("Supabase Edge HTTP "+rd.status));
+  return Array.isArray(dd.data)?dd.data:[];
 }
 
 async function chkPin(){
@@ -8349,7 +8350,7 @@ window.renderOrdersV5=function(){
 </style>
 <script>
 (function(){
- console.log('HOLA LUZ — BUILD V10 · DISPATCH FLOW');
+ console.log('HOLA LUZ — BUILD V10.1 · SUPABASE EDGE AUTH');
  var v10EventCursor=null,v10EventPoll=null,v10BarTimer=null,v10Seen={};
  function esc10(v){return typeof escHtml==='function'?escHtml(String(v==null?'':v)):String(v==null?'':v)}
  function isPickup10(p){var t=String(p&&p.tipo_pedido||'').toLowerCase(),d=String(p&&p.direccion||'').toUpperCase();return t==='recoger'||t==='pickup'||d.indexOf('RECOGER')===0}
