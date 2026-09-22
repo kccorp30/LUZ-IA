@@ -242,13 +242,13 @@ function nextOrderNumber() { return ++orderCounter; }
 
 // ── COLA PARALELA ─────────────────────────────────────────────────────────────
 const colasPorCliente = new Map();
-var DELAY_RESPUESTA_MS = Math.max(250, Number(process.env.LUZ_CHAT_DEBOUNCE_MS || 350)); // respuesta fluida; configurable
+var DELAY_RESPUESTA_MS = Math.max(0, Number(process.env.LUZ_CHAT_DEBOUNCE_MS || 0)); // sin espera artificial; la cola solo preserva orden
 
 function procesarEnCola(from, tarea) {
   if (!colasPorCliente.has(from)) colasPorCliente.set(from, Promise.resolve());
   var cola = colasPorCliente.get(from);
   var nueva = cola.then(function() {
-    return new Promise(function(resolve) { setTimeout(resolve, DELAY_RESPUESTA_MS); })
+    return (DELAY_RESPUESTA_MS > 0 ? new Promise(function(resolve) { setTimeout(resolve, DELAY_RESPUESTA_MS); }) : Promise.resolve())
       .then(function() { return tarea(); })
       .catch(function(err) { console.error("Error cola " + from + ":", err.message); });
   });
@@ -756,7 +756,7 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
       restaurante_id: restauranteId, numero_pedido: pedidoData.orderNumber,
       cliente_tel: stripCountryCode(pedidoData.phone), items: pedidoData.items,
       subtotal, desechables: pedidoData.desechables, domicilio: pedidoData.domicilio,
-      total: pedidoData.total, direccion: pedidoData.address,
+      total: pedidoData.total, direccion: hlCleanOrderAddress(pedidoData.address) || "Por confirmar",
       metodo_pago: pedidoData.paymentMethod, estado: "confirmado",
       notas_especiales: pedidoData.notasEspeciales || null,
       pedido_adicional_de: pedidoData.pedidoAdicionalDe || null,
@@ -768,7 +768,24 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
     var response = await axios.post(SUPABASE_URL + "/rest/v1/pedidos", payload, {
       headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
     });
-    console.log("Pedido #" + pedidoData.orderNumber + " guardado. ID:", response.data[0]?.id || "?");
+    var savedOrder = response.data && response.data[0] ? response.data[0] : null;
+    console.log("Pedido #" + pedidoData.orderNumber + " guardado. ID:", savedOrder?.id || "?");
+    // Verificación de persistencia del comprobante. Si el pedido nació desde una
+    // evidencia validada, mediaId y URL forman parte del pedido y se reafirman
+    // inmediatamente sobre la fila recién creada.
+    if (savedOrder && pedidoData.comprobanteMediaId) {
+      var proofPatch = {
+        comprobante_media_id: String(pedidoData.comprobanteMediaId),
+        comprobante_url: pedidoData.comprobanteUrl || ("/api/comprobante/" + pedidoData.comprobanteMediaId),
+        updated_at: new Date().toISOString()
+      };
+      await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + encodeURIComponent(savedOrder.id), proofPatch, {
+        headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type":"application/json", "Prefer":"return=minimal" }
+      });
+      savedOrder.comprobante_media_id = proofPatch.comprobante_media_id;
+      savedOrder.comprobante_url = proofPatch.comprobante_url;
+      console.log("[pedido-proof] ✅ Comprobante ligado a pedido #" + pedidoData.orderNumber + " · " + proofPatch.comprobante_media_id);
+    }
     // Notificar al dueño por WhatsApp
     try {
       var restInfo = restCache ? Object.values(restCache).find(function(r){ return r && r.id === restauranteId; }) : null;
@@ -1240,51 +1257,149 @@ async function sendWhatsAppImage(to, imageUrl, caption, phoneId, restauranteId) 
 async function verificarComprobante(mediaId, totalEsperado, phoneNumberId, restauranteId, telefono) {
   try {
     var imgData = await descargarImagenMeta(mediaId, phoneNumberId, restauranteId);
-    if (!imgData) return { valido:false, decision:"revision_manual", razon:"No se pudo descargar la imagen" };
+    if (!imgData) return { valido:false, decision:"revision_manual", razon:"No se pudo descargar la imagen", hard_failures:["imagen_no_disponible"] };
     var base64, mediaType;
-    if (typeof imgData === "string" && imgData.startsWith("data:")) {var parts=imgData.split(",");base64=parts[1];mediaType=(parts[0].split(":")[1]||"image/jpeg").split(";")[0];}
-    else {base64=Buffer.from(imgData).toString("base64");mediaType="image/jpeg";}
-    if(!base64||base64.length<100)return {valido:false,decision:"revision_manual",razon:"Imagen vacía o ilegible"};
-    var rawBuf=Buffer.from(base64,"base64"),sha256=channelCrypto.createHash("sha256").update(rawBuf).digest("hex");
-    var paymentCfg={};
-    try{var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+encodeURIComponent(restauranteId)+"&select=nombre,metodo_pago_nequi,metodo_pago_banco,metodo_pago_nombre",{headers:sbPrivilegedHeaders()});paymentCfg=rr.data&&rr.data[0]||{}}catch(_e){}
-    var prompt=[
-      "Eres un extractor forense de evidencia de pago. NO decides si el dinero existe realmente: una imagen puede ser falsificada.",
-      "Lee SOLO lo visible. Si un dato no se ve con claridad devuelve null. Nunca completes ni inventes referencias, montos, nombres o estados.",
-      "Monto esperado COP: "+String(Number(totalEsperado||0))+".",
-      "Destino esperado si aparece en pantalla: negocio="+String(paymentCfg.nombre||"")+", titular="+String(paymentCfg.metodo_pago_nombre||"")+", Nequi="+String(paymentCfg.metodo_pago_nequi||"")+", Banco="+String(paymentCfg.metodo_pago_banco||"")+".",
-      "Extrae: es_comprobante, monto, moneda, entidad, referencia, fecha_hora, destinatario, cuenta_destino, estado_pago (exitoso|pendiente|fallido|desconocido), señales_manipulacion (ninguna|posible|alta), confianza_lectura de 0 a 1 y razon.",
-      "Una captura que solo muestre formulario, saldo, chat, comprobante recortado sin monto/referencia o transferencia pendiente NO es evidencia suficiente.",
-      "Responde SOLO JSON válido."
+    if (typeof imgData === "string" && imgData.startsWith("data:")) { var parts=imgData.split(","); base64=parts[1]; mediaType=(parts[0].split(":")[1]||"image/jpeg").split(";")[0]; }
+    else { base64=Buffer.from(imgData).toString("base64"); mediaType="image/jpeg"; }
+    if(!base64||base64.length<100) return {valido:false,decision:"revision_manual",razon:"Imagen vacía o ilegible",hard_failures:["imagen_ilegible"]};
+
+    var rawBuf=Buffer.from(base64,"base64");
+    var sha256=channelCrypto.createHash("sha256").update(rawBuf).digest("hex");
+
+    // PASO 1 — extracción ciega. CRÍTICO: el modelo NO recibe el monto ni el destinatario esperado.
+    // Esto evita contaminar la lectura visual con los datos del pedido.
+    var extractionPrompt=[
+      "Analiza EXCLUSIVAMENTE lo que aparece visible en esta imagen de un posible comprobante de pago.",
+      "No conoces el pedido, el monto esperado ni el destinatario esperado. No los infieras.",
+      "Si un dato no está claramente visible devuelve null. No completes datos por contexto ni por probabilidad.",
+      "Devuelve SOLO JSON válido con estas claves:",
+      "es_comprobante (boolean), monto_cop (numero entero o null), monto_texto (string o null), moneda (string o null), entidad (string o null), referencia (string o null), fecha_iso (ISO-8601 o null), fecha_texto (string o null), destinatario (string o null), cuenta_destino (string o null), estado_pago (exitoso|pendiente|fallido|desconocido), texto_estado_visible (string o null), senales_manipulacion (ninguna|posible|alta), confianza_lectura (0..1), razon (string).",
+      "Para estado_pago=exitoso debe existir en la imagen una señal visible de finalización/éxito (por ejemplo transacción exitosa, realizada, enviada, completada o una pantalla final inequívoca). Si solo hay formulario, QR para verificar, saldo, chat o datos de transferencia sin confirmación visible, usa desconocido o pendiente.",
+      "Una captura puede ser falsa: aquí SOLO extraes lo visible, no certificas autenticidad."
     ].join(" ");
-    var resp=await axios.post("https://api.anthropic.com/v1/messages",{model:"claude-haiku-4-5-20251001",max_tokens:400,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mediaType,data:base64}},{type:"text",text:prompt}]}]},{headers:{"x-api-key":process.env.ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","Content-Type":"application/json"}});
-    var outText=resp.data&&resp.data.content&&resp.data.content[0]&&resp.data.content[0].text||"{}",a=outText.indexOf("{"),b=outText.lastIndexOf("}");if(a<0||b<a)throw new Error("JSON de visión inválido");
+
+    var resp=await axios.post("https://api.anthropic.com/v1/messages",{
+      model:"claude-haiku-4-5-20251001",max_tokens:420,
+      messages:[{role:"user",content:[
+        {type:"image",source:{type:"base64",media_type:mediaType,data:base64}},
+        {type:"text",text:extractionPrompt}
+      ]}]
+    },{headers:{"x-api-key":process.env.ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","Content-Type":"application/json"},timeout:18000});
+
+    var outText=resp.data&&resp.data.content&&resp.data.content[0]&&resp.data.content[0].text||"{}";
+    var a=outText.indexOf("{"),b=outText.lastIndexOf("}");
+    if(a<0||b<a) throw new Error("JSON de visión inválido");
     var v=JSON.parse(outText.slice(a,b+1));
-    function moneyN(x){if(x==null||x==='')return null;if(typeof x==='number')return Math.round(x);var s=String(x).replace(/[^0-9]/g,'');return s?Number(s):null}
-    var monto=moneyN(v.monto),esperado=Math.round(Number(totalEsperado||0)),tol=Math.max(100,Math.round(esperado*0.002));
-    var montoCoincide=esperado>0&&monto!=null&&Math.abs(monto-esperado)<=tol;
-    var estado=String(v.estado_pago||'desconocido').toLowerCase(),estadoOk=['exitoso','completado','aprobado','realizado'].indexOf(estado)!==-1;
-    var referencia=String(v.referencia||'').trim(),refOk=referencia.length>=4;
-    var conf=Math.max(0,Math.min(1,Number(v.confianza_lectura||0))),manip=String(v.señales_manipulacion||v.senales_manipulacion||'ninguna').toLowerCase();
+
+    // PASO 2 — obtener la configuración real DESPUÉS de leer la imagen.
+    var paymentCfg={};
+    try {
+      var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+encodeURIComponent(restauranteId)+"&select=nombre,metodo_pago_nequi,metodo_pago_banco,metodo_pago_nombre",{headers:sbPrivilegedHeaders()});
+      paymentCfg=rr.data&&rr.data[0]||{};
+    } catch(_e) {}
+
+    function moneyN(x){
+      if(x==null||x==='')return null;
+      if(typeof x==='number'&&Number.isFinite(x))return Math.round(x);
+      var s=String(x).trim().replace(/\s/g,'').replace(/[^0-9.,-]/g,'');
+      if(!s)return null;
+      // Formato CO: 13.000,00 -> 13000; 23.400 -> 23400; 13000 -> 13000
+      if(s.indexOf(',')!==-1 && s.indexOf('.')!==-1){
+        if(s.lastIndexOf(',')>s.lastIndexOf('.')) s=s.replace(/\./g,'').replace(',','.');
+        else s=s.replace(/,/g,'');
+      } else if(s.indexOf(',')!==-1){
+        var cp=s.split(',');
+        if(cp[cp.length-1].length===2) s=cp.slice(0,-1).join('')+'.'+cp[cp.length-1]; else s=s.replace(/,/g,'');
+      } else if(s.indexOf('.')!==-1){
+        var dp=s.split('.');
+        if(dp.length>1 && dp[dp.length-1].length===3) s=s.replace(/\./g,'');
+      }
+      var n=Number(s);return Number.isFinite(n)?Math.round(n):null;
+    }
     function normText(x){return String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'')}
     function digits(x){return String(x||'').replace(/\D/g,'')}
-    var dst=normText(v.destinatario),acct=digits(v.cuenta_destino),expectedName=normText(paymentCfg.metodo_pago_nombre||paymentCfg.nombre||''),nequiDigits=digits(paymentCfg.metodo_pago_nequi),bankDigits=digits(paymentCfg.metodo_pago_banco);
-    var recipientMatch=!!(expectedName&&dst&&(dst.indexOf(expectedName)!==-1||expectedName.indexOf(dst)!==-1));
-    var accountMatch=!!(acct&&((nequiDigits&&acct.endsWith(nequiDigits.slice(-4)))||(bankDigits&&acct.endsWith(bankDigits.slice(-4)))));
-    var hasDestinationConfig=!!(expectedName||nequiDigits||bankDigits),destinationOk=!hasDestinationConfig||recipientMatch||accountMatch;
-    var fechaRaw=String(v.fecha_hora||'').trim(),fechaOk=false,fechaMs=NaN;
-    if(fechaRaw){fechaMs=Date.parse(fechaRaw);if(Number.isFinite(fechaMs)){var age=Date.now()-fechaMs;fechaOk=age>=-24*60*60*1000&&age<=72*60*60*1000}}
+
+    var monto=moneyN(v.monto_cop!=null?v.monto_cop:v.monto_texto);
+    var esperado=Math.round(Number(totalEsperado||0));
+    // Para COP el valor debe coincidir exactamente. Solo toleramos 1 peso por normalización.
+    var montoCoincide=esperado>0&&monto!=null&&Math.abs(monto-esperado)<=1;
+    var estado=String(v.estado_pago||'desconocido').toLowerCase();
+    var estadoOk=['exitoso','completado','aprobado','realizado','enviado'].indexOf(estado)!==-1;
+    var referencia=String(v.referencia||'').trim();
+    var refOk=referencia.length>=5;
+    var conf=Math.max(0,Math.min(1,Number(v.confianza_lectura||0)));
+    var manip=String(v.senales_manipulacion||v.señales_manipulacion||'ninguna').toLowerCase();
+
+    var dst=normText(v.destinatario),acct=digits(v.cuenta_destino);
+    var expectedName=normText(paymentCfg.metodo_pago_nombre||paymentCfg.nombre||'');
+    var nequiRaw=String(paymentCfg.metodo_pago_nequi||'').trim();
+    var bankRaw=String(paymentCfg.metodo_pago_banco||'').trim();
+    var nequiDigits=digits(nequiRaw),bankDigits=digits(bankRaw);
+    var recipientMatch=!!(expectedName&&dst&&(dst===expectedName||dst.indexOf(expectedName)!==-1||expectedName.indexOf(dst)!==-1));
+    var accountMatch=false;
+    if(acct){
+      if(nequiDigits.length>=7 && (acct===nequiDigits||acct.endsWith(nequiDigits.slice(-7)))) accountMatch=true;
+      if(bankDigits.length>=7 && (acct===bankDigits||acct.endsWith(bankDigits.slice(-7)))) accountMatch=true;
+    }
+    // Si hay titular configurado, un nombre visible diferente es un fallo duro.
+    // Una cuenta coincidente puede respaldar el destino, pero NO borra un nombre visible contradictorio.
+    var recipientVisible=!!dst;
+    var recipientContradiction=!!(expectedName&&recipientVisible&&!recipientMatch);
+    var destinationOk=false;
+    if(expectedName){ destinationOk=recipientMatch && !recipientContradiction; }
+    else if((nequiDigits.length>=7||bankDigits.length>=7)){ destinationOk=accountMatch; }
+
+    var fechaRaw=String(v.fecha_iso||'').trim(),fechaOk=false,fechaMs=NaN;
+    if(fechaRaw){
+      fechaMs=Date.parse(fechaRaw);
+      if(Number.isFinite(fechaMs)){var age=Date.now()-fechaMs;fechaOk=age>=-2*60*60*1000&&age<=36*60*60*1000;}
+    }
+
     var duplicate=false,duplicateReason='';
-    try{var ev=await axios.get(SUPABASE_URL+"/rest/v1/luz_eventos?restaurante_id=eq."+encodeURIComponent(restauranteId)+"&tipo=eq.comprobante_verificado&order=created_at.desc&limit=200&select=metadata,created_at",{headers:sbPrivilegedHeaders()});(ev.data||[]).some(function(e){var m=e.metadata||{};if(typeof m==='string'){try{m=JSON.parse(m)}catch(_){m={}}}if(m.sha256===sha256){duplicate=true;duplicateReason='imagen reutilizada';return true}if(refOk&&m.referencia&&String(m.referencia).trim()===referencia){duplicate=true;duplicateReason='referencia reutilizada';return true}return false})}catch(_dup){}
-    var score=0;if(v.es_comprobante===true)score+=15;if(montoCoincide)score+=25;if(estadoOk)score+=15;if(refOk)score+=12;if(destinationOk)score+=12;if(fechaOk)score+=10;if(conf>=.92)score+=11;else if(conf>=.86)score+=6;if(manip==='posible')score-=30;if(manip==='alta')score-=65;if(duplicate)score-=75;
-    // Screenshot-only validation can reduce fraud risk but cannot prove bank settlement.
-    // Auto-confirm is intentionally strict: full amount/status/reference + recent date + recipient/account evidence.
-    var strictPass=v.es_comprobante===true&&montoCoincide&&estadoOk&&refOk&&destinationOk&&fechaOk&&conf>=.88&&!duplicate&&manip==='ninguna';
-    var result={valido:strictPass,decision:strictPass?'evidencia_consistente':(v.es_comprobante===true?'revision_manual':'rechazado'),score:Math.max(0,Math.min(100,score)),monto:monto,monto_esperado:esperado,monto_coincide:montoCoincide,entidad:v.entidad||null,referencia:referencia||null,fecha_hora:v.fecha_hora||null,fecha_valida:fechaOk,destinatario:v.destinatario||null,cuenta_destino:v.cuenta_destino||null,destino_coincide:destinationOk,recipient_match:recipientMatch,account_match:accountMatch,estado_pago:estado,confianza:conf,duplicado:duplicate,senales_manipulacion:manip,razon:duplicate?("Posible fraude: "+duplicateReason):String(v.razon||'')};
-    try{await registrarEventoLuz(restauranteId,null,"restaurante",null,"comprobante_verificado","Comprobante evaluado",result.razon||result.decision,{sha256:sha256,referencia:result.referencia,monto:result.monto,monto_esperado:esperado,score:result.score,decision:result.decision,duplicado:duplicate,telefono:chatTelKey(telefono)},"cliente",chatTelKey(telefono))}catch(_evt){}
-    console.log("[comprobante-strict]",JSON.stringify({decision:result.decision,score:result.score,monto:result.monto,esperado:esperado,dup:duplicate}));
+    try{
+      var ev=await axios.get(SUPABASE_URL+"/rest/v1/luz_eventos?restaurante_id=eq."+encodeURIComponent(restauranteId)+"&tipo=eq.comprobante_verificado&order=created_at.desc&limit=250&select=metadata,created_at",{headers:sbPrivilegedHeaders()});
+      (ev.data||[]).some(function(e){var m=e.metadata||{};if(typeof m==='string'){try{m=JSON.parse(m)}catch(_){m={}}}if(m.sha256===sha256){duplicate=true;duplicateReason='imagen reutilizada';return true}if(refOk&&m.referencia&&String(m.referencia).trim()===referencia){duplicate=true;duplicateReason='referencia reutilizada';return true}return false});
+    }catch(_dup){}
+
+    var hard=[];
+    if(v.es_comprobante!==true)hard.push('no_es_comprobante');
+    if(monto==null)hard.push('monto_no_legible');
+    else if(!montoCoincide)hard.push('monto_no_coincide');
+    if(!estadoOk)hard.push('estado_no_confirmado');
+    if(!refOk)hard.push('referencia_ausente');
+    if(expectedName && !recipientVisible)hard.push('destinatario_no_visible');
+    if(recipientContradiction)hard.push('destinatario_no_coincide');
+    if(!destinationOk)hard.push('destino_no_verificado');
+    if(!fechaOk)hard.push('fecha_no_verificada');
+    if(conf<0.90)hard.push('lectura_baja_confianza');
+    if(manip==='posible'||manip==='alta')hard.push('posible_manipulacion');
+    if(duplicate)hard.push('comprobante_duplicado');
+
+    var strictPass=hard.length===0;
+    var result={
+      valido:strictPass,
+      decision:strictPass?'evidencia_consistente':(v.es_comprobante===true?'revision_manual':'rechazado'),
+      monto:monto,monto_esperado:esperado,monto_coincide:montoCoincide,
+      entidad:v.entidad||null,referencia:referencia||null,
+      fecha_hora:v.fecha_iso||v.fecha_texto||null,fecha_valida:fechaOk,
+      destinatario:v.destinatario||null,cuenta_destino:v.cuenta_destino||null,
+      destinatario_esperado:paymentCfg.metodo_pago_nombre||paymentCfg.nombre||null,
+      destino_coincide:destinationOk,recipient_match:recipientMatch,account_match:accountMatch,
+      estado_pago:estado,texto_estado_visible:v.texto_estado_visible||null,
+      confianza:conf,duplicado:duplicate,senales_manipulacion:manip,
+      hard_failures:hard,
+      razon:duplicate?("Posible fraude: "+duplicateReason):(hard.length?("Validación bloqueada: "+hard.join(', ')):String(v.razon||'Evidencia consistente'))
+    };
+
+    try{
+      await registrarEventoLuz(restauranteId,null,"restaurante",null,"comprobante_verificado","Comprobante evaluado",result.razon,{sha256:sha256,referencia:result.referencia,monto:result.monto,monto_esperado:esperado,destinatario:result.destinatario,destinatario_esperado:result.destinatario_esperado,decision:result.decision,hard_failures:hard,duplicado:duplicate,telefono:chatTelKey(telefono)},"cliente",chatTelKey(telefono));
+    }catch(_evt){}
+    console.log("[comprobante-v2]",JSON.stringify({decision:result.decision,monto:result.monto,esperado:esperado,destinatario:result.destinatario,destEsperado:result.destinatario_esperado,hard:hard}));
     return result;
-  } catch(e) {console.error("[comprobante] error:",e.message);return {valido:false,decision:"revision_manual",razon:"No se pudo verificar automáticamente con seguridad"};}
+  } catch(e) {
+    console.error("[comprobante] error:",e.message);
+    return {valido:false,decision:"revision_manual",razon:"No se pudo verificar automáticamente con seguridad",hard_failures:["error_verificacion"]};
+  }
 }
 
 async function persistirComprobanteStorage(mediaId, phoneNumberId, restauranteId) {
@@ -1569,14 +1684,48 @@ async function printTicket(orderData) {
 }
 
 // ── PARSE REPLY ───────────────────────────────────────────────────────────────
+function hlTaggedLine(text, tag) {
+  var src=String(text||"");
+  var safeTag=String(tag||"").replace(/[^A-Za-z0-9_]/g,"");
+  var re=new RegExp("(?:^|\\n)"+safeTag+"\\s*:?\\s*([^\\r\\n]+)","i");
+  var m=src.match(re);
+  return m ? String(m[1]||"").trim() : null;
+}
+function hlCleanOrderAddress(value) {
+  var v=String(value||"").replace(/\s+/g," ").trim();
+  if(!v)return null;
+  // Defensive cutoff for legacy/model spillover. Address data must never absorb
+  // later conversational/payment text.
+  var stops=[
+    /\s+(?:si|sí)\s+as[ií]\s+est[aá]\s+bien\b/i,
+    /\s+perfecto[,.!]?\s+(?:para\s+pagar|busca\s+la\s+llave)/i,
+    /\s+(?:para\s+pagar\s+por|pago\s+por)\s+(?:nequi|bancolombia)/i,
+    /\s+metodo_pago\s*:/i,
+    /\s+pago_(?:confirmado|efectivo|datafono)\b/i,
+    /\s+pedido_listo\s*:/i
+  ];
+  var cut=v.length;
+  stops.forEach(function(re){var m=v.match(re);if(m&&m.index<cut)cut=m.index;});
+  v=v.slice(0,cut).trim().replace(/[|,;\-]+$/g,"").trim();
+  return v ? v.slice(0,220) : null;
+}
+function hlExtractAddressFromConversation(list) {
+  var rows=Array.isArray(list)?list:[];
+  for(var i=rows.length-1;i>=0;i--){
+    var raw=String(rows[i]&&rows[i].content||"");
+    var tagged=hlTaggedLine(raw,"DIRECCION_LISTA");
+    var clean=hlCleanOrderAddress(tagged);
+    if(clean)return clean;
+  }
+  return null;
+}
 function parseReply(reply, from) {
   var cleanReply = reply;
   var sideEffect = null;
 
   var preParsedDir = null;
   if (reply.indexOf("DIRECCION_LISTA:") !== -1) {
-    var preDir = reply.match(/DIRECCION_LISTA:(.+)/);
-    if (preDir) preParsedDir = preDir[1].trim();
+    preParsedDir = hlCleanOrderAddress(hlTaggedLine(reply,"DIRECCION_LISTA"));
   }
 
   if (reply.indexOf("PEDIDO_LISTO:") !== -1) {
@@ -1615,13 +1764,13 @@ function parseReply(reply, from) {
   }
 
   if (reply.indexOf("DIRECCION_LISTA:") !== -1) {
-    var dirMatch = reply.match(/DIRECCION_LISTA:(.+)/);
-    if (dirMatch && orderState[from]) {
-      orderState[from].address = dirMatch[1].trim();
+    var direccionSegura = hlCleanOrderAddress(hlTaggedLine(reply,"DIRECCION_LISTA"));
+    if (direccionSegura && orderState[from]) {
+      orderState[from].address = direccionSegura;
       orderState[from].status = "esperando_pago";
       sideEffect = "direccion_registrada";
     }
-    cleanReply = cleanReply.replace(/DIRECCION_LISTA:.+/g, "").trim();
+    cleanReply = cleanReply.replace(/DIRECCION_LISTA:[^\r\n]*/gi, "").trim();
   }
 
   if (reply.indexOf("TELEFONO_ADICIONAL:") !== -1) {
@@ -1697,10 +1846,16 @@ function parseReply(reply, from) {
   }
 
   if (reply.indexOf("PAGO_CONFIRMADO") !== -1) {
-    if (orderState[from]) {
+    // Seguridad: el tag del modelo NO autoriza pagos digitales.
+    // Solo el validador backend puede activar comprobanteValidado para esa evidencia.
+    if (orderState[from] && orderState[from].comprobanteValidado === true) {
       orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
       orderState[from].status = "confirmado";
       sideEffect = "pago_confirmado";
+    } else {
+      console.warn("[pago] PAGO_CONFIRMADO ignorado: no existe evidencia validada por backend para", from);
+      if (orderState[from]) orderState[from].status = "esperando_pago";
+      if (sideEffect === "pago_confirmado") sideEffect = null;
     }
     cleanReply = cleanReply.replace("PAGO_CONFIRMADO", "").trim();
   }
@@ -6497,8 +6652,10 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     var imagenPagoEvaluada = false;
     var comprobanteVerificacion = null;
 
-    // Memorizar el método elegido ANTES de que llegue la imagen.
-    if (!esImagen && orderState[from] && orderState[from].status === "esperando_pago") {
+    // Memorizar el método elegido ANTES de que llegue la imagen. No dependemos
+    // de un único status: si existe una orden en construcción, el método pertenece
+    // a esa orden y debe persistirse.
+    if (!esImagen && orderState[from] && Number(orderState[from].total||0) > 0 && orderState[from].status !== "confirmado") {
       var pagoTxt = String(userText || "").toLowerCase();
       if (/\bnequi\b/.test(pagoTxt)) orderState[from].paymentMethod = "nequi";
       else if (/\bbancolombia\b|transferencia\s*bancolombia/.test(pagoTxt)) orderState[from].paymentMethod = "bancolombia";
@@ -6506,13 +6663,26 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
 
     if (esImagen && mediaId) {
       var estadoActual = orderState[from] ? orderState[from].status : null;
-      if (estadoActual === "esperando_pago") {
+      var metodoActual = String(orderState[from]&&orderState[from].paymentMethod||"").toLowerCase();
+      var tieneOrdenPendiente = !!(orderState[from] && Number(orderState[from].total||0) > 0 && estadoActual !== "confirmado");
+      var pareceFlujoPago = tieneOrdenPendiente && (estadoActual === "esperando_pago" || ["nequi","bancolombia","digital","transferencia"].indexOf(metodoActual)!==-1);
+      // Una imagen nueva invalida cualquier autorización visual previa. La única
+      // autorización válida será para ESTE mediaId y ESTE turno.
+      if(orderState[from]){
+        orderState[from].comprobanteValidado=false;
+        orderState[from].comprobanteValidadoMediaId=null;
+        orderState[from].comprobanteMediaId=null;
+        orderState[from].comprobanteUrl=null;
+      }
+      if (pareceFlujoPago) {
         // CRÍTICO: validar ANTES de pedir una respuesta a Luz.
         imagenPagoEvaluada = true;
         var totalPedidoPre = Number(orderState[from].total || 0);
         comprobanteVerificacion = await verificarComprobante(mediaId, totalPedidoPre, phoneNumberId, restaurante&&restaurante.id, from);
         if (comprobanteVerificacion && comprobanteVerificacion.valido === true) {
           esComprobante = true;
+          orderState[from].comprobanteValidado = true;
+          orderState[from].comprobanteValidadoMediaId = mediaId;
           if(restaurante)guardarMensajeSupabase(restaurante.id,stripCountryCode(from),"🛡️ Evidencia de pago pasó controles visuales estrictos · $"+Number(comprobanteVerificacion.monto||0).toLocaleString("es-CO")+" · Ref. "+String(comprobanteVerificacion.referencia||"—"),"estado_luz",null).catch(function(){});
           orderState[from].comprobanteMediaId = mediaId;
           orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
@@ -6521,11 +6691,14 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
           userText = "[COMPROBANTE DE PAGO VALIDADO por el sistema. Confirma el pedido y escribe PAGO_CONFIRMADO. No vuelvas a pedir el comprobante.]";
         } else {
           esComprobante = false;
+          orderState[from].comprobanteValidado = false;
+          orderState[from].comprobanteValidadoMediaId = null;
           var vr=comprobanteVerificacion||{};
           if(restaurante){var secMsg=vr.duplicado?"🛡️ POSIBLE FRAUDE · comprobante/referencia reutilizado":(vr.monto!=null&&vr.monto_coincide===false?"🛡️ PAGO NO COINCIDE · evidencia $"+Number(vr.monto).toLocaleString("es-CO")+" / pedido $"+Number(totalPedidoPre).toLocaleString("es-CO"):"🛡️ COMPROBANTE REQUIERE REVISIÓN · no pasó todos los controles");guardarMensajeSupabase(restaurante.id,stripCountryCode(from),secMsg,"alerta_pregunta",null).catch(function(){});}
           if(vr.duplicado) userText="[SEGURIDAD DE PAGO: esta evidencia coincide con un comprobante/referencia ya utilizado. NO confirmes el pedido. Indica que el pago requiere revisión del restaurante.]";
           else if(vr.monto!=null&&vr.monto_coincide===false) userText="[SEGURIDAD DE PAGO: el comprobante muestra $"+Number(vr.monto).toLocaleString("es-CO")+" pero el pedido requiere $"+Number(totalPedidoPre).toLocaleString("es-CO")+". NO confirmes; explica la diferencia.]";
-          else userText="[La imagen parece evidencia de pago pero NO pasó la validación estricta (monto, estado, referencia y legibilidad). NO confirmes el pedido ni escribas PAGO_CONFIRMADO. Pide una captura completa y clara o indica que requiere revisión del restaurante.]";
+          else if(vr.destino_coincide===false && vr.destinatario) userText="[SEGURIDAD DE PAGO: el comprobante aparece dirigido a '"+String(vr.destinatario)+"' y NO coincide con el destinatario autorizado del restaurante. NO confirmes el pedido. Pide el comprobante correcto.]";
+          else userText="[La imagen parece evidencia de pago pero NO pasó la validación estricta (monto, destinatario, estado, referencia, fecha y legibilidad). NO confirmes el pedido ni escribas PAGO_CONFIRMADO. Pide una captura completa y clara o indica que requiere revisión del restaurante.]";
         }
       } else {
         userText = "[El cliente envio una imagen]";
@@ -6797,7 +6970,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
 
     var claudeResponse = await axios.post(
       "https://api.anthropic.com/v1/messages",
-      { model: "claude-haiku-4-5-20251001", max_tokens: 2000, system: systemFinal, messages: conversations[from] },
+      { model: "claude-haiku-4-5-20251001", max_tokens: 900, system: systemFinal, messages: conversations[from] },
       { headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" } }
     );
 
@@ -6824,7 +6997,8 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     // La decisión de pago ya fue tomada ANTES de Claude. Nunca permitimos que
     // una respuesta del modelo contradiga el resultado del validador.
     if (imagenPagoEvaluada && orderState[from]) {
-      if (esComprobante) {
+      var comprobanteActualAutorizado = !!(esComprobante && orderState[from].comprobanteValidado === true && String(orderState[from].comprobanteValidadoMediaId||"") === String(mediaId||""));
+      if (comprobanteActualAutorizado) {
         orderState[from].status = "confirmado";
         orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
         orderState[from].comprobanteMediaId = mediaId;
@@ -6838,8 +7012,21 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
         sideEffect = null;
         var vr2=comprobanteVerificacion||{};
         if(vr2.duplicado)cleanReply="Recibí el comprobante, pero el sistema detectó que esa evidencia o referencia ya fue utilizada. El restaurante debe revisarla antes de confirmar el pago.";
-        else if(vr2.monto!=null&&vr2.monto_coincide===false)cleanReply="Recibí el comprobante. Detecté un valor de $"+Number(vr2.monto).toLocaleString("es-CO")+" y el pedido es por $"+Number(orderState[from].total||0).toLocaleString("es-CO")+". Necesito que revises el valor o envíes el comprobante correcto.";
-        else cleanReply="Recibí la imagen, pero todavía no puedo validar el pago con suficiente seguridad. Envíame una captura completa y clara donde se vean el valor, el estado exitoso y la referencia de la transacción.";
+        else if(vr2.monto!=null&&vr2.monto_coincide===false)cleanReply="Recibí el comprobante. El valor visible es $"+Number(vr2.monto).toLocaleString("es-CO")+" y este pedido requiere $"+Number(orderState[from].total||0).toLocaleString("es-CO")+". No puedo confirmar el pago con ese valor; envíame el comprobante correcto.";
+        else if(vr2.destino_coincide===false&&vr2.destinatario)cleanReply="Recibí el comprobante, pero aparece a nombre de "+String(vr2.destinatario)+" y no coincide con el destinatario autorizado del restaurante. No puedo confirmar ese pago; revisa el destinatario y envíame el comprobante correcto.";
+        else cleanReply="Recibí la imagen, pero todavía no puedo validar el pago con suficiente seguridad. Envíame una captura completa y clara donde se vean el valor correcto, el destinatario, el estado exitoso y la referencia de la transacción.";
+      }
+    }
+
+    // DEFENSA FINAL: ninguna imagen puede autorizar pago por un flag viejo o por
+    // una instrucción del modelo. Debe haber sido validada en ESTE turno y el
+    // mediaId debe coincidir exactamente.
+    if (esImagen && sideEffect === "pago_confirmado") {
+      var proofTurnOk = !!(imagenPagoEvaluada && esComprobante && orderState[from] && orderState[from].comprobanteValidado === true && String(orderState[from].comprobanteValidadoMediaId||"") === String(mediaId||""));
+      if (!proofTurnOk) {
+        console.warn("[pago] Bloqueado PAGO_CONFIRMADO sin validación ligada al media actual", mediaId);
+        sideEffect = null;
+        if(orderState[from]) orderState[from].status = "esperando_pago";
       }
     }
 
@@ -7038,12 +7225,13 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       }
 
       if (restId) {
-        // Try to recover address from conversation if missing
+        // Recuperar únicamente desde el tag de UN mensaje. Nunca concatenar toda
+      // la conversación: eso mezclaba dirección, método de pago y respuestas.
       if (!state.address || state.address === "Por confirmar") {
-        var convText = (conversations[from]||[]).map(function(m){return m.content;}).join(" ");
-        var dirMatch2 = convText.match(/DIRECCION_LISTA:([^\n]+)/);
-        if (dirMatch2) state.address = dirMatch2[1].trim();
+        var recoveredAddress = hlExtractAddressFromConversation(conversations[from]||[]);
+        if (recoveredAddress) state.address = recoveredAddress;
       }
+      state.address = hlCleanOrderAddress(state.address) || "Por confirmar";
       await guardarPedidoSupabase(restId, {
           orderNumber: state.orderNumber, phone: from, items: state.items,
           subtotal: Number(state.total) - Number(state.desechables||0) - Number(state.domicilio||0),
