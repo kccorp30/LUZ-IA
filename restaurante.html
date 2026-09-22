@@ -4220,7 +4220,7 @@ function abrirChat(tel,num,comp){
   document.getElementById("msgOverlay").classList.add("open");
   cargarMensajesChat(true);
   if(chatTimer)clearInterval(chatTimer);
-  chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
+  chatTimer=setInterval(function(){cargarMensajesChat(false);},5000);
   setTimeout(function(){document.getElementById("msgTexto").focus();},400);
 }
 function cargarMensajesChat(forzar){
@@ -4236,6 +4236,18 @@ function cargarMensajesChat(forzar){
     .catch(function(e){ console.error("[chat] Error cargando:", e.message); });
 }
 function renderMensajesChat(msgs, forzar){
+  if(Array.isArray(msgs)&&msgs.length){
+    msgs=msgs.slice().sort(function(a,b){
+      var ta=new Date(a&&a.created_at||0).getTime()||0,tb=new Date(b&&b.created_at||0).getTime()||0;
+      if(ta!==tb)return ta-tb;
+      return String(a&&a.id||'').localeCompare(String(b&&b.id||''));
+    });
+    var seenMsg={};
+    msgs=msgs.filter(function(m){
+      var k=String(m&&m.id||'')||[m&&m.created_at,m&&m.tipo,m&&m.telefono,m&&m.comprobante_media_id,m&&m.mensaje].join('|');
+      if(seenMsg[k])return false;seenMsg[k]=1;return true;
+    });
+  }
   if(!msgs||!msgs.length){
     document.getElementById("chatArea").innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;opacity:0.4"><div style="font-size:32px">💬</div><div style="font-size:13px;color:var(--text3)">Sin mensajes aún</div></div>';
     return;
@@ -4264,7 +4276,9 @@ function renderMensajesChat(msgs, forzar){
     var newCls = esNuevo&&esUltimo ? " chat-new" : "";
 
     // ── DETECCIÓN DE TIPO DE MENSAJE ─────────────────────────────
-    var mediaIdComp = m.comprobante_media_id || null;
+    var mediaIdComp = m.comprobante_media_id || m.media_id || null;
+    var durableMedia = String(m.comprobante_url||"");
+    var mediaSrc = durableMedia && !durableMedia.startsWith("/api/") ? durableMedia : (mediaIdComp ? ("/api/comprobante/"+encodeURIComponent(mediaIdComp)+"?restaurante_id="+encodeURIComponent(rest&&rest.id||"")) : "");
     // Comprobante: tiene mediaId Y texto menciona pago/comprobante
     var esComprobanteBurbuja = mediaIdComp && (
       (m.mensaje||"").toLowerCase().indexOf("comprobante") !== -1 ||
@@ -4275,16 +4289,21 @@ function renderMensajesChat(msgs, forzar){
 
     if(m.tipo==="cliente" && esComprobanteBurbuja){
       // Usar URL de Supabase Storage si existe (permanente), si no usar proxy Meta (puede expirar)
-      var compSrc = m.comprobante_url && !m.comprobante_url.startsWith("/api/") ? m.comprobante_url : ("/api/comprobante/"+mediaIdComp);
+      var compSrc = m.comprobante_url && !m.comprobante_url.startsWith("/api/") ? m.comprobante_url : mediaSrc;
       h += '<div class="chat-comp-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\''+compSrc+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
       h += '<div class="chat-comp-label">📎 Comprobante de pago — <span style="font-weight:400;opacity:0.7">Toca para ampliar</span></div>';
       h += '<img src="'+compSrc+'" onerror="compImgErr(this)" loading="lazy" style="min-height:60px;width:100%;object-fit:contain;border-radius:8px">';
       h += '<div class="chat-comp-time">'+horaStr+'</div></div>';
     }
     else if(m.tipo==="cliente" && esImagenCliente){
-      h += '<div class="chat-img-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\'/api/comprobante/'+m.media_id+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
-      h += '<img src="/api/comprobante/'+m.media_id+'" onerror="this.style.display=\'none\'" loading="lazy">';
-      h += '<div class="chat-img-caption">📷 Imagen del cliente</div></div>';
+      h += '<div class="chat-img-bubble'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\''+mediaSrc+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
+      h += '<img src="'+mediaSrc+'" onerror="this.closest(\'.chat-img-bubble\').classList.add(\'media-error\');this.style.display=\'none\'" loading="lazy">';
+      h += '<div class="chat-img-caption">📷 Imagen del cliente · Toca para ampliar</div></div>';
+    }
+    else if(m.tipo==="restaurante" && mediaIdComp){
+      h += '<div class="chat-img-bubble chat-img-out'+newCls+'" onclick="document.getElementById(\'imgOverlayImg\').src=\''+mediaSrc+'\';document.getElementById(\'imgOverlay\').classList.add(\'open\')">';
+      h += '<img src="'+mediaSrc+'" onerror="this.closest(\'.chat-img-bubble\').classList.add(\'media-error\');this.style.display=\'none\'" loading="lazy">';
+      h += '<div class="chat-img-caption">📷 Imagen enviada · '+horaStr+'</div></div>';
     }
     else if(m.tipo==="estado_luz"){
       h += '<div class="chat-bubble chat-luz-estado'+newCls+'">';
@@ -4322,7 +4341,7 @@ function renderMensajesChat(msgs, forzar){
   var box = document.getElementById("chatArea");
   box.innerHTML = h;
   requestAnimationFrame(function(){
-    box.scrollTo({top:box.scrollHeight, behavior: esNuevo?"smooth":"auto"});
+    box.scrollTop=box.scrollHeight;
   });
 }
 function cerrarChat(){
@@ -4368,16 +4387,16 @@ document.getElementById("chatImgInput").addEventListener("change",function(){
         chatLastTs="";
         setTimeout(function(){
           cargarMensajesChat(true);
-          chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
+          chatTimer=setInterval(function(){cargarMensajesChat(false);},5000);
         },800);
       }else{
         notif("Error: "+(d.error||"").substring(0,40));
-        chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
+        chatTimer=setInterval(function(){cargarMensajesChat(false);},5000);
       }
     })
     .catch(function(){
       notif("Error de conexion");
-      chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
+      chatTimer=setInterval(function(){cargarMensajesChat(false);},5000);
     })
     .finally(function(){btn.style.opacity="1";document.getElementById("chatImgInput").value="";});
   };
@@ -4410,17 +4429,17 @@ function enviarMensaje(){
       setTimeout(function(){
         cargarMensajesChat(true);
         // Reanudar polling
-        chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
+        chatTimer=setInterval(function(){cargarMensajesChat(false);},5000);
       },800);
     } else {
       notif("Error enviando: "+(d.error||"").substring(0,40));
       // Reanudar polling
-      chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
+      chatTimer=setInterval(function(){cargarMensajesChat(false);},5000);
     }
   })
   .catch(function(){
     notif("Error de conexión");
-    chatTimer=setInterval(function(){cargarMensajesChat(false);},1500);
+    chatTimer=setInterval(function(){cargarMensajesChat(false);},5000);
   })
   .finally(function(){
     btn.disabled=false;
@@ -4895,9 +4914,9 @@ function abrirConstructor(){
     var pago=(document.getElementById("con-pago")||{value:"nequi"}).value||"nequi";
     var notas=((document.getElementById("con-notas")||{}).value||"").trim()||null;
     var self=this;self.textContent="Registrando...";self.disabled=true;
-    fetch("/api/pedido-manual",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,telefono:msgTel,items:arr,total:total,desechables:des,domicilio:dom,direccion:dir,metodo_pago:pago,notas_especiales:notas})})
+    fetch("/api/pedido-manual",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({restaurante_id:rest.id,telefono:msgTel,items:arr,total:total,desechables:des,domicilio:dom,direccion:dir,metodo_pago:pago,notas_especiales:notas,nombre_cliente:window.hlCommManualClientName||null,pedido_adicional_de:window.hlCommManualParentOrder||null})})
     .then(function(r){return r.json();})
-    .then(function(d){if(d.ok){notif("Pedido #"+d.numero_pedido+" registrado!");var panel=document.getElementById("constructorPedido");if(panel)panel.style.display="none";var bc=document.getElementById("btnConstructor");if(bc)bc.classList.remove("active");cartItems={};renderCarrito();loadPedidos();loadStats();}else{notif("Error: "+(d.error||"").substring(0,40));}})
+    .then(function(d){if(d.ok){notif("Pedido #"+d.numero_pedido+" registrado!");var panel=document.getElementById("constructorPedido");if(panel)panel.style.display="none";if(typeof window.hlCommRestoreConstructor==='function')window.hlCommRestoreConstructor();var bc=document.getElementById("btnConstructor");if(bc)bc.classList.remove("active");cartItems={};renderCarrito();loadPedidos();loadStats();if(typeof loadChatUniversal==='function')loadChatUniversal();if(msgTel&&typeof hlCommLoadContext==='function')hlCommLoadContext(msgTel);}else{notif("Error: "+(d.error||"").substring(0,40));}})
     .catch(function(){notif("Error de conexion");})
     .finally(function(){self.textContent="Registrar pedido";self.disabled=false;});
   });
@@ -9800,6 +9819,27 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
   var legacyRenderMessages=window.renderMensajesChat;
   var legacyCerrarChat=window.cerrarChat;
   var state={query:'',filter:'todos',selectedKey:null,clients:{},contextCache:{},installed:false,lastChannel:null,lastThreadHtml:'',lastThreadKey:'',channelProbeAt:0};
+  var hlCommStream=null,hlCommSyncTimer=null,hlCommListSyncTimer=null;
+  function hlCommCloseLiveStream(){if(hlCommStream){try{hlCommStream.close()}catch(e){}hlCommStream=null}}
+  function hlCommScheduleLiveSync(telefono){
+    if(hlCommListSyncTimer)clearTimeout(hlCommListSyncTimer);
+    hlCommListSyncTimer=setTimeout(function(){hlCommListSyncTimer=null;loadChatUniversal()},140);
+    if(telefono&&msgTel&&telKey(telefono)===telKey(msgTel)){
+      if(hlCommSyncTimer)clearTimeout(hlCommSyncTimer);
+      hlCommSyncTimer=setTimeout(function(){hlCommSyncTimer=null;cargarMensajesChat(false);if(msgTel)hlCommLoadContext(msgTel)},70);
+    }
+  }
+  function hlCommOpenLiveStream(){
+    if(!window.EventSource||!rest||!rest.id)return;
+    if(hlCommStream&&hlCommStream.readyState!==2)return;
+    hlCommCloseLiveStream();
+    try{
+      var u='/api/chat-stream?restaurante_id='+encodeURIComponent(rest.id),es=new EventSource(u);hlCommStream=es;
+      es.addEventListener('chat',function(ev){try{var d=JSON.parse(ev.data||'{}');hlCommScheduleLiveSync(d.telefono||'')}catch(e){hlCommScheduleLiveSync('')}});
+      es.onerror=function(){var sync=document.getElementById('hlCommSyncText');if(sync)sync.textContent='Reconectando canal en vivo…'};
+      es.addEventListener('ready',function(){var sync=document.getElementById('hlCommSyncText');if(sync)sync.textContent='En vivo · conectado'});
+    }catch(e){}
+  }
   function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
   function telKey(v){var d=String(v||'').replace(/\D/g,'');if(d.startsWith('57')&&d.length===12)d=d.slice(2);return d.slice(-10)}
   function prettyPhone(v){var d=telKey(v);if(d.length!==10)return String(v||'');return '+57 '+d.slice(0,3)+' '+d.slice(3,6)+' '+d.slice(6)}
@@ -9833,7 +9873,7 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
   }
   window.filtrarChats=function(modo){state.filter=modo==='humano'?'atencion':modo==='incompletos'?'activos':modo||'todos';renderChatUniversal()};
   window.loadChatUniversal=async function(){
-    installShell();if(!window.rest||!rest.id)return;if(window.hlWaSilentRefresh&&Date.now()-state.channelProbeAt>30000){state.channelProbeAt=Date.now();window.hlWaSilentRefresh().then(function(x){if(x&&x.channel)updateChannelBadge({channel:x.channel})}).catch(function(){})}var list=document.getElementById('chatUniversalLista');if(list)list.innerHTML='<div class="empty"><div class="et">Sincronizando conversaciones…</div></div>';
+    installShell();if(!window.rest||!rest.id)return;hlCommOpenLiveStream();if(window.hlWaSilentRefresh&&Date.now()-state.channelProbeAt>30000){state.channelProbeAt=Date.now();window.hlWaSilentRefresh().then(function(x){if(x&&x.channel)updateChannelBadge({channel:x.channel})}).catch(function(){})}var list=document.getElementById('chatUniversalLista');if(list)list.innerHTML='<div class="empty"><div class="et">Sincronizando conversaciones…</div></div>';
     try{
       var rid=encodeURIComponent(rest.id);var all=await Promise.all([
         safeFetch('/api/supabase/silencio_conversacion?restaurante_id=eq.'+rid+'&activo=eq.true&select=telefono').catch(function(){return[]}),
@@ -9862,7 +9902,7 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
     installShell();msgTel=tel;msgNum=num;chatLastTs='';state.lastThreadHtml='';state.lastThreadKey='';state.selectedKey=telKey(tel);var c=(chatUniversalData||[]).find(function(x){return x.key===state.selectedKey})||{key:state.selectedKey,tel:tel,nombre:'',pedidoActual:null};
     silencioPorTel[tel]=!!c.silenciado;
     var hiddenAvatar=document.getElementById('msgAvatar'),hiddenInfo=document.getElementById('msgClienteInfo'),hiddenTel=document.getElementById('msgTelInfo'),hiddenPed=document.getElementById('msgPedidoInfo');if(hiddenAvatar)hiddenAvatar.textContent=initials(c.nombre,tel).toUpperCase();if(hiddenInfo)hiddenInfo.textContent=c.nombre||prettyPhone(tel);if(hiddenTel)hiddenTel.textContent=tel;if(hiddenPed)hiddenPed.textContent=num?'Pedido #'+num:'';var t=document.getElementById('toggleSilencio');if(t){t.className='big-toggle '+(c.silenciado?'on':'off');t.setAttribute('data-tel',tel)}
-    document.getElementById('hlCommEmpty').style.display='none';document.getElementById('hlCommThreadLive').classList.add('on');var shell=getShell();if(shell&&window.innerWidth<=900)shell.classList.add('mobile-thread');hlCommRefreshHeader(c);renderChatUniversal();hlCommLoadContext(tel);cargarMensajesChat(true);if(chatTimer)clearInterval(chatTimer);chatTimer=setInterval(function(){cargarMensajesChat(false)},1500);setTimeout(function(){var x=document.getElementById('hlCommText');if(x&&window.innerWidth>900)x.focus()},120)
+    document.getElementById('hlCommEmpty').style.display='none';document.getElementById('hlCommThreadLive').classList.add('on');var shell=getShell();if(shell&&window.innerWidth<=900)shell.classList.add('mobile-thread');hlCommRefreshHeader(c);renderChatUniversal();hlCommLoadContext(tel);cargarMensajesChat(true);hlCommOpenLiveStream();if(chatTimer)clearInterval(chatTimer);chatTimer=setInterval(function(){cargarMensajesChat(false)},5000);setTimeout(function(){var x=document.getElementById('hlCommText');if(x&&window.innerWidth>900)x.focus()},120)
   };
   window.renderMensajesChat=function(msgs,forzar){
     if(typeof legacyRenderMessages==='function')legacyRenderMessages(msgs,forzar);var src=document.getElementById('chatArea'),dst=document.getElementById('hlCommMessages');if(!dst)return;var html=src?src.innerHTML:'',key=String(msgs&&msgs.length||0)+'|'+String(msgs&&msgs.length&&msgs[msgs.length-1]&&msgs[msgs.length-1].created_at||'')+'|'+html.length;var changed=forzar||key!==state.lastThreadKey||html!==state.lastThreadHtml;if(changed&&src){var nearBottom=(dst.scrollHeight-dst.scrollTop-dst.clientHeight)<90;state.lastThreadKey=key;state.lastThreadHtml=html;dst.innerHTML=html;requestAnimationFrame(function(){if(forzar||nearBottom)dst.scrollTop=dst.scrollHeight})}if(changed){var sync=document.getElementById('hlCommSyncText');if(sync)sync.textContent='Sincronizado · '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}
@@ -9871,13 +9911,25 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
   function hlCommRenderTakeover(){var c=currentConv(),human=!!(c&&c.silenciado)||Object.keys(silencioPorTel||{}).some(function(t){return telKey(t)===state.selectedKey&&silencioPorTel[t]});var title=document.getElementById('hlCommTakeTitle'),sub=document.getElementById('hlCommTakeSub'),btn=document.getElementById('hlCommTakeBtn');if(!title||!btn)return;title.textContent=human?'Tú estás respondiendo':'Luz está atendiendo';sub.textContent=human?'Luz está en pausa únicamente en esta conversación.':'Puedes intervenir y devolverla a Luz cuando quieras.';btn.textContent=human?'DEVOLVER A LUZ':'TOMAR CONVERSACIÓN';btn.className='hlcc-take-btn '+(human?'human':'')}
   window.hlCommToggleTakeover=function(){if(!msgTel)return;var tog=document.getElementById('toggleSilencio');if(!tog)return;var before=!!silencioPorTel[msgTel];tog.click();var c=currentConv();if(c)c.silenciado=!before;hlCommRenderTakeover();renderChatUniversal()};
   function hlCommRenderQuick(c){var q=document.getElementById('hlCommQuick');if(!q)return;var s=[];var st=String(c&&c.pedidoActual&&c.pedidoActual.estado||'');if(st==='en_preparacion')s=['Tu pedido ya está en preparación 👨‍🍳','Te aviso apenas salga con el domiciliario.'];else if(st==='listo')s=['Tu pedido ya está listo ✅','Estamos coordinando la entrega.'];else if(st==='en_camino')s=['Tu pedido ya va en camino 🛵','El domiciliario está realizando la entrega.'];else s=['Hola 👋 ¿En qué podemos ayudarte?','Gracias por escribirnos.'];q.innerHTML=s.map(function(x){return '<button data-text="'+esc(x)+'">'+esc(x)+'</button>'}).join('');q.querySelectorAll('button').forEach(function(b){b.onclick=function(){var t=document.getElementById('hlCommText');t.value=this.dataset.text;t.dispatchEvent(new Event('input'));t.focus()}})}
-  window.hlCommSend=async function(){var t=document.getElementById('hlCommText'),text=String(t&&t.value||'').trim();if(!text||!msgTel||!rest)return;var b=document.getElementById('hlCommSend');b.disabled=true;b.textContent='…';t.value='';t.style.height='38px';if(chatTimer)clearInterval(chatTimer);try{var d=await safeFetch('/enviar-mensaje-cliente',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telefono:msgTel,mensaje:text,restaurante_id:rest.id})});if(!d||!d.ok)throw new Error(d&&d.error||'No se pudo enviar');setTimeout(function(){chatLastTs='';cargarMensajesChat(true);loadChatUniversal();chatTimer=setInterval(function(){cargarMensajesChat(false)},1500)},500)}catch(e){if(typeof notif==='function')notif('No se pudo enviar: '+String(e.message||e).substring(0,50));t.value=text;chatTimer=setInterval(function(){cargarMensajesChat(false)},1500)}finally{b.disabled=false;b.textContent='➤';t.focus()}};
+  window.hlCommSend=async function(){var t=document.getElementById('hlCommText'),text=String(t&&t.value||'').trim();if(!text||!msgTel||!rest)return;var b=document.getElementById('hlCommSend');b.disabled=true;b.textContent='…';t.value='';t.style.height='38px';if(chatTimer)clearInterval(chatTimer);try{var d=await safeFetch('/enviar-mensaje-cliente',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telefono:msgTel,mensaje:text,restaurante_id:rest.id})});if(!d||!d.ok)throw new Error(d&&d.error||'No se pudo enviar');setTimeout(function(){chatLastTs='';cargarMensajesChat(true);loadChatUniversal();chatTimer=setInterval(function(){cargarMensajesChat(false)},5000)},500)}catch(e){if(typeof notif==='function')notif('No se pudo enviar: '+String(e.message||e).substring(0,50));t.value=text;chatTimer=setInterval(function(){cargarMensajesChat(false)},5000)}finally{b.disabled=false;b.textContent='➤';t.focus()}};
   window.hlCommAttach=function(){var i=document.getElementById('chatImgInput');if(i)i.click()};
-  window.hlCommOpenConstructor=function(){if(!msgTel)return;var p=document.getElementById('constructorPedido');if(!p)return;p.style.display='block';p.classList.add('hlcc-constructor-open');var dir=document.getElementById('con-dir');safeFetch('/api/cliente/'+encodeURIComponent(msgTel)+'?restaurante_id='+encodeURIComponent(rest.id)).then(function(d){if(d&&d.cliente&&d.cliente.ultima_direccion&&dir)dir.value=d.cliente.ultima_direccion}).catch(function(){})};
-  var closeConstructor=document.getElementById('btnCerrarConstructor');if(closeConstructor)closeConstructor.addEventListener('click',function(){var p=document.getElementById('constructorPedido');if(p)p.classList.remove('hlcc-constructor-open')});
+  var hlCommConstructorHome=null,hlCommConstructorNext=null;
+  function hlCommRestoreConstructor(){var p=document.getElementById('constructorPedido');if(!p)return;p.style.display='none';p.classList.remove('hlcc-constructor-open');if(hlCommConstructorHome&&p.parentNode!==hlCommConstructorHome){try{hlCommConstructorHome.insertBefore(p,hlCommConstructorNext&&hlCommConstructorNext.parentNode===hlCommConstructorHome?hlCommConstructorNext:null)}catch(e){hlCommConstructorHome.appendChild(p)}}}
+  window.hlCommRestoreConstructor=hlCommRestoreConstructor;
+  window.hlCommOpenConstructor=function(){
+    if(!msgTel||!rest)return;
+    var c=currentConv();window.hlCommManualParentOrder=c?(c.pedidoActual?c.pedidoActual.numero_pedido:(c.ultimoPedidoNum||null)):null;window.hlCommManualClientName=c&&c.nombre?c.nombre:null;
+    var p=document.getElementById('constructorPedido');if(!p)return;
+    if(!hlCommConstructorHome){hlCommConstructorHome=p.parentNode;hlCommConstructorNext=p.nextSibling}
+    if(typeof abrirConstructor==='function')abrirConstructor();
+    if(p.closest('#msgOverlay'))document.body.appendChild(p);
+    p.style.display='block';p.classList.add('hlcc-constructor-open');
+    var dir=document.getElementById('con-dir');safeFetch('/api/cliente/'+encodeURIComponent(msgTel)+'?restaurante_id='+encodeURIComponent(rest.id)).then(function(d){if(d&&d.cliente){if(d.cliente.nombre_cliente)window.hlCommManualClientName=d.cliente.nombre_cliente;if(d.cliente.ultima_direccion&&dir)dir.value=d.cliente.ultima_direccion}}).catch(function(){});
+  };
+  var closeConstructor=document.getElementById('btnCerrarConstructor');if(closeConstructor)closeConstructor.addEventListener('click',hlCommRestoreConstructor);
   window.hlCommLoadContext=async function(tel){var body=document.getElementById('hlCommContextBody');if(!body||!rest)return;body.innerHTML='<div class="hlcc-note">Cargando contexto…</div>';var k=telKey(tel);try{var pair=await Promise.all([safeFetch('/api/cliente/'+encodeURIComponent(tel)+'?restaurante_id='+encodeURIComponent(rest.id)).catch(function(){return{}}),safeFetch('/api/mis-pedidos/'+encodeURIComponent(tel)+'?restaurante_id='+encodeURIComponent(rest.id)).catch(function(){return{}})]);var cli=pair[0]&&pair[0].cliente||state.clients[k]||{},orders=pair[1]&&pair[1].pedidos||[],ord=orders.find(activeOrder)||orders[0]||null;state.contextCache[k]={cliente:cli,orders:orders};var name=cli.nombre_cliente||(currentConv()&&currentConv().nombre)||('Cliente '+k.slice(-4)),nivel=String(cli.nivel_fidelidad||'bronce'),nivelLabel=nivel.charAt(0).toUpperCase()+nivel.slice(1),amount=ord?(ord.total_final||ord.total||0):0;body.innerHTML='<div class="hlcc-profile"><div class="hlcc-profile-avatar">'+esc(initials(name,tel).toUpperCase())+'</div><h3>'+esc(name)+'</h3><div class="phone">'+esc(prettyPhone(tel))+'</div><div class="hlcc-tags"><span class="hlcc-tag hlcc-tier tier-'+esc(nivel)+'"><i></i>'+esc(nivelLabel)+'</span>'+(ord&&activeOrder(ord)?'<span class="hlcc-tag hlcc-tag-live"><i></i>Pedido activo</span>':'')+'</div></div>'+
       '<section class="hlcc-context-section"><h4>Relación</h4><div class="hlcc-customer-stats"><div class="hlcc-customer-stat"><strong>'+esc(cli.total_pedidos||orders.length||0)+'</strong><span>Pedidos</span></div><div class="hlcc-customer-stat"><strong>'+esc(cli.puntos||0)+'</strong><span>Puntos</span></div><div class="hlcc-customer-stat"><strong>'+esc(orders.length)+'</strong><span>Historial</span></div></div></section>'+
-      '<section class="hlcc-context-section"><h4>Pedido '+(ord?'actual':'')+'</h4>'+(ord?'<div class="hlcc-order-card"><div class="hlcc-order-top"><strong>#'+esc(ord.numero_pedido||'—')+'</strong><span class="hlcc-order-status">'+esc(String(ord.estado||'').replaceAll('_',' '))+'</span></div><div class="hlcc-order-amount">'+money(amount)+'</div><div class="hlcc-order-meta"><div><span>Pago</span><b>'+esc(ord.metodo_pago||'—')+'</b></div><div><span>Domiciliario</span><b>'+esc(ord.domiciliario_nombre||'Sin asignar')+'</b></div><div><span>Destino</span><b>'+esc(ord.direccion||cli.ultima_direccion||'—')+'</b></div></div></div>':'<div class="hlcc-note">No hay pedido activo en esta conversación.</div>')+'</section>'+
+      '<section class="hlcc-context-section"><h4>Pedido '+(ord?'actual':'')+'</h4>'+(ord?'<div class="hlcc-order-card"><div class="hlcc-order-top"><strong>#'+esc(ord.numero_pedido||'—')+'</strong><span class="hlcc-order-status">'+esc(String(ord.estado||'').replaceAll('_',' '))+'</span></div>'+(ord.pedido_adicional_de?'<div class="hlcc-linked-order">↳ Pedido adicional vinculado a #'+esc(ord.pedido_adicional_de)+'</div>':'')+'<div class="hlcc-order-amount">'+money(amount)+'</div><div class="hlcc-order-meta"><div><span>Pago</span><b>'+esc(ord.metodo_pago||'—')+'</b></div><div><span>Domiciliario</span><b>'+esc(ord.domiciliario_nombre||'Sin asignar')+'</b></div><div><span>Destino</span><b>'+esc(ord.direccion||cli.ultima_direccion||'—')+'</b></div></div></div>':'<div class="hlcc-note">No hay pedido activo en esta conversación.</div>')+'</section>'+
       '<section class="hlcc-context-section"><h4>Acciones rápidas</h4><div class="hlcc-context-actions"><button class="hlcc-action" onclick="hlCommCall()">☎ Llamar</button><button class="hlcc-action" onclick="hlCommShowOrders()">🧾 Pedidos</button><button class="hlcc-action primary" onclick="hlCommOpenConstructor()">🛒 Crear pedido desde el chat</button></div></section>'+
       '<section class="hlcc-context-section"><h4>Luz</h4><div class="hlcc-note">'+(currentConv()&&currentConv().silenciado?'El equipo humano tomó esta conversación. Luz conserva el contexto y queda en pausa aquí.':'Luz está disponible para atender esta conversación. Puedes intervenir en cualquier momento.')+'</div></section>';
     }catch(e){body.innerHTML='<div class="hlcc-note">No pudimos cargar el contexto del cliente.</div>'}}
@@ -9886,7 +9938,7 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
   window.hlCommOpenContext=function(){var c=document.getElementById('hlCommContext'),b=document.getElementById('hlCommContextBackdrop');if(c)c.classList.add('mobile-open');if(b)b.classList.add('on')};
   window.hlCommCloseContext=function(){var c=document.getElementById('hlCommContext'),b=document.getElementById('hlCommContextBackdrop');if(c)c.classList.remove('mobile-open');if(b)b.classList.remove('on')};
   window.hlCommBack=function(){var shell=getShell();if(shell)shell.classList.remove('mobile-thread');state.selectedKey=null;renderChatUniversal();if(chatTimer){clearInterval(chatTimer);chatTimer=null}};
-  var legacyClose=window.cerrarChat;window.cerrarChat=function(){try{if(typeof legacyClose==='function')legacyClose()}catch(e){}var shell=getShell();if(shell)shell.classList.remove('mobile-thread');state.selectedKey=null;renderChatUniversal()};
+  var legacyClose=window.cerrarChat;window.cerrarChat=function(){hlCommCloseLiveStream();try{if(typeof legacyClose==='function')legacyClose()}catch(e){}var shell=getShell();if(shell)shell.classList.remove('mobile-thread');state.selectedKey=null;renderChatUniversal()};
   function boot(){installShell();if(document.getElementById('page-chat')&&document.getElementById('page-chat').classList.contains('active'))loadChatUniversal()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,250)});else setTimeout(boot,250);
 })();
@@ -10967,5 +11019,11 @@ html body #page-chat .v6 .hlcc-action:active{transform:scale(.97)!important}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(install,400)});else setTimeout(install,400);
 })();
 </script>
+
+<style id="hlChatFunctionalMediaFix">
+#page-chat .chat-img-bubble.media-error{min-height:84px;display:flex!important;align-items:center;justify-content:center;border:1px dashed rgba(97,232,255,.25)!important}
+#page-chat .chat-img-bubble.media-error:before{content:"Imagen no disponible · toca para reintentar";font-size:11px;color:#A9B9D6}
+#page-chat .chat-img-out{margin-left:auto!important;border-color:rgba(75,140,255,.28)!important}
+</style>
 </body>
 </html>
