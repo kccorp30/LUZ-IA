@@ -2936,7 +2936,8 @@ document.addEventListener("DOMContentLoaded", function(){
 var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 console.info("HOLA LUZ — BUILD V7.5 · PIN SURGICAL FIX");
 
-var rest=null,pin="",known={},timer=null;
+var rest=window.rest||null,pin="",known={},timer=null;
+window.rest=rest;
 var ESTADOS={confirmado:{l:"Recibido",c:"tr",n:"en_preparacion",bl:"Preparando",bc:"bp"},en_preparacion:{l:"Preparando",c:"tp",n:"listo",bl:"Listo",bc:"bl"},listo:{l:"Listo",c:"tl2",n:"en_camino",bl:"En camino",bc:"bc"},en_camino:{l:"En camino",c:"tc",n:"entregado",bl:"Entregado",bc:"be"},cuenta:{l:"💳 Cuenta",c:"tp",n:"entregado",bl:"✅ Cuenta cobrada",bc:"be"},listo_entrega:{l:"Listo",c:"tl2",n:"entregado",bl:"💳 Cobrar y cerrar",bc:"bcerrar"},entregado:{l:"Entregado",c:"te",n:null,bl:null,bc:null}};
 var filtroActual="hoy",pedidoAEliminar=null,editPedidoId=null;
 var chatBadgeCount=0,pedidosBadgeCount=0,ultimoMensajeTs={};
@@ -3118,6 +3119,9 @@ function selTipo(t){
   if(orb)orb.textContent=c.orb;if(tit)tit.textContent=c.tit;if(sub)sub.textContent=c.sub;
   pin="";dots();
 }
+// Explicit browser globals: later visual modules wrap these functions.
+window.selPais=selPais;
+window.selTipo=selTipo;
 
 function volverPais(){
   paisActual=null;
@@ -3256,6 +3260,7 @@ async function chkPin(){
 // ── ENTER APP — setea el restaurante y abre el panel ─────────────────────────
 function enterApp(restauranteData){
   rest = restauranteData;
+  window.rest = restauranteData;
   goApp();
 }
 
@@ -8096,11 +8101,24 @@ window.renderOrdersV5=function(){
       el.classList.toggle('done',i<n);
     }
   }
-  var oldSelPais=window.selPais;
-  window.selPais=function(p){oldSelPais(p);setRail(p==='us'?3:2);};
-  var oldSelTipo=window.selTipo;
+  var oldSelPais=(typeof window.selPais==='function')?window.selPais:null;
+  window.selPais=function(p){
+    if(oldSelPais){oldSelPais(p);}else{
+      paisActual=p;
+      var sp=document.getElementById('stepPais'),su=document.getElementById('stepUSA'),st=document.getElementById('stepTipo');
+      if(sp)sp.style.display='none';
+      if(p==='us'){if(su)su.style.display='block';}else{if(st)st.style.display='block';}
+    }
+    setRail(p==='us'?3:2);
+  };
+  var oldSelTipo=(typeof window.selTipo==='function')?window.selTipo:null;
   window.selTipo=function(t){
-    oldSelTipo(t);setRail(3);
+    if(oldSelTipo){oldSelTipo(t);}else{
+      tipoActual=t;
+      var st=document.getElementById('stepTipo'),spi=document.getElementById('stepPin');
+      if(st)st.style.display='none';if(spi)spi.style.display='block';
+    }
+    setRail(3);
     var names={restaurante:'Restaurante',heladeria:'Heladería',salsamentaria:'Salsamentaria',charr:'CHARR Tower'};
     var l=document.getElementById('pinBusinessLabel');if(l)l.textContent=names[t]||'Restaurante';
     var o=document.getElementById('pinOrb');if(o)o.innerHTML='<span>✦</span><i></i><i></i>';
@@ -8559,8 +8577,8 @@ window.renderOrdersV5=function(){
 
   window.autoAsignarTodos=async function(){await syncDomiTeamV82();var activos=(domiciliariosList||[]).filter(function(d){return d.presence==='online'});if(!activos.length){hlNotice('warn','Sin equipo disponible','No hay domiciliarios en turno.',3200);return}var pendientes=(ordersV2Data||[]).filter(function(p){return needsCourierV5(p)&&!p.domiciliario_id&&['confirmado','en_preparacion','listo'].includes(String(p.estado||'').toLowerCase())});if(!pendientes.length){hlNotice('info','Todo asignado','No hay domicilios pendientes sin domiciliario.',2800);return}var n=hlNotice('info','Auto-asignando','Distribuyendo '+pendientes.length+' pedido(s) entre el equipo activo…',0),ok=0;for(var i=0;i<pendientes.length;i++){var p=pendientes[i],d=activos[i%activos.length];try{await fetch('/api/asignar-domiciliario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pedido_id:p.id,domiciliario_id:d.id,domiciliario_nombre:d.nombre,restaurante_id:rest?rest.id:null})}).then(responseMessageV82);p.domiciliario_id=d.id;p.domiciliario_nombre=d.nombre;ok++}catch(e){}}resolveNoticeV82(n,ok?'success':'error',ok+' pedido(s) asignados',ok?'El reparto quedó distribuido.':'No se pudieron completar las asignaciones.',3300);refreshOrdersUiV82(selectedOrderV5Id);};
 
-  async function syncDomiTeamV82(){if(!rest)return domiciliariosList||[];try{var rr=await fetch('/api/domi-admin/list?restaurante_id='+encodeURIComponent(rest.id),{cache:'no-store'});if(!rr.ok)return domiciliariosList||[];var dd=await rr.json();if(dd&&Array.isArray(dd.domiciliarios)){d9State.team=dd.domiciliarios;domiciliariosList=dd.domiciliarios.filter(function(x){return x.habilitado!==false});}return domiciliariosList||[]}catch(e){return domiciliariosList||[]}}
-  async function pollPresenceV82(){if(!rest)return;await syncDomiTeamV82();if(!(domiciliariosList||[]).length)return;var locs=await locationsV82(),by={};locs.forEach(function(x){by[String(x.domiciliario_id)]=x});(domiciliariosList||[]).forEach(function(d){var pr=presenceForV82(d,by[String(d.id)]),old=presenceV82[String(d.id)];presenceV82[String(d.id)]=pr.key;if(presenceInitV82&&old&&old!==pr.key){if(pr.key==='online')hlNotice('success',d.nombre+' está disponible','GPS conectado y listo para recibir pedidos.',2600);else if(pr.key==='busy')hlNotice('info',d.nombre+' está en entrega',pr.detail+'. Tracking activo.',2600);else if(pr.key==='off')hlNotice('warn',d.nombre+' salió de turno','Ya no recibirá nuevas asignaciones.',2600)}});presenceInitV82=true;var p=orderByIdV5(selectedOrderV5Id);if(p&&document.getElementById('page-orders')&&document.getElementById('page-orders').classList.contains('active'))renderCouriersV5(p);}
+  async function syncDomiTeamV82(){var activeRest=window.rest||null;if(!activeRest)return domiciliariosList||[];try{var rr=await fetch('/api/domi-admin/list?restaurante_id='+encodeURIComponent(activeRest.id),{cache:'no-store'});if(!rr.ok)return domiciliariosList||[];var dd=await rr.json();if(dd&&Array.isArray(dd.domiciliarios)){d9State.team=dd.domiciliarios;domiciliariosList=dd.domiciliarios.filter(function(x){return x.habilitado!==false});}return domiciliariosList||[]}catch(e){return domiciliariosList||[]}}
+  async function pollPresenceV82(){if(!window.rest)return;await syncDomiTeamV82();if(!(domiciliariosList||[]).length)return;var locs=await locationsV82(),by={};locs.forEach(function(x){by[String(x.domiciliario_id)]=x});(domiciliariosList||[]).forEach(function(d){var pr=presenceForV82(d,by[String(d.id)]),old=presenceV82[String(d.id)];presenceV82[String(d.id)]=pr.key;if(presenceInitV82&&old&&old!==pr.key){if(pr.key==='online')hlNotice('success',d.nombre+' está disponible','GPS conectado y listo para recibir pedidos.',2600);else if(pr.key==='busy')hlNotice('info',d.nombre+' está en entrega',pr.detail+'. Tracking activo.',2600);else if(pr.key==='off')hlNotice('warn',d.nombre+' salió de turno','Ya no recibirá nuevas asignaciones.',2600)}});presenceInitV82=true;var p=orderByIdV5(selectedOrderV5Id);if(p&&document.getElementById('page-orders')&&document.getElementById('page-orders').classList.contains('active'))renderCouriersV5(p);}
   setInterval(pollPresenceV82,12000);setTimeout(pollPresenceV82,1800);
 })();
 </script>
@@ -8683,7 +8701,7 @@ window.renderOrdersV5=function(){
  var prevCouriers10=window.renderCouriersV5;window.renderCouriersV5=function(p){var box=document.getElementById('ordersV5Couriers');if(!p)return prevCouriers10?prevCouriers10(p):undefined;if(needsCourierV5(p)&&!p.domiciliario_id&&String(p.estado||'').toLowerCase()!=='listo'){if(box)box.innerHTML='<div class="v10-dispatch-lock"><b>🔒 Despacho bloqueado por Cocina</b><small>Primero completa preparación y marca el pedido como <strong>LISTO</strong>. En ese momento Luz podrá asignarlo automáticamente o podrás elegir un domiciliario manualmente.</small></div>';return}if(needsCourierV5(p)&&!p.domiciliario_id&&String(p.estado||'').toLowerCase()==='listo'&&d9State.auto){if(box)box.innerHTML='<div class="v10-dispatch-lock"><b>✨ Luz está buscando el mejor domiciliario</b><small>Comparo domiciliarios habilitados, en turno, con GPS reciente y sin otra misión, priorizando cercanía al restaurante.</small></div>';return}return prevCouriers10?prevCouriers10(p):undefined}
  var prevPrimary10=window.primaryOrderActionV5;window.primaryOrderActionV5=function(id){var p=orderByIdV5(id);if(p&&String(p.estado||'').toLowerCase()==='listo'&&needsCourierV5(p)&&!p.domiciliario_id&&d9State.auto){v10SpeakLuz({tipo:'dispatch_wait',titulo:'Estoy buscando domiciliario',mensaje:'El pedido ya está listo. En cuanto encuentre un domiciliario elegible lo asignaré y te avisaré.'},false);try{d9Refresh(false);loadPedidos()}catch(e){}return}return prevPrimary10?prevPrimary10(id):undefined}
  var prevAuto10=window.autoAsignarTodos;window.autoAsignarTodos=async function(){var pendientes=(ordersV2Data||[]).filter(function(p){return needsCourierV5(p)&&!p.domiciliario_id&&String(p.estado||'').toLowerCase()==='listo'});if(!pendientes.length){if(typeof hlNotice==='function')hlNotice('info','Nada para despachar','Solo se asignan domicilios que Cocina ya marcó LISTO.',3000);return}return prevAuto10?prevAuto10():undefined}
- async function pollEvents10(){if(!rest||!rest.id)return;try{var url='/api/luz-eventos?restaurante_id='+encodeURIComponent(rest.id)+(v10EventCursor?'&after='+encodeURIComponent(v10EventCursor):'');var d=await d9Json(url),arr=d.eventos||[];if(!v10EventCursor&&arr.length){v10EventCursor=arr[0].created_at;return}var fresh=arr.filter(function(e){return !v10Seen[e.id]});fresh.slice().reverse().forEach(function(e){v10Seen[e.id]=1;v10SpeakLuz(e,false);if(/pedido_|domi|ruta|entrega|recogido|auto_/.test(e.tipo||'')){try{loadPedidos()}catch(x){}try{d9Refresh(false)}catch(x){}}});if(arr.length)v10EventCursor=arr[0].created_at}catch(e){}}
+ async function pollEvents10(){var activeRest=window.rest||null;if(!activeRest||!activeRest.id)return;try{var url='/api/luz-eventos?restaurante_id='+encodeURIComponent(activeRest.id)+(v10EventCursor?'&after='+encodeURIComponent(v10EventCursor):'');var d=await d9Json(url),arr=d.eventos||[];if(!v10EventCursor&&arr.length){v10EventCursor=arr[0].created_at;return}var fresh=arr.filter(function(e){return !v10Seen[e.id]});fresh.slice().reverse().forEach(function(e){v10Seen[e.id]=1;v10SpeakLuz(e,false);if(/pedido_|domi|ruta|entrega|recogido|auto_/.test(e.tipo||'')){try{loadPedidos()}catch(x){}try{d9Refresh(false)}catch(x){}}});if(arr.length)v10EventCursor=arr[0].created_at}catch(e){}}
  function startEvents10(){clearInterval(v10EventPoll);pollEvents10();v10EventPoll=setInterval(pollEvents10,3000)}
  ensureBar10();startEvents10();setTimeout(function(){try{d9LoadSettings()}catch(e){}},900);
 })();
