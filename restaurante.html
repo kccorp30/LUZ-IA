@@ -2970,8 +2970,8 @@ async function chkPin(){
     }catch(e){
       pinVerificando=false;
       if(verifyEl)verifyEl.classList.remove("active");
-      console.error("[chkPin] ambas rutas fallaron:",e);
-      if(errEl)errEl.textContent="No se pudo verificar el PIN. Intenta nuevamente.";
+      console.error("[chkPin] acceso backend falló:",e);
+      if(errEl)errEl.textContent=(e&&e.message?e.message:"No se pudo verificar el PIN. Intenta nuevamente.");
       pin="";dots();
     }
   }
