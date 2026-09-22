@@ -44,6 +44,30 @@ function hasPrivilegedSupabaseKey() {
   return /^sb_secret_/i.test(key) || (key.startsWith('eyJ') && key !== String(SUPABASE_KEY || ''));
 }
 const FINDER_SERVER_SECRET = process.env.FINDER_SERVER_SECRET || "1dcLIWVzcBU4eUkNV4F0TdErKozdrPFU_YoRJlUXvTRQWcRlTlxKdGybgz7UGhCK";
+
+// V14.1 AUTH TRANSPORT FIX — backend only.
+// Supabase sb_secret_/sb_publishable_ keys are opaque API keys, NOT JWTs.
+// Older routes still build `Authorization: Bearer <key>`; strip that invalid
+// header centrally without changing the working business flows.
+axios.interceptors.request.use(function(config){
+  try {
+    if (config && config.url && String(config.url).indexOf(SUPABASE_URL) === 0) {
+      config.headers = config.headers || {};
+      var apiKey = String(config.headers.apikey || config.headers["apikey"] || "");
+      var auth = String(config.headers.Authorization || config.headers.authorization || "");
+      if (/^sb_(secret|publishable)_/i.test(apiKey) && auth === "Bearer " + apiKey) {
+        try { delete config.headers.Authorization; } catch(e) {}
+        try { delete config.headers.authorization; } catch(e) {}
+      }
+      // If Railway only exposes a publishable key, preserve the server-side
+      // Finder/RLS signal already used by this project. Never expose it to browser.
+      if (/^sb_publishable_/i.test(apiKey) && FINDER_SERVER_SECRET && !config.headers["x-finder-server"]) {
+        config.headers["x-finder-server"] = FINDER_SERVER_SECRET;
+      }
+    }
+  } catch(e) {}
+  return config;
+});
 function finderDbHeaders(extra) {
   if (hasPrivilegedSupabaseKey()) return sbPrivilegedHeaders(extra);
   var key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || SUPABASE_KEY;
@@ -5428,6 +5452,23 @@ app.get("/api/zonas", async function(req, res) {
   } catch(e) { res.json([]); }
 });
 
+// V14.1 same-origin restaurant PIN lookup. Avoids browser -> Supabase CORS entirely.
+app.get("/api/restaurante-pin", async function(req, res) {
+  try {
+    var pin = String(req.query.pin || "").replace(/[^0-9]/g, "").slice(0, 12);
+    if (!pin) return res.status(400).json({ ok:false, error:"PIN requerido" });
+    var r = await axios.get(
+      SUPABASE_URL + "/rest/v1/restaurantes?pin=eq." + encodeURIComponent(pin) + "&select=*&limit=1",
+      { headers: finderDbHeaders({ "Accept":"application/json" }) }
+    );
+    res.set("Cache-Control", "no-store");
+    res.json(r.data || []);
+  } catch(e) {
+    console.error("[restaurante-pin]", e.response && e.response.data ? e.response.data : e.message);
+    res.status(e.response ? e.response.status : 500).json({ ok:false, error:"No se pudo verificar el PIN" });
+  }
+});
+
 app.get("/api/restaurante", async function(req, res) {
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
@@ -5454,11 +5495,7 @@ app.all("/api/supabase/*", async function(req, res) {
     var qs = require("url").parse(req.url).query;
     if (qs) targetUrl += (targetUrl.indexOf("?") === -1 ? "?" : "&") + qs;
 
-    var headers = {
-      "apikey": svcKey,
-      "Authorization": "Bearer " + svcKey,
-      "Content-Type": "application/json"
-    };
+    var headers = finderDbHeaders({ "Content-Type": "application/json" });
     // Forward Prefer header if present in request
     var prefer = req.headers["prefer"] || req.body?._prefer;
     if (prefer) headers["Prefer"] = prefer;
@@ -5498,7 +5535,7 @@ app.get("/api/proxy-db", async function(req, res) {
     if (q.indexOf("..") !== -1) return res.status(400).json({ error: "Invalid query" });
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/" + q,
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+      { headers: finderDbHeaders() }
     );
     res.json(r.data || []);
   } catch(e) {
