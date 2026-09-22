@@ -1452,13 +1452,6 @@ body:before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;back
 }
 </style>
 
-<script id="hlCriticalGlobals">
-/* HOLA LUZ critical shared globals. Keep these available before any polling module starts. */
-var rest = window.rest || null;
-window.rest = rest;
-var ordersV2Data = Array.isArray(window.ordersV2Data) ? window.ordersV2Data : [];
-window.ordersV2Data = ordersV2Data;
-</script>
 </head>
 <script>
 // ── EARLY INIT — show pinScreen immediately, don't wait for scripts ──────────
@@ -2944,9 +2937,7 @@ document.addEventListener("DOMContentLoaded", function(){
 var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 console.info("HOLA LUZ — BUILD V7.5 · PIN SURGICAL FIX");
 
-rest=window.rest||rest||null;
-window.rest=rest;
-var pin="",known={},timer=null;
+var rest=null,pin="",known={},timer=null;
 var ESTADOS={confirmado:{l:"Recibido",c:"tr",n:"en_preparacion",bl:"Preparando",bc:"bp"},en_preparacion:{l:"Preparando",c:"tp",n:"listo",bl:"Listo",bc:"bl"},listo:{l:"Listo",c:"tl2",n:"en_camino",bl:"En camino",bc:"bc"},en_camino:{l:"En camino",c:"tc",n:"entregado",bl:"Entregado",bc:"be"},cuenta:{l:"💳 Cuenta",c:"tp",n:"entregado",bl:"✅ Cuenta cobrada",bc:"be"},listo_entrega:{l:"Listo",c:"tl2",n:"entregado",bl:"💳 Cobrar y cerrar",bc:"bcerrar"},entregado:{l:"Entregado",c:"te",n:null,bl:null,bc:null}};
 var filtroActual="hoy",pedidoAEliminar=null,editPedidoId=null;
 var chatBadgeCount=0,pedidosBadgeCount=0,ultimoMensajeTs={};
@@ -3769,7 +3760,7 @@ function renderDashboardLiveOrders(rows){var box=document.getElementById("dashbo
 
 
 // ===== V4 SYSTEM =====
-ordersV2Data=Array.isArray(window.ordersV2Data)?window.ordersV2Data:[];window.ordersV2Data=ordersV2Data;var ordersV2Filter="all",notificationCenterData=[];
+var ordersV2Data=[],ordersV2Filter="all",notificationCenterData=[];
 function openPlanDrawer(){var d=document.getElementById("planDrawer");if(d){var n=document.getElementById("planDrawerName");if(n)n.textContent=(typeof planActual!=="undefined"&&planActual)?String(planActual).replace(/_/g," "):"Dominante";d.classList.add("open");}}
 function closePlanDrawer(){var d=document.getElementById("planDrawer");if(d)d.classList.remove("open")}
 function openNotifications(){var d=document.getElementById("notificationDrawer");if(d){renderNotificationCenter();d.classList.add("open");}var b=document.getElementById("notifBadgeV4");if(b)b.classList.remove("show")}
@@ -3786,7 +3777,7 @@ function loadFinanceCenter(){if(!rest)return;var now=new Date(),desde=new Date(n
 function printFinanceCenter(){window.print()}
 function exportFinanceCsv(){if(!rest){return}var now=new Date(),desde=new Date(now.getTime()-6*86400000);get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+desde.toISOString()+"&estado=not.in.(cancelado,cuenta)&select=numero_pedido,total,domicilio,metodo_pago,created_at").then(function(rows){rows=Array.isArray(rows)?rows:[];var csv='Pedido,Fecha,Total,Domicilio,Metodo\\n'+rows.map(function(r){return [r.numero_pedido,new Date(r.created_at).toLocaleString('es-CO'),r.total||0,r.domicilio||0,r.metodo_pago||''].map(function(v){return '"'+String(v).replace(/"/g,'""')+'"'}).join(',')}).join('\\n');var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='hola-luz-finanzas.csv';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},500);});}
 
-ordersV2Data=Array.isArray(window.ordersV2Data)?window.ordersV2Data:[];window.ordersV2Data=ordersV2Data;var ordersV2Filter="all",notificationCenterData=[];
+var ordersV2Data=[],ordersV2Filter="all",notificationCenterData=[];
 var selectedOrderV5Id=null,ordersV5ActiveRows=[],ordersV5DeliveredRows=[];
 
 function openPlanDrawer(){var d=document.getElementById("planDrawer");if(d){var n=document.getElementById("planDrawerName");if(n)n.textContent=(typeof planActual!=="undefined"&&planActual)?String(planActual).replace(/_/g," "):"Dominante";d.classList.add("open");}}
@@ -8110,37 +8101,24 @@ window.renderOrdersV5=function(){
       el.classList.toggle('done',i<n);
     }
   }
-  var oldSelPais=(typeof window.selPais==='function')?window.selPais:null;
-  window.selPais=function(p){
-    if(oldSelPais){oldSelPais(p);}else{
-      paisActual=p;
-      var sp=document.getElementById('stepPais'),su=document.getElementById('stepUSA'),st=document.getElementById('stepTipo');
-      if(sp)sp.style.display='none';
-      if(p==='us'){if(su)su.style.display='block';}else{if(st)st.style.display='block';}
-    }
-    setRail(p==='us'?3:2);
-  };
-  var oldSelTipo=(typeof window.selTipo==='function')?window.selTipo:null;
+  var oldSelPais=window.selPais;
+  window.selPais=function(p){oldSelPais(p);setRail(p==='us'?3:2);};
+  var oldSelTipo=window.selTipo;
   window.selTipo=function(t){
-    if(oldSelTipo){oldSelTipo(t);}else{
-      tipoActual=t;
-      var st=document.getElementById('stepTipo'),spi=document.getElementById('stepPin');
-      if(st)st.style.display='none';if(spi)spi.style.display='block';
-    }
-    setRail(3);
+    oldSelTipo(t);setRail(3);
     var names={restaurante:'Restaurante',heladeria:'Heladería',salsamentaria:'Salsamentaria',charr:'CHARR Tower'};
     var l=document.getElementById('pinBusinessLabel');if(l)l.textContent=names[t]||'Restaurante';
     var o=document.getElementById('pinOrb');if(o)o.innerHTML='<span>✦</span><i></i><i></i>';
     var tt=document.getElementById('pinTitulo');if(tt)tt.textContent='HOLA LUZ';
   };
-  var oldVolverPais=(typeof window.volverPais==='function')?window.volverPais:null;
-  window.volverPais=function(){if(oldVolverPais)oldVolverPais();else{var sp=document.getElementById('stepPais'),su=document.getElementById('stepUSA'),st=document.getElementById('stepTipo'),spi=document.getElementById('stepPin');if(su)su.style.display='none';if(st)st.style.display='none';if(spi)spi.style.display='none';if(sp)sp.style.display='block';}setRail(1);};
-  var oldVolverTipo=(typeof window.volverTipo==='function')?window.volverTipo:null;
-  window.volverTipo=function(){if(oldVolverTipo)oldVolverTipo();else{var st=document.getElementById('stepTipo'),spi=document.getElementById('stepPin');if(spi)spi.style.display='none';if(st)st.style.display='block';}setRail(2);var v=document.getElementById('pinVerify');if(v)v.classList.remove('active');};
-  var oldPinKey=(typeof window.pinKey==='function')?window.pinKey:null;
-  window.pinKey=function(k){if(oldPinKey)oldPinKey(k);if(typeof pin!=='undefined'&&String(pin).length===4){var v=document.getElementById('pinVerify');if(v)v.classList.add('active');}};
-  var oldDots=(typeof window.dots==='function')?window.dots:null;
-  window.dots=function(){if(oldDots)oldDots();if(typeof pin==='undefined'||String(pin).length<4){var v=document.getElementById('pinVerify');if(v)v.classList.remove('active');}};
+  var oldVolverPais=window.volverPais;
+  window.volverPais=function(){oldVolverPais();setRail(1);};
+  var oldVolverTipo=window.volverTipo;
+  window.volverTipo=function(){oldVolverTipo();setRail(2);var v=document.getElementById('pinVerify');if(v)v.classList.remove('active');};
+  var oldPinKey=window.pinKey;
+  window.pinKey=function(k){oldPinKey(k);if(pin.length===4){var v=document.getElementById('pinVerify');if(v)v.classList.add('active');}};
+  var oldDots=window.dots;
+  window.dots=function(){oldDots();if(pin.length<4){var v=document.getElementById('pinVerify');if(v)v.classList.remove('active');}};
   setRail(1);
 })();
 </script>
