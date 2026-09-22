@@ -6812,7 +6812,8 @@ var agentState = {
   ultimoChequeo: new Date().toISOString(),
   pedidosVistosHoy: new Set(),
   canjesVistosHoy: new Set(),
-  alertasEnviadas: new Set()
+  alertasEnviadas: new Set(),
+  tickEnCurso: false
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -6999,6 +7000,13 @@ app.get("/api/luz-alive", async function(req, res) {
 });
 
 async function luzAgentTick() {
+  // Blindaje: si el tick anterior sigue corriendo (p.ej. Supabase respondiendo lento),
+  // NO arrancar uno nuevo encima — evita apilar conexiones/queries contra la BD cada 15s.
+  if (agentState.tickEnCurso) {
+    console.warn("[AGENTE] tick anterior aún en curso — se omite este ciclo para no saturar Supabase");
+    return;
+  }
+  agentState.tickEnCurso = true;
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var h = { "apikey": svcKey, "Authorization": "Bearer " + svcKey };
@@ -7006,7 +7014,7 @@ async function luzAgentTick() {
     agentState.ultimoChequeo = new Date().toISOString();
 
     // Cargar todos los restaurantes activos
-    var restsR = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=id,nombre,whatsapp_phone_id,telefono_dueno", { headers: h })
+    var restsR = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?estado=eq.activo&select=id,nombre,whatsapp_phone_id,telefono_dueno", { headers: h, timeout: 8000 })
       .catch(function(){ return { data: [] }; });
     var rests = restsR.data || [];
 
@@ -7051,7 +7059,7 @@ async function luzAgentTick() {
       try {
         var canjesR = await axios.get(
           SUPABASE_URL + "/rest/v1/canjes?estado=eq.pendiente&restaurante_id=eq." + restId + "&created_at=gte." + desde + "&select=*",
-          { headers: h }
+          { headers: h, timeout: 8000 }
         );
         for (var canje of (canjesR.data || [])) {
           if (agentState.canjesVistosHoy.has(canje.id)) continue;
@@ -7064,7 +7072,7 @@ async function luzAgentTick() {
             SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restId +
             "&cliente_tel=eq." + encodeURIComponent(canje.telefono) +
             "&estado=in.(confirmado,en_preparacion,listo)&order=created_at.desc&limit=1&select=id,numero_pedido,items,notas_especiales",
-            { headers: h }
+            { headers: h, timeout: 8000 }
           ).catch(function(){ return { data: [] }; });
           if (pedR.data && pedR.data.length > 0) {
             var ped = pedR.data[0];
@@ -7074,7 +7082,7 @@ async function luzAgentTick() {
               items.push("🎁 CANJE: " + canje.producto_nombre + " ($0)");
               await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + ped.id,
                 { items: items, notas_especiales: (ped.notas_especiales||"") + " | ⭐ CANJE: " + canje.producto_nombre, updated_at: new Date().toISOString() },
-                { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" } }
+                { headers: { ...h, "Content-Type": "application/json", "Prefer": "return=minimal" }, timeout: 8000 }
               ).catch(function(){});
               await guardarMensajeSupabase(restId, canje.telefono, "⭐ CANJE: " + canje.producto_nombre + " agregado al pedido #" + ped.numero_pedido, "alerta_pregunta", null).catch(function(){});
               await alertarDueno("⭐ Canje de " + canje.producto_nombre + " aplicado al pedido #" + ped.numero_pedido + " del cliente " + canje.telefono, "canje_"+canje.id+"_ok");
@@ -7091,7 +7099,7 @@ async function luzAgentTick() {
         var pedsPagR = await axios.get(
           SUPABASE_URL + "/rest/v1/pedidos?estado=eq.esperando_pago&restaurante_id=eq." + restId +
           "&updated_at=lte." + hace20 + "&select=id,numero_pedido,cliente_tel",
-          { headers: h }
+          { headers: h, timeout: 8000 }
         );
         for (var p of (pedsPagR.data || [])) {
           var cl = "pago_pendiente_" + p.id;
@@ -7107,7 +7115,7 @@ async function luzAgentTick() {
         var valsR = await axios.get(
           SUPABASE_URL + "/rest/v1/pedidos?valoracion=lte.2&restaurante_id=eq." + restId +
           "&valoracion=not.is.null&updated_at=gte." + desde + "&select=id,numero_pedido,cliente_tel,valoracion",
-          { headers: h }
+          { headers: h, timeout: 8000 }
         );
         for (var v of (valsR.data || [])) {
           var clv = "val_baja_" + v.id;
@@ -7125,7 +7133,7 @@ async function luzAgentTick() {
           SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + restId +
           "&tipo=eq.alerta_pregunta&created_at=gte." + hace2h +
           "&order=created_at.asc&select=telefono,mensaje,created_at",
-          { headers: h }
+          { headers: h, timeout: 8000 }
         ).catch(function(){ return { data: [] }; });
 
         for (var preg of (pregR.data || [])) {
@@ -7160,7 +7168,7 @@ async function luzAgentTick() {
           var pedHoyR = await axios.get(
             SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restId +
             "&created_at=gte." + hoyStart.toISOString() + "&select=estado,total,metodo_pago",
-            { headers: h }
+            { headers: h, timeout: 8000 }
           );
           var pedHoy = pedHoyR.data || [];
           var totalVentas = pedHoy.filter(function(p){ return p.estado!=="cancelado"; }).reduce(function(s,p){ return s+Number(p.total||0); }, 0);
@@ -7184,11 +7192,11 @@ async function luzAgentTick() {
 
       // ── ALERTA INVENTARIO BAJO (salsamentaria) ────────────────────────────
       try {
-        var restFull = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restId + "&select=tipo_negocio", { headers: h });
+        var restFull = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restId + "&select=tipo_negocio", { headers: h, timeout: 8000 });
         if (restFull.data && restFull.data[0] && restFull.data[0].tipo_negocio === "salsamentaria") {
           var invLow = await axios.get(
             SUPABASE_URL + "/rest/v1/inventario?restaurante_id=eq." + restId + "&activo=eq.true&select=nombre,stock,stock_minimo,unidad",
-            { headers: h }
+            { headers: h, timeout: 8000 }
           );
           var bajos = (invLow.data || []).filter(function(p){ return p.stock > 0 && p.stock <= p.stock_minimo; });
           var agotados = (invLow.data || []).filter(function(p){ return p.stock <= 0; });
@@ -7215,6 +7223,7 @@ async function luzAgentTick() {
     }
 
   } catch(eAgent) { console.error("[AGENTE] tick:", eAgent.message); }
+  finally { agentState.tickEnCurso = false; }
 }
 
 var PORT = process.env.PORT || 3000;
@@ -7260,7 +7269,7 @@ app.listen(PORT, function() {
       var svcKey = SUPABASE_SERVICE_KEY_VAL;
       var r = await axios.get(
         SUPABASE_URL + "/rest/v1/restaurantes?suscripcion_estado=eq.trial&estado=eq.activo&select=id,nombre,whatsapp,fecha_vencimiento,whatsapp_phone_id",
-        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
+        { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey }, timeout: 8000 }
       );
       var rests = r.data || [];
       var hoy = new Date(dia);
