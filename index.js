@@ -5452,19 +5452,61 @@ app.get("/api/zonas", async function(req, res) {
   } catch(e) { res.json([]); }
 });
 
-// AUTH V15 — RESTAURANTE: browser never talks to Supabase directly.
-// Same-origin Railway endpoint, bounded timeout, centralized Supabase headers.
+// AUTH V15.1 — RESTAURANTE PIN, SAME-ORIGIN Y AISLADO.
+// IMPORTANTE:
+// - El navegador NUNCA consulta Supabase directamente.
+// - Este endpoint vuelve a usar finderDbHeaders(), que es el transporte
+//   compatible con el RLS/FINDER_SERVER_SECRET ya utilizado por este proyecto.
+// - No depende de que Railway tenga una service_role nueva correctamente cargada.
+// - No toca domiciliario, pedidos, evidencias, dispatch, cuadre ni UI.
 app.get("/api/restaurante-pin", async function(req, res) {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+
+  var pin = String((req.query && req.query.pin) || "")
+    .replace(/[^0-9]/g, "")
+    .slice(0, 12);
+
+  if (!pin) {
+    return res.status(400).json({ ok:false, error:"PIN requerido" });
+  }
+
+  var url =
+    SUPABASE_URL +
+    "/rest/v1/restaurantes?pin=eq." +
+    encodeURIComponent(pin) +
+    "&select=*&limit=1";
+
   try {
-    var pin = String(req.query.pin || "").replace(/[^0-9]/g, "").slice(0, 12);
-    if (!pin) return res.status(400).json({ ok:false, error:"PIN requerido" });
-    var url = SUPABASE_URL + "/rest/v1/restaurantes?pin=eq." + encodeURIComponent(pin) + "&select=*&limit=1";
-    var r = await axios.get(url, { headers: sbPrivilegedHeaders({"Accept":"application/json"}), timeout: 7000 });
-    return res.json(Array.isArray(r.data) ? r.data : []);
-  } catch(e) {
-    console.error("[AUTH restaurant]", e.response && e.response.data ? e.response.data : e.message);
-    return res.status(503).json({ ok:false, error:"No se pudo verificar el acceso. Intenta nuevamente." });
+    // Camino estable del proyecto: publishable/anon + x-finder-server,
+    // o service key real cuando Railway sí dispone de ella.
+    var r = await axios.get(url, {
+      headers: finderDbHeaders({ "Accept":"application/json" }),
+      timeout: 8000,
+      validateStatus: function(status) {
+        return status >= 200 && status < 300;
+      }
+    });
+
+    return res.status(200).json(Array.isArray(r.data) ? r.data : []);
+  } catch (e) {
+    var upstreamStatus = e && e.response ? e.response.status : null;
+    var upstreamData = e && e.response ? e.response.data : null;
+
+    console.error(
+      "[AUTH V15.1 restaurante-pin]",
+      "status=" + (upstreamStatus || "network"),
+      upstreamData || (e && e.message) || e
+    );
+
+    // No hacemos fallback desde el browser hacia Supabase.
+    // Mantener el fallo dentro del backend evita CORS y no expone secretos.
+    return res.status(upstreamStatus && upstreamStatus >= 400 && upstreamStatus < 600 ? upstreamStatus : 502)
+      .json({
+        ok:false,
+        error:"No se pudo verificar el acceso. Intenta nuevamente."
+      });
   }
 });
 
