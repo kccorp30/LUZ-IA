@@ -3832,14 +3832,22 @@ function needsCourierV5(p){
   return Number(p.domicilio||0)>0 && !dir.startsWith("MESA ") && tipo!=="recoger" && !dir.startsWith("RECOGER");
 }
 function orderByIdV5(id){return (window.ordersV2Data||[]).find(function(x){return String(x.id)===String(id)})||null}
+function cleanOrderAddressV5(value){
+  var v=String(value||'').replace(/\s+/g,' ').trim();
+  if(!v)return v;
+  var stops=[/\s+(?:si|sí)\s+as[ií]\s+est[aá]\s+bien\b/i,/\s+perfecto[,.!]?\s+(?:para\s+pagar|busca\s+la\s+llave)/i,/\s+(?:para\s+pagar\s+por|pago\s+por)\s+(?:nequi|bancolombia)/i,/\s+metodo_pago\s*:/i,/\s+pago_(?:confirmado|efectivo|datafono)\b/i];
+  var cut=v.length;stops.forEach(function(re){var m=v.match(re);if(m&&m.index<cut)cut=m.index});
+  return v.slice(0,cut).trim().replace(/[|,;\-]+$/g,'').trim().slice(0,220);
+}
+function normalizeOrderViewV5(p){if(!p||typeof p!=='object')return p;var x=Object.assign({},p);x.direccion=cleanOrderAddressV5(x.direccion);return x}
 function renderOrdersV2(rows){
-  ordersV5ActiveRows=Array.isArray(rows)?rows:[];
+  ordersV5ActiveRows=(Array.isArray(rows)?rows:[]).map(normalizeOrderViewV5);
   window.ordersV2Data=ordersV2Data=ordersV5ActiveRows.slice();
   renderOrdersV5();
   if(rest){
     var since=new Date(Date.now()-24*60*60*1000).toISOString();
     get("pedidos","restaurante_id=eq."+rest.id+"&estado=eq.entregado&created_at=gte."+since+"&order=created_at.desc&limit=12").then(function(done){
-      ordersV5DeliveredRows=Array.isArray(done)?done:[];
+      ordersV5DeliveredRows=(Array.isArray(done)?done:[]).map(normalizeOrderViewV5);
       var seen={};window.ordersV2Data=ordersV2Data=[];
       ordersV5ActiveRows.concat(ordersV5DeliveredRows).forEach(function(x){if(x&&x.id&&!seen[x.id]){seen[x.id]=1;ordersV2Data.push(x)}});
       renderOrdersV5();
@@ -9821,12 +9829,24 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
   var state={query:'',filter:'todos',selectedKey:null,clients:{},contextCache:{},installed:false,lastChannel:null,lastThreadHtml:'',lastThreadKey:'',channelProbeAt:0};
   var hlCommStream=null,hlCommSyncTimer=null,hlCommListSyncTimer=null;
   function hlCommCloseLiveStream(){if(hlCommStream){try{hlCommStream.close()}catch(e){}hlCommStream=null}}
-  function hlCommScheduleLiveSync(telefono){
-    if(hlCommListSyncTimer)clearTimeout(hlCommListSyncTimer);
-    hlCommListSyncTimer=setTimeout(function(){hlCommListSyncTimer=null;loadChatUniversal()},140);
+  function hlCommScheduleLiveSync(payload){
+    var d=(payload&&typeof payload==='object')?payload:{telefono:payload||''};
+    var telefono=d.telefono||'',k=telKey(telefono);
+    if(k){
+      var c=(chatUniversalData||[]).find(function(x){return x.key===k});
+      if(!c){
+        c={key:k,tel:telefono,ultimo:d.mensaje||'',fecha:d.created_at||new Date().toISOString(),tipo:d.tipo||'cliente',totalMsgs:1,pidioHumano:false,tienePregunta:false,orders:[],pedidoActual:null,pedidoAbierto:false,tienePedido:false,silenciado:false,cliente:state.clients[k]||null,nombre:(state.clients[k]&&state.clients[k].nombre_cliente)||''};
+        chatUniversalData.unshift(c);
+      }else{
+        c.ultimo=d.mensaje!=null?d.mensaje:c.ultimo;c.fecha=d.created_at||new Date().toISOString();c.tipo=d.tipo||c.tipo;c.totalMsgs=(c.totalMsgs||0)+1;
+        var lt=String(d.mensaje||'').toLowerCase();if(d.tipo==='alerta_pregunta')c.tienePregunta=true;if(d.tipo==='cliente'&&['hablar con','persona real','asesor','humano','encargado'].some(function(x){return lt.indexOf(x)!==-1}))c.pidioHumano=true;
+        chatUniversalData.sort(function(a,b){return new Date(b.fecha||0)-new Date(a.fecha||0)});
+      }
+      renderChatUniversal();
+    }
     if(telefono&&msgTel&&telKey(telefono)===telKey(msgTel)){
       if(hlCommSyncTimer)clearTimeout(hlCommSyncTimer);
-      hlCommSyncTimer=setTimeout(function(){hlCommSyncTimer=null;cargarMensajesChat(false);if(msgTel)hlCommLoadContext(msgTel)},70);
+      hlCommSyncTimer=setTimeout(function(){hlCommSyncTimer=null;cargarMensajesChat(false)},20);
     }
   }
   function hlCommOpenLiveStream(){
@@ -9835,7 +9855,7 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
     hlCommCloseLiveStream();
     try{
       var u='/api/chat-stream?restaurante_id='+encodeURIComponent(rest.id),es=new EventSource(u);hlCommStream=es;
-      es.addEventListener('chat',function(ev){try{var d=JSON.parse(ev.data||'{}');hlCommScheduleLiveSync(d.telefono||'')}catch(e){hlCommScheduleLiveSync('')}});
+      es.addEventListener('chat',function(ev){try{var d=JSON.parse(ev.data||'{}');hlCommScheduleLiveSync(d)}catch(e){hlCommScheduleLiveSync({})}});
       es.onerror=function(){var sync=document.getElementById('hlCommSyncText');if(sync)sync.textContent='Reconectando canal en vivo…'};
       es.addEventListener('ready',function(){var sync=document.getElementById('hlCommSyncText');if(sync)sync.textContent='En vivo · conectado'});
     }catch(e){}
@@ -9910,11 +9930,13 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
   function currentConv(){return (chatUniversalData||[]).find(function(c){return c.key===state.selectedKey})}
   function hlCommRenderTakeover(){var c=currentConv(),human=!!(c&&c.silenciado)||Object.keys(silencioPorTel||{}).some(function(t){return telKey(t)===state.selectedKey&&silencioPorTel[t]});var title=document.getElementById('hlCommTakeTitle'),sub=document.getElementById('hlCommTakeSub'),btn=document.getElementById('hlCommTakeBtn');if(!title||!btn)return;title.textContent=human?'Tú estás respondiendo':'Luz está atendiendo';sub.textContent=human?'Luz está en pausa únicamente en esta conversación.':'Puedes intervenir y devolverla a Luz cuando quieras.';btn.textContent=human?'DEVOLVER A LUZ':'TOMAR CONVERSACIÓN';btn.className='hlcc-take-btn '+(human?'human':'')}
   window.hlCommToggleTakeover=function(){if(!msgTel)return;var tog=document.getElementById('toggleSilencio');if(!tog)return;var before=!!silencioPorTel[msgTel];tog.click();var c=currentConv();if(c)c.silenciado=!before;hlCommRenderTakeover();renderChatUniversal()};
+  function hlCommOptimisticMessage(text){var dst=document.getElementById('hlCommMessages');if(!dst)return;var div=document.createElement('div');div.className='chat-bubble chat-restaurante hlcc-optimistic';div.innerHTML='<div class="chat-label">👤 Panel</div><div>'+esc(text).replace(/\n/g,'<br>')+'</div><div class="chat-time">Enviando…</div>';dst.appendChild(div);requestAnimationFrame(function(){dst.scrollTop=dst.scrollHeight})}
+  function hlCommClearOptimistic(){document.querySelectorAll('#hlCommMessages .hlcc-optimistic').forEach(function(x){x.remove()})}
   function hlCommRenderQuick(c){var q=document.getElementById('hlCommQuick');if(!q)return;var s=[];var st=String(c&&c.pedidoActual&&c.pedidoActual.estado||'');if(st==='en_preparacion')s=['Tu pedido ya está en preparación 👨‍🍳','Te aviso apenas salga con el domiciliario.'];else if(st==='listo')s=['Tu pedido ya está listo ✅','Estamos coordinando la entrega.'];else if(st==='en_camino')s=['Tu pedido ya va en camino 🛵','El domiciliario está realizando la entrega.'];else s=['Hola 👋 ¿En qué podemos ayudarte?','Gracias por escribirnos.'];q.innerHTML=s.map(function(x){return '<button data-text="'+esc(x)+'">'+esc(x)+'</button>'}).join('');q.querySelectorAll('button').forEach(function(b){b.onclick=function(){var t=document.getElementById('hlCommText');t.value=this.dataset.text;t.dispatchEvent(new Event('input'));t.focus()}})}
-  window.hlCommSend=async function(){var t=document.getElementById('hlCommText'),text=String(t&&t.value||'').trim();if(!text||!msgTel||!rest)return;var b=document.getElementById('hlCommSend');b.disabled=true;b.textContent='…';t.value='';t.style.height='38px';if(chatTimer)clearInterval(chatTimer);try{var d=await safeFetch('/enviar-mensaje-cliente',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telefono:msgTel,mensaje:text,restaurante_id:rest.id})});if(!d||!d.ok)throw new Error(d&&d.error||'No se pudo enviar');setTimeout(function(){chatLastTs='';cargarMensajesChat(true);loadChatUniversal();chatTimer=setInterval(function(){cargarMensajesChat(false)},5000)},500)}catch(e){if(typeof notif==='function')notif('No se pudo enviar: '+String(e.message||e).substring(0,50));t.value=text;chatTimer=setInterval(function(){cargarMensajesChat(false)},5000)}finally{b.disabled=false;b.textContent='➤';t.focus()}};
+  window.hlCommSend=async function(){var t=document.getElementById('hlCommText'),text=String(t&&t.value||'').trim();if(!text||!msgTel||!rest)return;var b=document.getElementById('hlCommSend');b.disabled=true;b.textContent='…';t.value='';t.style.height='38px';hlCommOptimisticMessage(text);if(chatTimer)clearInterval(chatTimer);try{var d=await safeFetch('/enviar-mensaje-cliente',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telefono:msgTel,mensaje:text,restaurante_id:rest.id})});if(!d||!d.ok)throw new Error(d&&d.error||'No se pudo enviar');chatLastTs='';hlCommClearOptimistic();cargarMensajesChat(true);chatTimer=setInterval(function(){cargarMensajesChat(false)},5000)}catch(e){hlCommClearOptimistic();if(typeof notif==='function')notif('No se pudo enviar: '+String(e.message||e).substring(0,50));t.value=text;chatTimer=setInterval(function(){cargarMensajesChat(false)},5000)}finally{b.disabled=false;b.textContent='➤';t.focus()}};
   window.hlCommAttach=function(){var i=document.getElementById('chatImgInput');if(i)i.click()};
   var hlCommConstructorHome=null,hlCommConstructorNext=null;
-  function hlCommRestoreConstructor(){var p=document.getElementById('constructorPedido');if(!p)return;p.style.display='none';p.classList.remove('hlcc-constructor-open');if(hlCommConstructorHome&&p.parentNode!==hlCommConstructorHome){try{hlCommConstructorHome.insertBefore(p,hlCommConstructorNext&&hlCommConstructorNext.parentNode===hlCommConstructorHome?hlCommConstructorNext:null)}catch(e){hlCommConstructorHome.appendChild(p)}}}
+  function hlCommRestoreConstructor(){var p=document.getElementById('constructorPedido');if(!p)return;p.style.display='none';p.classList.remove('hlcc-constructor-open');var bd=document.getElementById('hlCommOrderBackdrop');if(bd)bd.remove();var cx=document.getElementById('hlCommConstructorContext');if(cx)cx.remove();if(hlCommConstructorHome&&p.parentNode!==hlCommConstructorHome){try{hlCommConstructorHome.insertBefore(p,hlCommConstructorNext&&hlCommConstructorNext.parentNode===hlCommConstructorHome?hlCommConstructorNext:null)}catch(e){hlCommConstructorHome.appendChild(p)}}}
   window.hlCommRestoreConstructor=hlCommRestoreConstructor;
   window.hlCommOpenConstructor=function(){
     if(!msgTel||!rest)return;
@@ -9923,6 +9945,9 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
     if(!hlCommConstructorHome){hlCommConstructorHome=p.parentNode;hlCommConstructorNext=p.nextSibling}
     if(typeof abrirConstructor==='function')abrirConstructor();
     if(p.closest('#msgOverlay'))document.body.appendChild(p);
+    if(!document.getElementById('hlCommOrderBackdrop')){var bd=document.createElement('div');bd.id='hlCommOrderBackdrop';bd.className='hlcc-order-backdrop';bd.onclick=hlCommRestoreConstructor;document.body.appendChild(bd)}
+    var title=p.querySelector('.constructor-title');if(title)title.innerHTML='<span class="hlcc-order-title-orb">✦</span><span>Nuevo pedido</span><small>Desde la conversación</small>';
+    var header=p.querySelector('.constructor-header');if(header&&!document.getElementById('hlCommConstructorContext')){var ctx=document.createElement('div');ctx.id='hlCommConstructorContext';ctx.className='hlcc-constructor-context';ctx.innerHTML='<div class="hlcc-constructor-avatar">'+esc(initials((c&&c.nombre)||'',msgTel).toUpperCase())+'</div><div><b>'+esc((c&&c.nombre)||('Cliente '+telKey(msgTel).slice(-4)))+'</b><span>'+esc(prettyPhone(msgTel))+(window.hlCommManualParentOrder?' · Pedido #'+esc(window.hlCommManualParentOrder):'')+'</span></div>';header.insertAdjacentElement('afterend',ctx)}
     p.style.display='block';p.classList.add('hlcc-constructor-open');
     var dir=document.getElementById('con-dir');safeFetch('/api/cliente/'+encodeURIComponent(msgTel)+'?restaurante_id='+encodeURIComponent(rest.id)).then(function(d){if(d&&d.cliente){if(d.cliente.nombre_cliente)window.hlCommManualClientName=d.cliente.nombre_cliente;if(d.cliente.ultima_direccion&&dir)dir.value=d.cliente.ultima_direccion}}).catch(function(){});
   };
@@ -11024,6 +11049,36 @@ html body #page-chat .v6 .hlcc-action:active{transform:scale(.97)!important}
 #page-chat .chat-img-bubble.media-error{min-height:84px;display:flex!important;align-items:center;justify-content:center;border:1px dashed rgba(97,232,255,.25)!important}
 #page-chat .chat-img-bubble.media-error:before{content:"Imagen no disponible · toca para reintentar";font-size:11px;color:#A9B9D6}
 #page-chat .chat-img-out{margin-left:auto!important;border-color:rgba(75,140,255,.28)!important}
+</style>
+
+<style id="hlChatOrderComposerV3">
+.hlcc-order-backdrop{position:fixed;inset:0;z-index:99993;background:rgba(1,5,17,.66);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);animation:hlccFade .16s ease both}
+@keyframes hlccFade{from{opacity:0}to{opacity:1}}
+#constructorPedido.hlcc-constructor-open{display:block!important;position:fixed!important;top:68px!important;right:0!important;bottom:0!important;left:auto!important;width:min(470px,calc(100vw - 112px))!important;max-height:none!important;z-index:99994!important;border-radius:28px 0 0 28px!important;border:1px solid rgba(93,117,255,.24)!important;border-right:0!important;background:radial-gradient(circle at 20% 0%,rgba(87,65,255,.16),transparent 30%),linear-gradient(180deg,rgba(6,14,35,.985),rgba(3,8,23,.995))!important;box-shadow:-32px 0 90px rgba(0,0,0,.55),inset 1px 0 rgba(255,255,255,.025)!important;padding:22px 22px 26px!important;overflow-y:auto!important;animation:hlccOrderIn .2s cubic-bezier(.2,.75,.2,1) both}
+@keyframes hlccOrderIn{from{transform:translateX(28px);opacity:.5}to{transform:none;opacity:1}}
+#constructorPedido.hlcc-constructor-open .constructor-header{margin:0 0 14px!important;padding:0 0 16px!important;border-bottom:1px solid rgba(103,124,204,.12)!important;align-items:center!important}
+#constructorPedido.hlcc-constructor-open .constructor-title{display:flex!important;align-items:center!important;gap:10px!important;background:none!important;-webkit-text-fill-color:initial!important;color:#f4f7ff!important;font-size:17px!important;letter-spacing:-.02em!important}
+#constructorPedido.hlcc-constructor-open .constructor-title small{display:block;color:#7288ae;font-size:8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
+.hlcc-order-title-orb{width:32px;height:32px;display:grid;place-items:center;border-radius:11px;background:linear-gradient(145deg,rgba(82,92,255,.3),rgba(131,58,255,.18));border:1px solid rgba(113,108,255,.38);box-shadow:0 0 24px rgba(94,65,255,.24);color:#b9b7ff}
+#constructorPedido.hlcc-constructor-open #btnCerrarConstructor{width:38px;height:38px;border-radius:12px!important;border:1px solid rgba(111,131,195,.16)!important;background:rgba(255,255,255,.025)!important;color:#90a3c6!important;display:grid;place-items:center}
+.hlcc-constructor-context{display:flex;align-items:center;gap:11px;padding:12px 13px;margin:0 0 15px;border-radius:15px;border:1px solid rgba(84,125,220,.17);background:linear-gradient(115deg,rgba(33,71,150,.16),rgba(91,48,175,.09))}
+.hlcc-constructor-avatar{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,#3158a8,#6b39b7);color:white;font-size:10px;font-weight:900;box-shadow:0 0 18px rgba(69,91,255,.18)}
+.hlcc-constructor-context b{display:block;color:#f1f5ff;font-size:11.5px}.hlcc-constructor-context span{display:block;color:#7f93b7;font-size:8.5px;margin-top:3px}
+#constructorPedido.hlcc-constructor-open .prod-search-wrap{margin:0 0 13px!important}
+#constructorPedido.hlcc-constructor-open .prod-search{height:48px!important;border-radius:14px!important;background:rgba(7,16,39,.9)!important;border:1px solid rgba(87,127,224,.24)!important;color:#eef3ff!important;padding:0 15px!important;font-size:11.5px!important;box-shadow:inset 0 1px rgba(255,255,255,.02)!important}
+#constructorPedido.hlcc-constructor-open .prod-search:focus{border-color:rgba(91,138,255,.58)!important;box-shadow:0 0 0 3px rgba(63,109,255,.09)!important}
+#constructorPedido.hlcc-constructor-open .prod-cart{min-height:96px!important;border-radius:16px!important;background:rgba(5,12,31,.74)!important;border:1px solid rgba(87,110,184,.13)!important;padding:10px!important;margin-bottom:13px!important}
+#constructorPedido.hlcc-constructor-open .prod-cart-empty{color:#657b9f!important;font-size:9.5px!important;padding:26px 8px!important}
+#constructorPedido.hlcc-constructor-open .ffield{margin-bottom:11px!important}
+#constructorPedido.hlcc-constructor-open .flabel{font-size:7.5px!important;letter-spacing:.11em!important;color:#7186a9!important;text-transform:uppercase!important;font-weight:900!important;margin-bottom:6px!important}
+#constructorPedido.hlcc-constructor-open .finput{height:44px!important;border-radius:13px!important;background:rgba(7,16,39,.88)!important;border:1px solid rgba(84,113,188,.18)!important;color:#eaf0ff!important;font-size:10.5px!important;padding:0 12px!important}
+#constructorPedido.hlcc-constructor-open .prod-total-row{margin-top:5px!important;border-radius:15px!important;border:1px solid rgba(75,127,255,.18)!important;background:linear-gradient(110deg,rgba(31,64,139,.16),rgba(99,44,170,.10))!important;padding:13px 14px!important;color:#8295b8!important}
+#constructorPedido.hlcc-constructor-open #conTotalDisplay{color:#59efb2!important;text-shadow:0 0 18px rgba(55,234,164,.18)!important}
+#constructorPedido.hlcc-constructor-open #btnRegistrarPedido{height:50px!important;border-radius:15px!important;margin-top:12px!important;background:linear-gradient(135deg,#315fff,#7436ea)!important;box-shadow:0 12px 34px rgba(61,69,255,.28)!important;font-size:11.5px!important;letter-spacing:.015em!important}
+#constructorPedido.hlcc-constructor-open .prod-results{border-radius:14px!important;background:#08132d!important;border:1px solid rgba(85,119,208,.2)!important;box-shadow:0 18px 50px rgba(0,0,0,.45)!important}
+.hlcc-optimistic{opacity:.72!important}.hlcc-optimistic .chat-time{color:#6e83a8!important}
+@media(max-width:900px){#constructorPedido.hlcc-constructor-open{top:auto!important;left:8px!important;right:8px!important;bottom:8px!important;width:auto!important;max-height:88vh!important;border-radius:24px!important;border-right:1px solid rgba(93,117,255,.24)!important;padding:18px!important}}
+@media(prefers-reduced-motion:reduce){#constructorPedido.hlcc-constructor-open,.hlcc-order-backdrop{animation:none!important}}
 </style>
 </body>
 </html>
