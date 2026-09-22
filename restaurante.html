@@ -1451,6 +1451,14 @@ body:before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;back
   #page-chat .hlcc-quick::before{left:10px!important;font-size:6.5px!important}
 }
 </style>
+
+<script id="hlCriticalGlobals">
+/* HOLA LUZ critical shared globals. Keep these available before any polling module starts. */
+var rest = window.rest || null;
+window.rest = rest;
+var ordersV2Data = Array.isArray(window.ordersV2Data) ? window.ordersV2Data : [];
+window.ordersV2Data = ordersV2Data;
+</script>
 </head>
 <script>
 // ── EARLY INIT — show pinScreen immediately, don't wait for scripts ──────────
@@ -2936,8 +2944,9 @@ document.addEventListener("DOMContentLoaded", function(){
 var SU="https://vbxuwzcfzfjwhllkppkg.supabase.co",SK="sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5";
 console.info("HOLA LUZ — BUILD V7.5 · PIN SURGICAL FIX");
 
-var rest=window.rest||null,pin="",known={},timer=null;
+rest=window.rest||rest||null;
 window.rest=rest;
+var pin="",known={},timer=null;
 var ESTADOS={confirmado:{l:"Recibido",c:"tr",n:"en_preparacion",bl:"Preparando",bc:"bp"},en_preparacion:{l:"Preparando",c:"tp",n:"listo",bl:"Listo",bc:"bl"},listo:{l:"Listo",c:"tl2",n:"en_camino",bl:"En camino",bc:"bc"},en_camino:{l:"En camino",c:"tc",n:"entregado",bl:"Entregado",bc:"be"},cuenta:{l:"💳 Cuenta",c:"tp",n:"entregado",bl:"✅ Cuenta cobrada",bc:"be"},listo_entrega:{l:"Listo",c:"tl2",n:"entregado",bl:"💳 Cobrar y cerrar",bc:"bcerrar"},entregado:{l:"Entregado",c:"te",n:null,bl:null,bc:null}};
 var filtroActual="hoy",pedidoAEliminar=null,editPedidoId=null;
 var chatBadgeCount=0,pedidosBadgeCount=0,ultimoMensajeTs={};
@@ -3520,7 +3529,7 @@ function d9Avatar(d){return d.foto_url?'<img src="'+d9Esc(d.foto_url)+'">':d9Esc
 function d9InitMap(){if(d9State.map||!window.L)return;var el=document.getElementById('d9Map');if(!el)return;d9State.map=L.map('d9Map',{zoomControl:false,attributionControl:false}).setView([3.4516,-76.5320],13);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(d9State.map)}
 function d9RenderMap(){d9InitMap();if(!d9State.map)return;Object.keys(d9State.markers).forEach(function(k){d9State.map.removeLayer(d9State.markers[k])});d9State.markers={};var pts=[];d9State.team.forEach(function(d){var u=d.ubicacion;if(!u||u.lat==null||u.lng==null)return;var fresh=d.gps_age_ms!=null&&d.gps_age_ms<5*60*1000;if(!fresh)return;var col=d.presence==='busy'?'#34ddff':'#3be4b0';var m=L.circleMarker([u.lat,u.lng],{radius:9,color:'#d7f7ff',weight:2,fillColor:col,fillOpacity:1}).addTo(d9State.map);m.bindPopup('<b>'+d9Esc(d.nombre)+'</b><br>'+d9Esc(d9PresenceLabel(d))+(d.pedido_activo?'<br>Pedido #'+d9Esc(d.pedido_activo.numero_pedido):''));d9State.markers[d.id]=m;pts.push([u.lat,u.lng])});document.getElementById('d9MapMeta').textContent=pts.length?pts.length+' ubicación(es) reciente(s)':'Sin GPS reciente';if(pts.length===1)d9State.map.setView(pts[0],15);else if(pts.length>1)d9State.map.fitBounds(L.latLngBounds(pts),{padding:[28,28]});setTimeout(function(){d9State.map.invalidateSize()},80)}
 function d9RenderTeam(){var el=document.getElementById('d9Team');if(!el)return;var t=d9State.team;document.getElementById('d9Online').textContent=t.filter(function(d){return d.presence==='online'}).length;document.getElementById('d9Busy').textContent=t.filter(function(d){return d.presence==='busy'}).length;document.getElementById('d9Pending').textContent=t.filter(function(d){return d.presence==='pending'}).length;document.getElementById('d9Total').textContent=t.length;document.getElementById('d9TeamMeta').textContent=t.length+' domiciliario(s)';if(!t.length){el.innerHTML='<div class="d9-empty">Aún no tienes domiciliarios. Agrega el primero con su número de teléfono.</div>';return}el.innerHTML=t.map(function(d){return '<div class="d9-card '+d9PresenceClass(d)+'"><div class="d9-photo">'+d9Avatar(d)+'</div><div class="d9-main"><b>'+d9Esc(d.nombre||'Domiciliario')+'</b><small>'+d9Esc(d.telefono||'Sin teléfono')+' · '+d9Esc(d.vehiculo||'moto')+(d.placa?' · '+d9Esc(d.placa):'')+'</small><span class="d9-pres '+d9PresenceClass(d)+'"><i></i>'+d9Esc(d9PresenceLabel(d))+'</span>'+(d.pedido_activo?'<div class="d9-mini-order">Pedido #'+d9Esc(d.pedido_activo.numero_pedido)+' · '+d9Esc(d.pedido_activo.estado)+'</div>':'')+'</div><div class="d9-ops"><button class="d9-icon-btn" title="Editar" data-edit="'+d.id+'">✎</button></div></div>'}).join('');el.querySelectorAll('[data-edit]').forEach(function(b){b.onclick=function(){d9OpenEdit(this.dataset.edit)}})}
-async function d9LoadSettings(){if(!rest)return;try{var d=await d9Json('/api/domi-admin/settings?restaurante_id='+rest.id);d9State.auto=!!d.auto;d9State.locationConfigured=!!d.location_configured;d9State.restaurantLat=d.lat!=null?Number(d.lat):null;d9State.restaurantLng=d.lng!=null?Number(d.lng):null;var sw=document.getElementById('d9AutoSwitch');if(sw)sw.classList.toggle('on',d9State.auto);if(typeof d10RenderLocationState==='function')d10RenderLocationState();}catch(e){}}
+async function d9LoadSettings(){var activeRest=window.rest||null;if(!activeRest||!activeRest.id)return;try{var d=await d9Json('/api/domi-admin/settings?restaurante_id='+activeRest.id);d9State.auto=!!d.auto;d9State.locationConfigured=!!d.location_configured;d9State.restaurantLat=d.lat!=null?Number(d.lat):null;d9State.restaurantLng=d.lng!=null?Number(d.lng):null;var sw=document.getElementById('d9AutoSwitch');if(sw)sw.classList.toggle('on',d9State.auto);if(typeof d10RenderLocationState==='function')d10RenderLocationState();}catch(e){}}
 async function d9ToggleAuto(){if(!rest)return;var sw=document.getElementById('d9AutoSwitch'),next=!d9State.auto;if(next&&!d9State.locationConfigured&&typeof d10SaveRestaurantLocation==='function'){var ok=await d10SaveRestaurantLocation(true);if(!ok){sw&&sw.classList.toggle('on',false);return;}}sw&&sw.classList.toggle('on',next);try{var d=await d9Json('/api/domi-admin/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest.id,auto:next})});d9State.auto=!!d.auto;sw&&sw.classList.toggle('on',d9State.auto);d9Notify('success',d9State.auto?'Luz quedó a cargo del despacho':'Asignación manual activada',d9State.auto?'Cuando Cocina marque LISTO, buscaré al domiciliario activo más cercano al restaurante.':'Tú eliges quién recibe cada pedido listo.');if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:d9State.auto?'auto_dispatch_on':'auto_dispatch_off',titulo:d9State.auto?'Despacho automático activado':'Despacho manual activado',mensaje:d9State.auto?'Estoy lista para asignar los domicilios cuando Cocina los marque listos.':'Te avisaré cuando un pedido esté listo para que elijas el domiciliario.'},true);}catch(e){sw&&sw.classList.toggle('on',d9State.auto);d9Notify('error','No se pudo cambiar',e.message)}}
 async function d9Refresh(show){if(!rest)return;try{var d=await d9Json('/api/domi-admin/list?restaurante_id='+rest.id);d9State.team=d.domiciliarios||[];domiciliariosList=d9State.team.filter(function(x){return x.habilitado!==false});d9RenderTeam();d9RenderMap();if(show)d9Notify('success','Equipo actualizado','Estados y GPS sincronizados.')}catch(e){var el=document.getElementById('d9Team');if(el)el.innerHTML='<div class="d9-empty">No se pudo cargar el equipo.</div>';if(show)d9Notify('error','Error de conexión',e.message)}}
 function cargarDomiciliarios(){return d9Refresh(false)}
@@ -3760,7 +3769,7 @@ function renderDashboardLiveOrders(rows){var box=document.getElementById("dashbo
 
 
 // ===== V4 SYSTEM =====
-var ordersV2Data=[],ordersV2Filter="all",notificationCenterData=[];
+ordersV2Data=Array.isArray(window.ordersV2Data)?window.ordersV2Data:[];window.ordersV2Data=ordersV2Data;var ordersV2Filter="all",notificationCenterData=[];
 function openPlanDrawer(){var d=document.getElementById("planDrawer");if(d){var n=document.getElementById("planDrawerName");if(n)n.textContent=(typeof planActual!=="undefined"&&planActual)?String(planActual).replace(/_/g," "):"Dominante";d.classList.add("open");}}
 function closePlanDrawer(){var d=document.getElementById("planDrawer");if(d)d.classList.remove("open")}
 function openNotifications(){var d=document.getElementById("notificationDrawer");if(d){renderNotificationCenter();d.classList.add("open");}var b=document.getElementById("notifBadgeV4");if(b)b.classList.remove("show")}
@@ -3777,7 +3786,7 @@ function loadFinanceCenter(){if(!rest)return;var now=new Date(),desde=new Date(n
 function printFinanceCenter(){window.print()}
 function exportFinanceCsv(){if(!rest){return}var now=new Date(),desde=new Date(now.getTime()-6*86400000);get("pedidos","restaurante_id=eq."+rest.id+"&created_at=gte."+desde.toISOString()+"&estado=not.in.(cancelado,cuenta)&select=numero_pedido,total,domicilio,metodo_pago,created_at").then(function(rows){rows=Array.isArray(rows)?rows:[];var csv='Pedido,Fecha,Total,Domicilio,Metodo\\n'+rows.map(function(r){return [r.numero_pedido,new Date(r.created_at).toLocaleString('es-CO'),r.total||0,r.domicilio||0,r.metodo_pago||''].map(function(v){return '"'+String(v).replace(/"/g,'""')+'"'}).join(',')}).join('\\n');var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='hola-luz-finanzas.csv';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},500);});}
 
-var ordersV2Data=[],ordersV2Filter="all",notificationCenterData=[];
+ordersV2Data=Array.isArray(window.ordersV2Data)?window.ordersV2Data:[];window.ordersV2Data=ordersV2Data;var ordersV2Filter="all",notificationCenterData=[];
 var selectedOrderV5Id=null,ordersV5ActiveRows=[],ordersV5DeliveredRows=[];
 
 function openPlanDrawer(){var d=document.getElementById("planDrawer");if(d){var n=document.getElementById("planDrawerName");if(n)n.textContent=(typeof planActual!=="undefined"&&planActual)?String(planActual).replace(/_/g," "):"Dominante";d.classList.add("open");}}
@@ -3831,16 +3840,16 @@ function needsCourierV5(p){
   var dir=(p.direccion||"").toUpperCase(),tipo=(p.tipo_pedido||"").toLowerCase();
   return Number(p.domicilio||0)>0 && !dir.startsWith("MESA ") && tipo!=="recoger" && !dir.startsWith("RECOGER");
 }
-function orderByIdV5(id){return ordersV2Data.find(function(x){return String(x.id)===String(id)})||null}
+function orderByIdV5(id){return (window.ordersV2Data||[]).find(function(x){return String(x.id)===String(id)})||null}
 function renderOrdersV2(rows){
   ordersV5ActiveRows=Array.isArray(rows)?rows:[];
-  ordersV2Data=ordersV5ActiveRows.slice();
+  window.ordersV2Data=ordersV2Data=ordersV5ActiveRows.slice();
   renderOrdersV5();
   if(rest){
     var since=new Date(Date.now()-24*60*60*1000).toISOString();
     get("pedidos","restaurante_id=eq."+rest.id+"&estado=eq.entregado&created_at=gte."+since+"&order=created_at.desc&limit=12").then(function(done){
       ordersV5DeliveredRows=Array.isArray(done)?done:[];
-      var seen={};ordersV2Data=[];
+      var seen={};window.ordersV2Data=ordersV2Data=[];
       ordersV5ActiveRows.concat(ordersV5DeliveredRows).forEach(function(x){if(x&&x.id&&!seen[x.id]){seen[x.id]=1;ordersV2Data.push(x)}});
       renderOrdersV5();
     }).catch(function(){});
@@ -3851,14 +3860,14 @@ function renderOrdersV5(){
   filterOrdersV5();
   renderOrdersAlertV5();
   updateOrdersClockV5();
-  if(!domiciliariosList.length&&rest)cargarDomiciliarios();
+  if(!domiciliariosList.length&&window.rest)cargarDomiciliarios();
 }
 function updateOrdersClockV5(){
   var el=document.getElementById("ordersV5Clock");if(!el)return;
   try{el.textContent=new Date().toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});}catch(e){el.textContent="Conectado"}
 }
 function updateOrdersCountsV5(){
-  var arr=ordersV2Data||[],counts={confirmado:0,en_preparacion:0,listo:0,en_camino:0,entregado:0},active=0;
+  var arr=window.ordersV2Data||[],counts={confirmado:0,en_preparacion:0,listo:0,en_camino:0,entregado:0},active=0;
   arr.forEach(function(p){var s=(p.estado||"").toLowerCase();if(counts[s]!==undefined)counts[s]++;if(!["entregado","cancelado","cuenta"].includes(s))active++;});
   setText("ov5CountAll",String(arr.length));setText("ov5CountNew",String(counts.confirmado));setText("ov5CountKitchen",String(counts.en_preparacion));setText("ov5CountReady",String(counts.listo));setText("ov5CountRoute",String(counts.en_camino));setText("ov5CountDone",String(counts.entregado));setText("ordersV5ActiveCount",active+" pedido"+(active===1?"":"s")+" activo"+(active===1?"":"s"));
 }
@@ -3878,7 +3887,7 @@ function syncOrderTabsV5(){
 function filterOrdersV5(){
   var box=document.getElementById("ordersV5List");if(!box)return;
   var q=((document.getElementById("ordersV5Search")||{}).value||"").trim().toLowerCase();
-  var arr=(ordersV2Data||[]).filter(function(p){
+  var arr=(window.ordersV2Data||[]).filter(function(p){
     var st=(p.estado||"").toLowerCase();if(ordersV2Filter!=="all"&&st!==ordersV2Filter)return false;
     var blob=[p.numero_pedido,p.cliente_nombre,p.cliente_tel,p.direccion,p.canal,p.domiciliario_nombre].join(" ").toLowerCase();
     return !q||blob.indexOf(q)!==-1;
@@ -7826,7 +7835,7 @@ async function confirmarPOS(){
   if(origShowTab){window.showTab=function(n){currentTab=n;origShowTab(n);fetchLuzAlive(n);};}
   function fetchLuzAlive(tab){
     if(!window.rest||!window.rest.id) return;
-    fetch("/api/luz-alive?restaurante_id="+rest.id+"&tab="+(tab||currentTab))
+    fetch("/api/luz-alive?restaurante_id="+window.rest.id+"&tab="+(tab||currentTab))
       .then(function(r){return r.json();})
       .then(function(d){
         if(!d.ok) return;
@@ -7962,7 +7971,7 @@ window.updateOrdersClockV5=function(){var el=document.getElementById("ordersV5Cl
 window.renderOrdersAlertV5=function(){var box=document.getElementById("ordersV5Alert");if(box)box.classList.remove("show");};
 window.renderOrdersV2=function(rows){
   ordersV5ActiveRows=Array.isArray(rows)?rows:[];
-  ordersV2Data=ordersV5ActiveRows.slice();
+  window.ordersV2Data=ordersV2Data=ordersV5ActiveRows.slice();
   var sig=ov6Sig(ordersV5ActiveRows);
   if(sig!==ov6LastSignature){ov6LastSignature=sig;renderOrdersV5();}
   else {updateOrdersCountsV5();updateOrdersClockV5();}
@@ -7971,7 +7980,7 @@ window.renderOrdersV2=function(rows){
     get("pedidos","restaurante_id=eq."+rest.id+"&estado=eq.entregado&created_at=gte."+since+"&order=created_at.desc&limit=12").then(function(done){
       ordersV5DeliveredRows=Array.isArray(done)?done:[];var seen={},merged=[];
       ordersV5ActiveRows.concat(ordersV5DeliveredRows).forEach(function(x){if(x&&x.id&&!seen[x.id]){seen[x.id]=1;merged.push(x)}});
-      var nextSig=ov6Sig(merged);ordersV2Data=merged;
+      var nextSig=ov6Sig(merged);window.ordersV2Data=ordersV2Data=merged;
       if(nextSig!==ov6LastSignature){ov6LastSignature=nextSig;renderOrdersV5();}else{updateOrdersCountsV5();}
     }).catch(function(){});
   }
@@ -8034,7 +8043,7 @@ window.primaryOrderActionV5=function(id){
 var originalRenderOrdersV5=window.renderOrdersV5;
 window.renderOrdersV5=function(){
   updateOrdersCountsV5();syncOrderTabsV5();filterOrdersV5();updateOrdersClockV5();
-  if(!domiciliariosList.length&&rest)cargarDomiciliarios();
+  if(!domiciliariosList.length&&window.rest)cargarDomiciliarios();
 };
 })();
 </script>
@@ -8124,14 +8133,14 @@ window.renderOrdersV5=function(){
     var o=document.getElementById('pinOrb');if(o)o.innerHTML='<span>✦</span><i></i><i></i>';
     var tt=document.getElementById('pinTitulo');if(tt)tt.textContent='HOLA LUZ';
   };
-  var oldVolverPais=window.volverPais;
-  window.volverPais=function(){oldVolverPais();setRail(1);};
-  var oldVolverTipo=window.volverTipo;
-  window.volverTipo=function(){oldVolverTipo();setRail(2);var v=document.getElementById('pinVerify');if(v)v.classList.remove('active');};
-  var oldPinKey=window.pinKey;
-  window.pinKey=function(k){oldPinKey(k);if(pin.length===4){var v=document.getElementById('pinVerify');if(v)v.classList.add('active');}};
-  var oldDots=window.dots;
-  window.dots=function(){oldDots();if(pin.length<4){var v=document.getElementById('pinVerify');if(v)v.classList.remove('active');}};
+  var oldVolverPais=(typeof window.volverPais==='function')?window.volverPais:null;
+  window.volverPais=function(){if(oldVolverPais)oldVolverPais();else{var sp=document.getElementById('stepPais'),su=document.getElementById('stepUSA'),st=document.getElementById('stepTipo'),spi=document.getElementById('stepPin');if(su)su.style.display='none';if(st)st.style.display='none';if(spi)spi.style.display='none';if(sp)sp.style.display='block';}setRail(1);};
+  var oldVolverTipo=(typeof window.volverTipo==='function')?window.volverTipo:null;
+  window.volverTipo=function(){if(oldVolverTipo)oldVolverTipo();else{var st=document.getElementById('stepTipo'),spi=document.getElementById('stepPin');if(spi)spi.style.display='none';if(st)st.style.display='block';}setRail(2);var v=document.getElementById('pinVerify');if(v)v.classList.remove('active');};
+  var oldPinKey=(typeof window.pinKey==='function')?window.pinKey:null;
+  window.pinKey=function(k){if(oldPinKey)oldPinKey(k);if(typeof pin!=='undefined'&&String(pin).length===4){var v=document.getElementById('pinVerify');if(v)v.classList.add('active');}};
+  var oldDots=(typeof window.dots==='function')?window.dots:null;
+  window.dots=function(){if(oldDots)oldDots();if(typeof pin==='undefined'||String(pin).length<4){var v=document.getElementById('pinVerify');if(v)v.classList.remove('active');}};
   setRail(1);
 })();
 </script>
@@ -8263,13 +8272,13 @@ window.renderOrdersV5=function(){
 
   window.renderOrdersV2=function(rows){
     ordersV5ActiveRows=Array.isArray(rows)?rows:[];
-    ordersV2Data=ordersV5ActiveRows.slice();
+    window.ordersV2Data=ordersV2Data=ordersV5ActiveRows.slice();
     renderOrdersV5();
     if(rest){
       var since=new Date(Date.now()-24*60*60*1000).toISOString();
       get('pedidos','restaurante_id=eq.'+rest.id+'&estado=eq.entregado&created_at=gte.'+since+'&order=created_at.desc&limit=18').then(function(done){
         ordersV5DeliveredRows=Array.isArray(done)?done:[];
-        var seen={},merged=[];ordersV5ActiveRows.concat(ordersV5DeliveredRows).forEach(function(x){if(x&&x.id&&!seen[x.id]){seen[x.id]=1;merged.push(x)}});ordersV2Data=merged;
+        var seen={},merged=[];ordersV5ActiveRows.concat(ordersV5DeliveredRows).forEach(function(x){if(x&&x.id&&!seen[x.id]){seen[x.id]=1;merged.push(x)}});window.ordersV2Data=ordersV2Data=merged;
         updateOrdersCountsV5();
         if(ordersV2Filter==='entregado')filterOrdersV5();
       }).catch(function(){});
@@ -8277,14 +8286,14 @@ window.renderOrdersV5=function(){
   };
 
   window.updateOrdersCountsV5=function(){
-    var arr=ordersV2Data||[],counts={confirmado:0,en_preparacion:0,listo:0,en_camino:0,entregado:0},active=0;
+    var arr=window.ordersV2Data||[],counts={confirmado:0,en_preparacion:0,listo:0,en_camino:0,entregado:0},active=0;
     arr.forEach(function(p){var s=(p.estado||'').toLowerCase();if(counts[s]!==undefined)counts[s]++;if(activeForAllV8(p))active++;});
     setText('ov5CountAll',String(active));setText('ov5CountNew',String(counts.confirmado));setText('ov5CountKitchen',String(counts.en_preparacion));setText('ov5CountReady',String(counts.listo));setText('ov5CountRoute',String(counts.en_camino));setText('ov5CountDone',String(counts.entregado));setText('ordersV5ActiveCount',active+' pedido'+(active===1?'':'s')+' activo'+(active===1?'':'s'));};
 
   window.filterOrdersV5=function(){
     var box=document.getElementById('ordersV5List');if(!box)return;
     var q=((document.getElementById('ordersV5Search')||{}).value||'').trim().toLowerCase();
-    var arr=(ordersV2Data||[]).filter(function(p){var st=(p.estado||'').toLowerCase();if(ordersV2Filter==='all'){if(!activeForAllV8(p))return false;}else if(st!==ordersV2Filter)return false;var blob=[p.numero_pedido,p.cliente_nombre,p.cliente_tel,p.direccion,p.canal,p.domiciliario_nombre].join(' ').toLowerCase();return !q||blob.indexOf(q)!==-1;});
+    var arr=(window.ordersV2Data||[]).filter(function(p){var st=(p.estado||'').toLowerCase();if(ordersV2Filter==='all'){if(!activeForAllV8(p))return false;}else if(st!==ordersV2Filter)return false;var blob=[p.numero_pedido,p.cliente_nombre,p.cliente_tel,p.direccion,p.canal,p.domiciliario_nombre].join(' ').toLowerCase();return !q||blob.indexOf(q)!==-1;});
     arr=stableSortV8(arr);
     if(!arr.length){box.innerHTML='<div class="ov5-empty">No hay pedidos en este filtro.</div>';selectedOrderV5Id=null;lastListSig='';renderOrderDetailV5(null);return;}
     if(!selectedOrderV5Id||!arr.some(function(x){return String(x.id)===String(selectedOrderV5Id)}))selectedOrderV5Id=arr[0].id;
@@ -8332,7 +8341,7 @@ window.renderOrdersV5=function(){
   };
 
   function courierPhotoV8(dom){var u=dom&&(dom.foto_url||dom.avatar_url||dom.photo_url||dom.imagen_url||dom.image_url);var initial=escHtml(String((dom&&dom.nombre)||'D').charAt(0).toUpperCase());return u?'<div class="ov5-courier-avatar"><img src="'+escHtml(u)+'" alt="'+escHtml(dom.nombre||'Domiciliario')+'" onerror="this.parentElement.textContent=\''+initial+'\'"></div>':'<div class="ov5-courier-avatar">'+initial+'</div>';}
-  function activeOrderForDomiV8(id){return (ordersV2Data||[]).find(function(p){return String(p.domiciliario_id||'')===String(id||'')&&!['entregado','cancelado'].includes((p.estado||'').toLowerCase())})||null;}
+  function activeOrderForDomiV8(id){return (window.ordersV2Data||[]).find(function(p){return String(p.domiciliario_id||'')===String(id||'')&&!['entregado','cancelado'].includes((p.estado||'').toLowerCase())})||null;}
   function locForDomiV8(id){return (domiLocations||[]).find(function(x){return String(x.domiciliario_id)===String(id)})||null;}
   function freshTextV8(loc){if(!loc||!loc.updated_at)return 'Sin posición reciente';var m=Math.max(0,Math.floor((Date.now()-new Date(loc.updated_at).getTime())/60000));return m<1?'GPS ahora':m<60?'GPS hace '+m+' min':'GPS sin actualizar';}
 
@@ -8357,7 +8366,7 @@ window.renderOrdersV5=function(){
     card.appendChild(panel);
   }
 
-  async function loadDomiLocationsV8(){if(!rest)return [];try{var r=await fetch('/api/domi-ubicaciones?restaurante_id='+encodeURIComponent(rest.id),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);var d=await r.json();domiLocations=Array.isArray(d)?d:[];return domiLocations;}catch(e){return domiLocations||[];}}
+  async function loadDomiLocationsV8(){var activeRest=window.rest||null;if(!activeRest)return [];try{var r=await fetch('/api/domi-ubicaciones?restaurante_id='+encodeURIComponent(activeRest.id),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);var d=await r.json();domiLocations=Array.isArray(d)?d:[];return domiLocations;}catch(e){return domiLocations||[];}}
   function destroyTrackMapV8(){if(trackMap&&window.L){try{trackMap.remove()}catch(e){}}trackMap=null;trackMarkers=[];var m=document.getElementById('ordersV8Map');if(m)m.innerHTML='';}
   function drawMapV8(p){
     ensureTrackingPanelV8();var mapEl=document.getElementById('ordersV8Map'),status=document.getElementById('ordersV8TrackingStatus'),ass=document.getElementById('ordersV8Assigned'),fresh=document.getElementById('ordersV8Fresh');if(!mapEl)return;
@@ -8377,7 +8386,7 @@ window.renderOrdersV5=function(){
   var oldAssign=window.assignCourierV5;window.assignCourierV5=function(pid,pnum,did,dname){var detail=document.getElementById('ordersV5Detail');if(detail)detail.classList.add('ov8-state-flash');return oldAssign(pid,pnum,did,dname);};
   var oldRenderLuz=window.renderLuzOrderV5;window.renderLuzOrderV5=function(p){oldRenderLuz(p);var t=document.getElementById('ordersV5LuzTitle'),x=document.getElementById('ordersV5LuzText');if(!p||!t||!x)return;if(needsCourierV5(p)&&!p.domiciliario_id&&(p.estado==='listo'||p.estado==='en_preparacion')){t.textContent='Despacho pendiente';x.textContent='El pedido requiere domiciliario. Puedes asignarlo desde las cards superiores sin salir de esta orden.';}else if(p.domiciliario_id&&p.estado==='en_camino'){t.textContent='Tracking activo';x.textContent='La posición del domiciliario se actualiza en el mapa cuando su dispositivo reporta GPS.';}};
 
-  window.renderOrdersV5=function(){updateOrdersCountsV5();syncOrderTabsV5();filterOrdersV5();updateOrdersClockV5();if(!domiciliariosList.length&&rest)cargarDomiciliarios();};
+  window.renderOrdersV5=function(){updateOrdersCountsV5();syncOrderTabsV5();filterOrdersV5();updateOrdersClockV5();if(!domiciliariosList.length&&window.rest)cargarDomiciliarios();};
 
   setInterval(function(){var pg=document.getElementById('page-orders');if(!pg||!pg.classList.contains('active'))return;var p=orderByIdV5(selectedOrderV5Id);if(p)refreshOrderDomiTrackingV8(p);},15000);
 
@@ -8532,7 +8541,7 @@ window.renderOrdersV5=function(){
   function modifyOrderV13(id,body){return fetch('/api/pedido-modificar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest&&rest.id?rest.id:null,pedido_id:id,patch:body,origen:'panel_restaurante'})}).then(responseMessageV82).then(function(d){return d&&d.pedido?d.pedido:d;});}
   window.patchOrderFieldsV82=proxyPatchV82;
 
-  function updateLocalOrderV82(id,body){var p=orderByIdV5(id);if(p)Object.assign(p,body);(ordersV2Data||[]).forEach(function(x){if(String(x.id)===String(id))Object.assign(x,body)});return p;}
+  function updateLocalOrderV82(id,body){var p=orderByIdV5(id);if(p)Object.assign(p,body);(window.ordersV2Data||[]).forEach(function(x){if(String(x.id)===String(id))Object.assign(x,body)});return p;}
   function refreshOrdersUiV82(preferId){try{if(preferId)selectedOrderV5Id=preferId;updateOrdersCountsV5();filterOrdersV5();loadStats();}catch(e){}setTimeout(function(){try{loadPedidos()}catch(e){}},350);}
 
   window.changeOrderStateV82=async function(p,state,opts){
@@ -8566,8 +8575,8 @@ window.renderOrdersV5=function(){
 
   /* Courier presence / reliable assignment */
   var presenceV82={},presenceInitV82=false;
-  async function locationsV82(){if(!rest)return [];try{var r=await fetch('/api/domi-ubicaciones?restaurante_id='+encodeURIComponent(rest.id),{cache:'no-store'});if(!r.ok)return [];var d=await r.json();return Array.isArray(d)?d:[]}catch(e){return []}}
-  function activeDomiOrderV82(id){return (ordersV2Data||[]).find(function(p){return String(p.domiciliario_id||'')===String(id)&&['listo','en_camino'].includes(String(p.estado||'').toLowerCase())});}
+  async function locationsV82(){var activeRest=window.rest||null;if(!activeRest)return [];try{var r=await fetch('/api/domi-ubicaciones?restaurante_id='+encodeURIComponent(activeRest.id),{cache:'no-store'});if(!r.ok)return [];var d=await r.json();return Array.isArray(d)?d:[]}catch(e){return []}}
+  function activeDomiOrderV82(id){return (window.ordersV2Data||[]).find(function(p){return String(p.domiciliario_id||'')===String(id)&&['listo','en_camino'].includes(String(p.estado||'').toLowerCase())});}
   function presenceForV82(d,loc){var active=activeDomiOrderV82(d.id),age=loc&&loc.updated_at?Date.now()-new Date(loc.updated_at).getTime():Infinity;if(d.habilitado===false)return {key:'off',label:'Acceso deshabilitado',detail:'No disponible'};if(!d.onboarding_completo)return {key:'off',label:'Por configurar',detail:'Debe completar su cuenta'};if(!d.turno_activo)return {key:'off',label:'Fuera de turno',detail:'No disponible'};if(active)return {key:'busy',label:'Ocupado',detail:'Pedido #'+(active.numero_pedido||'')};if(age<120000)return {key:'online',label:'Disponible',detail:'GPS en vivo'};if(age<600000)return {key:'stale',label:'En turno',detail:'GPS hace '+Math.max(2,Math.round(age/60000))+' min'};return {key:'stale',label:'GPS sin señal',detail:'Turno abierto · esperando GPS'};}
   function photoV82(d){return '<div class="hl-domi-photo">'+(d.foto_url?'<img src="'+escHtml(d.foto_url)+'" onerror="this.remove()">':escHtml(String(d.nombre||'D').charAt(0).toUpperCase()))+'</div>';}
   window.renderCouriersV5=async function(p){var box=document.getElementById('ordersV5Couriers');if(!box)return;if(!p){box.innerHTML='<div class="ov8-no-courier"><b>Selecciona un pedido</b><p>El equipo de reparto aparecerá aquí.</p></div>';return;}if(!needsCourierV5(p)){box.innerHTML='<div class="ov8-no-courier"><b>No requiere domiciliario</b><p>Mesa y Recoger cierran directamente desde el flujo del pedido.</p></div>';if(window.refreshOrderDomiTrackingV8)refreshOrderDomiTrackingV8(p);return;}var locs=await locationsV82(),by={};locs.forEach(function(x){by[String(x.domiciliario_id)]=x});var list=(domiciliariosList||[]).slice();var assigned=String(p.domiciliario_id||'');list.sort(function(a,b){if(String(a.id)===assigned)return -1;if(String(b.id)===assigned)return 1;var pa=presenceForV82(a,by[String(a.id)]),pb=presenceForV82(b,by[String(b.id)]);var rank={online:0,busy:1,stale:2,off:3};return rank[pa.key]-rank[pb.key]||String(a.nombre).localeCompare(String(b.nombre));});var html='';list.forEach(function(d){var pr=presenceForV82(d,by[String(d.id)]),isAssigned=String(d.id)===assigned;var disabled=!isAssigned&&pr.key!=='online';html+='<div class="hl-domi-card '+(isAssigned?'assigned':'')+'" style="--presence-glow:'+(pr.key==='online'?'rgba(45,212,191,.20)':pr.key==='busy'?'rgba(96,165,250,.20)':pr.key==='stale'?'rgba(245,158,11,.14)':'rgba(100,116,139,.08)')+'">'+photoV82(d)+'<div class="hl-domi-main"><b>'+escHtml(d.nombre||'Domiciliario')+(isAssigned?' · Asignado':'')+'</b><small>'+(d.tipo?escHtml(d.tipo)+' · ':'')+escHtml(pr.detail)+'</small><span class="hl-presence '+pr.key+'"><i></i>'+escHtml(pr.label)+'</span></div><button class="hl-domi-btn" '+(disabled?'disabled style="opacity:.35;cursor:not-allowed"':'')+' onclick="assignCourierV5(\''+p.id+'\',\''+String(p.numero_pedido||'')+'\',\''+d.id+'\',\''+encodeURIComponent(d.nombre||'Domiciliario')+'\')">'+(isAssigned?'Asignado':disabled?'No disponible':'Asignar')+'</button></div>';});if(!html)html='<div class="ov8-no-courier"><b>No hay domiciliarios registrados</b><p>Activa o agrega el equipo desde Despacho & Tracking.</p></div>';box.innerHTML=html;if(window.refreshOrderDomiTrackingV8)refreshOrderDomiTrackingV8(p);};
@@ -8575,10 +8584,10 @@ window.renderOrdersV5=function(){
 
   window.cambiarTurnoDomi=async function(id,enTurno){var d=(domiciliariosList||[]).find(function(x){return String(x.id)===String(id)}),name=d?d.nombre:'Domiciliario',n=hlNotice('info',enTurno?'Abriendo turno':'Finalizando turno',name+'…',0);try{await fetch('/api/domi-admin/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest?rest.id:null,domiciliario_id:id,turno_activo:!!enTurno})}).then(responseMessageV82);if(d)d.turno_activo=!!enTurno;resolveNoticeV82(n,enTurno?'success':'warn',enTurno?name+' tiene el turno abierto':name+' terminó turno',enTurno?'Seguirá sin estar disponible hasta que su teléfono reporte GPS.':'Ya no recibirá nuevas entregas.',3200);await syncDomiTeamV82();var p=orderByIdV5(selectedOrderV5Id);if(p)renderCouriersV5(p);}catch(e){resolveNoticeV82(n,'error','No se pudo cambiar el turno',String(e.message||e),4200)}};
 
-  window.autoAsignarTodos=async function(){await syncDomiTeamV82();var activos=(domiciliariosList||[]).filter(function(d){return d.presence==='online'});if(!activos.length){hlNotice('warn','Sin equipo disponible','No hay domiciliarios en turno.',3200);return}var pendientes=(ordersV2Data||[]).filter(function(p){return needsCourierV5(p)&&!p.domiciliario_id&&['confirmado','en_preparacion','listo'].includes(String(p.estado||'').toLowerCase())});if(!pendientes.length){hlNotice('info','Todo asignado','No hay domicilios pendientes sin domiciliario.',2800);return}var n=hlNotice('info','Auto-asignando','Distribuyendo '+pendientes.length+' pedido(s) entre el equipo activo…',0),ok=0;for(var i=0;i<pendientes.length;i++){var p=pendientes[i],d=activos[i%activos.length];try{await fetch('/api/asignar-domiciliario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pedido_id:p.id,domiciliario_id:d.id,domiciliario_nombre:d.nombre,restaurante_id:rest?rest.id:null})}).then(responseMessageV82);p.domiciliario_id=d.id;p.domiciliario_nombre=d.nombre;ok++}catch(e){}}resolveNoticeV82(n,ok?'success':'error',ok+' pedido(s) asignados',ok?'El reparto quedó distribuido.':'No se pudieron completar las asignaciones.',3300);refreshOrdersUiV82(selectedOrderV5Id);};
+  window.autoAsignarTodos=async function(){await syncDomiTeamV82();var activos=(domiciliariosList||[]).filter(function(d){return d.presence==='online'});if(!activos.length){hlNotice('warn','Sin equipo disponible','No hay domiciliarios en turno.',3200);return}var pendientes=(window.ordersV2Data||[]).filter(function(p){return needsCourierV5(p)&&!p.domiciliario_id&&['confirmado','en_preparacion','listo'].includes(String(p.estado||'').toLowerCase())});if(!pendientes.length){hlNotice('info','Todo asignado','No hay domicilios pendientes sin domiciliario.',2800);return}var n=hlNotice('info','Auto-asignando','Distribuyendo '+pendientes.length+' pedido(s) entre el equipo activo…',0),ok=0;for(var i=0;i<pendientes.length;i++){var p=pendientes[i],d=activos[i%activos.length];try{await fetch('/api/asignar-domiciliario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pedido_id:p.id,domiciliario_id:d.id,domiciliario_nombre:d.nombre,restaurante_id:rest?rest.id:null})}).then(responseMessageV82);p.domiciliario_id=d.id;p.domiciliario_nombre=d.nombre;ok++}catch(e){}}resolveNoticeV82(n,ok?'success':'error',ok+' pedido(s) asignados',ok?'El reparto quedó distribuido.':'No se pudieron completar las asignaciones.',3300);refreshOrdersUiV82(selectedOrderV5Id);};
 
   async function syncDomiTeamV82(){var activeRest=window.rest||null;if(!activeRest)return domiciliariosList||[];try{var rr=await fetch('/api/domi-admin/list?restaurante_id='+encodeURIComponent(activeRest.id),{cache:'no-store'});if(!rr.ok)return domiciliariosList||[];var dd=await rr.json();if(dd&&Array.isArray(dd.domiciliarios)){d9State.team=dd.domiciliarios;domiciliariosList=dd.domiciliarios.filter(function(x){return x.habilitado!==false});}return domiciliariosList||[]}catch(e){return domiciliariosList||[]}}
-  async function pollPresenceV82(){if(!window.rest)return;await syncDomiTeamV82();if(!(domiciliariosList||[]).length)return;var locs=await locationsV82(),by={};locs.forEach(function(x){by[String(x.domiciliario_id)]=x});(domiciliariosList||[]).forEach(function(d){var pr=presenceForV82(d,by[String(d.id)]),old=presenceV82[String(d.id)];presenceV82[String(d.id)]=pr.key;if(presenceInitV82&&old&&old!==pr.key){if(pr.key==='online')hlNotice('success',d.nombre+' está disponible','GPS conectado y listo para recibir pedidos.',2600);else if(pr.key==='busy')hlNotice('info',d.nombre+' está en entrega',pr.detail+'. Tracking activo.',2600);else if(pr.key==='off')hlNotice('warn',d.nombre+' salió de turno','Ya no recibirá nuevas asignaciones.',2600)}});presenceInitV82=true;var p=orderByIdV5(selectedOrderV5Id);if(p&&document.getElementById('page-orders')&&document.getElementById('page-orders').classList.contains('active'))renderCouriersV5(p);}
+  async function pollPresenceV82(){if(!window.rest||!window.rest.id)return;await syncDomiTeamV82();if(!(domiciliariosList||[]).length)return;var locs=await locationsV82(),by={};locs.forEach(function(x){by[String(x.domiciliario_id)]=x});(domiciliariosList||[]).forEach(function(d){var pr=presenceForV82(d,by[String(d.id)]),old=presenceV82[String(d.id)];presenceV82[String(d.id)]=pr.key;if(presenceInitV82&&old&&old!==pr.key){if(pr.key==='online')hlNotice('success',d.nombre+' está disponible','GPS conectado y listo para recibir pedidos.',2600);else if(pr.key==='busy')hlNotice('info',d.nombre+' está en entrega',pr.detail+'. Tracking activo.',2600);else if(pr.key==='off')hlNotice('warn',d.nombre+' salió de turno','Ya no recibirá nuevas asignaciones.',2600)}});presenceInitV82=true;var p=orderByIdV5(selectedOrderV5Id);if(p&&document.getElementById('page-orders')&&document.getElementById('page-orders').classList.contains('active'))renderCouriersV5(p);}
   setInterval(pollPresenceV82,12000);setTimeout(pollPresenceV82,1800);
 })();
 </script>
@@ -8700,7 +8709,7 @@ window.renderOrdersV5=function(){
  var prevCard10=window.orderCardHtmlV5;window.orderCardHtmlV5=function(p){var html=prevCard10?prevCard10(p):'';if(!html)return html;if(isPickup10(p)&&String(p.estado||'').toLowerCase()==='listo'){html=html.replace('orders-v5-card ','orders-v5-card v10-pickup-ready ');html=html.replace('<div class="ov5-top">','<div class="v10-pickup-badge"><i></i>LISTO · RECOGER EN LOCAL</div><div class="ov5-top">')}return html}
  var prevCouriers10=window.renderCouriersV5;window.renderCouriersV5=function(p){var box=document.getElementById('ordersV5Couriers');if(!p)return prevCouriers10?prevCouriers10(p):undefined;if(needsCourierV5(p)&&!p.domiciliario_id&&String(p.estado||'').toLowerCase()!=='listo'){if(box)box.innerHTML='<div class="v10-dispatch-lock"><b>🔒 Despacho bloqueado por Cocina</b><small>Primero completa preparación y marca el pedido como <strong>LISTO</strong>. En ese momento Luz podrá asignarlo automáticamente o podrás elegir un domiciliario manualmente.</small></div>';return}if(needsCourierV5(p)&&!p.domiciliario_id&&String(p.estado||'').toLowerCase()==='listo'&&d9State.auto){if(box)box.innerHTML='<div class="v10-dispatch-lock"><b>✨ Luz está buscando el mejor domiciliario</b><small>Comparo domiciliarios habilitados, en turno, con GPS reciente y sin otra misión, priorizando cercanía al restaurante.</small></div>';return}return prevCouriers10?prevCouriers10(p):undefined}
  var prevPrimary10=window.primaryOrderActionV5;window.primaryOrderActionV5=function(id){var p=orderByIdV5(id);if(p&&String(p.estado||'').toLowerCase()==='listo'&&needsCourierV5(p)&&!p.domiciliario_id&&d9State.auto){v10SpeakLuz({tipo:'dispatch_wait',titulo:'Estoy buscando domiciliario',mensaje:'El pedido ya está listo. En cuanto encuentre un domiciliario elegible lo asignaré y te avisaré.'},false);try{d9Refresh(false);loadPedidos()}catch(e){}return}return prevPrimary10?prevPrimary10(id):undefined}
- var prevAuto10=window.autoAsignarTodos;window.autoAsignarTodos=async function(){var pendientes=(ordersV2Data||[]).filter(function(p){return needsCourierV5(p)&&!p.domiciliario_id&&String(p.estado||'').toLowerCase()==='listo'});if(!pendientes.length){if(typeof hlNotice==='function')hlNotice('info','Nada para despachar','Solo se asignan domicilios que Cocina ya marcó LISTO.',3000);return}return prevAuto10?prevAuto10():undefined}
+ var prevAuto10=window.autoAsignarTodos;window.autoAsignarTodos=async function(){var pendientes=(window.ordersV2Data||[]).filter(function(p){return needsCourierV5(p)&&!p.domiciliario_id&&String(p.estado||'').toLowerCase()==='listo'});if(!pendientes.length){if(typeof hlNotice==='function')hlNotice('info','Nada para despachar','Solo se asignan domicilios que Cocina ya marcó LISTO.',3000);return}return prevAuto10?prevAuto10():undefined}
  async function pollEvents10(){var activeRest=window.rest||null;if(!activeRest||!activeRest.id)return;try{var url='/api/luz-eventos?restaurante_id='+encodeURIComponent(activeRest.id)+(v10EventCursor?'&after='+encodeURIComponent(v10EventCursor):'');var d=await d9Json(url),arr=d.eventos||[];if(!v10EventCursor&&arr.length){v10EventCursor=arr[0].created_at;return}var fresh=arr.filter(function(e){return !v10Seen[e.id]});fresh.slice().reverse().forEach(function(e){v10Seen[e.id]=1;v10SpeakLuz(e,false);if(/pedido_|domi|ruta|entrega|recogido|auto_/.test(e.tipo||'')){try{loadPedidos()}catch(x){}try{d9Refresh(false)}catch(x){}}});if(arr.length)v10EventCursor=arr[0].created_at}catch(e){}}
  function startEvents10(){clearInterval(v10EventPoll);pollEvents10();v10EventPoll=setInterval(pollEvents10,3000)}
  ensureBar10();startEvents10();setTimeout(function(){try{d9LoadSettings()}catch(e){}},900);
@@ -8712,7 +8721,7 @@ window.renderOrdersV5=function(){
   var oldOpenDomiV10=window.abrirDomiModal;
   window.abrirDomiModal=function(pid,pnum){var p=typeof orderByIdV5==='function'?orderByIdV5(pid):null;if(p&&needsCourierV5(p)&&String(p.estado||'').toLowerCase()!=='listo'){if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:'dispatch_locked',titulo:'Todavía no puedo asignarlo',mensaje:'Cocina debe marcar el pedido como LISTO antes de habilitar despacho.'},false);return}return oldOpenDomiV10?oldOpenDomiV10(pid,pnum):undefined};
   window.assignCourierV5=async function(pid,pnum,did,dnameEnc){var name=decodeURIComponent(dnameEnc||'Domiciliario'),p=orderByIdV5(pid);if(!p)return;if(String(p.estado||'').toLowerCase()!=='listo'){if(typeof hlNotice==='function')hlNotice('warn','Despacho bloqueado','Cocina debe marcar LISTO antes de asignar.',3400);if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:'dispatch_locked',titulo:'Primero terminemos Cocina',mensaje:'Cuando este pedido esté LISTO habilitaré el reparto.'},false);return}var n=typeof hlNotice==='function'?hlNotice('info','Asignando domiciliario','Conectando a '+name+' con el pedido #'+pnum+'…',0):null;try{var r=await fetch('/api/asignar-domiciliario',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pedido_id:pid,domiciliario_id:did,domiciliario_nombre:name,restaurante_id:rest?rest.id:null})}),d={};try{d=await r.json()}catch(x){}if(!r.ok)throw new Error(d.error||('HTTP '+r.status));p.domiciliario_id=did;p.domiciliario_nombre=(d.domiciliario&&d.domiciliario.nombre)||name;p.domiciliario_asignado_at=new Date().toISOString();if(typeof resolveNoticeV82==='function'&&n)resolveNoticeV82(n,'success',p.domiciliario_nombre+' asignado','La misión fue enviada al panel del domiciliario.',3000);if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:'domi_asignado',titulo:'Domiciliario asignado',mensaje:p.domiciliario_nombre+' ya recibió el pedido #'+pnum+'.'},false);try{renderCouriersV5(p)}catch(x){}try{refreshOrdersUiV82(pid)}catch(x){try{loadPedidos()}catch(y){}}}catch(e){if(typeof resolveNoticeV82==='function'&&n)resolveNoticeV82(n,'error','No se pudo asignar',String(e.message||e),4300);else if(typeof hlNotice==='function')hlNotice('error','No se pudo asignar',String(e.message||e),4300)}};
-  window.autoAsignarTodos=async function(){if(!rest)return;var ready=(ordersV2Data||[]).filter(function(p){return needsCourierV5(p)&&!p.domiciliario_id&&String(p.estado||'').toLowerCase()==='listo'});if(!ready.length){if(typeof hlNotice==='function')hlNotice('info','Nada para despachar','Solo se asignan domicilios que Cocina ya marcó LISTO.',3000);return}if(!d9State.auto){if(typeof hlNotice==='function')hlNotice('warn','Activa Luz automática','Enciende Asignación automática para que Luz seleccione por cercanía.',3300);return}var n=typeof hlNotice==='function'?hlNotice('info','Luz está despachando','Revisando '+ready.length+' pedido(s) listo(s)…',0):null;try{var d=await d9Json('/api/domi-admin/dispatch-ready',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest.id})}),c=(d.asignaciones||[]).length;if(typeof resolveNoticeV82==='function'&&n)resolveNoticeV82(n,c?'success':'warn',c?c+' pedido(s) asignados':'Sin domiciliarios elegibles',c?'Las misiones ya fueron enviadas.':'Mantendré los pedidos listos y volveré a intentarlo cuando haya un domiciliario disponible.',3400);if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:c?'domi_asignado':'pedido_listo_sin_domi',titulo:c?'Despacho completado':'Sigo buscando equipo',mensaje:c?'Ya envié las nuevas misiones.':'No encontré todavía un domiciliario elegible con GPS reciente.'},false);try{loadPedidos();d9Refresh(false)}catch(x){}}catch(e){if(typeof resolveNoticeV82==='function'&&n)resolveNoticeV82(n,'error','No pude completar el despacho',String(e.message||e),4200)}};
+  window.autoAsignarTodos=async function(){if(!rest)return;var ready=(window.ordersV2Data||[]).filter(function(p){return needsCourierV5(p)&&!p.domiciliario_id&&String(p.estado||'').toLowerCase()==='listo'});if(!ready.length){if(typeof hlNotice==='function')hlNotice('info','Nada para despachar','Solo se asignan domicilios que Cocina ya marcó LISTO.',3000);return}if(!d9State.auto){if(typeof hlNotice==='function')hlNotice('warn','Activa Luz automática','Enciende Asignación automática para que Luz seleccione por cercanía.',3300);return}var n=typeof hlNotice==='function'?hlNotice('info','Luz está despachando','Revisando '+ready.length+' pedido(s) listo(s)…',0):null;try{var d=await d9Json('/api/domi-admin/dispatch-ready',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest.id})}),c=(d.asignaciones||[]).length;if(typeof resolveNoticeV82==='function'&&n)resolveNoticeV82(n,c?'success':'warn',c?c+' pedido(s) asignados':'Sin domiciliarios elegibles',c?'Las misiones ya fueron enviadas.':'Mantendré los pedidos listos y volveré a intentarlo cuando haya un domiciliario disponible.',3400);if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:c?'domi_asignado':'pedido_listo_sin_domi',titulo:c?'Despacho completado':'Sigo buscando equipo',mensaje:c?'Ya envié las nuevas misiones.':'No encontré todavía un domiciliario elegible con GPS reciente.'},false);try{loadPedidos();d9Refresh(false)}catch(x){}}catch(e){if(typeof resolveNoticeV82==='function'&&n)resolveNoticeV82(n,'error','No pude completar el despacho',String(e.message||e),4200)}};
 })();
 </script>
 
@@ -8859,7 +8868,7 @@ window.renderOrdersV5=function(){
   function markerHtml(d,color){var p=d.pedido_activo||null,status=d.presence==='busy'?(p?'Pedido #'+p.numero_pedido+' · '+(p.estado==='en_camino'?'En ruta':'Asignado'):'En ruta'):stateLabel(d),meta=gpsAgeLabel(d)+(d.ubicacion&&d.ubicacion.accuracy!=null?' · ±'+Math.round(Number(d.ubicacion.accuracy))+' m':'');return '<div class="d11-map-marker" style="--mc:'+color+'"><div class="d11-marker-ring"><span>'+photoHtml(d)+'</span></div><div class="d11-marker-label"><b>'+esc(d.nombre||'Domi')+'</b><span>'+esc(status)+'</span><small>'+esc(meta)+'</small></div></div>'}
   function markerPopupHtml(d){var p=d.pedido_activo||null,u=d.ubicacion||{},vehicle=[d.vehiculo,d.placa].filter(Boolean).join(' · '),status=stateLabel(d);return '<div style="min-width:210px;font-family:inherit"><div style="display:flex;gap:9px;align-items:center;margin-bottom:9px"><div style="width:46px;height:46px;border-radius:50%;overflow:hidden;background:#0a1b42;display:grid;place-items:center">'+(d.foto_url?'<img src="'+esc(d.foto_url)+'" style="width:100%;height:100%;object-fit:cover" alt="">':esc(String(d.nombre||'D').charAt(0).toUpperCase()))+'</div><div><b style="font-size:13px">'+esc(d.nombre||'Domiciliario')+'</b><div style="font-size:9px;color:#6ee7d0;margin-top:2px">'+esc(status)+'</div><div style="font-size:8px;color:#7890b9;margin-top:2px">'+esc(vehicle||'Reparto')+'</div></div></div><div style="font-size:9px;line-height:1.6;color:#8ea5cb">'+esc(gpsAgeLabel(d))+(u.accuracy!=null?' · precisión ±'+Math.round(Number(u.accuracy))+' m':'')+(p?'<br><b style="color:#fff">Pedido #'+esc(p.numero_pedido)+'</b> · '+esc(p.estado==='en_camino'?'En ruta':'Asignado')+'<br>'+esc(p.direccion||'Sin dirección'):'<br>Sin pedido activo')+'</div></div>'}
   function ensureRestaurantMarker(){if(!d9State.map||!isFinite(Number(d9State.restaurantLat))||!isFinite(Number(d9State.restaurantLng)))return null;var ll=[Number(d9State.restaurantLat),Number(d9State.restaurantLng)];if(!d11.restaurantMarker){var ic=L.divIcon({className:'',iconSize:[50,50],iconAnchor:[25,25],html:'<div class="d11-rest-marker">♜</div>'});d11.restaurantMarker=L.marker(ll,{icon:ic,interactive:false}).addTo(d11.markerGroup)}else d11.restaurantMarker.setLatLng(ll);return ll}
-  async function loadRoutes(force){if(!rest||!rest.id)return null;if(!force&&d11.routes&&Date.now()-d11.routeAt<6000)return d11.routes;try{var d=await d9Json('/api/domi-admin/live-routes?restaurante_id='+encodeURIComponent(rest.id));d11.routes=d;d11.routeAt=Date.now();return d}catch(e){return d11.routes}}
+  async function loadRoutes(force){var activeRest=window.rest||null;if(!activeRest||!activeRest.id)return null;if(!force&&d11.routes&&Date.now()-d11.routeAt<6000)return d11.routes;try{var d=await d9Json('/api/domi-admin/live-routes?restaurante_id='+encodeURIComponent(activeRest.id));d11.routes=d;d11.routeAt=Date.now();return d}catch(e){return d11.routes}}
   function removeUnused(obj,keep,group){Object.keys(obj).forEach(function(k){if(!keep[k]){try{group.removeLayer(obj[k].line||obj[k].glow||obj[k])}catch(e){}if(obj[k].line)try{group.removeLayer(obj[k].line)}catch(e){}if(obj[k].glow)try{group.removeLayer(obj[k].glow)}catch(e){}delete obj[k]}})}
   function renderRoutes(data){if(!d9State.map||!data)return;var keep={},keepDest={},orders=data.orders||[],routes=data.routes||{};orders.forEach(function(o){var pid=String(o.id),color=hashColor(o.domiciliario_id||pid),pts=(routes[pid]||[]).map(function(p){return[Number(p.lat),Number(p.lng)]}).filter(function(x){return isFinite(x[0])&&isFinite(x[1])});keep[pid]=1;if(pts.length>=2){var r=d11.routeLayers[pid];if(!r){r={glow:L.polyline(pts,{color:color,weight:11,opacity:.12,lineCap:'round'}).addTo(d11.routeGroup),line:L.polyline(pts,{color:color,weight:4,opacity:.95,lineCap:'round'}).addTo(d11.routeGroup)};d11.routeLayers[pid]=r}else{r.glow.setLatLngs(pts);r.line.setLatLngs(pts);r.glow.setStyle({color:color});r.line.setStyle({color:color})}}else if(d11.routeLayers[pid]){var rr=d11.routeLayers[pid];try{d11.routeGroup.removeLayer(rr.glow);d11.routeGroup.removeLayer(rr.line)}catch(e){}delete d11.routeLayers[pid]}
       if(o.lat_destino!=null&&o.lng_destino!=null&&isFinite(Number(o.lat_destino))&&isFinite(Number(o.lng_destino))){keepDest[pid]=1;var ll=[Number(o.lat_destino),Number(o.lng_destino)],de=d11.destLayers[pid];if(!de){var ic=L.divIcon({className:'',iconSize:[40,40],iconAnchor:[20,34],html:'<div class="d11-dest-marker" style="--mc:'+color+'">⌂</div>'});de=L.marker(ll,{icon:ic}).addTo(d11.destGroup);d11.destLayers[pid]=de}else de.setLatLng(ll);de.bindTooltip('<b>Cliente</b><br>'+esc(o.cliente_nombre||o.direccion||('Pedido #'+o.numero_pedido)),{direction:'top',className:'d11-tip'});var d=(d9State.team||[]).find(function(x){return String(x.id)===String(o.domiciliario_id)}),u=d&&d.ubicacion;if(u&&u.lat!=null&&u.lng!=null){var gp=d11.guideLayers[pid],gpts=[[Number(u.lat),Number(u.lng)],ll];if(!gp){gp=L.polyline(gpts,{color:color,weight:2,opacity:.32,dashArray:'5 9'}).addTo(d11.routeGroup);d11.guideLayers[pid]=gp}else{gp.setLatLngs(gpts);gp.setStyle({color:color})}}}
@@ -8870,12 +8879,12 @@ window.renderOrdersV5=function(){
   window.d11RecenterMap=function(){d11.mapUserMoved=false;d9RenderMap()};window.d11ZoomMap=function(v){if(d9State.map)d9State.map.setZoom(d9State.map.getZoom()+Number(v||0))};window.d11ToggleMapLayer=function(){var s=document.getElementById('d11MapStage');if(s)s.classList.toggle('alt-map')};window.d11ToggleMapFullscreen=function(){var p=document.getElementById('d11MapPanel');if(!p)return;p.classList.toggle('fullscreen');setTimeout(function(){if(d9State.map)d9State.map.invalidateSize()},180)};
 
   function isDelivery(p){try{return typeof needsCourierV5==='function'?needsCourierV5(p):String(p.tipo_pedido||'').toLowerCase()==='domicilio'}catch(e){return true}}
-  function orderCollections(){var arr=window.ordersV2Data||ordersV2Data||[];return{ready:arr.filter(function(p){return isDelivery(p)&&String(p.estado||'').toLowerCase()==='listo'}),route:arr.filter(function(p){return isDelivery(p)&&String(p.estado||'').toLowerCase()==='en_camino'}),done:arr.filter(function(p){return isDelivery(p)&&String(p.estado||'').toLowerCase()==='entregado'}).slice(0,24)}}
+  function orderCollections(){var arr=Array.isArray(window.ordersV2Data)?window.ordersV2Data:[];return{ready:arr.filter(function(p){return isDelivery(p)&&String(p.estado||'').toLowerCase()==='listo'}),route:arr.filter(function(p){return isDelivery(p)&&String(p.estado||'').toLowerCase()==='en_camino'}),done:arr.filter(function(p){return isDelivery(p)&&String(p.estado||'').toLowerCase()==='entregado'}).slice(0,24)}}
   window.d11SetOrderTab=function(tab,btn){d11.orderTab=tab;document.querySelectorAll('#page-domis [data-d11tab]').forEach(function(b){b.classList.toggle('active',b===btn)});d11RenderOrders(true)};
   function openOrder(pid,assign){try{showTab('orders');setTimeout(function(){if(typeof selectOrderV5==='function')selectOrderV5(pid);var p=typeof orderByIdV5==='function'?orderByIdV5(pid):null;if(assign&&p&&typeof abrirDomiModal==='function')setTimeout(function(){abrirDomiModal(p.id,String(p.numero_pedido||''))},160)},100)}catch(e){}}
   function d11RenderOrders(force){var c=orderCollections(),set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v};set('d11ReadyCount',c.ready.filter(function(p){return !p.domiciliario_id}).length);set('d11TabReady',c.ready.length);set('d11TabRoute',c.route.length);set('d11TabDone',c.done.length);var rows=c[d11.orderTab]||[],sig=d11.orderTab+'|'+rows.map(function(p){return[p.id,p.estado,p.domiciliario_id,p.updated_at,p.numero_pedido].join(':')}).join('|');if(!force&&sig===d11.readySig)return;d11.readySig=sig;var box=document.getElementById('d11ReadyList');if(!box)return;if(!rows.length){box.innerHTML='<div class="d11-empty">No hay pedidos en esta vista.</div>';return}box.innerHTML=rows.slice(0,7).map(function(p){var st=String(p.estado||'').toLowerCase(),cls=st==='listo'?'ready':st==='en_camino'?'route':'done',action=st==='listo'&&!p.domiciliario_id?'Asignar':st==='en_camino'?'Ver ruta':'Ver',ghost=action==='Ver'?' ghost':'',client=p.cliente_nombre||p.cliente_tel||'Cliente';return '<div class="d11-order-row"><div class="d11-order-thumb '+cls+'">#'+esc(String(p.numero_pedido||'').slice(-3))+'</div><div class="d11-order-copy"><b>#'+esc(p.numero_pedido)+' · '+esc(client)+'</b><small>'+esc(p.direccion||'Sin dirección')+'</small><span class="d11-mini-status">'+(p.domiciliario_nombre?esc(p.domiciliario_nombre)+' · ':'')+esc(st==='en_camino'?'En ruta':st==='listo'?'Listo':'Entregado')+'</span></div><button class="d11-order-action'+ghost+'" data-d11order="'+esc(p.id)+'" data-mode="'+(st==='en_camino'?'route':st==='entregado'?'done':'order')+'" data-assign="'+(action==='Asignar'?'1':'0')+'">'+action+'</button></div>'}).join('');box.querySelectorAll('[data-d11order]').forEach(function(b){b.onclick=function(){var pid=this.dataset.d11order,mode=this.dataset.mode||'';if(mode==='route'){d11ShowHistoricalRoute(pid);return;}if(mode==='done'){d11OpenEvidenceForOrder(pid);return;}openOrder(pid,this.dataset.assign==='1')}})}
 
-  async function d11LoadEvents(){if(!rest||!rest.id)return;try{var d=await d9Json('/api/luz-eventos?restaurante_id='+encodeURIComponent(rest.id)),arr=(d.eventos||[]).slice(0,8),sig=arr.map(function(e){return e.id}).join('|');if(sig===d11.eventSig)return;d11.eventSig=sig;d11.events=arr;var box=document.getElementById('d11LuzActivity');if(!box)return;if(!arr.length){box.innerHTML='<div class="d11-empty">Luz está observando la operación…</div>';return}box.innerHTML=arr.map(function(e){var t=new Date(e.created_at),time=isNaN(t)?'':t.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),type=String(e.tipo||''),color=/gps|ruta/.test(type)?'#25d9ff':/entreg/.test(type)?'#2ce3aa':/evid|foto|comprobante/.test(type)?'#a65cff':/listo|cocina/.test(type)?'#ffb94b':'#6f6dff';return '<div class="d11-activity-row"><div class="d11-activity-time">'+esc(time)+'</div><span class="d11-activity-dot" style="--ac:'+color+'"></span><div class="d11-activity-copy"><b>'+esc(e.titulo||'Luz')+'</b><span>'+esc(e.mensaje||'Actualicé la operación.')+'</span></div></div>'}).join('');var top=arr[0];if(top)d11SetLuz(top.titulo||'Luz está activa',top.mensaje||'Estoy supervisando tu operación.')}catch(e){}}
+  async function d11LoadEvents(){var activeRest=window.rest||null;if(!activeRest||!activeRest.id)return;try{var d=await d9Json('/api/luz-eventos?restaurante_id='+encodeURIComponent(activeRest.id)),arr=(d.eventos||[]).slice(0,8),sig=arr.map(function(e){return e.id}).join('|');if(sig===d11.eventSig)return;d11.eventSig=sig;d11.events=arr;var box=document.getElementById('d11LuzActivity');if(!box)return;if(!arr.length){box.innerHTML='<div class="d11-empty">Luz está observando la operación…</div>';return}box.innerHTML=arr.map(function(e){var t=new Date(e.created_at),time=isNaN(t)?'':t.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}),type=String(e.tipo||''),color=/gps|ruta/.test(type)?'#25d9ff':/entreg/.test(type)?'#2ce3aa':/evid|foto|comprobante/.test(type)?'#a65cff':/listo|cocina/.test(type)?'#ffb94b':'#6f6dff';return '<div class="d11-activity-row"><div class="d11-activity-time">'+esc(time)+'</div><span class="d11-activity-dot" style="--ac:'+color+'"></span><div class="d11-activity-copy"><b>'+esc(e.titulo||'Luz')+'</b><span>'+esc(e.mensaje||'Actualicé la operación.')+'</span></div></div>'}).join('');var top=arr[0];if(top)d11SetLuz(top.titulo||'Luz está activa',top.mensaje||'Estoy supervisando tu operación.')}catch(e){}}
 
   window.d11OpenEvidence=async function(){
     var ov=document.getElementById('d11EvidenceDrawer');
@@ -8892,11 +8901,12 @@ window.renderOrdersV5=function(){
   window.d11LoadMoreEvidence=function(){d11.evidenceVisible+=80;d11RenderEvidence()};
 
   async function d11LoadEvidence(force){
-    if(!rest||!rest.id)return;
+    var activeRest=window.rest||null;
+    if(!activeRest||!activeRest.id)return;
     var box=document.getElementById('d11EvidenceGrid');
     if(box&&force)box.innerHTML='<div class="d11-empty">Cargando expedientes de pedidos…</div>';
     try{
-      var d=await d9Json('/api/domi-admin/evidencias?restaurante_id='+encodeURIComponent(rest.id)+'&limit=1000',{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
+      var d=await d9Json('/api/domi-admin/evidencias?restaurante_id='+encodeURIComponent(activeRest.id)+'&limit=1000',{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
       d11.evidence=d.evidencias||[];
       if(!d11.evidence.length&&Array.isArray(window.ordersV2Data)){d11.evidence=window.ordersV2Data.slice().sort(function(a,b){return new Date(b.created_at||0)-new Date(a.created_at||0)})}
       d11RenderEvidence();
@@ -8968,7 +8978,7 @@ window.renderOrdersV5=function(){
   window.d11ShowHistoricalRoute=async function(pid){
     d11CloseEvidenceDetail();d11CloseEvidence();
     try{
-      var d=await d9Json('/api/domi-admin/ruta-pedido?restaurante_id='+encodeURIComponent(rest.id)+'&pedido_id='+encodeURIComponent(pid)),pts=(d.puntos||[]).map(function(p){return[Number(p.lat),Number(p.lng)]}).filter(function(x){return isFinite(x[0])&&isFinite(x[1])});
+      var d=await d9Json('/api/domi-admin/ruta-pedido?restaurante_id='+encodeURIComponent(activeRest.id)+'&pedido_id='+encodeURIComponent(pid)),pts=(d.puntos||[]).map(function(p){return[Number(p.lat),Number(p.lng)]}).filter(function(x){return isFinite(x[0])&&isFinite(x[1])});
       showTab('domis');
       setTimeout(function(){
         d9InitMap();
@@ -9648,7 +9658,7 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
    setTimeout(function(){try{if(typeof window.loadPedidos==='function')window.loadPedidos()}catch(e){}},1100);
  }
  function show(p){var o=document.getElementById('hlDeliveryComplete');if(!o)return;retireDeliveredFromLive(p);document.getElementById('hlDTitle').textContent='Pedido #'+shortNo(p.numero_pedido)+' entregado';document.getElementById('hlDSub').textContent=(p.domiciliario_nombre||'El domiciliario')+' completó la entrega al cliente. Luz cerró tracking y actualizó la operación.';document.getElementById('hlDDomi').textContent=p.domiciliario_nombre||'Domiciliario';document.getElementById('hlDOrder').textContent='#'+shortNo(p.numero_pedido);document.getElementById('hlDClient').textContent=p.cliente_nombre||'Cliente';document.getElementById('hlDAddress').textContent=p.direccion||'Destino confirmado';o.classList.add('on');try{playSound('pedido_cerrado')}catch(e){}try{if(typeof v10SpeakLuz==='function')v10SpeakLuz({tipo:'pedido_entregado',titulo:'Entrega completada',mensaje:(p.domiciliario_nombre||'El domiciliario')+' completó el pedido '+shortNo(p.numero_pedido)+'. Evidencia guardada y operación cerrada.'},false)}catch(e){};if(closingTimer)clearTimeout(closingTimer);closingTimer=setTimeout(window.hlCloseDeliveryComplete,6500)}
- async function poll(){if(!window.rest||!rest.id||typeof get!=='function')return;try{var since=new Date(Date.now()-20*60*1000).toISOString();var rows=await get('pedidos','restaurante_id=eq.'+rest.id+'&estado=eq.entregado&domiciliario_id=not.is.null&entregado_at=gte.'+encodeURIComponent(since)+'&order=entregado_at.desc&limit=8&select=id,numero_pedido,cliente_nombre,direccion,domiciliario_id,domiciliario_nombre,entregado_at,foto_entrega');rows=Array.isArray(rows)?rows:[];if(!seeded){rows.forEach(function(p){seen.add(String(p.id))});seeded=true;return}var fresh=rows.slice().reverse().filter(function(p){return !seen.has(String(p.id))});fresh.forEach(function(p){seen.add(String(p.id));show(p)});}catch(e){console.warn('[delivery-complete-watch]',e.message||e)}}
+ async function poll(){var activeRest=window.rest||null;if(!activeRest||!activeRest.id||typeof get!=='function')return;try{var since=new Date(Date.now()-20*60*1000).toISOString();var rows=await get('pedidos','restaurante_id=eq.'+activeRest.id+'&estado=eq.entregado&domiciliario_id=not.is.null&entregado_at=gte.'+encodeURIComponent(since)+'&order=entregado_at.desc&limit=8&select=id,numero_pedido,cliente_nombre,direccion,domiciliario_id,domiciliario_nombre,entregado_at,foto_entrega');rows=Array.isArray(rows)?rows:[];if(!seeded){rows.forEach(function(p){seen.add(String(p.id))});seeded=true;return}var fresh=rows.slice().reverse().filter(function(p){return !seen.has(String(p.id))});fresh.forEach(function(p){seen.add(String(p.id));show(p)});}catch(e){console.warn('[delivery-complete-watch]',e.message||e)}}
  function start(){if(timer)return;poll();timer=setInterval(poll,3500)}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(start,1800)});else setTimeout(start,1800);
 })();
@@ -10051,5 +10061,6 @@ body.hl-chat-active .hlcc-compose-send{background:linear-gradient(145deg,#236bf3
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setTimeout(setup,0);
 })();
 </script>
+
 </body>
 </html>
