@@ -133,7 +133,7 @@ body{background:radial-gradient(70% 45% at 50% -8%,rgba(62,55,255,.24),transpare
    </div>
    <div id="homeHero"></div>
 
-   <section id="turnControlCenter"><div id="hls-center" class="hls"></div></section>
+   <section class="control-center" id="turnControlCenter"><div class="cc-head"><div><div class="cc-kicker">CENTRO DE CONEXIÓN</div><div class="cc-title">Turno & cuadre</div><div class="cc-sub" id="ccSub">Luz mantiene sincronizada tu operación.</div></div><div class="cc-live off" id="ccLive">FUERA DE TURNO</div></div><div class="cc-experience"><div class="cc-luz-core"><span class="cc-luz-orb"></span><span class="cc-luz-ring"></span><span class="cc-luz-ring r2"></span><span class="cc-luz-star">✦</span></div><div class="cc-exp-copy"><small id="ccExpKicker">CONCILIACIÓN INTELIGENTE</small><b id="ccExpTitle">Tu operación, conectada con Luz</b><span id="ccExpText">Cuando inicies el cuadre, Luz sincronizará entregas, efectivo, pagos digitales y domicilios.</span><div class="cc-progress"><i id="ccP1"></i><i id="ccP2"></i><i id="ccP3"></i><i id="ccP4"></i></div></div></div><div class="cc-grid"><div class="cc-stat"><span>ENTREGAS</span><b id="ccCount">0</b></div><div class="cc-stat"><span>EFECTIVO</span><b id="ccCash">$0</b></div><div class="cc-stat"><span>DOMICILIOS</span><b id="ccEarn">$0</b></div></div><div class="cc-actions"><button class="cc-btn primary" id="ccSettleBtn" onclick="startSettlementExperience(this)">INICIAR CUADRE CON LUZ →</button><button class="cc-btn cc-btn-icon" aria-label="Sincronizar" onclick="syncControlCenter(true)">↻</button></div><div class="mission-sync" id="missionSync">Sincronización operativa lista.</div></section>
    <div id="domiPwaCard" class="domi-pwa-card hide"><div class="domi-pwa-icon">📲</div><div class="domi-pwa-copy"><b id="domiPwaTitle">HOLA LUZ como app</b><span id="domiPwaText">Instala la app para mejorar notificaciones y operación.</span></div><button class="domi-pwa-btn" id="domiPwaBtn" type="button" onclick="configureDomiPWA()">CONFIGURAR</button></div>
    <div class="metrics">
     <div class="metric"><div class="metric-ico box"><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4-8-4Z"/><path d="m4 7 8 4 8-4v10l-8 4-8-4V7Z"/></svg></div><div><small>Entregas hoy</small><b id="mDeliveries">0</b></div></div>
@@ -279,10 +279,7 @@ function gpsHelpText(e){if(e&&e.code===1)return 'El permiso de ubicación está 
 function gpsErr(e){gpsErrorCode=e&&e.code||0;gpsErrorText=gpsHelpText(e);renderPresence();var now=Date.now();if(now-gpsNoticeAt>5000){gpsNoticeAt=now;notice('error',gpsErrorCode===1?'Permiso de ubicación bloqueado':'No pudimos conectar el GPS',gpsErrorText)}}
 async function connectGps(trigger){notice('info','Conectando GPS','Esperando una ubicación precisa…');try{var p=await getGpsOnce();await acceptGpsPosition(p,!!trigger);startGpsWatch();notice('success','GPS conectado','Tu posición ya es visible para el restaurante.');return true}catch(e){gpsErr(e);return false}}
 async function toggleShift(btn){if(!token)return;var next=!shift;if(next){if(!navigator.geolocation){notice('error','GPS no disponible','Este dispositivo no ofrece geolocalización.');return}try{await activateShiftExperience(btn||null)}catch(e){}}else{if(ped){notice('error','Tienes una entrega activa','Completa la misión actual antes de finalizar el turno.');return}pressFeedback(btn||null);await startSettlementExperience(document.getElementById('ccSettleBtn'))}renderPresence()}
-// ====================================================
-// HOLA LUZ — PREMIUM SHIFT SETTLEMENT
-// ====================================================
-async function finishShiftFromSettlement(){return window.HLSettlement.start();}
+async function finishShiftFromSettlement(){var btn=document.getElementById('confirmShiftClose');if(btn){btn.disabled=true;btn.textContent='CERRANDO TURNO…'}try{var sum=buildShiftSettlement();await jfetch('/api/domi-turno',{method:'POST',headers:authHeader(),body:JSON.stringify({activo:false,cuadre:{pedidos:sum.count,efectivo:sum.cash,digital:sum.digital,domicilios:sum.earn,total_movido:sum.gross}})});shift=false;domi.turno_activo=false;domi.turno_fin_at=new Date().toISOString();stopGPS();releaseDomiWakeLock();ped=null;pedSig='';closeShiftClose();renderIdle();renderPresence();notice('success','Turno finalizado','Cuadre listo · '+sum.count+' entregas · '+money(sum.cash)+' en efectivo para entregar.')}catch(e){notice('error','No se pudo finalizar el turno',e.message);if(btn){btn.disabled=false;btn.textContent='CONFIRMAR Y FINALIZAR'}}}
 async function recoverGpsForActiveShift(){renderPresence();var ok=await connectGps(true);if(ok){startGpsWatch();loadMission(true)}else renderPresence()}
 async function retryGps(){var ok=await connectGps(false);if(!ok)return;if(!shift){try{await jfetch('/api/domi-turno',{method:'POST',headers:authHeader(),body:JSON.stringify({activo:true})});shift=true;domi.turno_activo=true;shiftStartedAt=new Date()}catch(e){notice('error','GPS conectado, turno no iniciado',e.message);return}}await postGps(true);renderPresence();loadMission(true)}
 document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&shift&&!gpsFresh())setTimeout(function(){connectGps(true)},250)});
@@ -317,10 +314,7 @@ function renderFullMap(){var el=document.getElementById('fullMap');if(!el||!wind
 async function loadHistory(){if(!domi)return;try{var since=shiftStartedAt?('&desde='+encodeURIComponent(shiftStartedAt.toISOString())):'';var d=await jfetch('/api/domi-historial?restaurante_id='+encodeURIComponent(restId)+'&domiciliario_id='+encodeURIComponent(domi.id)+since,{headers:authHeader()});hist=Array.isArray(d)?d:(d.pedidos||[]);renderHistory()}catch(e){hist=[];renderHistory()}}
 function paymentKind(p){var m=String(p&&p.metodo_pago||'').toLowerCase();return /(efectivo|cash|contra.?entrega)/.test(m)?'cash':'digital'}
 function buildShiftSettlement(){var rows=hist.slice(),cash=0,digital=0,earn=0,gross=0;rows.forEach(function(p){var total=Number(p.total||0),fee=Number(p.domicilio||0);gross+=total;earn+=fee;if(paymentKind(p)==='cash')cash+=total;else digital+=total});return {count:rows.length,cash:cash,digital:digital,earn:earn,gross:gross}}
-// ====================================================
-// HOLA LUZ — PREMIUM SHIFT SETTLEMENT
-// ====================================================
-async function openShiftClose(){return window.HLSettlement.open();}
+async function openShiftClose(preview){await loadHistory();var s=buildShiftSettlement(),el=document.getElementById('shiftCloseBody');var canClose=!!shift&&!ped;el.innerHTML='<div class="shift-hero"><small>CUADRE DEL DÍA</small><b>'+money(s.gross)+'</b><p>Luz concilió '+s.count+' entrega'+(s.count===1?'':'s')+' registrada'+(s.count===1?'':'s')+'.</p></div><div class="settle-grid"><div class="settle-card cash"><span>EFECTIVO COBRADO</span><b>'+money(s.cash)+'</b></div><div class="settle-card digital"><span>PAGOS DIGITALES</span><b>'+money(s.digital)+'</b></div><div class="settle-card earn"><span>DOMICILIOS GENERADOS</span><b>'+money(s.earn)+'</b></div><div class="settle-card count"><span>ENTREGAS</span><b>'+s.count+'</b></div></div><div class="settle-due"><span>EFECTIVO A ENTREGAR<br>AL RESTAURANTE</span><b>'+money(s.cash)+'</b></div><div class="settle-note">Este es el centro de conciliación del turno. Puedes revisarlo en cualquier momento. Para cerrar la jornada no puede existir una misión activa.</div><div class="sheet-actions"><button class="btn btn-ghost" onclick="closeShiftClose()">VOLVER</button>'+(canClose?'<button class="btn btn-primary" id="confirmShiftClose" onclick="finishShiftFromSettlement()">CONFIRMAR Y FINALIZAR TURNO</button>':'<button class="btn btn-ghost" disabled>'+(ped?'MISIÓN ACTIVA · NO SE PUEDE CERRAR':(shift?'REVISIÓN':'TURNO CERRADO'))+'</button>')+'</div>';document.getElementById('shiftCloseBackdrop').classList.add('on')}
 function closeShiftClose(){var x=document.getElementById('shiftCloseBackdrop');if(x)x.classList.remove('on')}
 function itemLabel(i){if(typeof i==='string')return i;return i&&String(i.nombre||i.name||i.producto||i.descripcion||'Producto')||'Producto'}
 function itemQty(i){return i&&typeof i==='object'?Number(i.cantidad||i.qty||i.quantity||1):1}
@@ -541,15 +535,9 @@ function haptic(pattern){try{if(navigator.vibrate)navigator.vibrate(pattern||[35
 function pressFeedback(el){if(!el)return;el.classList.remove('pressfx');void el.offsetWidth;el.classList.add('pressfx');haptic([24]);setTimeout(function(){el.classList.remove('pressfx')},360)}
 function setCcProgress(step){for(var i=1;i<=4;i++){var el=document.getElementById('ccP'+i);if(!el)continue;el.className=i<step?'on':i===step?'on active':''}}
 function setCcExperience(kicker,title,text,step,thinking){var cc=document.getElementById('turnControlCenter'),k=document.getElementById('ccExpKicker'),t=document.getElementById('ccExpTitle'),x=document.getElementById('ccExpText');if(k)k.textContent=kicker||'';if(t)t.textContent=title||'';if(x)x.textContent=text||'';if(cc)cc.classList.toggle('cc-thinking',!!thinking);setCcProgress(step||0)}
-// ====================================================
-// HOLA LUZ — PREMIUM SHIFT SETTLEMENT
-// ====================================================
-async function startSettlementExperience(){return window.HLSettlement.start();}
-async function activateShiftExperience(btn){var hlTurnStarted=false;pressFeedback(btn);if(btn){btn.disabled=true;btn.textContent='CONECTANDO CON LUZ…'}setCcExperience('CONEXIÓN DE TURNO','Preparando tu disponibilidad','Primero verificamos GPS; luego sincronizamos tu sesión con HOLA LUZ.',1,true);showLuzAction('Iniciando turno','Voy a verificar GPS, sesión y disponibilidad antes de conectarte.');try{var ok=await connectGps(false);if(!ok)throw new Error(gpsErrorText||'No se pudo conectar el GPS.');setCcExperience('GPS CONFIRMADO','Sincronizando tu turno','Tu ubicación está lista. Ahora te conecto con el restaurante.',2,true);var d=await jfetch('/api/domi-turno',{method:'POST',headers:authHeader(),body:JSON.stringify({activo:true})});hlTurnStarted=true;shift=true;domi.turno_activo=true;shiftStartedAt=new Date(d.turno_inicio_at||Date.now());domi.turno_inicio_at=shiftStartedAt.toISOString();setCcExperience('TURNO ACTIVO','Conexión completada','Ya estás visible y listo para recibir entregas.',4,false);renderPresence();requestDomiWakeLock();await postGps(true);notice('success','Turno activado','GPS conectado y sincronizado. Ya apareces disponible para el restaurante.');showLuzAction('Ya estás conectado','Tu turno está activo. Luz te avisará cuando llegue una nueva misión.');haptic([60,40,100]);loadMission(true);loadHistory();return d}catch(e){if(hlTurnStarted){renderPresence();notice('info','Turno iniciado','El turno está activo. La ubicación está pendiente de sincronizar.');return;}shift=false;domi.turno_activo=false;stopGPS();setCcExperience('NO SE PUDO CONECTAR','Turno no iniciado',e.message||'Revisa la conexión e intenta nuevamente.',0,false);notice('error','No se pudo iniciar el turno',e.message||'Intenta nuevamente.');throw e}finally{if(btn){btn.disabled=false;btn.textContent='ACTIVAR TURNO →'}}}
-// ====================================================
-// HOLA LUZ — PREMIUM SHIFT SETTLEMENT
-// ====================================================
-function renderControlCenter(){if(window.HLSettlement){window.HLSettlement.init();window.HLSettlement.render();}}
+async function startSettlementExperience(btn){pressFeedback(btn);if(btn){btn.disabled=true;btn.classList.add('cc-running');btn.textContent='LUZ ESTÁ CONCILIANDO…'}setCcExperience('PASO 1 DE 4','Conectando con tu turno','Luz está verificando tu sesión y el estado de la operación.',1,true);showLuzAction('Cuadre inteligente','Estoy conectando tu turno con el restaurante para conciliar todo.');haptic([45,35,65]);try{await new Promise(function(r){setTimeout(r,300)});setCcExperience('PASO 2 DE 4','Verificando entregas','Revisando misiones completadas y movimientos del turno.',2,true);await loadHistory();await new Promise(function(r){setTimeout(r,260)});setCcExperience('PASO 3 DE 4','Conciliando pagos','Separando efectivo, pagos digitales y domicilios generados.',3,true);await loadStats();await new Promise(function(r){setTimeout(r,260)});renderControlCenter();setCcExperience('PASO 4 DE 4','Cuadre listo','Todo quedó conciliado. Abriendo tu resumen del turno.',4,false);luzTone();haptic([50,45,90]);await new Promise(function(r){setTimeout(r,360)});await openShiftClose(true)}catch(e){setCcExperience('CONEXIÓN INTERRUMPIDA','No pude terminar el cuadre',e.message||'Intenta nuevamente.',0,false);notice('error','No se pudo conciliar',e.message||'Intenta nuevamente.')}finally{if(btn){btn.disabled=false;btn.classList.remove('cc-running');btn.textContent=shift?'VER CUADRE EN VIVO →':'INICIAR CUADRE CON LUZ →'}}}
+async function activateShiftExperience(btn){pressFeedback(btn);if(btn){btn.disabled=true;btn.textContent='CONECTANDO CON LUZ…'}setCcExperience('CONEXIÓN DE TURNO','Preparando tu disponibilidad','Primero verificamos GPS; luego sincronizamos tu sesión con HOLA LUZ.',1,true);showLuzAction('Iniciando turno','Voy a verificar GPS, sesión y disponibilidad antes de conectarte.');try{var ok=await connectGps(false);if(!ok)throw new Error(gpsErrorText||'No se pudo conectar el GPS.');setCcExperience('GPS CONFIRMADO','Sincronizando tu turno','Tu ubicación está lista. Ahora te conecto con el restaurante.',2,true);var d=await jfetch('/api/domi-turno',{method:'POST',headers:authHeader(),body:JSON.stringify({activo:true})});shift=true;domi.turno_activo=true;shiftStartedAt=new Date();setCcExperience('TURNO ACTIVO','Conexión completada','Ya estás visible y listo para recibir entregas.',4,false);renderPresence();requestDomiWakeLock();await postGps(true);notice('success','Turno activado','GPS conectado y sincronizado. Ya apareces disponible para el restaurante.');showLuzAction('Ya estás conectado','Tu turno está activo. Luz te avisará cuando llegue una nueva misión.');haptic([60,40,100]);loadMission(true);loadHistory();return d}catch(e){shift=false;domi.turno_activo=false;stopGPS();setCcExperience('NO SE PUDO CONECTAR','Turno no iniciado',e.message||'Revisa la conexión e intenta nuevamente.',0,false);notice('error','No se pudo iniciar el turno',e.message||'Intenta nuevamente.');throw e}finally{if(btn){btn.disabled=false;btn.textContent='ACTIVAR TURNO →'}}}
+function renderControlCenter(){var s=buildShiftSettlement();var a=document.getElementById('ccCount'),b=document.getElementById('ccCash'),c=document.getElementById('ccEarn'),sub=document.getElementById('ccSub'),live=document.getElementById('ccLive'),ms=document.getElementById('missionSync'),btn=document.getElementById('ccSettleBtn'),cc=document.getElementById('turnControlCenter');if(a)a.textContent=s.count;if(b)b.textContent=money(s.cash);if(c)c.textContent=money(s.earn);if(sub)sub.textContent=ped?'Misión #'+(ped.numero_pedido||'')+' activa · Luz vigila el cierre y la siguiente asignación.':(shift?'Turno conectado · cuadre disponible en tiempo real.':'Turno cerrado · puedes revisar o iniciar el cuadre cuando quieras.');if(live){live.textContent=shift?'EN VIVO':'FUERA DE TURNO';live.className='cc-live '+(shift?'live':'off')}if(btn&&!btn.classList.contains('cc-running'))btn.textContent=shift?'VER CUADRE EN VIVO →':'INICIAR CUADRE CON LUZ →';if(cc&&!cc.classList.contains('cc-thinking'))setCcExperience(shift?'SINCRONIZACIÓN EN VIVO':'CONCILIACIÓN INTELIGENTE',shift?'Luz está conectada a tu turno':'Tu operación, conectada con Luz',shift?'Las entregas y el cuadre se actualizan mientras trabajas.':'Cuando inicies el cuadre, Luz sincronizará entregas, efectivo, pagos digitales y domicilios.',0,false);if(ms){ms.className='mission-sync';ms.textContent=ped?'Pedido #'+(ped.numero_pedido||'')+' sincronizado con restaurante.':'Operación conciliada · '+s.count+' entregas en el turno.'}}
 async function syncControlCenter(manual){var ms=document.getElementById('missionSync');if(ms){ms.className='mission-sync busy';ms.textContent='Luz está conciliando restaurante, misión e historial…'}await Promise.all([loadMission(true),loadHistory(),loadStats()]);renderControlCenter();if(manual)notice('success','Centro sincronizado','Misión, historial y cuadre están actualizados.')}
 var loadHistoryV14=loadHistory;loadHistory=async function(){await loadHistoryV14();renderControlCenter()};
 var enterAppV14=enterApp;enterApp=function(){enterAppV14();setTimeout(function(){renderControlCenter();syncControlCenter(false)},350)};
@@ -558,213 +546,712 @@ var enterAppV14=enterApp;enterApp=function(){enterAppV14();setTimeout(function()
 document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('button'):null;if(!b||b.disabled)return;pressFeedback(b)},true);
 restore();
 </script>
+<style id="hlShiftSyncDriverCSS">
+/* HOLA LUZ · SHIFT SYNC EXPERIENCE V2 · Domiciliario — todo dentro de #hlss (y .hlr para el recibo) */
+#hlss{--ff:'Plus Jakarta Sans',system-ui,sans-serif;--b0:#020817;--b1:#06122B;--b2:#0A1736;--b3:#10234A;--t1:#2F6BFF;--t2:#4B8CFF;--cy:#27D7FF;--cy2:#61E8FF;--ind:#5B4DFF;--lz:#7A4DFF;--lz2:#B94CFF;--ok:#31E6A1;--warn:#FFBE4B;--bad:#FF5C7A;--tx:#F5F8FF;--tx2:#A9B9D6;--tx3:#6F86AD;
+  position:fixed;inset:0;z-index:2000;display:none;flex-direction:column;color:var(--tx);font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--b0);overflow:hidden}
+#hlss.on{display:flex;animation:hlssIn .32s cubic-bezier(.2,.8,.2,1) both}
+@keyframes hlssIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+#hlss .hlss-bg{position:absolute;inset:0;pointer-events:none;background:radial-gradient(520px 320px at 50% -8%,rgba(122,77,255,.22),transparent 70%),radial-gradient(420px 300px at 100% 100%,rgba(39,215,255,.08),transparent 70%),linear-gradient(180deg,var(--b1),var(--b0) 60%)}
+#hlss .hlss-bg::after{content:"";position:absolute;inset:-80px;opacity:.06;background-image:radial-gradient(circle at 1px 1px,#A9B9D6 1px,transparent 1.5px);background-size:34px 34px;animation:hlssDrift 36s linear infinite alternate}
+@keyframes hlssDrift{to{transform:translate3d(-34px,-24px,0)}}
+#hlss button{font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#hlss button:active{transform:scale(.97);transition:transform .11s}
+#hlss .hlss-top{position:relative;z-index:2;display:flex;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top,0px)) 14px 8px}
+#hlss .hlss-top-copy{flex:1;min-width:0}
+#hlss .hlss-top-copy small{display:block;font:700 9.5px/1 var(--ff);letter-spacing:.2em;color:var(--lz2)}
+#hlss .hlss-top-copy b{display:block;font:700 16px/1.2 var(--ff);margin-top:3px}
+#hlss .hlss-ico{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;border:1px solid rgba(169,185,214,.12);background:rgba(245,248,255,.04);color:var(--tx2)}
+#hlss .hlss-ico svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#hlss .hlss-body{position:relative;z-index:1;flex:1;overflow-y:auto;padding:4px 16px 18px;-webkit-overflow-scrolling:touch}
+#hlss .hlss-dock{position:relative;z-index:3;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(2,8,23,0),rgba(2,8,23,.92) 30%);display:grid;gap:8px}
+#hlss .hlss-dock:empty{display:none}
+#hlss .hlss-wrap{max-width:520px;margin:0 auto}
 
-<style id="hlPremiumSettlementCSS">
-/* ====================================================
-   HOLA LUZ — PREMIUM SHIFT SETTLEMENT
-   All selectors belong to the settlement module.
-   ==================================================== */
-.hls{--s-ink:#eef4ff;--s-muted:#94a8cc;--s-line:rgba(139,162,237,.2);color:var(--s-ink);font-family:inherit;line-height:1.5;letter-spacing:normal;font-size:14px}.hls *{box-sizing:border-box}.hls button,.hls input,.hls textarea{font:inherit}.hls h2,.hls h3,.hls p{margin:0}.hls h2{font-size:clamp(25px,5vw,36px);letter-spacing:-.045em;line-height:1.15}.hls h3{font-size:20px;letter-spacing:-.025em}.hls small,.hls .hls-muted{color:var(--s-muted)}.hls-label{display:block;color:#93bded;font-size:10px;font-weight:750;letter-spacing:.16em;text-transform:uppercase}.hls-card{padding:24px;border:1px solid var(--s-line);border-radius:24px;background:radial-gradient(ellipse at 80% 0,rgba(110,68,228,.19),transparent 65%),linear-gradient(145deg,#0b1d3b,#071229);box-shadow:0 18px 56px #02081838,inset 0 1px #ffffff08;position:relative;overflow:hidden}.hls-card:before{content:'';pointer-events:none;position:absolute;inset:0;background-image:linear-gradient(#6fa8dc06 1px,transparent 1px),linear-gradient(90deg,#6fa8dc06 1px,transparent 1px);background-size:30px 30px;mask-image:linear-gradient(90deg,transparent,#000)}.hls-card>*{position:relative}.hls-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}.hls-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid #7286c440;border-radius:30px;padding:5px 10px;color:#b4c5e6;font-size:10px;font-weight:700;white-space:nowrap}.hls-pill.good{color:#81e4c5;background:#29ce9c0b;border-color:#57deb12e}.hls-pill.warn{color:#edc783;border-color:#edc78340}.hls-identity{display:flex;gap:12px;align-items:center}.hls-avatar{display:grid;place-items:center;width:52px;height:52px;flex-shrink:0;border-radius:18px;object-fit:cover;background:linear-gradient(145deg,#26456e,#47266c);border:1px solid #a0b6ef50;color:#dfecff;font-size:20px;font-weight:650}.hls-name{font-weight:750;font-size:16px}.hls-times{font-size:12px;color:#94a8cc;margin-top:18px}.hls-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:22px 0}.hls-metric{padding:14px 12px;border:1px solid #839dda16;background:#ffffff03;border-radius:14px;min-width:0}.hls-metric small{display:block;font-size:10px;letter-spacing:.04em}.hls-metric strong{display:block;font-size:clamp(19px,5vw,25px);font-weight:650;letter-spacing:-.04em;font-variant-numeric:tabular-nums;margin-top:5px}.hls-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:20px}.hls-btn{border:1px solid #9caee02d;padding:13px 17px;border-radius:13px;background:#3045731d;color:#edf4ff;min-height:46px;cursor:pointer;font-weight:650;font-size:12px;transition:transform .15s,box-shadow .2s;position:relative;overflow:hidden}.hls-btn.primary{background:linear-gradient(112deg,#6545c5,#346ed4 65%,#358da8);border-color:#b8b5ff47;box-shadow:0 7px 25px #5656ca30}.hls-btn:active{transform:scale(.97);box-shadow:0 0 22px #6476d645}.hls-btn:focus-visible{outline:2px solid #7fe8ff;outline-offset:3px}.hls-btn:disabled{opacity:.4;cursor:wait}.hls-btn.wide{width:100%}.hls-overlay{position:fixed;inset:0;z-index:20000;display:none;align-items:center;justify-content:center;background:#020919ce;backdrop-filter:blur(18px);padding:20px}.hls-overlay.open{display:flex}.hls-sheet{width:min(760px,100%);max-height:92dvh;overflow:auto;background:linear-gradient(155deg,#0b1932,#061124);border:1px solid #7996d839;border-radius:28px;box-shadow:0 40px 160px #0009;padding:28px}.hls-close{border:1px solid #8cadd329;background:#a9c4fa0a;color:#d4e3ff;border-radius:50%;width:38px;height:38px;flex-shrink:0;font-size:22px;cursor:pointer}.hls-pair{display:grid;grid-template-columns:1fr 90px 1fr;align-items:center;gap:6px;position:relative;text-align:center;padding:36px 0 28px}.hls-pair:before{content:'';position:absolute;left:17%;right:17%;top:71px;border-top:1px dashed #5977ac;opacity:.5}.hls-pair.linked:before{border-top-style:solid;border-color:#6acbde;box-shadow:0 0 10px #54cde34d}.hls-node{z-index:1;min-width:0}.hls-node .hls-avatar{margin:0 auto 11px;width:68px;height:68px;border-radius:24px;box-shadow:0 10px 30px #0004}.hls-node b{display:block;font-size:12px;overflow-wrap:anywhere}.hls-node small{font-size:10px}.hls-orb{position:relative;margin:auto;width:49px;height:49px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#f5e8ff 0,#b8a3ff 9%,#8454f0 32%,#334b9c 68%,#192b6d);box-shadow:0 0 28px #8a67e769,inset 0 0 14px #ffffff50;animation:hls-breathe 4s ease-in-out infinite;display:grid;place-items:center;color:white;font-size:25px}.hls-orb:before,.hls-orb:after{content:'';position:absolute;inset:-13px;border-radius:50%;border:1px solid #967be14a;transform:rotateX(55deg) rotate(-25deg);animation:hls-orbit 10s linear infinite}.hls-orb:after{inset:-22px;animation-direction:reverse;border-color:#6bcfee24}.hls-pair.syncing .hls-node:after{content:'';position:absolute;top:70px;left:22%;width:4px;height:4px;border-radius:50%;background:#97e9ff;box-shadow:0 0 12px #7fb6ff;animation:hls-travel 2s ease-in-out infinite}.hls-pair.syncing .hls-node:last-child:after{left:auto;right:22%;animation-name:hls-travel-back}.hls-success .hls-orb{background:radial-gradient(circle at 35% 25%,#b1ffe7,#3da6a1 65%,#355d93);box-shadow:0 0 38px #5accbe40}.hls-success h2{text-align:center}.hls-steps{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:20px 0;font-size:12px;color:#9fb3d4}.hls-step{display:flex;gap:8px;padding:9px;border-bottom:1px solid #c0d6ff0a}.hls-step.done{color:#8bddc3}.hls-step.busy{color:#c7b4f4}.hls-due{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid var(--s-line);padding:20px 0}.hls-due b{font-size:29px;letter-spacing:-.04em;white-space:nowrap}.hls-difference{display:flex;justify-content:space-between;border-radius:12px;padding:12px 15px;background:#75d9b80b;border:1px solid #75d9b825;color:#8cddc5}.hls-difference.warn{color:#e7c18a;background:#d9a4510b;border-color:#d9a45133}.hls-note{font-size:12px;color:#9aaece;margin:15px 0!important;white-space:pre-wrap;overflow-wrap:anywhere}.hls-field{display:block;margin-top:16px;font-size:12px;color:#b9c9e7}.hls-field textarea,.hls-field input{display:block;width:100%;border:1px solid #8dabe140;border-radius:12px;background:#020e22;color:#eef6ff;padding:12px;margin-top:7px;resize:vertical}.hls-field input[type=checkbox]{display:inline;width:auto}.hls-error{margin:14px 0;padding:14px;border-radius:13px;border:1px solid #c6a66640;background:#c6a6660b;color:#e3cfa9;font-size:13px}.hls-incoming{position:fixed;z-index:19900;right:24px;bottom:26px;width:min(390px,calc(100vw - 32px));box-shadow:0 20px 80px #0008}.hls-incoming h3{margin-top:12px}.hls-history{display:grid;gap:14px;margin:20px 0}.hls-history .hls-card{padding:18px}.hls-history-heading{font-size:16px;margin:24px 0 12px!important}.hls-receipt{position:relative;padding:30px;margin:20px 0;background:linear-gradient(155deg,#122348,#0b182d);border:1px solid #97aee745;border-radius:20px;box-shadow:0 16px 45px #0003}.hls-receipt-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:25px;border-bottom:1px solid var(--s-line)}.hls-receipt-header img{width:54px;height:54px;object-fit:contain;border-radius:12px}.hls-receipt h3{font-size:25px;margin:24px 0 15px}.hls-receipt dl{display:grid;grid-template-columns:1fr 1fr;font-size:12px;gap:10px 16px;margin:20px 0}.hls-receipt dt{color:#a4b4d1}.hls-receipt dd{margin:0;text-align:right;overflow-wrap:anywhere}.hls-receipt-id{font-family:monospace;font-size:10px;word-break:break-all;color:#9baccc}.hls-receipt-footer{padding-top:24px;margin-top:24px;border-top:1px dashed var(--s-line);text-align:center}.hls-timeline{list-style:none;padding:0}.hls-timeline li{border-left:1px solid #758eda44;padding:7px 0 12px 16px;font-size:12px}.hls-timeline small{display:block}.hls-evidence{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hls-evidence img{width:100%;max-height:180px;object-fit:cover;border-radius:12px}.hls details{border-top:1px solid var(--s-line);padding-top:14px;margin-top:20px}.hls summary{cursor:pointer;font-size:13px;color:#c0d4f6}.hls-connection{font-size:11px;color:#8fa7c9;margin:10px 0}.hls-empty{padding:25px;color:#9aabc8;text-align:center}
-@keyframes hls-breathe{50%{transform:scale(1.06);box-shadow:0 0 40px #8a67e77a,inset 0 0 14px #ffffff50}}@keyframes hls-orbit{to{transform:rotateX(55deg) rotate(335deg)}}@keyframes hls-travel{to{transform:translateX(115px);opacity:0}}@keyframes hls-travel-back{to{transform:translateX(-115px);opacity:0}}
-@media(max-width:560px){.hls-overlay{padding:0;align-items:flex-end}.hls-sheet{border-radius:26px 26px 0 0;max-height:95dvh;padding:22px 18px 32px}.hls-card{padding:20px}.hls-pair{grid-template-columns:1fr 75px 1fr}.hls-steps{grid-template-columns:1fr}.hls-receipt{padding:20px 16px}.hls-incoming{right:16px;bottom:16px}.hls-actions>.hls-btn{flex:1}.hls-receipt dl{gap:8px;font-size:11px}}
-@media(prefers-reduced-motion:reduce){.hls *,.hls *:before,.hls *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
-@media print{body.hls-printing>*{display:none!important}body.hls-printing>#hls-print{display:block!important}#hls-print,.hls-receipt{color:#14243c!important;background:#fff!important;box-shadow:none!important;border-color:#c8d0df!important}.hls-receipt{margin:0;border-radius:0;padding:12mm}.hls-receipt small,.hls-receipt dt,.hls-receipt .hls-note,.hls-receipt-id{color:#526078!important}.hls-receipt .hls-btn{display:none!important}.hls-receipt .hls-metric{break-inside:avoid;background:#f6f8fb!important}.hls-receipt .hls-pill,.hls-receipt .hls-difference{color:#163f36!important;border-color:#aac6bb!important;background:#fff!important}.hls-receipt-footer{break-inside:avoid}@page{size:auto;margin:10mm}}
+/* Botones */
+#hlss .hlss-btn{height:54px;border-radius:17px;border:0;font:700 14px var(--ff);letter-spacing:.06em;color:var(--tx);display:flex;align-items:center;justify-content:center;gap:9px;width:100%;transition:transform .11s,box-shadow .2s,opacity .2s}
+#hlss .hlss-btn.pri{background:linear-gradient(135deg,#2F6BFF,#5B4DFF 55%,#7A4DFF);box-shadow:inset 0 1px 0 rgba(245,248,255,.28),0 12px 28px rgba(47,107,255,.35)}
+#hlss .hlss-btn.ok{background:linear-gradient(135deg,#27D7FF,#31E6A1);color:var(--b0);box-shadow:inset 0 1px 0 rgba(245,248,255,.4),0 12px 28px rgba(49,230,161,.28)}
+#hlss .hlss-btn.sec{height:48px;background:rgba(245,248,255,.04);border:1px solid rgba(169,185,214,.16);color:var(--tx2);font-size:12.5px}
+#hlss .hlss-btn.warn{height:48px;background:rgba(255,190,75,.08);border:1px solid rgba(255,190,75,.35);color:var(--warn);font-size:12.5px}
+#hlss .hlss-btn[disabled]{opacity:.45;pointer-events:none}
+#hlss .hlss-link{background:none;border:0;color:var(--tx3);font:600 12px var(--ff);text-decoration:underline;text-underline-offset:3px;padding:6px}
 
-#hls-print{display:none}
+/* Hero · centro de cierre */
+#hlss .hlss-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:10px 0 4px}
+#hlss .hlss-orb{position:relative;width:96px;height:96px;display:grid;place-items:center}
+#hlss .hlss-orb i.core{width:62px;height:62px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#F5F8FF 0 5%,#B94CFF 22%,#7A4DFF 48%,#5B4DFF 70%,#0A1736 100%);box-shadow:0 0 0 1px rgba(185,76,255,.45),0 0 26px rgba(122,77,255,.55),inset 0 -8px 16px rgba(2,8,23,.35);animation:hlssBreath 4.5s ease-in-out infinite}
+#hlss .hlss-orb i.ring{position:absolute;inset:4px;border-radius:50%;border:1px solid rgba(97,232,255,.28);border-top-color:rgba(97,232,255,.85);animation:hlssOrbit 8s linear infinite}
+#hlss .hlss-orb i.ring.r2{inset:-6px;border-color:rgba(185,76,255,.18);border-right-color:rgba(185,76,255,.7);animation-duration:10s;animation-direction:reverse}
+@keyframes hlssBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes hlssOrbit{to{transform:rotate(360deg)}}
+#hlss .hlss-hero h2{font:700 21px/1.2 var(--ff);margin-top:10px;letter-spacing:-.02em}
+#hlss .hlss-hero p{font:500 13px/1.5 var(--ff);color:var(--tx2);margin-top:4px}
+#hlss .hlss-person{display:flex;align-items:center;gap:12px;margin:16px 0 4px;padding:12px;border-radius:18px;border:1px solid rgba(169,185,214,.09);background:linear-gradient(180deg,rgba(16,35,74,.55),rgba(6,18,43,.5))}
+#hlss .hlss-av{width:46px;height:46px;border-radius:50%;flex:0 0 46px;display:grid;place-items:center;font:700 15px var(--ff);color:var(--tx);background:linear-gradient(145deg,#2F6BFF,#7A4DFF);overflow:hidden;box-shadow:0 0 0 2px var(--b1),0 0 0 3px rgba(97,232,255,.35)}
+#hlss .hlss-av img{width:100%;height:100%;object-fit:cover}
+#hlss .hlss-person b{display:block;font:700 15px var(--ff)}
+#hlss .hlss-person span{display:block;font:500 12px var(--ff);color:var(--tx3);margin-top:2px}
 
-.hls-success .hls-node:first-child{transform:translateX(8px)}
-.hls-success .hls-node:last-child{transform:translateX(-8px)}
-.hls-success .hls-orb:after{animation:hls-final-pulse 1.2s ease-out 1}
-@keyframes hls-final-pulse{from{opacity:.8;transform:scale(.6)}to{opacity:0;transform:scale(1.65)}}
-@media(prefers-reduced-motion:reduce){.hls-success .hls-orb:after{animation:none!important}}
+/* Total dominante */
+#hlss .hlss-total{margin:14px 0 10px;padding:20px 18px 18px;border-radius:24px;text-align:center;position:relative;overflow:hidden;border:1px solid rgba(97,232,255,.22);background:radial-gradient(320px 140px at 50% -10%,rgba(39,215,255,.14),transparent 70%),linear-gradient(180deg,rgba(16,35,74,.75),rgba(6,18,43,.8));box-shadow:inset 0 1px 0 rgba(245,248,255,.07),0 18px 40px rgba(2,8,23,.5)}
+#hlss .hlss-total small{display:block;font:700 10.5px var(--ff);letter-spacing:.2em;color:var(--cy2)}
+#hlss .hlss-total strong{display:block;font:800 44px/1.05 var(--ff);letter-spacing:-.03em;margin-top:8px;font-variant-numeric:tabular-nums}
+#hlss .hlss-total span{display:block;font:500 12px var(--ff);color:var(--tx2);margin-top:6px}
+#hlss .hlss-total.diff{border-color:rgba(255,190,75,.4)}
+#hlss .hlss-total.done{border-color:rgba(49,230,161,.45);background:radial-gradient(320px 140px at 50% -10%,rgba(49,230,161,.16),transparent 70%),linear-gradient(180deg,rgba(16,35,74,.75),rgba(6,18,43,.8))}
 
+/* Desglose */
+#hlss .hlss-rows{border-radius:20px;border:1px solid rgba(169,185,214,.08);background:rgba(6,18,43,.5);padding:4px 14px}
+#hlss .hlss-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid rgba(169,185,214,.07);font:500 13.5px var(--ff);color:var(--tx2)}
+#hlss .hlss-row:last-child{border-bottom:0}
+#hlss .hlss-row b{font:600 14px var(--ff);color:var(--tx);font-variant-numeric:tabular-nums;text-align:right}
+#hlss .hlss-row em{font-style:normal;display:block;font:500 11px var(--ff);color:var(--tx3);margin-top:2px}
+#hlss .hlss-row.neg b{color:var(--bad)}
+#hlss .hlss-row.pos b{color:var(--ok)}
+#hlss .hlss-note{margin-top:10px;font:500 12px/1.5 var(--ff);color:var(--tx3);text-align:center}
+
+/* Emparejamiento */
+#hlss .hlss-pair{display:grid;grid-template-columns:78px 1fr 96px 1fr 78px;align-items:center;margin:12px 0 6px}
+#hlss .hlss-node{display:flex;flex-direction:column;align-items:center;gap:6px}
+#hlss .hlss-node .hlss-av{width:58px;height:58px;flex-basis:58px;font-size:18px;transition:box-shadow .45s}
+#hlss .hlss-node small{font:600 10.5px var(--ff);color:var(--tx3);white-space:nowrap;max-width:78px;overflow:hidden;text-overflow:ellipsis;text-align:center}
+#hlss .hlss-node.rest .hlss-av{background:linear-gradient(145deg,#10234A,#5B4DFF)}
+#hlss .hlss-wire{height:2px;position:relative;border-radius:2px;background:repeating-linear-gradient(90deg,rgba(111,134,173,.55) 0 6px,transparent 6px 12px);transition:background .45s}
+#hlss .hlss-wire::after{content:"";position:absolute;inset:-3px 0;border-radius:4px;opacity:0;transition:opacity .45s}
+#hlss .hlss-pair.linked .hlss-wire{background:linear-gradient(90deg,#27D7FF,#61E8FF);box-shadow:0 0 10px rgba(39,215,255,.6)}
+#hlss .hlss-pair.linked .hlss-wire.w2{background:linear-gradient(90deg,#61E8FF,#27D7FF)}
+#hlss .hlss-pair.flow .hlss-wire::after{opacity:1;background:linear-gradient(90deg,transparent,rgba(245,248,255,.9),transparent);background-size:40% 100%;background-repeat:no-repeat;animation:hlssFlow 1.3s linear infinite}
+#hlss .hlss-pair.flow .hlss-wire.w2::after{animation-direction:reverse}
+@keyframes hlssFlow{from{background-position:-40% 0}to{background-position:140% 0}}
+#hlss .hlss-pair.done .hlss-wire{background:linear-gradient(90deg,#27D7FF,#31E6A1);box-shadow:0 0 12px rgba(49,230,161,.65)}
+#hlss .hlss-pair.linked .rest .hlss-av,#hlss .hlss-pair.linked .me .hlss-av{box-shadow:0 0 0 2px var(--b1),0 0 0 3px rgba(39,215,255,.8),0 0 20px rgba(39,215,255,.45)}
+#hlss .hlss-pair.linked .hlss-orb i.core{animation:hlssBreath 4.5s ease-in-out infinite,hlssCyan .45s ease-out}
+@keyframes hlssCyan{0%{box-shadow:0 0 0 1px rgba(185,76,255,.45),0 0 0 0 rgba(39,215,255,.7)}100%{box-shadow:0 0 0 1px rgba(185,76,255,.45),0 0 0 22px rgba(39,215,255,0)}}
+#hlss .hlss-pair.done .hlss-av{box-shadow:0 0 0 2px var(--b1),0 0 0 3px rgba(49,230,161,.9),0 0 22px rgba(49,230,161,.5)}
+#hlss .hlss-pair.done .hlss-orb i.core{background:radial-gradient(circle at 36% 30%,#F5F8FF 0 6%,#61E8FF 26%,#31E6A1 60%,#0A1736 100%);animation:hlssBreath 4.5s ease-in-out infinite,hlssFlash .5s ease-out}
+@keyframes hlssFlash{0%{box-shadow:0 0 0 0 rgba(49,230,161,.9),0 0 0 0 rgba(245,248,255,.9)}60%{box-shadow:0 0 0 18px rgba(49,230,161,.12),0 0 40px 10px rgba(245,248,255,.25)}100%{box-shadow:0 0 0 26px rgba(49,230,161,0),0 0 30px rgba(49,230,161,.45)}}
+#hlss .hlss-pair.done .me{animation:hlssMeet .5s cubic-bezier(.2,.8,.2,1) both}
+#hlss .hlss-pair.done .rest{animation:hlssMeetR .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes hlssMeet{0%{transform:none}50%{transform:translateX(10px)}100%{transform:none}}
+@keyframes hlssMeetR{0%{transform:none}50%{transform:translateX(-10px)}100%{transform:none}}
+#hlss .hlss-status{text-align:center;margin:12px 0 4px;min-height:52px}
+#hlss .hlss-status b{display:block;font:800 13px var(--ff);letter-spacing:.18em;color:var(--cy2)}
+#hlss .hlss-status span{display:block;font:500 12.5px/1.5 var(--ff);color:var(--tx2);margin-top:5px}
+#hlss .hlss-status.wait b{color:var(--tx2)}
+#hlss .hlss-status.warn b{color:var(--warn)}
+#hlss .hlss-status.ok b{color:var(--ok)}
+#hlss .hlss-status.bad b{color:var(--bad)}
+#hlss .hlss-net{position:sticky;top:0;z-index:4;backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;gap:8px;margin:0 auto 8px;padding:8px 12px;border-radius:12px;font:600 11.5px var(--ff);color:var(--warn);background:rgba(255,190,75,.08);border:1px solid rgba(255,190,75,.28);width:max-content;max-width:100%}
+#hlss.offline .hlss-net{display:flex}
+
+/* Conciliación por categoría (datos reales del servidor) */
+#hlss .hlss-checks{display:grid;gap:6px;margin:8px 0 12px}
+#hlss .hlss-check{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:14px;border:1px solid rgba(169,185,214,.07);background:rgba(6,18,43,.45);font:500 13px var(--ff);color:var(--tx2)}
+#hlss .hlss-check i{width:24px;height:24px;border-radius:50%;flex:0 0 24px;display:grid;place-items:center;font-style:normal;font:700 12px var(--ff);color:var(--b0);background:var(--ok)}
+#hlss .hlss-check.w i{background:var(--warn)}
+#hlss .hlss-check.p i{background:transparent;border:1.5px solid rgba(97,232,255,.5);border-top-color:transparent;animation:hlssOrbit .9s linear infinite}
+#hlss .hlss-check b{color:var(--tx);font-weight:600}
+#hlss .hlss-checks.in .hlss-check{animation:hlssItem .3s cubic-bezier(.2,.8,.2,1) both}
+#hlss .hlss-checks.in .hlss-check:nth-child(2){animation-delay:.06s}#hlss .hlss-checks.in .hlss-check:nth-child(3){animation-delay:.12s}#hlss .hlss-checks.in .hlss-check:nth-child(4){animation-delay:.18s}#hlss .hlss-checks.in .hlss-check:nth-child(5){animation-delay:.24s}#hlss .hlss-checks.in .hlss-check:nth-child(6){animation-delay:.3s}
+@keyframes hlssItem{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+#hlss .hlss-flag{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:16px;margin:10px 0;font:500 12.5px/1.5 var(--ff);color:var(--tx2);border:1px solid rgba(255,190,75,.3);background:rgba(255,190,75,.06)}
+#hlss .hlss-flag b{display:block;color:var(--warn);font:800 11.5px var(--ff);letter-spacing:.14em;margin-bottom:2px}
+#hlss .hlss-flag.info{border-color:rgba(75,140,255,.28);background:rgba(47,107,255,.06)}
+#hlss .hlss-flag.info b{color:var(--t2)}
+#hlss .hlss-err{padding:14px;border-radius:16px;margin:12px 0;border:1px solid rgba(255,92,122,.35);background:rgba(255,92,122,.07);font:500 13px/1.5 var(--ff);color:var(--tx2)}
+#hlss .hlss-err b{display:block;color:var(--bad);font-weight:700;margin-bottom:2px}
+
+/* Panel de diferencia */
+#hlss .hlss-sheet{position:absolute;inset:0;z-index:5;display:none;align-items:flex-end;background:rgba(2,8,23,.72);backdrop-filter:blur(8px)}
+#hlss .hlss-sheet.on{display:flex}
+#hlss .hlss-sheet-card{width:100%;max-width:560px;margin:0 auto;max-height:92%;overflow-y:auto;border-radius:26px 26px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,var(--b2),var(--b0));border:1px solid rgba(169,185,214,.1);animation:hlssUp .3s cubic-bezier(.2,.8,.2,1) both}
+@keyframes hlssUp{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+#hlss .hlss-sheet-card h3{font:700 18px var(--ff)}
+#hlss .hlss-sheet-card p{font:500 12.5px/1.5 var(--ff);color:var(--tx2);margin:4px 0 12px}
+#hlss .hlss-field{display:block;margin-bottom:12px}
+#hlss .hlss-field span{display:block;font:600 11.5px var(--ff);color:var(--tx2);margin-bottom:6px}
+#hlss .hlss-field input,#hlss .hlss-field textarea{width:100%;border-radius:14px;border:1px solid rgba(169,185,214,.16);background:rgba(2,8,23,.6);color:var(--tx);font:600 16px var(--ff);padding:13px 14px;outline:none}
+#hlss .hlss-field textarea{font-weight:500;font-size:14px;min-height:74px;resize:none}
+#hlss .hlss-field input:focus,#hlss .hlss-field textarea:focus{border-color:rgba(39,215,255,.55);box-shadow:0 0 0 3px rgba(39,215,255,.12)}
+#hlss .hlss-chips{display:flex;flex-wrap:wrap;gap:7px}
+#hlss .hlss-chips button{height:36px;padding:0 13px;border-radius:999px;border:1px solid rgba(169,185,214,.18);background:rgba(245,248,255,.03);color:var(--tx2);font:600 12px var(--ff)}
+#hlss .hlss-chips button.on{border-color:rgba(255,190,75,.6);background:rgba(255,190,75,.12);color:var(--warn)}
+#hlss .hlss-photo{display:flex;align-items:center;gap:10px;padding:12px;border-radius:14px;border:1px dashed rgba(169,185,214,.25);color:var(--tx2);font:600 12.5px var(--ff);background:none;width:100%}
+#hlss .hlss-photo img{width:46px;height:46px;border-radius:10px;object-fit:cover}
+
+/* Historial */
+#hlss .hlss-hist{display:grid;gap:8px;margin-top:10px}
+#hlss .hlss-hist button{display:flex;align-items:center;gap:12px;padding:13px;border-radius:16px;border:1px solid rgba(169,185,214,.08);background:rgba(6,18,43,.5);color:var(--tx);text-align:left;width:100%}
+#hlss .hlss-hist button i{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;font-style:normal;color:var(--b0);background:var(--ok);font-weight:800}
+#hlss .hlss-hist b{display:block;font:600 13.5px var(--ff)}
+#hlss .hlss-hist span{display:block;font:500 11.5px var(--ff);color:var(--tx3);margin-top:2px}
+#hlss .hlss-hist strong{margin-left:auto;font:700 14px var(--ff);font-variant-numeric:tabular-nums}
+
+/* Recibo (compartido con impresión) */
+.hlr{--ff:'Plus Jakarta Sans',system-ui,sans-serif;--rb:#06122B;border-radius:24px;padding:20px 18px;margin:12px 0;color:#F5F8FF;font-family:'Plus Jakarta Sans',system-ui,sans-serif;border:1px solid rgba(49,230,161,.3);background:radial-gradient(300px 120px at 50% -10%,rgba(49,230,161,.12),transparent 70%),linear-gradient(180deg,#10234A,#06122B);animation:hlrIn .3s cubic-bezier(.2,.8,.2,1) both}
+@keyframes hlrIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.hlr-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-start;padding-bottom:14px;border-bottom:1px dashed rgba(169,185,214,.25)}
+.hlr-brand small{display:block;font:800 10px/1 var(--ff);letter-spacing:.22em;color:#B94CFF}
+.hlr-brand b{display:block;font:800 18px/1.2 var(--ff);margin-top:5px;letter-spacing:.02em}
+.hlr-brand{min-width:0}
+.hlr-no{margin-left:auto;flex:0 0 auto;white-space:nowrap;text-align:right;font:600 11px/1.4 var(--ff);color:#A9B9D6}
+.hlr-no b{display:block;font:700 12.5px var(--ff);color:#F5F8FF;font-variant-numeric:tabular-nums}
+.hlr-badge{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;margin-top:12px;height:26px;padding:0 11px;border-radius:999px;font:800 10.5px var(--ff);letter-spacing:.12em;color:#31E6A1;background:rgba(49,230,161,.1);border:1px solid rgba(49,230,161,.4)}
+.hlr-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding:14px 0;border-bottom:1px dashed rgba(169,185,214,.25)}
+.hlr-grid div span{display:block;font:600 10.5px var(--ff);color:#6F86AD;letter-spacing:.04em}
+.hlr-grid div b{display:block;font:600 13px var(--ff);margin-top:2px}
+.hlr-lines{padding:8px 0;border-bottom:1px dashed rgba(169,185,214,.25)}
+.hlr-line{display:flex;justify-content:space-between;padding:6px 0;font:500 13px var(--ff);color:#A9B9D6}
+.hlr-line b{font:600 13px var(--ff);color:#F5F8FF;font-variant-numeric:tabular-nums}
+.hlr-total{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0;border-bottom:1px dashed rgba(169,185,214,.25)}
+.hlr-total span{font:800 11px var(--ff);letter-spacing:.14em;color:#61E8FF}
+.hlr-total b{font:800 26px var(--ff);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.hlr-notes{padding:10px 0;font:500 12px/1.5 var(--ff);color:#A9B9D6;border-bottom:1px dashed rgba(169,185,214,.25)}
+.hlr-notes b{color:#FFBE4B}
+.hlr-conf{display:grid;gap:6px;padding:12px 0 4px;font:500 12.5px var(--ff);color:#A9B9D6}
+.hlr-conf div{display:flex;justify-content:space-between}
+.hlr-conf b{color:#31E6A1;font-weight:700}
+.hlr-foot{margin-top:10px;font:500 10px/1.5 var(--ff);color:#6F86AD;text-align:center;word-break:break-all}
+
+@media (prefers-reduced-motion: reduce){
+  #hlss *,#hlss *::before,#hlss *::after,.hlr{animation:none!important;transition:none!important}
+}
+@media print{
+  body.hlss-printing > *:not(#hlss){display:none!important}
+  body.hlss-printing{background:#fff!important}
+  body.hlss-printing #hlss{position:static!important;display:block!important;background:#fff!important;overflow:visible!important}
+  body.hlss-printing #hlss > *:not(.hlss-body){display:none!important}
+  body.hlss-printing #hlss .hlss-body{overflow:visible!important;padding:0!important}
+  body.hlss-printing #hlss .hlss-body > .hlss-wrap > *:not(.hlr):not(#hlssMain),body.hlss-printing #hlss .hlss-net{display:none!important}
+  body.hlss-printing .hlr{animation:none!important;border:1px solid #cbd5e1!important;background:#fff!important;color:#020817!important;max-width:680px;margin:0 auto!important;box-shadow:none!important}
+  body.hlss-printing .hlr *{color:#020817!important}
+  body.hlss-printing .hlr .hlr-badge{border-color:#16a34a!important;background:#fff!important}
+  body.hlss-printing .hlr-head,body.hlss-printing .hlr-grid,body.hlss-printing .hlr-lines,body.hlss-printing .hlr-total,body.hlss-printing .hlr-notes{border-color:#94a3b8!important}
+  @page{size:auto;margin:14mm}
+}
 </style>
-<script id="hlPremiumSettlementJS">
-// ====================================================
-// HOLA LUZ — PREMIUM SHIFT SETTLEMENT
-// ====================================================
-window.HLSettlementConfig={
- role:'driver',credentials:function(){return typeof token!=='undefined'?token:''},
- info:function(){var d=typeof domi!=='undefined'&&domi||{};return {id:d.id,name:d.nombre||'Domiciliario',photo:d.foto_url,restaurant:typeof restName!=='undefined'?restName:'Restaurante',logo:d.restaurante_logo,shift:typeof shift!=='undefined'&&shift,start:typeof shiftStartedAt!=='undefined'?shiftStartedAt:d.turno_inicio_at,end:d.turno_fin_at,preview:typeof buildShiftSettlement==='function'?buildShiftSettlement():{}}},
- mount:function(){var h=document.getElementById('view-history');if(h&&!document.getElementById('hls-history')){var e=document.createElement('section');e.id='hls-history';e.className='hls';h.appendChild(e)}},
- activate:function(){return toggleShift(document.getElementById('ccSettleBtn'))},
- onClosed:function(r){if(!domi||!shift)return;var start=domi.turno_inicio_at||(shiftStartedAt&&shiftStartedAt.toISOString());if(!start||new Date(start).getTime()!==new Date(r.shift_started_at).getTime())return;shift=false;domi.turno_activo=false;domi.turno_fin_at=r.shift_ended_at;stopGPS();releaseDomiWakeLock();renderIdle();renderPresence();}
-};
-// ====================================================
-// HOLA LUZ — PREMIUM SHIFT SETTLEMENT
-// Shared renderer: the same stored receipt is used by both panels.
-// ====================================================
+
+<script id="hlShiftSyncDriverJS">
+/* HOLA LUZ · SHIFT SYNC EXPERIENCE V2 · Domiciliario
+   El servidor (función hl-shift-sync + base de datos) decide estados y totales.
+   Esta capa solo muestra lo que el servidor responde y escucha cambios por Realtime. */
 (function(){
 'use strict';
-const cfg=window.HLSettlementConfig;
-const ENDPOINT='https://vbxuwzcfzfjwhllkppkg.supabase.co/functions/v1/hl-shift-settlement';
-const KEY='sb_publishable_I5lP9lq6-6t0B0K0PmjyWQ_RiIxiJM5';
-const $=id=>document.getElementById(id);
-const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money=v=>v==null?'No registrado':new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(Number(v));
-const date=v=>v?new Date(v).toLocaleString('es-CO',{timeZone:'America/Bogota',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
-const duration=(a,b)=>{if(!a)return '—';let m=Math.max(0,Math.floor((new Date(b||Date.now())-new Date(a))/60000));return Math.floor(m/60)+' h '+m%60+' min';};
-const safeUrl=v=>{try{const u=new URL(v);return u.protocol==='https:'?u.href:'';}catch{return '';}};
-const avatar=(url,name)=>safeUrl(url)?'<img class="hls-avatar" src="'+esc(safeUrl(url))+'" alt="'+esc(name)+'" loading="lazy">':'<span class="hls-avatar">'+esc((name||'HL').split(/\s+/).slice(0,2).map(x=>x[0]).join(''))+'</span>';
-const complete=r=>!!r?.receipt_snapshot;
-const active=r=>r&&!complete(r)&&r.premium_status!=='cancelled';
-const titles={pairing:'Buscando restaurante…',connected:'Conexión segura establecida',syncing:'Sincronizando el turno…',awaiting_driver:'Tu operación, lista para revisar',awaiting_restaurant:'Esperando aprobación del restaurante',difference_review:'Revisión compartida',approved:'Cierre conciliado',approved_with_note:'Cierre registrado con observación',cancelled:'Solicitud cancelada'};
-const eventNames={settlement_started:'Cierre iniciado',restaurant_detected:'Restaurante detectado',connection_established:'Conexión establecida',sync_started:'Sincronización iniciada',data_synced:'Datos conciliados',driver_confirmed:'Domiciliario confirmó',restaurant_confirmed:'Restaurante confirmó',difference_reported:'Diferencia reportada',observation_added:'Observación registrada',source_changed:'La operación cambió: nueva revisión',receipt_generated:'Recibo persistido',settlement_completed:'Turno cerrado',settlement_cancelled:'Solicitud cancelada'};
-let historyMore=false,rows=[],selected=null,events=[],connected=false,busy=false,started=false,streamAbort=null,retry=null,heartbeat=null,account='',lastView='',lastFocus=null,error='',draft={note:'',cash:'',accept:false},mode='summary',sound=null;
-function credentials(){const c=cfg.credentials();return c?{'Content-Type':'application/json','apikey':KEY,...(cfg.role==='driver'?{Authorization:'Bearer '+c}:{'x-hl-settlement-token':c})}:null;}
-async function request(action,id,args){
- const h=credentials();if(!h)throw new Error('Vuelve a ingresar al panel para acceder a tus cierres.');
- let r;try{r=await fetch(ENDPOINT,{method:'POST',headers:h,body:JSON.stringify({action,id,args}),cache:'no-store',signal:AbortSignal.timeout(18000)});}catch{throw new Error('No pudimos completar la sincronización. Tu turno sigue abierto y no se perdió información.');}
- let d;try{d=await r.json();}catch{throw new Error('La conexión se interrumpió. Vuelve a intentarlo.');}
- if(!r.ok||!d.ok)throw new Error(d.error||'No pudimos completar la sincronización. Tu turno sigue abierto.');return d;
-}
-function feedback(type){
- try{if(navigator.vibrate)navigator.vibrate(type==='success'?[20,40,20]:type==='connection'?20:10);}catch{}
- try{if(!sound||sound.state!=='running')return;const o=sound.createOscillator(),g=sound.createGain();o.connect(g);g.connect(sound.destination);o.type='sine';o.frequency.value=type==='success'?660:type==='attention'?330:520;g.gain.setValueAtTime(.0001,sound.currentTime);g.gain.exponentialRampToValueAtTime(.025,sound.currentTime+.015);g.gain.exponentialRampToValueAtTime(.0001,sound.currentTime+.2);o.start();o.stop(sound.currentTime+.22);}catch{}
-}
-function enableSound(){try{if(!sound)sound=new (window.AudioContext||window.webkitAudioContext)();sound.resume();}catch{}}
-function button(action,label,primary,id){return '<button class="hls-btn '+(primary?'primary':'')+'" data-hls="'+action+'"'+(id?' data-id="'+esc(id)+'"':'')+(busy?' disabled':'')+'>'+label+'</button>';}
-function merge(row){if(!row)return;const prior=rows.find(x=>x.id===row.id);const changed=!prior||prior.premium_status!==row.premium_status||prior.revision!==row.revision;const i=rows.findIndex(x=>x.id===row.id);if(i>=0&&new Date(rows[i].updated_at)>new Date(row.updated_at))return;if(i<0)rows.unshift(row);else rows[i]=row;rows.sort((a,b)=>new Date(b.iniciado_at)-new Date(a.iniciado_at));if(selected?.id===row.id)selected=row;
- if(complete(row))cfg.onClosed?.(row);
- if(changed&&row.premium_status==='connected')feedback('connection');if(changed&&complete(row))feedback('success');
- if(changed&&selected?.id===row.id)request('get',row.id).then(d=>{if(selected?.id===row.id){events=d.events||[];renderSheet();}}).catch(()=>{});
- render();
-}
-async function stream(){
- if(streamAbort)streamAbort.abort();clearTimeout(retry);const h=credentials();if(!h)return;
- const ctl=streamAbort=new AbortController();connected=false;renderConnection();
- try{
-  const response=await fetch(ENDPOINT,{method:'POST',headers:h,body:JSON.stringify({action:'stream'}),signal:ctl.signal});
-  if(response.status===401){error='Vuelve a ingresar al panel para acceder a tus cierres.';ctl.abort();connected=false;render();return;}if(!response.ok)throw new Error('stream');
-  const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
-  while(true){const part=await reader.read();if(part.done)break;buffer+=decoder.decode(part.value,{stream:true});let cut;
-   while((cut=buffer.indexOf('\n\n'))>=0){const chunk=buffer.slice(0,cut);buffer=buffer.slice(cut+2);if(!chunk.startsWith('data: '))continue;const msg=JSON.parse(chunk.slice(6));
-    if(msg.type==='ready'){const fresh=msg.rows||[];historyMore=historyMore||fresh.length===100;rows=[...new Map([...rows,...fresh].map(r=>[r.id,r])).values()].sort((a,b)=>new Date(b.iniciado_at)-new Date(a.iniciado_at));connected=true;rows.filter(complete).forEach(r=>cfg.onClosed?.(r));if(selected)selected=rows.find(r=>r.id===selected.id)||selected;render();beat();}
-    if(msg.type==='change')merge(msg.row);
-    if(msg.type==='unavailable')throw new Error('unavailable');
-   }
-  }
- }catch(e){if(ctl.signal.aborted)return;}finally{if(!ctl.signal.aborted){connected=false;renderConnection();retry=setTimeout(stream,2000+Math.random()*1500);}}
-}
-async function beat(){
- if(document.hidden||!credentials())return;
- const targets=cfg.role==='driver'?rows.filter(active):selected&&active(selected)?[selected]:[];
- for(const r of targets){try{const d=await request('heartbeat',r.id);merge(d.row);}catch{connected=false;renderConnection();}}
-}
-function renderConnection(){document.querySelectorAll('[data-hls-connection]').forEach(el=>el.textContent=connected?'Canal de cierre en tiempo real':'Reconectando el canal de cierre…');document.querySelectorAll('[data-hls-peer]').forEach(el=>{const r=rows.find(x=>x.id===el.dataset.hlsPeer);if(!r)return;const t=cfg.role==='driver'?r.restaurant_seen_at:r.driver_seen_at;el.textContent=!active(r)?'Recibo guardado':t&&Date.now()-new Date(t)<45000?'Ambos presentes':'Esperando a la otra parte · el turno sigue abierto';});}
-function card(r){return '<article class="hls-card"><div class="hls-top"><span class="hls-label">'+(complete(r)?'Cierre recibido':'Conexión de turno')+'</span><span class="hls-pill '+(complete(r)&&!r.diferencia?'good':r.diferencia?'warn':'')+'">'+esc(complete(r)?r.diferencia?'Con observación':'Conciliado':titles[r.premium_status])+'</span></div><div class="hls-identity">'+avatar(r.resumen?.driver?.foto_url,r.domiciliario_nombre)+'<div><b>'+esc(r.domiciliario_nombre)+'</b><br><small>'+date(r.confirmado_at||r.iniciado_at)+'</small></div></div><p class="hls-note">'+r.pedidos_count+' entregas · '+money(r.efectivo_esperado)+' efectivo · '+money(r.diferencia)+' diferencia</p>'+button('open',complete(r)?'VER RECIBO':'ABRIR SINCRONIZACIÓN',false,r.id)+'</article>';}
-function center(){const host=$('hls-center');if(!host)return;const info=cfg.info(),r=rows.find(active),t=r?.resumen?.totals;const last=rows.find(complete);const prev=info.preview||{};
- host.innerHTML='<div class="hls-card"><div class="hls-top"><span class="hls-label">Centro de cierre</span><span class="hls-pill '+(info.shift?'good':'')+'">'+(info.shift?'TURNO ACTIVO':'FUERA DE TURNO')+'</span></div><div class="hls-identity">'+avatar(info.photo,info.name)+'<div class="hls-name">'+esc(info.name)+'<br><small>'+esc(info.restaurant)+'</small></div><div class="hls-orb" style="width:30px;height:30px;margin-left:auto" aria-hidden="true"></div></div><p class="hls-times">Inicio '+date(info.start)+' · '+duration(info.start)+'</p><div class="hls-metrics">'+metric('ENTREGAS',t?t.deliveries:prev.count||0)+metric('EFECTIVO REGISTRADO',money(t?t.cash:prev.cash||0))+metric('DOMICILIOS',money(t?t.fees:prev.earn||0))+metric('PAGOS DIGITALES',money(t?t.digital:prev.digital||0))+'</div><p class="hls-note">'+(r?'Tu solicitud está guardada. Puedes continuar donde la dejaste.':'Vista previa del historial disponible. Luz verificará las cifras del turno en el servidor antes de confirmar.')+'</p><button id="ccSettleBtn" class="hls-btn primary wide" data-hls="'+(info.shift?'start':'activate')+'"'+(busy?' disabled':'')+'>'+(info.shift?r?'CONTINUAR SINCRONIZACIÓN':'INICIAR SINCRONIZACIÓN':'INICIAR TURNO')+'</button><div class="hls-actions">'+(last?button('open','VER ÚLTIMO RECIBO',false,last.id):'')+'</div><div class="hls-connection" data-hls-connection></div></div>';
-}
-function metric(k,v){return '<div class="hls-metric"><small>'+esc(k)+'</small><strong>'+esc(v)+'</strong></div>';}
-function render(){center();const hist=$('hls-history');if(hist)hist.innerHTML='<h3 class="hls-history-heading">'+(cfg.role==='driver'?'Cierres de turno':'Cierres de domiciliarios')+'</h3><div class="hls-history">'+(rows.filter(complete).map(card).join('')||'<div class="hls-empty">Los recibos de cierre aparecerán aquí.</div>')+'</div>'+(historyMore?button('more','VER CIERRES ANTERIORES',false):'');
- const incoming=$('hls-incoming');if(incoming){const r=rows.find(active);incoming.hidden=!r;if(r)incoming.innerHTML='<div class="hls-top"><span class="hls-label">Conexión entrante</span><span class="hls-pill">'+(r.premium_status==='pairing'?'CONECTANDO…':'CIERRE EN CURSO')+'</span></div><div class="hls-identity">'+avatar(r.resumen?.driver?.foto_url,r.domiciliario_nombre)+'<div><b>'+esc(r.domiciliario_nombre)+'</b><br><small>'+esc(r.resumen?.driver?.vehiculo||'')+' · '+date(r.iniciado_at)+'</small></div></div><h3>Quiere cerrar su turno</h3><p class="hls-note">'+r.pedidos_count+' entregas · '+esc(titles[r.premium_status])+'</p>'+button('open','VER CONEXIÓN',true,r.id);}
- if($('hls-overlay')?.classList.contains('open'))renderSheet();renderConnection();
-}
-function pairing(r){const driver=r?.resumen?.driver||{},info=cfg.info();const done=complete(r),linked=r&&r.premium_status!=='pairing';return '<div class="hls-pair '+(linked?'linked ':'')+(r?.premium_status==='syncing'?'syncing ':'')+(done?'hls-success':'')+'"><div class="hls-node">'+avatar(driver.foto_url||info.photo,driver.nombre||info.name)+'<b>'+esc(driver.nombre||info.name)+'</b><small>Domiciliario</small></div><div class="hls-orb" aria-label="Luz">'+(done?'✓':'✦')+'</div><div class="hls-node">'+avatar(r?.receipt_snapshot?.restaurant?.logo_url||info.logo,info.restaurant)+'<b>'+esc(r?.receipt_snapshot?.restaurant?.nombre||info.restaurant)+'</b><small>Restaurante</small></div></div>';}
-function summary(r){const t=r.resumen?.totals;if(!t)return '';const steps=[['Turno identificado',true],['Entregas encontradas',true],['Pedidos conciliados',true],['Efectivo calculado',true],['Métodos de pago revisados',!t.unresolved],['Evidencias vinculadas ('+(t.evidence||[]).length+')',true],['Incidencias revisadas ('+(t.incidents||[]).length+')',true]];
- return '<div class="hls-steps">'+steps.map(x=>'<div class="hls-step '+(x[1]?'done':'busy')+'">'+(x[1]?'✓':'!')+' '+esc(x[0])+'</div>').join('')+'</div><div class="hls-metrics">'+metric('ENTREGAS',t.deliveries)+metric('EFECTIVO',money(t.cash))+metric('DOMICILIOS COBRADOS',money(t.fees))+metric('PAGOS DIGITALES',money(t.digital))+metric('DATÁFONO',money(t.card))+metric('AJUSTES',money(t.adjustments))+metric('PROPINA',money(t.tips))+metric('TOTAL REGISTRADO',money(t.total))+'</div><div class="hls-due"><span>Saldo a entregar<br><small>Efectivo registrado, sin descontar domicilios</small></span><b>'+money(t.amount_due)+'</b></div><div class="hls-difference '+(r.diferencia?'warn':'')+'"><span>'+ (r.diferencia?'Diferencia · requiere aceptación':'Diferencia')+'</span><strong>'+money(r.diferencia)+'</strong></div><p class="hls-note">Efectivo contado: '+money(r.efectivo_entregado)+'. Los pagos corresponden a los métodos registrados en los pedidos.</p>'+(r.notas_domiciliario?'<p class="hls-note"><b>Domiciliario:</b> '+esc(r.notas_domiciliario)+'</p>':'')+(r.notas_restaurante?'<p class="hls-note"><b>Restaurante:</b> '+esc(r.notas_restaurante)+'</p>':'');
-}
-function controls(r){if(!active(r))return '';const state=r.premium_status;
- if(state==='pairing')return '<p class="hls-note">'+(cfg.role==='driver'?'La solicitud está guardada. Esperando que el restaurante acepte la conexión.':'El domiciliario está esperando. Acepta para revisar juntos el cierre.')+'</p>'+(cfg.role==='restaurant'?button('connect','ACEPTAR CONEXIÓN',true):'');
- if(state==='connected'||state==='syncing')return '<div class="hls-steps"><div class="hls-step done">✓ Turno identificado</div><div class="hls-step busy">'+(state==='syncing'?'Procesando entregas y pagos registrados…':'Listo para sincronizar')+'</div></div>'+button('sync','CONTINUAR SINCRONIZACIÓN',true);
- let html='';if(mode==='note'||mode==='difference')return '<label class="hls-field">Observación<textarea id="hls-note" maxlength="2000" rows="3" placeholder="Cuéntanos qué debemos revisar">'+esc(draft.note)+'</textarea></label>'+(mode==='difference'&&cfg.role==='driver'?'<label class="hls-field">Efectivo contado<input id="hls-cash" type="number" min="0" max="999999999" step="0.01" inputmode="decimal" value="'+esc(draft.cash===''?r.efectivo_entregado:draft.cash)+'"></label>':'')+'<div class="hls-actions">'+button('save-note','REGISTRAR OBSERVACIÓN',true)+button('back','VOLVER',false)+'</div>';
- if(cfg.role==='driver')html=r.driver_confirmed_at?'<p class="hls-note">✓ Confirmaste esta versión. Esperando la aprobación del restaurante.</p>':button('driver-confirm','CONFIRMAR MI CUADRE',true);
- else if(r.driver_confirmed_at)html=(r.diferencia?'<label class="hls-field"><input id="hls-accept" type="checkbox" '+(draft.accept?'checked':'')+'> Revisé y acepto la diferencia de '+money(r.diferencia)+' registrada por ambas partes.</label>':'')+button('restaurant-confirm',r.diferencia?'REGISTRAR CIERRE CON OBSERVACIÓN':'APROBAR CIERRE',true);
- else html='<p class="hls-note">Esperando que el domiciliario confirme el mismo resumen.</p>';
- return html+'<div class="hls-actions">'+button('difference',cfg.role==='driver'?'REPORTAR DIFERENCIA':'REVISAR DIFERENCIA',false)+button('note','AGREGAR OBSERVACIÓN',false)+'</div>';
-}
-function receipt(s){const t=s.totals,d=s.driver,r=s.restaurant;
- const fields=[['Inicio',date(s.shift_started_at)],['Cierre',date(s.shift_ended_at)],['Duración',duration(s.shift_started_at,s.shift_ended_at)],['Vehículo / placa',(d.vehiculo||'—')+' / '+(d.placa||'—')],['Entregas',t.deliveries],['Efectivo registrado',money(t.cash)],['Efectivo contado',money(s.cash_counted)],['Pagos digitales',money(t.digital)],['Datáfono',money(t.card)],['Domicilios',money(t.fees)],['Propinas',money(t.tips)],['Ajustes',money(t.adjustments)],['Total conciliado',money(t.total)],['Saldo a entregar',money(t.amount_due)]];
- return '<article class="hls-receipt"><header class="hls-receipt-header"><div><span class="hls-label">'+esc(r.nombre)+'</span><small>Tecnología HOLA LUZ</small></div>'+(safeUrl(r.logo_url)?'<img src="'+esc(safeUrl(r.logo_url))+'" alt="Logo restaurante">':'<strong>HL</strong>')+'</header><h3>Recibo digital de<br>cierre de turno</h3><p class="hls-receipt-id">'+esc(s.receipt_number)+'</p><p class="hls-note">'+date(s.generated_at)+'</p><div class="hls-identity">'+avatar(d.foto_url,d.nombre)+'<div><b>'+esc(d.nombre)+'</b><br><span class="hls-pill '+(s.difference?'warn':'good')+'">'+(s.status==='approved'?'CONCILIADO':'REGISTRADO CON OBSERVACIÓN')+'</span></div></div><dl>'+fields.map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v)+'</dd>').join('')+'</dl><div class="hls-difference '+(s.difference?'warn':'')+'"><span>Diferencia aceptada</span><strong>'+money(s.difference)+'</strong></div><p class="hls-note"><b>Observación del domiciliario</b><br>'+esc(s.driver_note||'Sin observaciones')+'</p><p class="hls-note"><b>Observación del restaurante</b><br>'+esc(s.restaurant_note||'Sin observaciones')+'</p><dl><dt>Domiciliario confirmó</dt><dd>'+date(s.driver_confirmed_at)+'</dd><dt>Restaurante confirmó</dt><dd>'+date(s.restaurant_confirmed_at)+'</dd></dl><footer class="hls-receipt-footer"><span class="hls-label">GENERADO POR HOLA LUZ</span><p class="hls-note">Un cierre. Dos confirmaciones. El mismo comprobante.</p><p class="hls-receipt-id">ID verificable: '+esc(s.settlement_id)+'<br>Versión '+esc(s.revision)+'</p></footer></article>';
-}
-function evidence(r){const t=r.receipt_snapshot?.totals||r.resumen?.totals||{},items=[...(t.evidence||[]),...(t.orders||[]).filter(x=>safeUrl(x.foto_entrega)).map(x=>({url:x.foto_entrega,tipo:'Entrega #'+x.numero_pedido}))];return '<details '+(mode==='evidence'?'open':'')+'><summary>VER EVIDENCIAS · '+items.length+' soportes</summary><p class="hls-note">'+(complete(r)?'El recibo mostrado arriba es la evidencia inmutable de este cierre.':'Soportes vinculados a las entregas del turno.')+'</p><div class="hls-evidence">'+items.filter(x=>safeUrl(x.url)).map(x=>'<a href="'+esc(safeUrl(x.url))+'" target="_blank" rel="noopener noreferrer"><img src="'+esc(safeUrl(x.url))+'" alt="'+esc(x.tipo)+'" loading="lazy"><small>'+esc(x.tipo)+'</small></a>').join('')+'</div></details>';}
-function timeline(){return '<details '+(mode==='timeline'?'open':'')+'><summary>VER TIMELINE</summary><ol class="hls-timeline">'+events.map(e=>'<li>'+esc(eventNames[e.event_type]||e.event_type)+'<small>'+date(e.created_at)+' · '+esc(e.actor_role)+'</small>'+(e.details?.note?'<p class="hls-note">'+esc(e.details.note)+'</p>':'')+'</li>').join('')+'</ol></details>';}
-function renderSheet(force){const box=$('hls-content');if(!box)return;const r=selected;
- const key=JSON.stringify([r?.id,r?.revision,r?.premium_status,r?.driver_confirmed_at,mode,error,busy,events.length]);if(!force&&lastView===key){renderConnection();return;}lastView=key;
- if(!r){box.innerHTML='<h2>Cierres de turno</h2><p class="hls-note">Solicitudes e historial compartido</p>'+(error?'<div class="hls-error" role="alert">'+esc(error)+'</div>':'')+'<div class="hls-history">'+(rows.map(card).join('')||'<div class="hls-empty">Aún no hay solicitudes.</div>')+'</div>';return;}
- const done=complete(r);box.innerHTML='<span class="hls-label">'+(done?'Confirmación bilateral':'DOMICILIARIO · LUZ · RESTAURANTE')+'</span>'+pairing(r)+'<h2>'+esc(titles[r.premium_status]||'Preparando cierre…')+'</h2><div class="hls-connection" data-hls-peer="'+r.id+'"></div>'+(error?'<div class="hls-error" role="alert">'+esc(error)+button('retry','REINTENTAR',false)+'</div>':'')+(done?receipt(r.receipt_snapshot)+'<div class="hls-actions">'+button('print','IMPRIMIR',true)+button('pdf','DESCARGAR PDF',false)+'</div>':summary(r)+controls(r))+(r.resumen?.totals?evidence(r):'')+timeline()+(active(r)?'<div class="hls-actions">'+button('cancel','CANCELAR SOLICITUD',false)+'</div><p class="hls-note">Cancelar la solicitud mantiene el turno abierto.</p>':'');renderConnection();
-}
-function modal(){lastFocus=document.activeElement;$('hls-overlay').classList.add('open');$('hls-close').focus();lastView='';renderSheet(true);}
-function close(){ $('hls-overlay').classList.remove('open');selected=null;mode='summary';error='';lastView='';lastFocus?.focus();}
-async function open(id){selected=rows.find(r=>r.id===id)||null;events=[];error='';mode='summary';draft={note:'',cash:'',accept:false};modal();if(id){try{const d=await request('get',id);selected=d.row;events=d.events||[];merge(d.row);beat();}catch(e){error=e.message;renderSheet(true);}}}
-async function act(action,args){const d=await request(action,selected?.id,args);if(d.row){selected=d.row;events=d.events||[];merge(d.row);}return d;}
-async function sync(){if(selected.premium_status==='connected')await act('begin_sync');if(selected.premium_status==='syncing')await act('sync');}
-async function handle(action,id){if(busy)return;enableSound();feedback('tap');
- if(action==='open')return open(id);
- if(action==='inbox')return open();
- if(action==='close')return close();
- if(action==='print')return printReceipt();
- if(action==='pdf')return downloadPDF();
- if(action==='note'||action==='difference'||action==='back'){mode=action==='back'?'summary':action;error='';renderSheet(true);return;}
- busy=true;error='';render();
- try{
-  if(action==='more'){const last=rows[rows.length-1];const d=await request('list',null,last?{before:last.iniciado_at,before_id:last.id}:{});historyMore=d.rows.length===100;d.rows.forEach(merge);}
-  else if(action==='activate')await cfg.activate?.();
-  else if(action==='start'){const d=await request('start');selected=d.row;events=d.events||[];mode='summary';merge(d.row);modal();beat();}
-  else if(action==='connect'){await act('connect');feedback('connection');await sync();}
-  else if(action==='sync')await sync();
-  else if(action==='retry'){if(selected)await act('get');await streamReconnect();}
-  else if(action==='save-note'){await act(mode==='difference'?'difference':'note',{revision:selected.revision,note:draft.note,cash_counted:draft.cash===''?selected.efectivo_entregado:Number(draft.cash)});mode='summary';}
-  else if(action==='driver-confirm')await act('driver_confirm',{revision:selected.revision});
-  else if(action==='restaurant-confirm'){await act('restaurant_confirm',{revision:selected.revision,accept_difference:draft.accept});if(complete(selected))feedback('success');else if(selected.premium_status==='syncing'){await sync();error='La operación cambió. Ambos deben revisar y confirmar el resumen actualizado.';}}
-  else if(action==='cancel')await act('cancel');
- }catch(e){error=e.message;feedback('attention');if(!$('hls-overlay').classList.contains('open'))modal();}
- finally{busy=false;render();}
-}
-async function streamReconnect(){stream();}
-function printReceipt(){if(!selected?.receipt_snapshot)return;let root=$('hls-print');if(!root){root=document.createElement('div');root.id='hls-print';root.className='hls';root.hidden=true;document.body.appendChild(root);}root.innerHTML=receipt(selected.receipt_snapshot);root.hidden=false;document.body.classList.add('hls-printing');window.print();}
-window.addEventListener('afterprint',()=>{document.body.classList.remove('hls-printing');if($('hls-print'))$('hls-print').hidden=true;});
-// Small dependency-free PDF writer. Uses the immutable snapshot, not current orders.
-function pdfBytes(s,media=[]){
- const t=s.totals,d=s.driver,ink='0.08 0.14 0.23',muted='0.35 0.42 0.52',purple='0.40 0.29 0.72';
- const latin=v=>String(v??'').replace(/[–—]/g,'-').replace(/[^\x20-\xFF]/g,' ').replace(/[()\\]/g,'\\$&');
- const wrap=(v,n)=>String(v||'').split('\n').flatMap(p=>{const a=[];while(p.length>n){let i=p.lastIndexOf(' ',n);if(i<1)i=n;a.push(p.slice(0,i));p=p.slice(i).trim();}a.push(p);return a;});
- let pages=[],cmd='',y=0;
- const rect=(x,y,w,h,color)=>{cmd+=color+' rg '+x+' '+y+' '+w+' '+h+' re f\n';};
- const text=(v,x,y,size=10,bold=false,color=ink)=>{cmd+='BT /'+(bold?'F2':'F1')+' '+size+' Tf '+color+' rg '+x+' '+y+' Td ('+latin(v)+') Tj ET\n';};
- const line=(y)=>{cmd+='0.85 0.88 0.92 RG .5 w 42 '+y+' m 553 '+y+' l S\n';};
- function page(){if(cmd)pages.push(cmd);cmd='';rect(0,764,595,78,ink);text('HOLA LUZ',42,801,17,true,'1 1 1');text('TECNOLOGIA PARA UNA OPERACION CONECTADA',42,782,8,false,'0.72 0.78 0.89');rect(0,761,595,3,purple);y=727;}
- function ensure(h){if(y-h<70){page();text('Cierre de turno · continuación',42,y,18,true);y-=35;}}
- page();for(const m of media){const at=m.kind==='logo'?[495,778,44,44]:[510,568,42,42];cmd+='q '+at[2]+' 0 0 '+at[3]+' '+at[0]+' '+at[1]+' cm /'+m.kind+' Do Q\n';}text('Recibo digital',42,y,27,true);y-=30;text('de cierre de turno',42,y,27,true);y-=26;text(s.restaurant.nombre,42,y,12,true,purple);text(date(s.generated_at),350,y,9,false,muted);y-=25;text(s.receipt_number,42,y,9,false,muted);y-=17;line(y);y-=35;
- text(d.nombre,42,y,18,true);text(s.status==='approved'?'CONCILIADO':'CON OBSERVACION',355,y,10,true,s.difference?'0.54 0.37 0.11':'0.12 0.43 0.35');y-=19;text((d.vehiculo||'Vehiculo no registrado')+' / '+(d.placa||'Sin placa'),42,y,10,false,muted);y-=29;
- text('INICIO',42,y,8,true,muted);text('CIERRE',245,y,8,true,muted);text('DURACION',455,y,8,true,muted);y-=16;text(date(s.shift_started_at),42,y,9);text(date(s.shift_ended_at),245,y,9);text(duration(s.shift_started_at,s.shift_ended_at),455,y,9);y-=28;
- const pairs=[['Entregas',t.deliveries],['Efectivo registrado',money(t.cash)],['Efectivo contado',money(s.cash_counted)],['Pagos digitales',money(t.digital)],['Datáfono',money(t.card)],['Domicilios cobrados',money(t.fees)],['Propinas',money(t.tips)],['Ajustes',money(t.adjustments)]];
- pairs.forEach(([k,v],i)=>{if(i%2===0)rect(42,y-7,511,23,'0.96 0.97 0.99');text(k,53,y,10);text(v,422,y,10,true);y-=23;});y-=6;line(y);y-=25;text('TOTAL CONCILIADO',53,y,10,true,muted);text(money(t.total),400,y,17,true);y-=31;rect(42,y-13,511,32,'0.94 0.96 0.99');text('Saldo a entregar',53,y,11,true);text(money(t.amount_due),400,y,17,true);y-=37;text('Diferencia aceptada',53,y,10,true,muted);text(money(s.difference),422,y,11,true);y-=29;
- for(const [title,note] of [['OBSERVACION DEL DOMICILIARIO',s.driver_note],['OBSERVACION DEL RESTAURANTE',s.restaurant_note]]){ensure(50);text(title,42,y,8,true,muted);y-=17;for(const l of wrap(note||'Sin observaciones',91)){ensure(18);text(l,42,y,10);y-=15;}y-=11;}
- ensure(115);line(y);y-=25;text('CONFIRMACION BILATERAL',42,y,9,true,purple);y-=21;text('Domiciliario',42,y,9,true);text(date(s.driver_confirmed_at),230,y,9);y-=17;text('Restaurante',42,y,9,true);text(date(s.restaurant_confirmed_at),230,y,9);y-=25;text('ID verificable: '+s.settlement_id,42,y,8,false,muted);y-=14;text('Version '+s.revision+' · Un único comprobante para ambas partes.',42,y,8,false,muted);pages.push(cmd);
- let objs=['','<< /Type /Catalog /Pages 2 0 R >>','','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>'],ids=[];
- const imageIds={};for(const m of media){imageIds[m.kind]=objs.length;let binary='';for(const v of m.bytes)binary+=String.fromCharCode(v);objs.push('<< /Type /XObject /Subtype /Image /Width '+m.width+' /Height '+m.height+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+binary.length+' >>\nstream\n'+binary+'\nendstream');}
- pages.forEach((c,i)=>{const id=objs.length,content=id+1;ids.push(id);c+='BT /F1 8 Tf '+muted+' rg 42 32 Td (GENERADO POR HOLA LUZ) Tj ET\nBT /F1 8 Tf '+muted+' rg 510 32 Td ('+(i+1)+' / '+pages.length+') Tj ET';objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> /XObject << '+Object.entries(imageIds).map(([name,id])=>'/'+name+' '+id+' 0 R').join(' ')+' >> >> /Contents '+content+' 0 R >>');objs.push('<< /Length '+c.length+' >>\nstream\n'+c+'\nendstream');});
- objs[2]='<< /Type /Pages /Kids ['+ids.map(i=>i+' 0 R').join(' ')+'] /Count '+ids.length+' >>';let result='%PDF-1.4\n',offsets=[0];for(let i=1;i<objs.length;i++){offsets[i]=result.length;result+=i+' 0 obj\n'+objs[i]+'\nendobj\n';}const xref=result.length;result+='xref\n0 '+objs.length+'\n0000000000 65535 f \n'+offsets.slice(1).map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<< /Size '+objs.length+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF';return Uint8Array.from(result,c=>c.charCodeAt(0));
-}
-async function receiptImage(kind,url){
- if(!safeUrl(url))return null;
- return new Promise((resolve,reject)=>{
-  const img=new Image();img.crossOrigin='anonymous';const timer=setTimeout(()=>reject(new Error('No pudimos cargar la foto o el logo del recibo. Reintenta la descarga.')),12000);
-  img.onload=()=>{clearTimeout(timer);try{const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;const c=canvas.getContext('2d');c.fillStyle='#ffffff';c.fillRect(0,0,256,256);const factor=Math.min(256/img.naturalWidth,256/img.naturalHeight),w=img.naturalWidth*factor,h=img.naturalHeight*factor;c.drawImage(img,(256-w)/2,(256-h)/2,w,h);const binary=atob(canvas.toDataURL('image/jpeg',.88).split(',')[1]);resolve({kind,width:256,height:256,bytes:Uint8Array.from(binary,x=>x.charCodeAt(0))});}catch{reject(new Error('No pudimos incluir las imágenes del recibo. Reintenta o usa la impresión del panel.'));}};
-  img.onerror=()=>{clearTimeout(timer);reject(new Error('No pudimos cargar la foto o el logo del recibo. Reintenta la descarga.'));};img.src=safeUrl(url);
- });
-}
-async function downloadPDF(){
- if(!selected?.receipt_snapshot)return;
- const s=selected.receipt_snapshot;busy=true;error='';renderSheet(true);
- try{const media=(await Promise.all([receiptImage('logo',s.restaurant.logo_url),receiptImage('photo',s.driver.foto_url)])).filter(Boolean);const a=document.createElement('a'),url=URL.createObjectURL(new Blob([pdfBytes(s,media)],{type:'application/pdf'}));a.href=url;a.download=s.receipt_number+'.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch(e){error=e.message;}finally{busy=false;renderSheet(true);}
-}
-function init(){
- if(!$('hls-overlay')){
-  const el=document.createElement('div');el.id='hls-overlay';el.className='hls hls-overlay';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','Cierre compartido de turno');el.innerHTML='<section class="hls-sheet"><div class="hls-top"><span class="hls-label">HOLA LUZ · CIERRE DE TURNO</span><button id="hls-close" class="hls-close" data-hls="close" aria-label="Cerrar">×</button></div><div id="hls-content"></div></section>';document.body.appendChild(el);
-  el.addEventListener('click',e=>{if(e.target===el)close();});
-  document.addEventListener('click',e=>{const b=e.target.closest('[data-hls]');if(b){e.preventDefault();handle(b.dataset.hls,b.dataset.id);}});
-  el.addEventListener('input',e=>{if(e.target.id==='hls-note')draft.note=e.target.value;if(e.target.id==='hls-cash')draft.cash=e.target.value;if(e.target.id==='hls-accept')draft.accept=e.target.checked;});
-  el.addEventListener('keydown',e=>{if(e.key==='Escape')close();if(e.key==='Tab'){const a=[...el.querySelectorAll('button:not([disabled]),input,textarea,summary,a[href]')].filter(x=>x.offsetParent);const first=a[0],last=a[a.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
- }
- cfg.mount();const cred=cfg.credentials();if(!cred||!cfg.info().id)return;const next=cfg.role+':'+cfg.info().id;if(started&&next===account){center();return;}account=next;started=true;rows=[];historyMore=false;stream();clearInterval(heartbeat);heartbeat=setInterval(()=>{beat();renderConnection();},15000);
-}
-window.addEventListener('online',()=>{if(started)stream();});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&started){stream();beat();}});window.addEventListener('pagehide',()=>{streamAbort?.abort();clearInterval(heartbeat);clearTimeout(retry);});
-window.HLSettlement={init,start:()=>handle('start'),open,render:center,receipt,pdfBytes};
-init();
-})();
+var EDGE=DOMI_SUPABASE_URL+'/functions/v1/hl-shift-sync';
+var SB_UMD='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js';
+var OPEN=['pairing','connected','syncing','awaiting_driver','awaiting_restaurant','difference_review'];
+var DONE=['approved','approved_with_note'];
+var REASONS=['Faltó dinero','Entregué vuelto','Pago mixto','Cliente pagó distinto','Pedido cancelado en puerta','Otro'];
+var FALLBACK_MS=20000;
+var S={el:null,view:'',stl:null,preview:null,hist:null,histSnap:null,backTo:'',busy:false,err:'',changed:false,
+  restOnline:null,sb:null,sbP:null,chan:null,chanId:'',pchan:null,pchanRid:'',fetchT:null,fb:null,wasDown:false,
+  finalized:{},celebrated:{},lastStatus:{},diff:null,sound:true,liveId:'',checksIn:{}};
+try{S.sound=localStorage.getItem('hl_stl_sound')!=='0'}catch(e){}
 
+var ICO={
+  back:'<svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>',
+  hist:'<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>',
+  snd:'<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
+  mute:'<svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/></svg>',
+  cam:'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  wifi:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5.5 12a10 10 0 0 1 13 0"/><path d="M9 15.5a5 5 0 0 1 6 0"/><circle cx="12" cy="19" r="1"/></svg>'
+};
+
+/* ── utilidades ── */
+function $(id){return document.getElementById(id)}
+function E(s){return typeof esc==='function'?esc(s):String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function M(v){return typeof money==='function'?money(v):'$'+Number(v||0).toLocaleString('es-CO')}
+function N(v){return Number(v||0)}
+function SM(v){v=N(v);return (v>0?'+':v<0?'−':'')+M(Math.abs(v))}
+function plural(n,a,b){return n===1?a:b}
+function reduced(){try{return window.matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}}
+function buzz(p){try{if(navigator.vibrate)navigator.vibrate(p)}catch(e){}}
+function chime(kind){
+  if(!S.sound)return;
+  try{var A=window.AudioContext||window.webkitAudioContext;if(!A)return;var c=new A(),t=c.currentTime;
+    var notes=kind==='ok'?[523.25,659.25,783.99]:[740];
+    notes.forEach(function(f,i){var o=c.createOscillator(),g=c.createGain(),s=t+i*.11;o.type='sine';o.frequency.setValueAtTime(f,s);g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(.035,s+.02);g.gain.exponentialRampToValueAtTime(.0001,s+.32);o.connect(g);g.connect(c.destination);o.start(s);o.stop(s+.34)});
+    setTimeout(function(){try{c.close()}catch(e){}},1200)}catch(e){}
+}
+function initials(n){return String(n||'HL').split(/\s+/).filter(Boolean).slice(0,2).map(function(x){return x[0]}).join('').toUpperCase()}
+function avatar(url,name){return '<div class="hlss-av">'+(url?'<img src="'+E(url)+'" alt="">':E(initials(name)))+'</div>'}
+function restLabel(s){return (s&&s.restaurant&&s.restaurant.nombre)||restName||'Restaurante'}
+function isOpen(s){return !!s&&OPEN.indexOf(s.status)>=0}
+function isDone(s){return !!s&&DONE.indexOf(s.status)>=0}
+
+/* ── servidor ── */
+async function api(action,body){
+  var c=new AbortController(),tm=setTimeout(function(){try{c.abort()}catch(e){}},15000);
+  try{
+    var r=await fetch(EDGE,{method:'POST',cache:'no-store',signal:c.signal,
+      headers:{'Content-Type':'application/json','apikey':DOMI_SUPABASE_KEY,'Authorization':'Bearer '+(token||'')},
+      body:JSON.stringify(Object.assign({action:action},body||{}))});
+    var t=await r.text(),d={};try{d=t?JSON.parse(t):{}}catch(e){}
+    if(!r.ok||d.ok===false){var er=new Error(d.error||'No pudimos sincronizar. Intenta de nuevo.');er.code=d.code||'';er.status=r.status;throw er}
+    setOffline(false);
+    return d;
+  }catch(e){
+    if(e&&e.name==='AbortError'){var x=new Error('La conexión tardó demasiado.');x.net=true;setOffline(true);throw x}
+    if(e instanceof TypeError){var y=new Error('Sin conexión. Reconectando…');y.net=true;setOffline(true);throw y}
+    throw e;
+  }finally{clearTimeout(tm)}
+}
+
+/* ── Realtime (solo señales; los datos siempre se piden al servidor) ── */
+function loadSb(){
+  if(window.supabase&&window.supabase.createClient)return Promise.resolve(window.supabase);
+  if(S.sbP)return S.sbP;
+  S.sbP=new Promise(function(res,rej){var s=document.createElement('script');s.src=SB_UMD;s.async=true;s.crossOrigin='anonymous';
+    s.onload=function(){window.supabase&&window.supabase.createClient?res(window.supabase):rej(new Error('realtime'))};
+    s.onerror=function(){S.sbP=null;rej(new Error('realtime'))};document.head.appendChild(s)});
+  return S.sbP;
+}
+async function client(){
+  if(S.sb)return S.sb;
+  var lib=await loadSb();
+  S.sb=lib.createClient(DOMI_SUPABASE_URL,DOMI_SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'hl-stl-driver'}});
+  return S.sb;
+}
+async function watchRestaurant(){
+  if(!restId||S.pchanRid===restId)return;
+  try{var sb=await client();if(S.pchan){try{sb.removeChannel(S.pchan)}catch(e){}}
+    S.pchanRid=restId;
+    var pc=sb.channel('hl-presence:'+restId,{config:{presence:{key:'driver:'+(domi&&domi.id||'x')}}});
+    pc.on('presence',{event:'sync'},function(){var st=pc.presenceState(),on=false;Object.keys(st).forEach(function(k){(st[k]||[]).forEach(function(p){if(p&&p.role==='restaurant')on=true})});setRestOnline(on)});
+    pc.subscribe();S.pchan=pc;
+  }catch(e){S.pchanRid=''}
+}
+async function subscribe(){
+  var s=S.stl;if(!s||!isOpen(s)){startFallback();return}
+  if(S.chan&&S.chanId===s.id){startFallback();return}
+  unsubscribe(true);S.chanId=s.id;startFallback();
+  try{
+    var sb=await client();if(S.chanId!==s.id)return;
+    var ch=sb.channel('settlement:'+s.id,{config:{broadcast:{self:false},presence:{key:'driver:'+(domi&&domi.id||'x')}}});
+    ch.on('broadcast',{event:'state'},function(m){var p=m&&m.payload||{};if(!S.stl||p.id!==S.stl.id)return;refetchSoon(60)});
+    ch.subscribe(function(status){
+      if(S.chan!==ch)return;
+      if(status==='SUBSCRIBED'){setOffline(false);try{ch.track({role:'driver',at:new Date().toISOString()})}catch(e){}if(S.wasDown){S.wasDown=false;refetchSoon(40)}}
+      else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){S.wasDown=true;setOffline(true)}
+    });
+    S.chan=ch;
+  }catch(e){/* Sin Realtime: la verificación de respaldo mantiene la vista al día */}
+  watchRestaurant();
+}
+function unsubscribe(keepFallback){
+  var ch=S.chan;S.chan=null;S.chanId='';
+  if(ch&&S.sb){try{S.sb.removeChannel(ch)}catch(e){}}
+  if(!keepFallback)stopFallback();
+}
+function startFallback(){
+  if(S.fb)return;
+  S.fb=setInterval(function(){if(document.hidden)return;if(S.stl&&isOpen(S.stl))refetch();else stopFallback()},FALLBACK_MS);
+}
+function stopFallback(){if(S.fb){clearInterval(S.fb);S.fb=null}}
+function refetchSoon(ms){clearTimeout(S.fetchT);S.fetchT=setTimeout(refetch,ms||120)}
+async function refetch(){
+  var s=S.stl;if(!s||!token)return;
+  try{var d=await api('driver_get',{id:s.id});apply(d.settlement)}
+  catch(e){if(!e.net){S.err=e.message;update()}}
+}
+function setOffline(v){
+  var el=S.el;if(!el)return;
+  if(!v&&!navigator.onLine)v=true;
+  el.classList.toggle('offline',!!v);
+}
+function setRestOnline(on){if(S.restOnline===on)return;S.restOnline=on;if(S.view==='live')update();if(S.view==='center')render()}
+
+/* ── estado ── */
+function apply(s,opts){
+  if(!s)return;
+  var prev=S.stl&&S.stl.id===s.id?S.stl:null,ps=prev?prev.status:'';
+  if(s.totals_changed){S.changed=true;delete s.totals_changed}
+  else if(prev&&prev.revision!==s.revision&&(prev.driver_confirmed_at||prev.restaurant_confirmed_at))S.changed=true;
+  if(prev&&s.status!==ps){
+    S.err='';
+    if(ps==='pairing'&&s.status!=='pairing'&&s.status!=='cancelled'){buzz(20);chime('link')}
+    if(s.status==='difference_review'||s.status==='awaiting_driver')S.changed=S.changed&&s.status==='awaiting_driver';
+  }
+  S.stl=s;
+  if(isDone(s)){finalizeLocal(s);celebrate(s,!!prev&&ps!==s.status)}
+  if(s.status==='cancelled'){unsubscribe()}
+  updateCc();
+  if(S.view==='live'&&S.liveId===s.id)update();
+  else if(isDone(s)&&!(opts&&opts.silent)){show();setView('live')}
+}
+function celebrate(s,animate){
+  if(S.celebrated[s.id])return;S.celebrated[s.id]=1;
+  try{localStorage.setItem('hl_stl_seen_'+s.id,'1')}catch(e){}
+  if(animate||S.view==='live'){buzz([20,40,20]);chime('ok')}
+}
+function finalizeLocal(s){
+  if(S.finalized[s.id])return;S.finalized[s.id]=1;
+  unsubscribe();
+  try{shift=false;if(domi){domi.turno_activo=false;domi.turno_fin_at=s.completed_at||new Date().toISOString()}}catch(e){}
+  try{stopGPS()}catch(e){}
+  try{releaseDomiWakeLock()}catch(e){}
+  try{ped=null;pedSig=''}catch(e){}
+  try{closeShiftClose()}catch(e){}
+  try{renderIdle()}catch(e){}
+  try{renderPresence()}catch(e){}
+  try{renderControlCenter()}catch(e){}
+  if(!S.el||!S.el.classList.contains('on')){try{notice('success','Cuadre sincronizado','Tu turno terminó · recibo '+(s.receipt_number||''))}catch(e){}}
+}
+function updateCc(){
+  var b=$('ccSettleBtn');if(!b||b.classList.contains('cc-running'))return;
+  if(S.stl&&isOpen(S.stl))b.textContent='CIERRE EN CURSO · CONTINUAR →';
+}
+
+/* ── overlay ── */
+function ensure(){
+  if(S.el)return S.el;
+  var el=document.createElement('div');el.id='hlss';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','hlssTitle');
+  el.innerHTML='<div class="hlss-bg" aria-hidden="true"></div>'+
+    '<header class="hlss-top"><button type="button" class="hlss-ico" data-a="back" aria-label="Volver">'+ICO.back+'</button>'+
+    '<div class="hlss-top-copy"><small>HOLA LUZ</small><b id="hlssTitle">Cierre de turno</b></div>'+
+    '<button type="button" class="hlss-ico" data-a="sound" id="hlssSnd" aria-label="Sonido">'+(S.sound?ICO.snd:ICO.mute)+'</button>'+
+    '<button type="button" class="hlss-ico" data-a="history" aria-label="Historial de cierres">'+ICO.hist+'</button></header>'+
+    '<div class="hlss-body" id="hlssBody"><div class="hlss-net" role="status">'+ICO.wifi+'<span>CONEXIÓN INTERRUMPIDA · Reconectando…</span></div><div class="hlss-wrap" id="hlssWrap"></div></div>'+
+    '<footer class="hlss-dock" id="hlssDock"></footer><div class="hlss-sheet" id="hlssSheet"></div>';
+  document.body.appendChild(el);S.el=el;
+  el.addEventListener('click',onClick);
+  el.addEventListener('input',onInput);
+  el.addEventListener('change',onChange);
+  return el;
+}
+function show(){ensure();S.el.classList.add('on');try{document.documentElement.style.overflow='hidden'}catch(e){}setOffline(!navigator.onLine)}
+function hide(){if(!S.el)return;closeSheet();S.el.classList.remove('on');try{document.documentElement.style.overflow=''}catch(e){}S.view='';S.liveId='';updateCc()}
+function setView(v){S.view=v;if(v!=='live')S.liveId='';render()}
+function title(t){var x=$('hlssTitle');if(x)x.textContent=t}
+
+function render(){
+  var w=$('hlssWrap'),d=$('hlssDock');if(!w)return;
+  var v=S.view;
+  if(v==='loading'){title('Cierre de turno');w.innerHTML=hero('Conectando con Luz…','Preparando tu cierre de turno.');d.innerHTML='';return}
+  if(v==='error'){title('Cierre de turno');w.innerHTML=hero('No pudimos sincronizar','Tu turno sigue activo.')+'<div class="hlss-err"><b>Detalle</b>'+E(S.err||'Intenta nuevamente.')+'</div>';d.innerHTML='<button type="button" class="hlss-btn pri" data-a="retry">REINTENTAR</button><button type="button" class="hlss-btn sec" data-a="close">VOLVER</button>';return}
+  if(v==='center')return renderCenter(w,d);
+  if(v==='live')return renderLive(w,d);
+  if(v==='history')return renderHistory(w,d);
+  if(v==='receipt'){title('Recibo de cierre');w.innerHTML=receiptHtml(S.histSnap);d.innerHTML='<button type="button" class="hlss-btn sec" data-a="print">IMPRIMIR / GUARDAR PDF</button>';return}
+}
+function hero(h,p){return '<div class="hlss-hero"><div class="hlss-orb" aria-hidden="true"><i class="core"></i><i class="ring"></i><i class="ring r2"></i></div><h2>'+E(h)+'</h2><p>'+E(p)+'</p></div>'}
+function person(sub){var n=(domi&&domi.nombre)||'Domiciliario';return '<div class="hlss-person">'+avatar(domi&&domi.foto_url,n)+'<div><b>'+E(n)+'</b><span>'+E(sub)+'</span></div></div>'}
+function rowsHtml(t){
+  var dig=N(t.digital_total)+N(t.card_total),digN=N(t.digital_count)+N(t.card_count),adj=N(t.adjustments_total);
+  return '<div class="hlss-rows">'+
+    '<div class="hlss-row"><span>Entregas completadas</span><b>'+N(t.deliveries_count)+'</b></div>'+
+    '<div class="hlss-row"><span>Efectivo recibido<em>'+N(t.cash_count)+' '+plural(N(t.cash_count),'pedido','pedidos')+' · incluye domicilio</em></span><b>'+M(t.cash_total)+'</b></div>'+
+    '<div class="hlss-row pos"><span>Domicilios<em>Tu ganancia del turno</em></span><b>'+M(t.delivery_fee_total)+'</b></div>'+
+    '<div class="hlss-row"><span>Pagos digitales<em>'+digN+' '+plural(digN,'pago','pagos')+' · incluye datáfono · no se entrega</em></span><b>'+M(dig)+'</b></div>'+
+    '<div class="hlss-row"><span>Propinas</span><b>'+M(t.tips_total)+'</b></div>'+
+    '<div class="hlss-row'+(adj<0?' neg':adj>0?' pos':'')+'"><span>Ajustes</span><b>'+(adj>0?'+':'')+M(adj)+'</b></div></div>';
+}
+
+/* Centro de cierre (antes de conectar) */
+function renderCenter(w,d){
+  title('Cierre de turno');var p=S.preview||{};
+  if(!p.shift_active){
+    w.innerHTML=hero('No tienes un turno activo','Aquí verás tus cierres y recibos anteriores.')+person('Fuera de turno');
+    d.innerHTML='<button type="button" class="hlss-btn pri" data-a="history">VER MIS CIERRES</button><button type="button" class="hlss-btn sec" data-a="close">VOLVER</button>';return;
+  }
+  var t=p.totals||{},pend=N(t.pending_orders),blocked=pend>0||!!ped;
+  var online=S.restOnline===true?'Restaurante en línea':S.restOnline===false?'Restaurante desconectado':'';
+  w.innerHTML=hero('Centro de cierre','Luz sincroniza tu turno con '+(restName||'el restaurante')+'. Nada se cierra hasta que ambos confirmen.')+
+    person('Inicio '+(p.turno_inicio_label||'')+' · '+(p.duration_label||'')+(online?' · '+online:''))+
+    '<div class="hlss-total"><small>TOTAL A ENTREGAR</small><strong>'+M(t.amount_due)+'</strong><span>Efectivo recibido + ajustes · se confirma al sincronizar</span></div>'+
+    rowsHtml(t)+
+    (blocked?'<div class="hlss-flag"><div><b>ENTREGA EN CURSO</b>'+(pend>0?pend+' '+plural(pend,'pedido asignado','pedidos asignados')+' sin entregar. ':'')+'Complétala antes de cerrar el turno.</div></div>':'')+
+    '<p class="hlss-note">Tu turno sigue activo mientras sincronizas. Si algo no cuadra, podrás reportarlo.</p>';
+  d.innerHTML='<button type="button" class="hlss-btn pri" data-a="start"'+(blocked||S.busy?' disabled':'')+'>'+(S.busy?'CONECTANDO…':'SINCRONIZAR CON RESTAURANTE')+'</button>';
+}
+
+/* Vista en vivo: emparejamiento → sincronización → resumen → confirmación → apretón de manos */
+function renderLive(w,d){
+  var s=S.stl;if(!s){setView('loading');return}
+  S.liveId=s.id;title('Cierre de turno');
+  var n=(domi&&domi.nombre)||(s.driver&&s.driver.nombre)||'Tú',rn=restLabel(s);
+  w.innerHTML='<div class="hlss-pair" id="hlssPair">'+
+      '<div class="hlss-node me">'+avatar((domi&&domi.foto_url)||(s.driver&&s.driver.foto_url),n)+'<small>Tú</small></div>'+
+      '<div class="hlss-wire"></div>'+
+      '<div class="hlss-orb" aria-hidden="true"><i class="core"></i><i class="ring"></i><i class="ring r2"></i></div>'+
+      '<div class="hlss-wire w2"></div>'+
+      '<div class="hlss-node rest">'+avatar(s.restaurant&&s.restaurant.logo_url,rn)+'<small id="hlssRestSt">'+E(rn)+'</small></div></div>'+
+    '<div class="hlss-status" id="hlssStatus" aria-live="polite"></div>'+
+    '<div id="hlssMain"></div>';
+  S.mainSig='';
+  update();
+}
+function statusInfo(s){
+  var rn=restLabel(s),pend=N(s.pending_orders);
+  switch(s.status){
+    case 'pairing':
+      if(S.restOnline===false)return{k:'wait',b:'ESPERANDO AL RESTAURANTE…',t:rn+' aún no abre el panel. Puedes salir: tu cierre queda guardado.'};
+      return{k:'',b:'BUSCANDO RESTAURANTE',t:'Luz está enlazando tu turno con '+rn+'…'};
+    case 'connected':return{k:'',b:'RESTAURANTE CONECTADO',t:rn+' abrió tu cierre.'};
+    case 'syncing':return{k:'',b:'SINCRONIZANDO OPERACIÓN',t:'Luz está conciliando entregas, efectivo y pagos.'};
+    case 'awaiting_driver':
+      if(pend>0)return{k:'warn',b:'⚠ DIFERENCIA DETECTADA',t:pend+' '+plural(pend,'pedido asignado','pedidos asignados')+' sin entregar.'};
+      if(s.resolution==='keep_system')return{k:'warn',b:'EL RESTAURANTE MANTUVO EL MONTO',t:'Lee su nota y confirma tu cuadre.'};
+      if(s.restaurant_confirmed_at)return{k:'ok',b:'EL RESTAURANTE YA CONFIRMÓ',t:'Falta tu confirmación para cerrar el turno.'};
+      return{k:'',b:'CUADRE LISTO',t:'Revisa el total y confirma tu cuadre.'};
+    case 'awaiting_restaurant':
+      return{k:'wait',b:'ESPERANDO AL RESTAURANTE…',t:S.restOnline===false?'Confirmaste. '+rn+' está desconectado; te avisamos cuando confirme.':'Confirmaste tu cuadre. Falta la confirmación de '+rn+'.'};
+    case 'difference_review':return{k:'warn',b:'DIFERENCIA EN REVISIÓN',t:rn+' está revisando tu reporte.'};
+    case 'approved':case 'approved_with_note':return{k:'ok',b:'CUADRE SINCRONIZADO',t:'Ambas partes confirmaron la operación.'};
+    case 'cancelled':return{k:'bad',b:'CIERRE CANCELADO',t:'Tu turno sigue activo.'};
+  }
+  return{k:'wait',b:'SINCRONIZANDO',t:''};
+}
+function pairClass(s){
+  var st=s.status;
+  if(isDone(s))return 'hlss-pair linked done';
+  if(st==='syncing')return 'hlss-pair linked flow';
+  if(st==='pairing'||st==='cancelled')return 'hlss-pair';
+  return 'hlss-pair linked';
+}
+function checksHtml(s){
+  if(s.status==='pairing'||s.status==='connected'||s.status==='cancelled')return '';
+  if(!s.synced_at){
+    return '<div class="hlss-checks">'+['Entregas','Efectivo','Domicilios','Pagos digitales','Pedidos pendientes','Evidencias'].map(function(x){return '<div class="hlss-check p"><i></i><span>'+x+'</span></div>'}).join('')+'</div>';
+  }
+  var dN=N(s.deliveries_count),dig=N(s.digital_total)+N(s.card_total),digN=N(s.digital_count)+N(s.card_count),pend=N(s.pending_orders),ev=N(s.evidence_count);
+  var c=function(ok,html){return '<div class="hlss-check'+(ok?'':' w')+'"><i>'+(ok?'✓':'!')+'</i><span>'+html+'</span></div>'};
+  var first=!S.checksIn[s.id];S.checksIn[s.id]=1;
+  return '<div class="hlss-checks'+(first?' in':'')+'">'+
+    c(true,'<b>'+dN+'</b> '+plural(dN,'entrega conciliada','entregas conciliadas'))+
+    c(true,'<b>'+M(s.cash_total)+'</b> efectivo recibido')+
+    c(true,'<b>'+M(s.delivery_fee_total)+'</b> en domicilios')+
+    c(true,'<b>'+digN+'</b> '+plural(digN,'pago digital','pagos digitales')+' · '+M(dig))+
+    c(pend===0,pend===0?'Sin pedidos pendientes':'<b>'+pend+'</b> '+plural(pend,'pedido pendiente','pedidos pendientes'))+
+    c(ev>=dN,'<b>'+ev+'/'+dN+'</b> evidencias de entrega')+'</div>';
+}
+function update(){
+  var s=S.stl;if(!s||S.view!=='live')return;
+  var pair=$('hlssPair');if(!pair){renderLive($('hlssWrap'),$('hlssDock'));return}
+  var pc=pairClass(s);if(pair.className!==pc)pair.className=pc;
+  var rs=$('hlssRestSt');if(rs)rs.textContent=isOpen(s)&&s.status==='pairing'?(S.restOnline===true?'En línea':S.restOnline===false?'Desconectado':restLabel(s)):restLabel(s);
+  var si=statusInfo(s),st=$('hlssStatus');
+  if(st){var html='<b>'+E(si.b)+'</b><span>'+E(si.t)+'</span>';if(st.innerHTML!==html){st.innerHTML=html}st.className='hlss-status'+(si.k?' '+si.k:'')}
+  var main=$('hlssMain');
+  var sig=[s.status,s.revision,s.synced_at?1:0,s.amount_due,s.driver_amount,s.restaurant_note,s.resolution,s.driver_confirmed_at?1:0,s.restaurant_confirmed_at?1:0,s.pending_orders,s.evidence_count,S.changed?1:0,S.err,s.receipt_number||''].join('|');
+  if(main&&S.mainSig!==sig){var st0=S.mainSig.split('|')[0];S.mainSig=sig;main.innerHTML=mainHtml(s);if((S.changed||st0!==s.status)&&$('hlssBody'))$('hlssBody').scrollTop=0}
+  $('hlssDock').innerHTML=dockHtml(s);
+}
+function mainHtml(s){
+  if(isDone(s))return receiptHtml(s.receipt_snapshot);
+  if(s.status==='cancelled')return '<p class="hlss-note">Cancelaste este cierre. Tu turno y tu GPS siguen activos.</p>';
+  var h='',diff=s.status==='difference_review';
+  if(S.err)h+='<div class="hlss-err"><b>No se pudo completar</b>'+E(S.err)+'</div>';
+  if(S.changed)h+='<div class="hlss-flag"><div><b>LOS TOTALES CAMBIARON</b>Entró un movimiento nuevo de tu turno. Luz actualizó el cuadre: revisa y confirma de nuevo.</div></div>';
+  var synced=!!s.synced_at,checks=checksHtml(s);
+  if(!synced)h+=checks;
+  h+='<div class="hlss-total'+(diff?' diff':'')+'"><small>TOTAL A ENTREGAR</small><strong>'+M(s.amount_due)+'</strong><span>'+
+    (diff?'Tu reporte: '+M(s.driver_amount)+' · diferencia '+SM(s.difference_amount):synced?'Efectivo recibido + ajustes':'Preliminar · se confirma al sincronizar')+'</span></div>';
+  if(diff)h+='<div class="hlss-flag"><div><b>TU REPORTE</b>'+E(s.difference_reason||'')+(s.driver_note?' · '+E(s.driver_note):'')+(s.difference_evidence_url?' · con evidencia':'')+'</div></div>';
+  if(s.restaurant_note&&!diff)h+='<div class="hlss-flag info"><div><b>NOTA DEL RESTAURANTE</b>'+E(s.restaurant_note)+'</div></div>';
+  if(s.driver_confirmed_at&&s.status==='awaiting_restaurant')h+='<div class="hlss-flag info"><div><b>TU CONFIRMACIÓN</b>Confirmaste '+M(s.amount_due)+'. Tu turno se cierra cuando el restaurante confirme.</div></div>';
+  if(synced)h+=checks+rowsHtml(s);
+  h+='<p class="hlss-note">Turno '+E(s.turno_inicio_label||'')+' · '+E(s.duration_label||'')+'. Tu turno sigue activo hasta que ambos confirmen.</p>';
+  return h;
+}
+function dockHtml(s){
+  var b=S.busy,st=s.status;
+  if(isDone(s))return '<button type="button" class="hlss-btn sec" data-a="print">IMPRIMIR / GUARDAR PDF</button><button type="button" class="hlss-btn ok" data-a="close">LISTO</button>';
+  if(st==='cancelled')return '<button type="button" class="hlss-btn pri" data-a="close">VOLVER</button>';
+  var cancel='<button type="button" class="hlss-link" data-a="cancelAsk">Cancelar cierre · seguir en turno</button>';
+  if(st==='pairing'||st==='connected'||st==='syncing')return '<button type="button" class="hlss-btn sec" data-a="close">SALIR · SEGUIR DESPUÉS</button>'+cancel;
+  if(st==='awaiting_driver'){var dis=b||N(s.pending_orders)>0;
+    return '<button type="button" class="hlss-btn ok" data-a="confirm"'+(dis?' disabled':'')+'>'+(b?'CONFIRMANDO…':'CONFIRMAR MI CUADRE · '+M(s.amount_due))+'</button><button type="button" class="hlss-btn warn" data-a="diff"'+(b?' disabled':'')+'>REPORTAR DIFERENCIA</button>'+cancel}
+  if(st==='awaiting_restaurant')return '<button type="button" class="hlss-btn sec" data-a="close">SALIR · TE AVISAMOS</button><button type="button" class="hlss-btn warn" data-a="diff"'+(b?' disabled':'')+'>REPORTAR DIFERENCIA</button>'+cancel;
+  if(st==='difference_review')return '<button type="button" class="hlss-btn sec" data-a="diff"'+(b?' disabled':'')+'>EDITAR MI REPORTE</button><button type="button" class="hlss-btn ok" data-a="confirm"'+(b||N(s.pending_orders)>0?' disabled':'')+'>'+(b?'CONFIRMANDO…':'RETIRAR REPORTE Y CONFIRMAR '+M(s.amount_due))+'</button>'+cancel;
+  return '';
+}
+
+/* Historial */
+function renderHistory(w,d){
+  title('Historial de cierres');
+  if(!S.hist){w.innerHTML=hero('Cargando tus cierres…','');d.innerHTML='';return}
+  if(!S.hist.length){w.innerHTML=hero('Aún no hay cierres','Cuando cierres un turno con el restaurante, el recibo aparecerá aquí.');d.innerHTML='';return}
+  w.innerHTML='<div class="hlss-hist">'+S.hist.map(function(h,i){var sn=h.receipt_snapshot||{},sh=sn.shift||{};
+    return '<button type="button" data-a="histOpen" data-i="'+i+'"><i>✓</i><div><b>'+E(sh.date_label||'')+' · '+E(sh.start_label||'')+' – '+E(sh.end_label||'')+'</b><span>'+E(h.receipt_number||'')+' · '+N(h.deliveries_count)+' '+plural(N(h.deliveries_count),'entrega','entregas')+'</span></div><strong>'+M(h.amount_due)+'</strong></button>'}).join('')+'</div>';
+  d.innerHTML='';
+}
+async function openHistory(){
+  S.backTo=S.view==='history'||S.view==='receipt'?S.backTo:S.view;S.hist=null;setView('history');
+  try{var d=await api('driver_history');S.hist=Array.isArray(d.history)?d.history:[]}catch(e){S.hist=[];S.err=e.message}
+  if(S.view==='history')render();
+}
+
+/* Recibo: se dibuja SOLO desde el snapshot inmutable del servidor */
+function receiptHtml(sn){
+  if(!sn)return '<div class="hlss-err"><b>Recibo no disponible</b>Intenta de nuevo en unos segundos.</div>';
+  var t=sn.totals||{},sh=sn.shift||{},df=sn.difference,cf=sn.confirmations||{},adj=N(t.adjustments_total);
+  return '<article class="hlr" aria-label="Recibo de cierre">'+
+    '<div class="hlr-head"><div class="hlr-brand"><small>HOLA LUZ</small><b>RECIBO DE CIERRE</b><span class="hlr-badge">✓ '+E(sn.status_label||'CUADRE APROBADO')+'</span></div>'+
+    '<div class="hlr-no">No.<b>'+E(sn.receipt_number||'')+'</b>'+E(sn.generated_label||'')+'</div></div>'+
+    '<div class="hlr-grid"><div><span>RESTAURANTE</span><b>'+E(sn.restaurant&&sn.restaurant.nombre||'')+'</b></div><div><span>DOMICILIARIO</span><b>'+E(sn.driver&&sn.driver.nombre||'')+'</b></div>'+
+    '<div><span>FECHA</span><b>'+E(sh.date_label||'')+'</b></div><div><span>TURNO</span><b>'+E(sh.start_label||'')+' – '+E(sh.end_label||'')+'</b></div>'+
+    '<div><span>DURACIÓN</span><b>'+E(sh.duration_label||'')+'</b></div><div><span>ENTREGAS</span><b>'+N(t.deliveries)+'</b></div></div>'+
+    '<div class="hlr-lines">'+
+      '<div class="hlr-line"><span>Efectivo recibido ('+N(t.cash_count)+')</span><b>'+M(t.cash_total)+'</b></div>'+
+      '<div class="hlr-line"><span>Domicilios (ganancia)</span><b>'+M(t.delivery_fee_total)+'</b></div>'+
+      '<div class="hlr-line"><span>Pagos digitales ('+N(t.digital_count)+') · incl. datáfono</span><b>'+M(t.digital_total)+'</b></div>'+
+      '<div class="hlr-line"><span>Propinas</span><b>'+M(t.tips_total)+'</b></div>'+
+      '<div class="hlr-line"><span>Ajustes</span><b>'+SM(adj)+'</b></div>'+
+      '<div class="hlr-line"><span>Evidencias de entrega</span><b>'+N(t.evidence_count)+'/'+N(t.deliveries)+'</b></div></div>'+
+    '<div class="hlr-total"><span>TOTAL ENTREGADO</span><b>'+M(t.amount_due)+'</b></div>'+
+    (df?'<div class="hlr-notes">'+(df.driver_amount!=null?'<div><b>Diferencia reportada:</b> '+M(df.driver_amount)+' ('+SM(df.difference_amount)+') · '+E(df.reason||'')+(df.driver_note?' — '+E(df.driver_note):'')+'</div>':'')+
+      (df.resolution?'<div><b>Resolución:</b> '+(df.resolution==='accept_driver'?'Se aceptó el monto del domiciliario':'Se mantuvo el monto del sistema')+'</div>':'')+
+      (df.restaurant_note?'<div><b>Nota del restaurante:</b> '+E(df.restaurant_note)+'</div>':'')+'</div>':'')+
+    '<div class="hlr-conf"><div><span>Domiciliario confirmó</span><b>✓ '+E(cf.driver_label||'')+'</b></div><div><span>Restaurante confirmó</span><b>✓ '+E(cf.restaurant_label||'')+'</b></div></div>'+
+    '<div class="hlr-foot">Cierre bilateral verificado por Luz · ID '+E(sn.settlement_id||'')+'</div></article>';
+}
+function printReceipt(){
+  document.body.classList.add('hlss-printing');
+  var done=function(){document.body.classList.remove('hlss-printing');window.removeEventListener('afterprint',done)};
+  window.addEventListener('afterprint',done);
+  try{window.print()}catch(e){}
+  setTimeout(function(){if(!window.matchMedia||!window.matchMedia('print').matches)done()},1500);
+}
+
+/* ── hojas: diferencia y cancelar ── */
+function sheet(html){var sh=$('hlssSheet');sh.innerHTML='<div class="hlss-sheet-card" role="dialog" aria-modal="true">'+html+'</div>';sh.classList.add('on')}
+function closeSheet(){var sh=$('hlssSheet');if(sh){sh.classList.remove('on');sh.innerHTML=''}S.diff=null}
+function openDiff(){
+  var s=S.stl;if(!s)return;
+  S.diff={reason:s.difference_reason||'',photo:'',busy:false};
+  var pre=s.status==='difference_review'&&s.driver_amount!=null?fmtAmt(String(Math.round(N(s.driver_amount)))):'';
+  sheet('<h3>Reportar diferencia</h3><p>Luz calcula <b>'+M(s.amount_due)+'</b>. Escribe cuánto vas a entregar y por qué. Tu turno no se cierra hasta que el restaurante lo revise.</p>'+
+    '<label class="hlss-field"><span>¿Cuánto vas a entregar?</span><input id="hlssAmt" inputmode="numeric" autocomplete="off" placeholder="$0" value="'+E(pre)+'"></label>'+
+    '<div class="hlss-field"><span>Motivo</span><div class="hlss-chips">'+REASONS.map(function(r){return '<button type="button" data-a="reason" data-v="'+E(r)+'"'+(r===S.diff.reason?' class="on"':'')+'>'+E(r)+'</button>'}).join('')+'</div></div>'+
+    '<label class="hlss-field"><span>Nota (opcional)</span><textarea id="hlssNote" maxlength="500" placeholder="Cuéntale al restaurante qué pasó">'+E(s.status==='difference_review'?(s.driver_note||''):'')+'</textarea></label>'+
+    '<input type="file" id="hlssFile" accept="image/*" hidden>'+
+    '<button type="button" class="hlss-photo" data-a="photo" id="hlssPhotoBtn">'+ICO.cam+'<span>Agregar foto de evidencia (opcional)</span></button>'+
+    '<div class="hlss-err" id="hlssDiffErr" hidden></div>'+
+    '<div style="display:grid;gap:8px;margin-top:14px"><button type="button" class="hlss-btn warn" data-a="diffSend" id="hlssDiffSend">ENVIAR DIFERENCIA</button><button type="button" class="hlss-btn sec" data-a="sheetClose">CANCELAR</button></div>');
+  setTimeout(function(){var i=$('hlssAmt');if(i)try{i.focus({preventScroll:true})}catch(e){}},80);
+}
+function fmtAmt(v){var d=String(v||'').replace(/\D/g,'').replace(/^0+(?=\d)/,'').slice(0,10);return d?'$'+Number(d).toLocaleString('es-CO'):''}
+function diffErr(m){var x=$('hlssDiffErr');if(!x)return;x.hidden=!m;x.innerHTML=m?'<b>Revisa</b>'+E(m):''}
+function readPhoto(file){
+  return new Promise(function(res,rej){
+    if(!file||!/^image\//.test(file.type))return rej(new Error('Elige una imagen.'));
+    var fr=new FileReader();fr.onerror=function(){rej(new Error('No se pudo leer la foto.'))};
+    fr.onload=function(){var img=new Image();img.onerror=function(){rej(new Error('No se pudo leer la foto.'))};
+      img.onload=function(){var max=1280,sc=Math.min(1,max/Math.max(img.width,img.height)),cv=document.createElement('canvas');cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);res(cv.toDataURL('image/jpeg',.8))};
+      img.src=fr.result};
+    fr.readAsDataURL(file);
+  });
+}
+async function sendDiff(){
+  var s=S.stl,D=S.diff;if(!s||!D||D.busy)return;
+  var amt=Number(String(($('hlssAmt')||{}).value||'').replace(/\D/g,''));
+  if(!String(($('hlssAmt')||{}).value||'').replace(/\D/g,''))return diffErr('Escribe el monto que vas a entregar.');
+  if(!D.reason)return diffErr('Selecciona el motivo de la diferencia.');
+  var note=String(($('hlssNote')||{}).value||'').trim();
+  D.busy=true;var b=$('hlssDiffSend');if(b){b.disabled=true;b.textContent=D.photo?'SUBIENDO EVIDENCIA…':'ENVIANDO…'}diffErr('');buzz(10);
+  try{
+    var url=s.status==='difference_review'?(s.difference_evidence_url||''):'';
+    if(D.photo){var up=await api('driver_evidence',{id:s.id,data:D.photo});url=up.url||'';if(b)b.textContent='ENVIANDO…'}
+    var d=await api('driver_difference',{id:s.id,amount:amt,reason:D.reason,note:note,evidence_url:url||null});
+    closeSheet();S.changed=false;apply(d.settlement);
+  }catch(e){D.busy=false;if(b){b.disabled=false;b.textContent='ENVIAR DIFERENCIA'}diffErr(e.message);if(e.code==='HL_STL_BAD_STATE')refetchSoon(10)}
+}
+function askCancel(){
+  sheet('<h3>¿Cancelar el cierre?</h3><p>Tu turno y tu GPS siguen activos. Podrás iniciar un nuevo cierre cuando quieras.</p>'+
+    '<div style="display:grid;gap:8px;margin-top:6px"><button type="button" class="hlss-btn pri" data-a="sheetClose">SEGUIR CON EL CIERRE</button><button type="button" class="hlss-btn sec" data-a="cancelYes" id="hlssCancelYes">SÍ, CANCELAR CIERRE</button></div>');
+}
+
+/* ── acciones ── */
+async function startSync(){
+  if(S.busy)return;S.busy=true;S.err='';buzz(10);render();
+  try{var d=await api('driver_start');S.busy=false;S.changed=false;S.stl=null;apply(d.settlement,{silent:true});setView('live');subscribe()}
+  catch(e){S.busy=false;S.err=e.message;if(e.code==='HL_STL_NO_ACTIVE_SHIFT'||e.code==='HL_STL_ACTIVE_MISSION'){try{notice('error','No se puede cerrar ahora',e.message)}catch(x){}render()}else setView('error')}
+}
+async function confirmMine(){
+  var s=S.stl;if(!s||S.busy)return;S.busy=true;S.err='';buzz(10);update();
+  try{var d=await api('driver_confirm',{id:s.id,revision:s.revision});S.busy=false;if(!(d.settlement&&d.settlement.totals_changed))S.changed=false;apply(d.settlement)}
+  catch(e){S.busy=false;S.err=e.message;update();if(e.code==='HL_STL_BAD_STATE'||e.code==='HL_STL_PENDING_ORDERS')refetchSoon(10)}
+}
+async function cancelIt(){
+  var s=S.stl,b=$('hlssCancelYes');if(!s||S.busy)return;S.busy=true;if(b){b.disabled=true;b.textContent='CANCELANDO…'}
+  try{var d=await api('driver_cancel',{id:s.id});S.busy=false;closeSheet();apply(d.settlement);try{renderControlCenter()}catch(e){}}
+  catch(e){S.busy=false;closeSheet();S.err=e.message;update()}
+}
+async function open(){
+  show();
+  if(S.stl&&isOpen(S.stl)){setView('live');refetch();subscribe();return}
+  S.err='';setView('loading');watchRestaurant();
+  try{
+    var c=await api('driver_current'),s=c.settlement;
+    if(s&&isOpen(s)){S.stl=null;apply(s,{silent:true});setView('live');subscribe();return}
+    if(s&&isDone(s)&&!S.celebrated[s.id]&&!seen(s.id)){S.stl=null;apply(s,{silent:true});setView('live');return}
+    var p=await api('driver_preview');S.preview=p.preview||{};setView('center');
+  }catch(e){S.err=e.message;setView('error')}
+}
+function seen(id){try{return localStorage.getItem('hl_stl_seen_'+id)==='1'}catch(e){return false}}
+function back(){
+  if($('hlssSheet')&&$('hlssSheet').classList.contains('on'))return closeSheet();
+  if(S.view==='receipt'){setView('history');return}
+  if(S.view==='history'&&S.backTo&&S.backTo!=='history'&&S.backTo!=='loading'){var v=S.backTo;S.backTo='';if(v==='live'&&!S.stl)return hide();setView(v);return}
+  hide();
+}
+function onClick(e){
+  var t=e.target.closest&&e.target.closest('[data-a]');
+  if(!t){if(e.target&&e.target.id==='hlssSheet')closeSheet();return}
+  if(t.disabled)return;
+  var a=t.getAttribute('data-a');
+  switch(a){
+    case 'back':return back();
+    case 'close':return hide();
+    case 'sound':S.sound=!S.sound;try{localStorage.setItem('hl_stl_sound',S.sound?'1':'0')}catch(x){}t.innerHTML=S.sound?ICO.snd:ICO.mute;buzz(10);return;
+    case 'history':return openHistory();
+    case 'histOpen':var h=S.hist&&S.hist[Number(t.getAttribute('data-i'))];if(h){S.histSnap=h.receipt_snapshot;setView('receipt')}return;
+    case 'retry':return open();
+    case 'start':return startSync();
+    case 'confirm':return confirmMine();
+    case 'diff':buzz(10);return openDiff();
+    case 'reason':if(!S.diff)return;S.diff.reason=t.getAttribute('data-v')||'';Array.prototype.forEach.call(t.parentNode.children,function(x){x.classList.toggle('on',x===t)});buzz(10);diffErr('');return;
+    case 'photo':var f=$('hlssFile');if(f)f.click();return;
+    case 'diffSend':return sendDiff();
+    case 'sheetClose':return closeSheet();
+    case 'cancelAsk':buzz(10);return askCancel();
+    case 'cancelYes':return cancelIt();
+    case 'print':return printReceipt();
+  }
+}
+function onInput(e){if(e.target&&e.target.id==='hlssAmt'){var v=fmtAmt(e.target.value);if(e.target.value!==v)e.target.value=v}}
+async function onChange(e){
+  if(!e.target||e.target.id!=='hlssFile'||!S.diff)return;
+  var f=e.target.files&&e.target.files[0];if(!f)return;
+  try{var data=await readPhoto(f);if(!S.diff)return;S.diff.photo=data;var b=$('hlssPhotoBtn');if(b)b.innerHTML='<img src="'+data+'" alt=""><span>Evidencia lista · tocar para cambiar</span>';diffErr('')}
+  catch(x){diffErr(x.message)}
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&S.el&&S.el.classList.contains('on'))back()});
+window.addEventListener('online',function(){setOffline(false);if(S.stl&&isOpen(S.stl))refetchSoon(50)});
+window.addEventListener('offline',function(){setOffline(true)});
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&S.stl&&isOpen(S.stl))refetchSoon(50)});
+
+/* Al entrar o recargar: recuperar el cierre abierto (o mostrar el recibo recién aprobado). */
+async function resume(){
+  if(!token||!domi)return;
+  try{var c=await api('driver_current'),s=c.settlement;if(!s)return;
+    if(isOpen(s)){S.stl=null;apply(s,{silent:true});subscribe();show();setView('live');return}
+    if(isDone(s)&&!seen(s.id)){S.stl=null;apply(s,{silent:true});show();setView('live')}
+  }catch(e){}
+}
+
+/* ── conexiones con la app existente (solo el dominio de cierre de turno) ── */
+window.HLShiftSync={open:open,close:hide,resume:resume,state:function(){return S.stl}};
+startSettlementExperience=async function(){await open()};
+openShiftClose=async function(){await open()};
+finishShiftFromSettlement=async function(){await open()};
+var _pf=pressFeedback;pressFeedback=function(el){if(el&&el.closest&&el.closest('#hlss'))return;return _pf.apply(this,arguments)};
+var _rcc=renderControlCenter;renderControlCenter=function(){var r=_rcc.apply(this,arguments);updateCc();return r};
+var _enter=enterApp;enterApp=function(){var r=_enter.apply(this,arguments);setTimeout(resume,500);return r};
+try{var app=$('app');if(token&&domi&&app&&app.style.display==='block')setTimeout(resume,500)}catch(e){}
+})();
 </script>
+
 </body></html>
