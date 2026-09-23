@@ -936,10 +936,16 @@ async function cargarAprendizajes(restauranteId) {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/luz_aprendizajes?restaurante_id=eq." + restauranteId +
-      "&activo=eq.true&order=created_at.desc&limit=50&select=tipo,contenido,fuente",
+      "&activo=eq.true&order=created_at.desc&limit=300&select=tipo,contenido,fuente",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
     );
-    var data = r.data || [];
+    // Cerebro V2: sin preguntas pendientes; primero lo que enseñó el restaurante, luego lo aprobado; tope de tamaño para el prompt
+    var prio = function (a) { return a.fuente === "admin" || a.fuente === "cocina" ? 0 : a.fuente === "cerebro_resumen" ? 1 : 2; };
+    var data = (r.data || []).filter(function (a) { return String(a.contenido || "").toUpperCase().indexOf("PREGUNTA SIN RESPUESTA") !== 0; })
+      .map(function (a, i) { return { a: a, i: i }; }).sort(function (x, y) { return prio(x.a) - prio(y.a) || x.i - y.i; }).map(function (x) { return x.a; });
+    var budget = 9000, kept = [];
+    for (var di = 0; di < data.length && kept.length < 90; di++) { var len = String(data[di].contenido || "").length + 4; if (budget - len < 0) break; budget -= len; kept.push(data[di]); }
+    data = kept;
     aprendizajesCache[restauranteId] = { data: data, ts: now };
     return data;
   } catch (e) {
@@ -968,8 +974,17 @@ function formatearAprendizajes(aprendizajes) {
 async function guardarAprendizaje(restauranteId, tipo, contenido, fuente) {
   try {
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
+    fuente = fuente || "auto";
+    // Cerebro V2 — aprendizaje supervisado
+    var humano = fuente === "admin" || fuente === "cocina";
+    var esPregunta = String(contenido || "").toUpperCase().indexOf("PREGUNTA SIN RESPUESTA") === 0;
+    var estado = humano ? "activo" : (esPregunta ? "pregunta" : "propuesta");
+    if (!humano && typeof cerebroEsDuplicado === "function" && await cerebroEsDuplicado(restauranteId, contenido)) {
+      console.log("[aprendizaje] duplicado omitido:", String(contenido).substring(0, 60));
+      return;
+    }
     await axios.post(SUPABASE_URL + "/rest/v1/luz_aprendizajes",
-      { restaurante_id: restauranteId, tipo: tipo, contenido: contenido, fuente: fuente || "auto", activo: true },
+      { restaurante_id: restauranteId, tipo: tipo, contenido: contenido, fuente: fuente, estado: estado, activo: estado === "activo" },
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=minimal" } }
     );
     // Invalidate cache
@@ -1022,7 +1037,7 @@ async function luzAprendizajePostPedido(restauranteId, telefono, conversacion, p
     try {
       var exR = await axios.get(
         SUPABASE_URL + "/rest/v1/luz_aprendizajes?restaurante_id=eq." + restauranteId +
-        "&activo=eq.true&select=contenido&limit=50",
+        "&estado=in.(activo,propuesta)&select=contenido&order=created_at.desc&limit=80",
         { headers: sbH(true) }
       );
       existentes = (exR.data || []).map(function(a) { return a.contenido; });
@@ -1037,7 +1052,7 @@ async function luzAprendizajePostPedido(restauranteId, telefono, conversacion, p
           + "CONVERSACIÓN:\n" + msgs + "\n\n"
           + "PEDIDO FINAL: " + itemsStr + " | Total: $" + (pedidoData.total || 0) + " | Dirección: " + (pedidoData.address || "?") + "\n"
           + "TELÉFONO CLIENTE: " + telLocal + "\n\n"
-          + "APRENDIZAJES QUE YA TENEMOS (NO repitas estos):\n" + existentes.slice(0, 20).join("\n") + "\n\n"
+          + "APRENDIZAJES QUE YA TENEMOS (NO repitas estos):\n" + existentes.slice(0, 40).join("\n") + "\n\n"
           + "EXTRAE solo lo que sea NUEVO y ÚTIL. Categorías:\n"
           + "1. preferencia_cliente: gustos o restricciones del cliente (ej: 'Cliente 3001234567 siempre pide sin cebolla', 'Cliente X es alérgico a maní')\n"
           + "2. regla_negocio: patrones que Luz debe recordar (ej: 'Cuando piden combo familiar preguntar si quieren papas grandes')\n"
@@ -5637,6 +5652,418 @@ app.delete("/api/aprendizajes/:id", async function(req, res) {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HOLA LUZ · CEREBRO V2 — aprendizaje supervisado
+// · Lo que Luz aprende sola entra como PROPUESTA (estado='propuesta', activo=false).
+// · Solo lo aprobado por el restaurante (estado='activo') llega al bot.
+// · Preguntas sin respuesta quedan en estado='pregunta' (no se inyectan al bot).
+// · "Organizar memoria": agrupa y resume aprendizajes viejos → propuestas; los
+//   originales se archivan SOLO cuando el restaurante aprueba el resumen.
+// ═══════════════════════════════════════════════════════════════════════════════
+var CEREBRO_HUMAN_SOURCES = { admin: 1, cocina: 1 };
+var CEREBRO_TIPOS = ["regla_negocio", "correccion", "faq", "producto_info", "preferencia_cliente"];
+var CEREBRO_ACC_RE = new RegExp("[" + String.fromCharCode(0x300) + "-" + String.fromCharCode(0x36f) + "]", "g");
+var CEREBRO_STOP = {};
+"que los las del por para con una uno unos unas como cuando debe cliente clientes luz esta este esto son pero sin mas muy hay ser sus les donde tambien entonces".split(" ").forEach(function (w) { CEREBRO_STOP[w] = 1; });
+var cerebroDedupCache = {};
+var cerebroRuns = {};
+var cerebroDailyCalls = {};
+var CEREBRO_PREG_PREFIX = "PREGUNTA SIN RESPUESTA";
+
+function cerebroNorm(s) { return String(s || "").toLowerCase().normalize("NFD").replace(CEREBRO_ACC_RE, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim(); }
+function cerebroWords(s) { var set = new Set(); cerebroNorm(s).split(" ").forEach(function (w) { if (w.length > 2 && !CEREBRO_STOP[w]) set.add(w); }); return set; }
+function cerebroJaccard(a, b) { if (!a.size || !b.size) return 0; var i = 0; a.forEach(function (x) { if (b.has(x)) i++; }); return i / (a.size + b.size - i); }
+function cerebroEsPregunta(row) { return !!row && (row.estado === "pregunta" || String(row.contenido || "").toUpperCase().indexOf(CEREBRO_PREG_PREFIX) === 0); }
+function cerebroLimpiarPregunta(t) { return String(t || "").replace(/^PREGUNTA SIN RESPUESTA:\s*/i, "").replace(/\s*\(pendiente de respuesta del admin\)\s*$/i, "").trim(); }
+function cerebroInvalidar(rid) { delete aprendizajesCache[rid]; delete cerebroDedupCache[rid]; }
+
+async function cerebroEsDuplicado(rid, contenido) {
+  var now = Date.now(), c = cerebroDedupCache[rid];
+  if (!c || now - c.ts > 10 * 60 * 1000) {
+    try {
+      var r = await axios.get(SUPABASE_URL + "/rest/v1/luz_aprendizajes?restaurante_id=eq." + rid + "&estado=in.(activo,propuesta,pregunta)&order=created_at.desc&limit=400&select=contenido", { headers: sbH(true) });
+      c = { ts: now, sets: (r.data || []).map(function (x) { return cerebroWords(x.contenido); }) };
+    } catch (e) { c = { ts: now, sets: [] }; }
+    cerebroDedupCache[rid] = c;
+  }
+  var w = cerebroWords(contenido);
+  if (w.size < 3) return false;
+  for (var i = 0; i < c.sets.length; i++) if (cerebroJaccard(w, c.sets[i]) >= 0.72) return true;
+  c.sets.unshift(w); if (c.sets.length > 500) c.sets.length = 500;
+  return false;
+}
+
+function cerebroRid(req) {
+  var rid = String((req.body && req.body.restaurante_id) || (req.query && req.query.restaurante_id) || "");
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rid) ? rid : null;
+}
+function cerebroId(v) { v = String(v || ""); return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v) ? v : null; }
+function cerebroH(extra) { return Object.assign({}, sbH(true), { "Content-Type": "application/json" }, extra || {}); }
+async function cerebroGet(path) { var r = await axios.get(SUPABASE_URL + "/rest/v1/" + path, { headers: sbH(true) }); return r.data || []; }
+async function cerebroCount(path) {
+  var r = await axios.get(SUPABASE_URL + "/rest/v1/" + path + (path.indexOf("?") < 0 ? "?" : "&") + "select=id&limit=1", { headers: Object.assign({}, sbH(true), { Prefer: "count=exact" }) });
+  var cr = String(r.headers["content-range"] || ""); var n = parseInt(cr.split("/")[1], 10); return isFinite(n) ? n : 0;
+}
+async function cerebroPatch(filter, body) {
+  return axios.patch(SUPABASE_URL + "/rest/v1/luz_aprendizajes?" + filter, body, { headers: cerebroH({ Prefer: "return=minimal" }) });
+}
+async function cerebroPatchIds(rid, ids, body, extraFilter) {
+  var n = 0;
+  for (var i = 0; i < ids.length; i += 120) {
+    var chunk = ids.slice(i, i + 120).filter(cerebroId);
+    if (!chunk.length) continue;
+    await cerebroPatch("restaurante_id=eq." + rid + "&id=in.(" + chunk.join(",") + ")" + (extraFilter || ""), body);
+    n += chunk.length;
+  }
+  return n;
+}
+function cerebroDiaCO(iso) { return new Date(new Date(iso).getTime() - 5 * 3600 * 1000).toISOString().slice(0, 10); }
+function cerebroModelo() { return process.env.CEREBRO_MODEL || "claude-haiku-4-5-20251001"; }
+async function cerebroClaude(prompt, maxTokens) {
+  var KEY = process.env.ANTHROPIC_API_KEY;
+  if (!KEY) throw new Error("Falta ANTHROPIC_API_KEY en el servidor");
+  var r = await axios.post("https://api.anthropic.com/v1/messages", {
+    model: cerebroModelo(), max_tokens: maxTokens || 8000,
+    messages: [{ role: "user", content: prompt }]
+  }, { headers: { "x-api-key": KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" }, timeout: 150000 });
+  var txt = ((r.data && r.data.content && r.data.content[0] && r.data.content[0].text) || "").trim().replace(/```json\s*/g, "").replace(/```\s*/g, "");
+  var s = txt.indexOf("{"), e = txt.lastIndexOf("}");
+  if (s < 0 || e < 0) throw new Error("La IA no devolvió un resultado legible");
+  return JSON.parse(txt.slice(s, e + 1));
+}
+function cerebroCupo(rid) {
+  var d = new Date().toISOString().slice(0, 10), k = rid + ":" + d;
+  cerebroDailyCalls[k] = (cerebroDailyCalls[k] || 0) + 1;
+  return cerebroDailyCalls[k] <= 60;
+}
+
+// ── Resumen para la vista neural (todo sale de datos reales) ─────────────────
+app.get("/api/cerebro/resumen", async function (req, res) {
+  var rid = cerebroRid(req); if (!rid) return res.status(400).json({ ok: false, error: "restaurante_id inválido" });
+  try {
+    var R = "restaurante_id=eq." + rid, hoy = getMedionocheColombiaISO();
+    var d7 = new Date(Date.now() - 7 * 864e5).toISOString(), d14 = new Date(Date.now() - 14 * 864e5).toISOString();
+    var safe = function (p) { return p.catch(function () { return null; }); };
+    var out = await Promise.all([
+      safe(cerebroGet("luz_aprendizajes?" + R + "&select=estado,tipo,fuente,created_at,revisado_at&order=created_at.desc&limit=6000")),
+      safe(cerebroCount("luz_aprendizajes?" + R + "&estado=eq.activo&contenido=like." + encodeURIComponent(CEREBRO_PREG_PREFIX + "*"))),
+      safe(cerebroGet("mensajes?" + R + "&tipo=eq.cliente&created_at=gte." + hoy + "&select=telefono,created_at&order=created_at.desc&limit=3000")),
+      safe(cerebroCount("mensajes?" + R + "&created_at=gte." + d7)),
+      safe(cerebroGet("mensajes?" + R + "&tipo=eq.restaurante&order=created_at.desc&limit=1&select=created_at")),
+      safe(cerebroGet("pedidos?" + R + "&created_at=gte." + hoy + "&select=estado,created_at&order=created_at.desc&limit=2000")),
+      safe(cerebroCount("pedidos?" + R + "&created_at=gte." + d7)),
+      safe(cerebroCount("domiciliario_eventos?" + R + "&created_at=gte." + hoy)),
+      safe(cerebroGet("domiciliario_eventos?" + R + "&order=created_at.desc&limit=1&select=created_at,tipo")),
+      safe(cerebroCount("clientes_frecuentes?" + R)),
+      safe(cerebroGet("luz_aprendizajes?" + R + "&select=id,tipo,fuente,estado,contenido,metadata,created_at,revisado_at,updated_at&order=updated_at.desc&limit=24")),
+      safe(cerebroGet("luz_eventos?" + R + "&destinatario_tipo=eq.restaurante&order=created_at.desc&limit=8&select=tipo,titulo,mensaje,created_at"))
+    ]);
+    var rows = out[0] || [], legacyQ = out[1] || 0, cliMsgs = out[2] || [], peds = out[5] || [];
+    var cuenta = { activo: 0, propuesta: 0, pregunta: 0, archivado: 0, rechazado: 0 }, porTipo = {}, humanos = 0, prefs = 0;
+    var propHoy = 0, aprob7 = 0, rech7 = 0, ultAnalisis = null, ultAuto = null;
+    var serie = {}; for (var i = 13; i >= 0; i--) serie[cerebroDiaCO(new Date(Date.now() - i * 864e5).toISOString())] = { propuestas: 0, aprobadas: 0 };
+    rows.forEach(function (r) {
+      cuenta[r.estado] = (cuenta[r.estado] || 0) + 1;
+      if (r.estado === "activo") { porTipo[r.tipo] = (porTipo[r.tipo] || 0) + 1; if (CEREBRO_HUMAN_SOURCES[r.fuente]) humanos++; if (r.tipo === "preferencia_cliente") prefs++; }
+      var auto = !CEREBRO_HUMAN_SOURCES[r.fuente];
+      if (auto && r.created_at >= hoy && r.estado !== "activo") propHoy++;
+      if (r.fuente === "analisis_nocturno" && (!ultAnalisis || r.created_at > ultAnalisis)) ultAnalisis = r.created_at;
+      if (auto && (!ultAuto || r.created_at > ultAuto)) ultAuto = r.created_at;
+      if (r.revisado_at && r.revisado_at >= d7) { if (r.estado === "activo") aprob7++; else if (r.estado === "rechazado") rech7++; }
+      if (auto && r.created_at >= d14) { var k = cerebroDiaCO(r.created_at); if (serie[k]) serie[k].propuestas++; }
+      if (r.revisado_at && r.estado === "activo" && r.revisado_at >= d14) { var k2 = cerebroDiaCO(r.revisado_at); if (serie[k2]) serie[k2].aprobadas++; }
+    });
+    // Preguntas antiguas (guardadas como activo con el prefijo) cuentan como preguntas, no como conocimiento
+    cuenta.pregunta += legacyQ; cuenta.activo = Math.max(0, cuenta.activo - legacyQ); porTipo.faq = Math.max(0, (porTipo.faq || 0) - legacyQ);
+    var tels = {}; cliMsgs.forEach(function (m) { tels[m.telefono] = 1; });
+    var ultCli = cliMsgs[0] ? cliMsgs[0].created_at : null;
+    var ultLuz = out[4] && out[4][0] ? out[4][0].created_at : null;
+    var activosPed = peds.filter(function (p) { return p.estado !== "entregado" && p.estado !== "cancelado"; }).length;
+    var pend = cuenta.propuesta + cuenta.pregunta;
+    var now = Date.now(), mins = function (t) { return t ? (now - new Date(t).getTime()) / 60000 : 1e9; };
+    var agentes = [
+      { id: "atencion", nombre: "Atención", rol: "Conversaciones y respuestas por WhatsApp",
+        estado: mins(ultCli) <= 10 ? "conversando" : "disponible",
+        etiqueta: mins(ultCli) <= 10 ? "Conversando" : "Disponible",
+        datos: { chats_hoy: Object.keys(tels).length, mensajes_hoy: cliMsgs.length, ultima_respuesta: ultLuz, ultimo_mensaje_cliente: ultCli, preguntas_pendientes: cuenta.pregunta } },
+      { id: "operaciones", nombre: "Operaciones", rol: "Pedidos, despacho y domiciliarios",
+        estado: activosPed > 0 ? "coordinando" : "disponible",
+        etiqueta: activosPed > 0 ? "Coordinando" : "Disponible",
+        datos: { pedidos_hoy: peds.length, pedidos_activos: activosPed, eventos_despacho_hoy: out[7] || 0, ultimo_evento: out[8] && out[8][0] ? out[8][0].created_at : null } },
+      { id: "conocimiento", nombre: "Conocimiento", rol: "Fuentes y aprendizaje",
+        estado: propHoy > 0 ? "aprendiendo" : "estable",
+        etiqueta: propHoy > 0 ? "Aprendiendo" : "Estable",
+        datos: { conocimiento_activo: cuenta.activo, enseñado_por_ti: humanos, propuestas_hoy: propHoy, ultimo_analisis_nocturno: ultAnalisis, ultimo_aprendizaje: ultAuto } },
+      { id: "supervisor", nombre: "Supervisor", rol: "Revisión y control",
+        estado: pend > 0 ? "esperando" : "al_dia",
+        etiqueta: pend > 0 ? "Esperando tu revisión" : "Al día",
+        datos: { por_revisar: pend, propuestas: cuenta.propuesta, preguntas: cuenta.pregunta, aprobadas_7d: aprob7, rechazadas_7d: rech7 } }
+    ];
+    var act = [];
+    (out[10] || []).forEach(function (r) {
+      var t = r.revisado_at || r.created_at, meta = r.metadata || {}, txt = String(r.contenido || "");
+      var k = r.revisado_at ? (r.estado === "activo" ? "aprobado" : r.estado === "rechazado" ? "rechazado" : "archivado") : (cerebroEsPregunta(r) ? "pregunta" : r.estado === "propuesta" ? "propuesta" : "ensenado");
+      if (meta.accion === "archivar") k = r.revisado_at ? "limpieza" : "propuesta_limpieza";
+      act.push({ t: t, tipo: k, fuente: r.fuente, texto: cerebroEsPregunta(r) ? cerebroLimpiarPregunta(txt) : txt.slice(0, 220) });
+    });
+    (out[11] || []).forEach(function (e) { act.push({ t: e.created_at, tipo: "operacion", fuente: "luz", texto: (e.titulo || e.tipo || "") + (e.mensaje ? " · " + String(e.mensaje).slice(0, 120) : "") }); });
+    act.sort(function (a, b) { return a.t < b.t ? 1 : -1; });
+    // agrupar archivados masivos del mismo minuto (p. ej. al aprobar un resumen)
+    var act2 = [];
+    act.forEach(function (e) {
+      var last = act2[act2.length - 1];
+      if (last && e.tipo === "archivado" && last.tipo === "archivado" && String(last.t).slice(0, 16) === String(e.t).slice(0, 16)) { last.n = (last.n || 1) + 1; last.texto = last.n + " notas archivadas al aprobar resúmenes"; return; }
+      act2.push(e);
+    });
+    act = act2;
+    res.json({
+      ok: true, generado: new Date().toISOString(),
+      conocimiento: { activos: cuenta.activo, por_tipo: porTipo, propuestas: cuenta.propuesta, preguntas: cuenta.pregunta, archivados: cuenta.archivado, rechazados: cuenta.rechazado, total: rows.length, pendientes_organizar: null },
+      fuentes: {
+        conversaciones: { chats_hoy: Object.keys(tels).length, mensajes_hoy: cliMsgs.length, mensajes_7d: out[3] },
+        operacion: { pedidos_hoy: peds.length, pedidos_activos: activosPed, pedidos_7d: out[6] },
+        conocimiento: { activos: cuenta.activo, enseñado_por_ti: humanos },
+        memoria: { preferencias: prefs, clientes: out[9], archivados: cuenta.archivado }
+      },
+      agentes: agentes,
+      serie: Object.keys(serie).map(function (d) { return { dia: d, propuestas: serie[d].propuestas, aprobadas: serie[d].aprobadas }; }),
+      actividad: act.slice(0, 20)
+    });
+  } catch (e) { console.error("[cerebro/resumen]", e.message); res.status(500).json({ ok: false, error: "No se pudo leer el cerebro" }); }
+});
+
+// ── Lista de conocimiento por estado ─────────────────────────────────────────
+app.get("/api/cerebro/items", async function (req, res) {
+  var rid = cerebroRid(req); if (!rid) return res.status(400).json({ ok: false, error: "restaurante_id inválido" });
+  try {
+    var estado = String(req.query.estado || "activo"), tipo = String(req.query.tipo || ""), q = String(req.query.q || "").replace(/[*,()%\\"]/g, " ").trim().slice(0, 60);
+    var limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 60)), offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+    var P = encodeURIComponent(CEREBRO_PREG_PREFIX + "*");
+    var f = "restaurante_id=eq." + rid;
+    if (estado === "pregunta") f += "&or=(estado.eq.pregunta,and(estado.eq.activo,contenido.like." + P + "))";
+    else if (estado === "activo") f += "&estado=eq.activo&contenido=not.like." + P;
+    else if (["propuesta", "archivado", "rechazado"].indexOf(estado) >= 0) f += "&estado=eq." + estado;
+    else return res.status(400).json({ ok: false, error: "estado inválido" });
+    if (tipo && CEREBRO_TIPOS.indexOf(tipo) >= 0) f += "&tipo=eq." + tipo;
+    if (q) f += "&contenido=ilike." + encodeURIComponent("*" + q + "*");
+    var order = estado === "archivado" || estado === "rechazado" ? "updated_at.desc" : "created_at.desc";
+    var r = await axios.get(SUPABASE_URL + "/rest/v1/luz_aprendizajes?" + f + "&select=id,tipo,contenido,fuente,estado,metadata,created_at,revisado_at,updated_at&order=" + order + "&offset=" + offset + "&limit=" + limit,
+      { headers: Object.assign({}, sbH(true), { Prefer: "count=exact" }) });
+    var cr = String(r.headers["content-range"] || ""), total = parseInt(cr.split("/")[1], 10);
+    var items = (r.data || []).map(function (x) {
+      var m = x.metadata || {};
+      return { id: x.id, tipo: x.tipo, fuente: x.fuente, estado: cerebroEsPregunta(x) ? "pregunta" : x.estado, contenido: cerebroEsPregunta(x) ? cerebroLimpiarPregunta(x.contenido) : x.contenido,
+        created_at: x.created_at, revisado_at: x.revisado_at, updated_at: x.updated_at,
+        accion: m.accion || null, motivo: m.motivo || null, origen_n: Array.isArray(m.origen_ids) ? m.origen_ids.length : 0,
+        motivos: m.accion === "archivar" && Array.isArray(m.motivos) ? m.motivos.slice(0, 200) : undefined,
+        origen_muestra: Array.isArray(m.origen_muestra) ? m.origen_muestra.slice(0, 6) : undefined };
+    });
+    res.json({ ok: true, items: items, total: isFinite(total) ? total : items.length });
+  } catch (e) { console.error("[cerebro/items]", e.message); res.status(500).json({ ok: false, error: "No se pudo cargar" }); }
+});
+
+// ── Revisión: aprobar / rechazar / archivar / restaurar / editar ─────────────
+async function cerebroRevisarUno(rid, id, accion, contenido, tipo) {
+  var rows = await cerebroGet("luz_aprendizajes?restaurante_id=eq." + rid + "&id=eq." + id + "&select=id,estado,tipo,contenido,fuente,metadata");
+  var row = rows[0]; if (!row) { var e = new Error("No encontrado"); e.status = 404; throw e; }
+  var meta = row.metadata || {}, now = new Date().toISOString(), body = {};
+  if (typeof contenido === "string") { contenido = contenido.trim().slice(0, 600); if (contenido.length < 4) { var e2 = new Error("El texto es muy corto"); e2.status = 400; throw e2; } }
+  if (tipo && CEREBRO_TIPOS.indexOf(tipo) < 0) tipo = null;
+  var archivados = 0;
+  if (accion === "aprobar") {
+    if (cerebroEsPregunta(row)) { var e3 = new Error("Las preguntas se responden, no se aprueban"); e3.status = 400; throw e3; }
+    if (meta.accion === "archivar") {
+      archivados = await cerebroPatchIds(rid, meta.origen_ids || [], { estado: "archivado", revisado_at: now, metadata: { organizado: meta.run_id || true, archivado_por: id } }, "&estado=eq.activo");
+      body = { estado: "archivado", revisado_at: now, metadata: Object.assign({}, meta, { aplicado_at: now, archivados: archivados }) };
+    } else {
+      body = { estado: "activo", revisado_at: now };
+      if (contenido) body.contenido = contenido; if (tipo) body.tipo = tipo;
+      if (Array.isArray(meta.origen_ids) && meta.origen_ids.length) {
+        archivados = await cerebroPatchIds(rid, meta.origen_ids, { estado: "archivado", revisado_at: now, metadata: { organizado: meta.run_id || true, archivado_por: id } }, "&estado=eq.activo");
+        body.metadata = Object.assign({}, meta, { aplicado_at: now, archivados: archivados });
+      }
+    }
+  } else if (accion === "rechazar") {
+    body = { estado: "rechazado", revisado_at: now };
+  } else if (accion === "archivar") {
+    body = { estado: "archivado", revisado_at: now };
+  } else if (accion === "restaurar") {
+    if (meta.accion === "archivar") { var e4 = new Error("Esta tarjeta era una limpieza; no se puede activar como conocimiento"); e4.status = 400; throw e4; }
+    body = { estado: "activo", revisado_at: now };
+  } else if (accion === "editar") {
+    if (!contenido && !tipo) { var e5 = new Error("Nada que cambiar"); e5.status = 400; throw e5; }
+    if (contenido) body.contenido = contenido; if (tipo) body.tipo = tipo;
+  } else { var e6 = new Error("Acción inválida"); e6.status = 400; throw e6; }
+  await cerebroPatch("restaurante_id=eq." + rid + "&id=eq." + id, body);
+  return { id: id, estado: body.estado || row.estado, archivados: archivados };
+}
+app.post("/api/cerebro/revisar", async function (req, res) {
+  var rid = cerebroRid(req), id = cerebroId(req.body && req.body.id);
+  if (!rid || !id) return res.status(400).json({ ok: false, error: "Datos incompletos" });
+  try {
+    var r = await cerebroRevisarUno(rid, id, String(req.body.accion || ""), req.body.contenido, req.body.tipo);
+    cerebroInvalidar(rid);
+    res.json(Object.assign({ ok: true }, r));
+  } catch (e) { res.status(e.status || 500).json({ ok: false, error: e.status ? e.message : "No se pudo guardar" }); }
+});
+app.post("/api/cerebro/revisar-lote", async function (req, res) {
+  var rid = cerebroRid(req), accion = String(req.body && req.body.accion || "");
+  var ids = (Array.isArray(req.body && req.body.ids) ? req.body.ids : []).map(cerebroId).filter(Boolean).slice(0, 100);
+  if (!rid || !ids.length || ["aprobar", "rechazar", "archivar"].indexOf(accion) < 0) return res.status(400).json({ ok: false, error: "Datos incompletos" });
+  var ok = 0, fallos = 0, archivados = 0;
+  for (var i = 0; i < ids.length; i++) {
+    try { var r = await cerebroRevisarUno(rid, ids[i], accion); ok++; archivados += r.archivados || 0; } catch (e) { fallos++; }
+  }
+  cerebroInvalidar(rid);
+  res.json({ ok: true, procesados: ok, fallos: fallos, archivados: archivados });
+});
+
+// ── Responder una pregunta sin respuesta → se convierte en FAQ activa ────────
+app.post("/api/cerebro/responder", async function (req, res) {
+  var rid = cerebroRid(req), id = cerebroId(req.body && req.body.id), resp = String(req.body && req.body.respuesta || "").trim().slice(0, 500);
+  if (!rid || !id || resp.length < 2) return res.status(400).json({ ok: false, error: "Escribe la respuesta" });
+  try {
+    var rows = await cerebroGet("luz_aprendizajes?restaurante_id=eq." + rid + "&id=eq." + id + "&select=id,estado,contenido,metadata");
+    var row = rows[0]; if (!row) return res.status(404).json({ ok: false, error: "No encontrado" });
+    if (!cerebroEsPregunta(row)) return res.status(400).json({ ok: false, error: "Esto no es una pregunta pendiente" });
+    var preg = cerebroLimpiarPregunta(row.contenido).slice(0, 300);
+    await cerebroPatch("restaurante_id=eq." + rid + "&id=eq." + id, {
+      tipo: "faq", estado: "activo", fuente: "admin", revisado_at: new Date().toISOString(),
+      contenido: "Si un cliente pregunta: " + preg + " → Responde: " + resp,
+      metadata: Object.assign({}, row.metadata || {}, { pregunta: preg, respuesta: resp, respondida_por: "restaurante" })
+    });
+    cerebroInvalidar(rid);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: "No se pudo guardar" }); }
+});
+
+// ── Organizar memoria (resumir aprendizajes automáticos antiguos) ────────────
+function cerebroFiltroPendientes(rid, tipo) {
+  return "restaurante_id=eq." + rid + "&estado=eq.activo&fuente=not.in.(admin,cocina,cerebro_resumen)&contenido=not.like." + encodeURIComponent(CEREBRO_PREG_PREFIX + "*") +
+    "&metadata->>organizado=is.null&revisado_at=is.null" + (tipo ? "&tipo=eq." + tipo : "");
+}
+app.post("/api/cerebro/organizar/iniciar", async function (req, res) {
+  var rid = cerebroRid(req); if (!rid) return res.status(400).json({ ok: false, error: "restaurante_id inválido" });
+  if (!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ ok: false, error: "Falta ANTHROPIC_API_KEY en el servidor" });
+  try {
+    var run = cerebroRuns[rid];
+    if (!run || Date.now() - run.ts > 30 * 60 * 1000) run = cerebroRuns[rid] = { id: "run_" + Date.now().toString(36), ts: Date.now(), lotes: {} };
+    var pasos = [];
+    var q = await cerebroCount("luz_aprendizajes?restaurante_id=eq." + rid + "&estado=eq.activo&contenido=like." + encodeURIComponent(CEREBRO_PREG_PREFIX + "*"));
+    if (q) pasos.push({ tipo: "preguntas", pendientes: q });
+    for (var i = 0; i < CEREBRO_TIPOS.length; i++) {
+      var n = await cerebroCount("luz_aprendizajes?" + cerebroFiltroPendientes(rid, CEREBRO_TIPOS[i]));
+      if (n) pasos.push({ tipo: CEREBRO_TIPOS[i], pendientes: n });
+    }
+    res.json({ ok: true, run_id: run.id, modelo: cerebroModelo(), pasos: pasos });
+  } catch (e) { res.status(500).json({ ok: false, error: "No se pudo preparar la organización" }); }
+});
+app.post("/api/cerebro/organizar/paso", async function (req, res) {
+  var rid = cerebroRid(req), tipo = String(req.body && req.body.tipo || ""), runId = String(req.body && req.body.run_id || "");
+  if (!rid || !runId) return res.status(400).json({ ok: false, error: "Datos incompletos" });
+  var run = cerebroRuns[rid];
+  if (!run || run.id !== runId) return res.status(409).json({ ok: false, error: "La organización expiró. Vuelve a iniciarla." });
+  if (run.busy) return res.status(409).json({ ok: false, error: "Ya hay un paso en curso" });
+  run.busy = true;
+  try {
+    if (tipo === "preguntas") {
+      var r0 = await axios.patch(SUPABASE_URL + "/rest/v1/luz_aprendizajes?restaurante_id=eq." + rid + "&estado=eq.activo&contenido=like." + encodeURIComponent(CEREBRO_PREG_PREFIX + "*"),
+        { estado: "pregunta" }, { headers: cerebroH({ Prefer: "return=representation" }) });
+      cerebroInvalidar(rid);
+      return res.json({ ok: true, procesados: (r0.data || []).length, propuestas: 0, descartes: 0, restantes: 0 });
+    }
+    if (CEREBRO_TIPOS.indexOf(tipo) < 0) return res.status(400).json({ ok: false, error: "Tipo inválido" });
+    if (!cerebroCupo(rid)) return res.status(429).json({ ok: false, error: "Límite diario de organización alcanzado. Intenta mañana." });
+    var lote = Math.min(150, Math.max(30, parseInt(req.body.lote, 10) || 140));
+    var rows = await cerebroGet("luz_aprendizajes?" + cerebroFiltroPendientes(rid, tipo) + "&select=id,contenido,fuente,created_at&order=created_at.asc&limit=" + lote);
+    if (!rows.length) return res.json({ ok: true, procesados: 0, propuestas: 0, descartes: 0, restantes: 0 });
+    var restInfo = await cerebroGet("restaurantes?id=eq." + rid + "&select=nombre").catch(function () { return []; });
+    var nombreRest = (restInfo[0] && restInfo[0].nombre) || "el restaurante";
+    var aprobadas = await cerebroGet("luz_aprendizajes?restaurante_id=eq." + rid + "&estado=eq.activo&fuente=in.(admin,cocina,cerebro_resumen)&select=contenido&order=created_at.desc&limit=60").catch(function () { return []; });
+    var lista = rows.map(function (r, i) { return (i + 1) + ". " + String(r.contenido || "").replace(/\s+/g, " ").slice(0, 400); }).join("\n");
+    var prompt = "Eres el editor del conocimiento de Luz, la asistente de WhatsApp que toma pedidos en " + nombreRest + " (Colombia).\n" +
+      "Luz guardó sola estas notas del tipo «" + tipo + "». Muchas se repiten, algunas son notas internas y otras son suposiciones.\n\n" +
+      "REGLAS YA APROBADAS POR EL RESTAURANTE (tienen prioridad, no las repitas ni las contradigas):\n" + (aprobadas.map(function (a) { return "- " + String(a.contenido).slice(0, 200); }).join("\n") || "(ninguna)") + "\n\n" +
+      "NOTAS A ORGANIZAR:\n" + lista + "\n\n" +
+      "TU TAREA:\n" +
+      "1. Agrupa las notas que dicen lo mismo y escribe UNA instrucción clara por grupo, dirigida a Luz (ej: «Cuando el cliente…, …»). Máximo 280 caracteres. Español neutro.\n" +
+      "2. Conserva solo instrucciones concretas y útiles para atender clientes por WhatsApp.\n" +
+      "3. Manda a «descartar» las notas que sean: notas para el administrador o para desarrolladores (revisar logs, implementar protocolos, entrenar, analizar), suposiciones («probablemente», «podría»), datos del negocio que no estén explícitos en las notas (precios, horarios, políticas), notas que contradigan una regla aprobada, o datos sensibles de clientes (salud, alergias).\n" +
+      "4. Si dos notas se contradicen entre sí, descártalas con la razón «contradicción: decide tú».\n" +
+      "5. No inventes nada que no esté en las notas.\n" +
+      (tipo === "preferencia_cliente" ? "6. Para preferencias de clientes: una instrucción por cliente, conservando su número de teléfono.\n" : "") +
+      "Cada número de nota debe aparecer en «de» de una regla o en «descartar».\n\n" +
+      "Responde SOLO con JSON válido, sin texto adicional:\n" +
+      "{\"reglas\":[{\"contenido\":\"...\",\"tipo\":\"regla_negocio|correccion|faq|producto_info|preferencia_cliente\",\"de\":[1,4],\"motivo\":\"por qué es útil, en pocas palabras\"}],\"descartar\":[{\"n\":3,\"razon\":\"...\"}]}";
+    var data;
+    try { data = await cerebroClaude(prompt, 8000); }
+    catch (eAi) { console.error("[cerebro/organizar] IA:", eAi.message); return res.status(502).json({ ok: false, error: "La IA no respondió bien. Reintenta (se usará un lote más pequeño).", reintentar: true }); }
+    var usados = {}, nuevas = [], now = new Date().toISOString();
+    run.lotes[tipo] = (run.lotes[tipo] || 0) + 1;
+    (Array.isArray(data.reglas) ? data.reglas : []).forEach(function (g) {
+      var txt = String(g && g.contenido || "").trim().slice(0, 500);
+      var de = (Array.isArray(g && g.de) ? g.de : []).map(function (n) { return parseInt(n, 10); }).filter(function (n) { return n >= 1 && n <= rows.length && !usados[n]; });
+      if (txt.length < 10 || !de.length) return;
+      de.forEach(function (n) { usados[n] = "regla"; });
+      var t = CEREBRO_TIPOS.indexOf(g.tipo) >= 0 ? g.tipo : tipo;
+      nuevas.push({ restaurante_id: rid, tipo: t, contenido: txt, fuente: "cerebro_resumen", estado: "propuesta", activo: false,
+        metadata: { run_id: run.id, lote: run.lotes[tipo], origen_ids: de.map(function (n) { return rows[n - 1].id; }),
+          origen_muestra: de.slice(0, 6).map(function (n) { return String(rows[n - 1].contenido || "").slice(0, 160); }),
+          motivo: String(g.motivo || "").slice(0, 200) } });
+    });
+    var desc = [];
+    (Array.isArray(data.descartar) ? data.descartar : []).forEach(function (d) {
+      var n = parseInt(d && d.n, 10); if (!(n >= 1 && n <= rows.length) || usados[n]) return;
+      usados[n] = "descartar"; desc.push({ id: rows[n - 1].id, razon: String(d.razon || "").slice(0, 140), texto: String(rows[n - 1].contenido || "").slice(0, 180) });
+    });
+    if (desc.length) nuevas.push({ restaurante_id: rid, tipo: tipo, fuente: "cerebro_resumen", estado: "propuesta", activo: false,
+      contenido: "Archivar " + desc.length + " " + (desc.length === 1 ? "nota que no debería" : "notas que no deberían") + " guiar a Luz (notas internas, suposiciones, repetidas o sensibles).",
+      metadata: { run_id: run.id, lote: run.lotes[tipo], accion: "archivar", origen_ids: desc.map(function (d) { return d.id; }), motivos: desc } });
+    if (nuevas.length) await axios.post(SUPABASE_URL + "/rest/v1/luz_aprendizajes", nuevas, { headers: cerebroH({ Prefer: "return=minimal" }) });
+    await cerebroPatchIds(rid, rows.map(function (r) { return r.id; }), { metadata: { organizado: run.id } });
+    var restantes = await cerebroCount("luz_aprendizajes?" + cerebroFiltroPendientes(rid, tipo));
+    cerebroInvalidar(rid);
+    res.json({ ok: true, procesados: rows.length, propuestas: nuevas.length - (desc.length ? 1 : 0), descartes: desc.length,
+      sin_cambios: rows.length - Object.keys(usados).length, restantes: restantes, lotes: run.lotes[tipo] });
+  } catch (e) { console.error("[cerebro/organizar]", e.message); res.status(500).json({ ok: false, error: "No se pudo organizar este paso" }); }
+  finally { run.busy = false; }
+});
+app.post("/api/cerebro/organizar/fusionar", async function (req, res) {
+  var rid = cerebroRid(req), tipo = String(req.body && req.body.tipo || ""), runId = String(req.body && req.body.run_id || "");
+  var run = cerebroRuns[rid];
+  if (!rid || !run || run.id !== runId || CEREBRO_TIPOS.indexOf(tipo) < 0) return res.status(400).json({ ok: false, error: "Datos incompletos" });
+  if ((run.lotes[tipo] || 0) < 2) return res.json({ ok: true, fusionadas: 0 });
+  if (!cerebroCupo(rid)) return res.status(429).json({ ok: false, error: "Límite diario alcanzado" });
+  try {
+    var props = await cerebroGet("luz_aprendizajes?restaurante_id=eq." + rid + "&estado=eq.propuesta&fuente=eq.cerebro_resumen&tipo=eq." + tipo +
+      "&metadata->>run_id=eq." + encodeURIComponent(run.id) + "&metadata->>accion=is.null&select=id,contenido,metadata&order=created_at.asc&limit=250");
+    if (props.length < 3) return res.json({ ok: true, fusionadas: 0 });
+    var lista = props.map(function (p, i) { return (i + 1) + ". " + String(p.contenido).slice(0, 300); }).join("\n");
+    var data = await cerebroClaude("Estas son instrucciones propuestas para Luz (asistente de WhatsApp de un restaurante). Algunas dicen lo mismo con otras palabras.\n\n" + lista +
+      "\n\nAgrupa SOLO las que son equivalentes y escribe una versión única y clara (máx. 280 caracteres) por grupo. No agrupes instrucciones distintas. No inventes nada.\n" +
+      "Responde SOLO JSON: {\"grupos\":[{\"contenido\":\"...\",\"de\":[2,7]}]} (solo grupos con 2 o más).", 6000);
+    var usados = {}, n = 0, now = new Date().toISOString(), nuevas = [], reemplazadas = [];
+    (Array.isArray(data.grupos) ? data.grupos : []).forEach(function (g) {
+      var de = (g.de || []).map(function (x) { return parseInt(x, 10); }).filter(function (x) { return x >= 1 && x <= props.length && !usados[x]; });
+      var txt = String(g.contenido || "").trim().slice(0, 500);
+      if (de.length < 2 || txt.length < 10) return;
+      de.forEach(function (x) { usados[x] = 1; });
+      var origen = [], muestra = [];
+      de.forEach(function (x) { var m = props[x - 1].metadata || {}; origen = origen.concat(m.origen_ids || []); muestra = muestra.concat(m.origen_muestra || []); reemplazadas.push(props[x - 1].id); });
+      nuevas.push({ restaurante_id: rid, tipo: tipo, contenido: txt, fuente: "cerebro_resumen", estado: "propuesta", activo: false,
+        metadata: { run_id: run.id, lote: "fusion", origen_ids: origen, origen_muestra: muestra.slice(0, 6), motivo: "Une " + de.length + " propuestas equivalentes" } });
+      n++;
+    });
+    if (nuevas.length) {
+      await axios.post(SUPABASE_URL + "/rest/v1/luz_aprendizajes", nuevas, { headers: cerebroH({ Prefer: "return=minimal" }) });
+      await cerebroPatchIds(rid, reemplazadas, { estado: "archivado", revisado_at: now, metadata: { run_id: run.id, fusionada: true } }, "&estado=eq.propuesta");
+    }
+    cerebroInvalidar(rid);
+    res.json({ ok: true, fusionadas: n, reemplazadas: reemplazadas.length });
+  } catch (e) { console.error("[cerebro/fusionar]", e.message); res.status(502).json({ ok: false, error: "No se pudieron unir duplicados (puedes seguir sin esto)" }); }
+});
+
 // ═══════════════════════════════════════════════════════════
 // ZONAS CRUD API (editar barrios y precios inline)
 // ═══════════════════════════════════════════════════════════
@@ -7517,7 +7944,10 @@ async function luzAnalisisNocturno(restauranteId) {
           + "Responde con JSON array: [{\"tipo\":\"correccion\",\"contenido\":\"...\"}]\n"
           + "Tipos: correccion, regla_negocio, faq\n"
           + "Máximo 4 correcciones. Si no hay nada útil, responde [].\n"
-          + "Sé específico: 'Cuando el cliente pregunta X, responder Y' — no genérico."
+          + "Sé específico: 'Cuando el cliente pregunta X, responder Y' — no genérico.\n"
+          + "NUNCA escribas notas para el administrador o desarrolladores (ej: 'revisar logs', 'implementar protocolo', 'entrenar a Luz'). "
+          + "NUNCA supongas datos del negocio (precios, horarios, políticas, métodos de pago) que no aparezcan en las conversaciones. "
+          + "Si no hay evidencia concreta, responde []. Todo lo que generes quedará como propuesta para que el restaurante lo apruebe."
       }]
     }, {
       headers: { "x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
