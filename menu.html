@@ -6232,7 +6232,7 @@ W.renderPromos=function(){
   host.classList.toggle('multi',slides.length>1);host.scrollLeft=0;heroAuto(slides.length);
 };
 var heroT=null,heroHold=false;
-function heroAuto(n){clearInterval(heroT);if(n<2||reduce||PREVIEW)return;heroT=setInterval(function(){if(heroHold||D.hidden)return;var h=$('mwHero');if(!h)return;var w=h.clientWidth,i=Math.round(h.scrollLeft/w),nx=(i+1)%n;h.scrollTo({left:nx*w,behavior:'smooth'})},5500)}
+function heroAuto(n){clearInterval(heroT);if(n<2||reduce||PREVIEW)return;heroT=setInterval(function(){if(heroHold||D.hidden)return;var h=$('mwHero');if(!h||!h.children.length)return;var sl=h.children,step=sl[1]?sl[1].offsetLeft-sl[0].offsetLeft:h.clientWidth,i=Math.round(h.scrollLeft/step),nx=(i+1)%sl.length;h.scrollTo({left:sl[nx].offsetLeft-sl[0].offsetLeft,behavior:'smooth'})},5500)}
 function heroDots(){var h=$('mwHero'),d=$('mwHeroDots');if(!h||!d||!d.children.length)return;var sl=h.children[0];var w=sl?sl.getBoundingClientRect().width+10:h.clientWidth;var i=Math.round(h.scrollLeft/w);[].forEach.call(d.children,function(x,j){x.classList.toggle('on',j===i)})}
 
 function renderToday(){
