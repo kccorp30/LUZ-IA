@@ -13534,7 +13534,7 @@ body.hl-cerebro-active .content{padding-bottom:0!important}
   background:radial-gradient(1100px 620px at 50% 30%,rgba(76,56,210,.20),transparent 62%),radial-gradient(800px 480px at 12% -10%,rgba(8,123,255,.12),transparent 60%),radial-gradient(700px 520px at 92% 8%,rgba(155,77,255,.14),transparent 60%),linear-gradient(180deg,#050a26 0%,#030720 55%,var(--d0) 100%)}
 #cbRoot:before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:.8;
   background-image:radial-gradient(1px 1px at 8% 14%,rgba(190,210,255,.7),transparent 60%),radial-gradient(1px 1px at 22% 38%,rgba(190,210,255,.45),transparent 60%),radial-gradient(1.3px 1.3px at 31% 9%,rgba(155,77,255,.7),transparent 60%),radial-gradient(1px 1px at 44% 22%,rgba(190,210,255,.5),transparent 60%),radial-gradient(1px 1px at 57% 6%,rgba(32,228,255,.55),transparent 60%),radial-gradient(1.2px 1.2px at 66% 31%,rgba(190,210,255,.5),transparent 60%),radial-gradient(1px 1px at 78% 17%,rgba(190,210,255,.6),transparent 60%),radial-gradient(1.4px 1.4px at 91% 27%,rgba(155,77,255,.6),transparent 60%),radial-gradient(1px 1px at 14% 62%,rgba(190,210,255,.35),transparent 60%),radial-gradient(1px 1px at 86% 58%,rgba(190,210,255,.35),transparent 60%),radial-gradient(1px 1px at 52% 72%,rgba(32,228,255,.3),transparent 60%);
-  background-size:620px 520px;animation:cbDrift 40s linear infinite}
+  background-size:620px 520px}
 @keyframes cbDrift{from{background-position:0 0}to{background-position:-620px 60px}}
 #cbRoot:after{content:"";position:absolute;left:0;right:0;top:360px;height:380px;z-index:-1;pointer-events:none;
   background:radial-gradient(60% 55% at 50% 100%,rgba(22,184,255,.08),transparent 70%),linear-gradient(180deg,transparent,rgba(6,10,40,.35) 60%,transparent)}
@@ -13549,19 +13549,20 @@ body.hl-cerebro-active .content{padding-bottom:0!important}
 .cb-pill:hover{border-color:rgba(155,77,255,.55);background:rgba(28,20,80,.75)}
 .cb-pill:active{transform:scale(.97)}
 .cb-live{display:inline-flex;align-items:center;gap:8px;font:600 12px var(--ff);color:var(--t3);white-space:nowrap}
-.cb-live i{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(33,230,162,.5);animation:cbLive 2.6s ease-out infinite}
+.cb-live i{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(33,230,162,.18)}
 .cb-live.err i{background:var(--wa);animation:none}
 @keyframes cbLive{0%{box-shadow:0 0 0 0 rgba(33,230,162,.45)}70%,100%{box-shadow:0 0 0 7px rgba(33,230,162,0)}}
 .cb-tag{border-left:1px solid var(--line);padding:2px 0 0 16px;font:600 9.5px/1.7 var(--ff);letter-spacing:.2em;text-transform:uppercase;color:var(--t3)}
 .cb-tag:after{content:"";display:block;width:22px;height:1px;background:var(--t3);margin-top:10px;opacity:.6}
 
 /* Pestañas */
-.cb-tabs{display:inline-flex;gap:4px;margin:16px 30px 0;padding:5px;border-radius:14px;border:1px solid var(--line);background:rgba(8,12,44,.66);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);max-width:calc(100% - 60px);overflow-x:auto;scrollbar-width:none}
+.cb-tabs{display:inline-flex;gap:4px;margin:16px 30px 0;padding:5px;border-radius:14px;border:1px solid var(--line);background:rgba(8,12,44,.88);max-width:calc(100% - 60px);overflow-x:auto;scrollbar-width:none}
 .cb-tabs::-webkit-scrollbar{display:none}
 .cb-tab{position:relative;border:0;background:none;height:40px;padding:0 24px;border-radius:10px;font:600 14px var(--ff);color:var(--t2);white-space:nowrap;transition:color .18s}
 .cb-tab:hover{color:var(--t1)}
 .cb-tab.on{color:#fff;background:linear-gradient(135deg,#6d3cff,#8b4dff);box-shadow:0 8px 24px -8px rgba(113,59,255,.8),inset 0 1px 0 rgba(255,255,255,.18)}
 .cb-tab .n{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;margin-left:7px;border-radius:9px;background:rgba(255,181,71,.18);color:var(--wa);font:750 10.5px var(--ff)}
+.cb-tab .n[hidden]{display:none}
 .cb-tab.on .n{background:rgba(255,255,255,.22);color:#fff}
 .cb-view{padding:0 30px}
 .cb-view[hidden]{display:none!important}
@@ -13571,7 +13572,8 @@ body.hl-cerebro-active .content{padding-bottom:0!important}
 /* ── Vista neural ── */
 .cb-stage{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:22px;margin-top:6px}
 .cb-brainbox{position:relative;min-height:430px;height:clamp(430px,calc(100vh - 520px),620px)}
-.cb-brainbox canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.cb-cv{position:absolute;inset:0}
+.cb-cv canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .cb-sat{position:absolute;display:flex;align-items:flex-start;gap:16px;max-width:250px;z-index:2}
 .cb-sat.r{flex-direction:row-reverse;text-align:left}
 .cb-sat.r .cb-sat-t{order:0}
@@ -13590,7 +13592,7 @@ body.hl-cerebro-active .content{padding-bottom:0!important}
 .cb-brain-cap{position:absolute;right:0;bottom:8px;font:500 11px var(--ff);color:var(--t3);z-index:2;max-width:320px;text-align:right}
 
 /* Agentes (panel lateral) */
-.cb-panel{border-radius:22px;border:1px solid var(--line);background:var(--glass);box-shadow:0 30px 70px -30px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.cb-panel{border-radius:22px;border:1px solid var(--line);background:linear-gradient(160deg,rgba(16,22,66,.94),rgba(7,11,38,.96));box-shadow:0 30px 70px -30px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.05)}
 .cb-agents{padding:24px 18px 22px;align-self:start;margin-top:4px}
 .cb-agents h3{margin:0 4px 18px;font:680 24px var(--ff);letter-spacing:-.02em}
 .cb-ag{width:100%;display:flex;align-items:center;gap:15px;padding:16px;margin-bottom:12px;border-radius:16px;border:1px solid rgba(130,140,230,.14);background:linear-gradient(160deg,rgba(26,32,84,.55),rgba(12,17,52,.6));text-align:left;transition:border-color .2s,transform .18s var(--ease),background .2s}
@@ -13720,7 +13722,7 @@ body.hl-cerebro-active .content{padding-bottom:0!important}
 /* ── Capas: hojas, modales, toast ── */
 .cb-layer{position:fixed;inset:0;z-index:4000;pointer-events:none}
 .cb-layer>*{pointer-events:auto}
-.cb-bg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(2,4,18,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:cbFade .2s ease both}
+.cb-bg{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(2,4,18,.78);animation:cbFade .2s ease both}
 @keyframes cbFade{from{opacity:0}}
 .cb-modal{width:min(640px,100%);max-height:min(88vh,860px);display:flex;flex-direction:column;border-radius:24px;border:1px solid var(--line2);background:linear-gradient(170deg,#0d1240,#070a2a 70%);box-shadow:0 40px 120px -30px rgba(0,0,0,.9),0 0 0 1px rgba(155,77,255,.08);animation:cbPop .3s var(--spring) both;overflow:hidden}
 @keyframes cbPop{from{opacity:0;transform:translateY(14px) scale(.98)}}
@@ -13791,7 +13793,7 @@ body.hl-cerebro-active .content{padding-bottom:0!important}
   .cb-tab{padding:0 16px}
   .cb-view{padding:0 16px}
   .cb-brainbox{height:auto;min-height:0}
-  .cb-brainbox canvas{position:relative;height:min(380px,86vw)}
+  .cb-cv{position:relative;height:min(380px,86vw)}
   .cb-brainbox{padding-bottom:44px}
   .cb-sats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
   .cb-sat,.cb-sat.r{position:relative!important;left:auto!important;right:auto!important;top:auto!important;flex-direction:row;max-width:none;padding:12px;border-radius:16px;border:1px solid var(--line);background:rgba(8,12,44,.6);gap:12px}
@@ -13816,6 +13818,176 @@ body.hl-cerebro-active .content{padding-bottom:0!important}
 @media(prefers-reduced-motion:reduce){
   #cbRoot *,#cbRoot:before,.cb-layer *{animation:none!important;transition:none!important}
 }
+/* ── LUZ CORE · multi-agente (evoluciona el Cerebro V2, no lo reemplaza) ── */
+#cbRoot .cb-st.gray,.cb-layer .cb-st.gray{color:#aab9d6;border-color:rgba(170,185,214,.28);background:rgba(170,185,214,.06)}
+#cbRoot .cb-st.gray i,.cb-layer .cb-st.gray i{background:#66789d}
+#cbRoot .cb-st.red,.cb-layer .cb-st.red{color:#ff9bb0;border-color:rgba(255,73,108,.45);background:rgba(255,73,108,.1)}
+#cbRoot .cb-st.red i,.cb-layer .cb-st.red i{background:var(--da)}
+#cbRoot .cb-st.sm,.cb-layer .cb-st.sm{height:22px;padding:0 9px;font-size:11px;gap:6px}
+#cbRoot .cb-st.sm i,.cb-layer .cb-st.sm i{width:6px;height:6px}
+.cb-layer .cb-st{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 12px;border-radius:999px;font:620 12px var(--ff);white-space:nowrap;border:1px solid}
+.cb-layer .cb-st i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.cb-layer .cb-st.green{color:#7ff0c4;border-color:rgba(33,230,162,.35);background:rgba(33,230,162,.08)}
+.cb-layer .cb-st.blue{color:#8cc8ff;border-color:rgba(22,184,255,.4);background:rgba(8,123,255,.12)}
+.cb-layer .cb-st.violet{color:#cdb6ff;border-color:rgba(155,77,255,.45);background:rgba(113,59,255,.14)}
+.cb-layer .cb-st.amber{color:#ffd28a;border-color:rgba(255,181,71,.4);background:rgba(255,181,71,.08)}
+/* puntos de estado */
+#cbRoot i.d,.cb-layer i.d{display:inline-block;width:7px;height:7px;border-radius:50%;flex:0 0 auto;background:#66789d}
+#cbRoot i.d.green,.cb-layer i.d.green{background:var(--ok);box-shadow:0 0 8px rgba(33,230,162,.6)}
+#cbRoot i.d.blue,.cb-layer i.d.blue{background:var(--lb);box-shadow:0 0 8px rgba(22,184,255,.7)}
+#cbRoot i.d.violet,.cb-layer i.d.violet{background:var(--lv);box-shadow:0 0 8px rgba(155,77,255,.8)}
+#cbRoot i.d.amber,.cb-layer i.d.amber{background:var(--wa);box-shadow:0 0 8px rgba(255,181,71,.7)}
+#cbRoot i.d.red,.cb-layer i.d.red{background:var(--da);box-shadow:0 0 8px rgba(255,73,108,.7)}
+/* regiones alrededor del cerebro */
+#cbRoot .cb-sat-t b{text-transform:uppercase;letter-spacing:.1em;font-size:14px}
+#cbRoot .cb-sat-t .cb-ra{display:flex;align-items:center;gap:8px;font:560 12.5px/1.8 var(--ff);color:var(--t1);white-space:nowrap;cursor:pointer;border-radius:6px;transition:color .15s}
+#cbRoot .cb-sat-t .cb-ra:hover{color:#fff}
+#cbRoot .cb-sat-t .cb-ra em{margin:0 0 0 auto;padding-left:10px;font:520 11.5px var(--ff);color:var(--t3)}
+#cbRoot .cb-sat{max-width:270px}
+#cbRoot .cb-sat-t{min-width:176px}
+#cbRoot .cb-bridge{position:absolute;right:9%;top:31%;z-index:2;display:flex;align-items:center;gap:8px;height:32px;padding:0 14px;border-radius:999px;border:1px solid rgba(155,77,255,.38);background:linear-gradient(120deg,rgba(40,26,110,.85),rgba(10,20,64,.85));font:560 12px var(--ff);color:var(--t2);box-shadow:0 0 24px -8px rgba(113,59,255,.8);transition:border-color .18s,transform .18s var(--ease)}
+#cbRoot .cb-bridge[hidden]{display:none}
+#cbRoot .cb-bridge:hover{border-color:rgba(155,77,255,.7);transform:translateY(-1px)}
+#cbRoot .cb-bridge b{font:700 11px var(--ff);letter-spacing:.12em;text-transform:uppercase;color:#fff}
+/* panel de agentes (13) */
+#cbRoot .cb-agents.v3{display:block;padding:20px 14px 18px}
+#cbRoot .cb-agh{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 6px 12px}
+#cbRoot .cb-agh h3{margin:0}
+#cbRoot .cb-agh span{font:560 11.5px var(--ff);color:var(--t3);white-space:nowrap}
+#cbRoot .cb-agl{max-height:clamp(300px,calc(100vh - 640px),520px);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;scrollbar-width:thin;scrollbar-color:rgba(140,150,240,.3) transparent}
+#cbRoot .cb-agr{margin-bottom:10px}
+#cbRoot .cb-agr>small{display:block;margin:6px 8px 6px;font:700 10px var(--ff);letter-spacing:.18em;text-transform:uppercase;color:var(--t3)}
+.cb-ag2{width:100%;display:flex;align-items:center;gap:12px;padding:10px 10px;margin:0 0 6px;border-radius:14px;border:1px solid rgba(130,140,230,.12);background:linear-gradient(160deg,rgba(26,32,84,.45),rgba(12,17,52,.5));text-align:left;transition:border-color .18s,background .18s,transform .15s var(--ease)}
+.cb-ag2:hover{border-color:rgba(155,77,255,.45);transform:translateY(-1px)}
+.cb-ag2-ic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;border:1px solid rgba(160,170,255,.24);background:rgba(20,24,70,.85);color:#dfe5ff;position:relative}
+.cb-ag2-ic:after{content:"";position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;border:2px solid #0a0f36;background:#66789d}
+.cb-ag2-ic.green:after{background:var(--ok)}.cb-ag2-ic.blue:after{background:var(--lb)}.cb-ag2-ic.violet:after{background:var(--lv)}.cb-ag2-ic.amber:after{background:var(--wa)}.cb-ag2-ic.red:after{background:var(--da)}
+.cb-ag2-b{flex:1;min-width:0}
+.cb-ag2-r{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cb-ag2-r b{font:660 14px var(--ff);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cb-ag2-b small{display:block;margin-top:3px;font:500 11.5px/1.4 var(--ff);color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#cbRoot .cb-ro{display:flex;gap:8px;align-items:flex-start;margin:12px 6px 0;padding:10px 12px;border-radius:12px;border:1px dashed rgba(255,181,71,.35);font:500 11.5px/1.5 var(--ff);color:#ffd28a}
+#cbRoot .cb-ro .cb-i{flex:0 0 auto;margin-top:2px}
+/* Luz está aprendiendo */
+#cbRoot .cb-learn{display:flex;align-items:center;gap:16px;margin-top:14px;padding:14px 20px;border-radius:18px;border:1px solid rgba(32,228,255,.22);background:linear-gradient(110deg,rgba(8,123,255,.12),rgba(113,59,255,.12))}
+#cbRoot .cb-learn[hidden]{display:none}
+#cbRoot .cb-learn b{display:block;font:720 12px var(--ff);letter-spacing:.16em;color:#bfefff}
+#cbRoot .cb-learn p{margin:4px 0 0;font:500 13px/1.5 var(--ff);color:var(--t2)}
+#cbRoot .cb-learn-s{font-size:22px;color:var(--cy);text-shadow:0 0 16px rgba(32,228,255,.8);animation:cbBreath 4.5s ease-in-out infinite}
+@keyframes cbBreath{0%,100%{opacity:.55}50%{opacity:1}}
+#cbRoot .cb-link{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:0;border:0;background:none;font:620 12.5px var(--ff);color:#cdb6ff;text-align:left}
+#cbRoot .cb-link[hidden]{display:none}
+#cbRoot .cb-link:hover{color:#fff}
+/* drawer del agente */
+.cb-bg.dr{justify-content:flex-end;align-items:stretch;padding:0;background:rgba(2,4,18,.55)}
+.cb-modal.cb-drawer{width:min(460px,100%);max-height:none;height:100%;border-radius:24px 0 0 24px;animation:cbDrawer .3s var(--spring) both}
+@keyframes cbDrawer{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+.cb-drawer .cb-mh{align-items:center}
+.cb-drawer .cb-mh>div{flex:1;min-width:0}
+.cb-drawer .cb-mb{padding:6px 22px 26px}
+.cb-dr-lv{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(8,12,44,.5)}
+.cb-dr-lv p{margin:0;font:500 12.5px/1.5 var(--ff);color:var(--t2)}
+.cb-dr-lv .cb-badge{flex:0 0 auto;margin-top:1px}
+.cb-sec{margin:22px 0 10px;font:700 10.5px var(--ff);letter-spacing:.18em;text-transform:uppercase;color:var(--t3)}
+.cb-layer .cb-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cb-layer .cb-kpi{padding:11px 12px;border-radius:13px;border:1px solid var(--line);background:rgba(8,12,44,.55)}
+.cb-layer .cb-kpi b{display:block;font:740 20px var(--ff);font-variant-numeric:tabular-nums}
+.cb-layer .cb-kpi span{display:block;margin-top:2px;font:500 11px/1.35 var(--ff);color:var(--t3)}
+.cb-dr-sum{display:flex;gap:8px;margin:12px 0 0;font:500 12px/1.5 var(--ff);color:var(--t3)}
+.cb-dr-sum .cb-i{flex:0 0 auto;margin-top:2px}
+.cb-fl{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.cb-fl li{display:flex;gap:12px;justify-content:space-between;padding:11px 13px;border-radius:13px;border:1px solid var(--line);background:rgba(10,14,48,.55)}
+.cb-fl li b{display:block;font:620 13.5px/1.4 var(--ff)}
+.cb-fl li small{display:block;margin-top:3px;font:500 12px/1.45 var(--ff);color:var(--t2)}
+.cb-fl-m{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:0 0 auto}
+.cb-fl-m em{font:500 10.5px var(--ff);font-style:normal;color:var(--t3);white-space:nowrap}
+.cb-empty.sm{padding:14px;font-size:12.5px;border-radius:13px;border:1px dashed var(--line)}
+.cb-layer .cb-tl{list-style:none;margin:0;padding:0 0 0 2px;position:relative}
+.cb-layer .cb-tl li{position:relative;display:grid;grid-template-columns:18px 48px 1fr;gap:8px;align-items:start;padding:6px 0}
+.cb-layer .cb-tl li>i{width:11px;height:11px;border-radius:50%;margin:3px 0 0 1px;background:var(--lb)}
+.cb-layer .cb-tl li>i.ok{background:var(--ok)}.cb-layer .cb-tl li>i.bad{background:var(--da)}.cb-layer .cb-tl li>i.vi{background:var(--lv)}.cb-layer .cb-tl li>i.wa{background:var(--wa)}
+.cb-layer .cb-tl time{font:600 12px var(--ff);color:var(--t2)}
+.cb-layer .cb-tl li b{display:block;font:620 13px var(--ff)}
+.cb-layer .cb-tl li small{display:block;margin-top:2px;font:500 11.5px/1.4 var(--ff);color:var(--t3)}
+.cb-layer .cb-badge.red,#cbRoot .cb-badge.red{background:rgba(255,73,108,.15);color:#ff9bb0}
+.cb-layer .cb-badge.amber,#cbRoot .cb-badge.amber{background:rgba(255,181,71,.13);color:#ffd28a}
+.cb-why.bad{border-color:rgba(255,73,108,.35);background:rgba(255,73,108,.07);color:#ffb3c2}
+/* propuestas */
+.cb-plist{display:grid;gap:14px;margin-top:16px;max-width:1080px}
+#cbRoot #cbPHead{max-width:1080px}
+.cb-layer .cb-plist{margin-top:0}
+.cb-prop{padding:18px 20px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(160deg,rgba(18,24,70,.62),rgba(8,12,42,.72));animation:cbIn .26s var(--ease) both}
+.cb-prop.camp{border-color:rgba(155,77,255,.3)}
+.cb-prop-h{display:flex;gap:12px;align-items:center}
+.cb-prop-h>div{flex:1;min-width:0}
+.cb-prop-h small{display:block;font:650 10.5px var(--ff);letter-spacing:.14em;text-transform:uppercase;color:var(--t3)}
+.cb-prop-h b{display:block;margin-top:2px;font:680 16px/1.35 var(--ff);letter-spacing:-.01em}
+.cb-prop-t{margin:12px 0 0;font:500 13.5px/1.6 var(--ff);color:var(--t2)}
+.cb-cmp{display:grid;grid-template-columns:150px 1fr;gap:6px 14px;margin:14px 0 0;font:500 13px/1.5 var(--ff)}
+.cb-cmp dt{color:var(--t3);font-weight:600}
+.cb-cmp dd{margin:0;color:var(--t1);overflow-wrap:anywhere}
+.cb-cmp dd small{display:block;color:var(--t3);font-size:11px}
+.cb-prop .cb-label{margin-top:14px}
+.cb-prop .cb-ta{min-height:96px;height:auto;padding:12px 14px;line-height:1.5;resize:vertical}
+.cb-prop .cb-why{margin-top:12px}
+.cb-prop-m{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;font:500 12px var(--ff);color:var(--t3)}
+.cb-prop-m b{color:var(--t1)}
+.cb-prop-a{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.cb-prop-a .sp{flex:1}
+#cbRoot .cb-kbar .sp{flex:1}
+/* grid de 13 agentes */
+#cbRoot .cb-agrid.g3{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:8px}
+#cbRoot .cb-agc{display:flex;flex-direction:column;gap:10px;padding:16px 18px;text-align:left;border-radius:18px;transition:border-color .18s,transform .15s var(--ease)}
+#cbRoot .cb-agc:hover{border-color:rgba(155,77,255,.45);transform:translateY(-1px)}
+#cbRoot .cb-agc-h{display:flex;gap:12px;align-items:center}
+#cbRoot .cb-agc-t{min-width:0}
+#cbRoot .cb-agc-t b{display:block;font:680 15.5px var(--ff)}
+#cbRoot .cb-agc-t small{display:block;margin-top:2px;font:500 12px var(--ff);color:var(--t2)}
+#cbRoot .cb-agc-s{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#cbRoot .cb-agc-l{font:560 13px/1.45 var(--ff);color:var(--t1);min-height:38px}
+#cbRoot .cb-agc-k{display:flex;gap:14px;font:500 11.5px var(--ff);color:var(--t3)}
+#cbRoot .cb-agc-k em{font-style:normal;font:720 14px var(--ff);color:#fff;margin-right:4px;font-variant-numeric:tabular-nums}
+#cbRoot .cb-agc .cb-when{font:500 11.5px var(--ff);color:var(--t3)}
+/* memoria */
+#cbRoot .cb-memg{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px;margin-top:8px}
+#cbRoot .cb-row.off{opacity:.55}
+@media(max-width:1480px){
+  #cbRoot .cb-sat{max-width:230px}
+  #cbRoot .cb-sat-t{min-width:150px}
+  #cbRoot .cb-sat-t .cb-ra em{display:none}
+  #cbRoot .cb-bridge{right:0;top:33%;height:30px;padding:0 12px}
+  #cbRoot .cb-agrid.g3{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:1240px){
+  #cbRoot .cb-agents.v3{display:block}
+  #cbRoot .cb-agl{max-height:none;display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+  #cbRoot .cb-bridge{right:0}
+}
+@media(max-width:900px){
+  #cbRoot .cb-head-r [data-a="analizar"]{display:none}
+  #cbRoot .cb-stage>*,#cbRoot .cb-sats,#cbRoot .cb-sat{min-width:0}
+  #cbRoot .cb-sats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #cbRoot .cb-sat-t{overflow:hidden}
+  #cbRoot .cb-bridge{position:relative;right:auto;top:auto;grid-column:1/-1;justify-content:center}
+  #cbRoot .cb-sat{max-width:none}
+  #cbRoot .cb-sat-t{min-width:0;flex:1}
+  #cbRoot .cb-sat-t .cb-ra{font-size:12px;line-height:1.7}
+  #cbRoot .cb-sat-t .cb-ra em{display:inline}
+  #cbRoot .cb-agl{display:block}
+  #cbRoot .cb-agrid.g3,#cbRoot .cb-memg{grid-template-columns:1fr}
+  .cb-bg.dr{align-items:flex-end}
+  .cb-modal.cb-drawer{width:100%;height:auto;max-height:92vh;border-radius:24px 24px 0 0;animation:cbUp .32s var(--spring) both}
+  .cb-cmp{grid-template-columns:1fr;gap:2px}
+  .cb-cmp dd{margin-bottom:8px}
+  .cb-prop{padding:16px}
+  .cb-prop-a .cb-btn{flex:1 1 auto}
+  .cb-prop-a .sp{display:none}
+}
+@media(max-width:520px){
+  #cbRoot .cb-sats{grid-template-columns:minmax(0,1fr)}
+  .cb-layer .cb-kpis{grid-template-columns:1fr 1fr}
+}
+@media(prefers-reduced-motion:reduce){#cbRoot .cb-learn-s{animation:none}}
 </style>
 <script id="hlCerebroJS">
 /* ═══════════════════════════════════════════════════════════════════
@@ -13870,7 +14042,12 @@ var P={
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',tag:'<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   alert:'<path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17v.5"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
   broom:'<path d="M14 4 20 10M11 7l6 6M4 20l6-6M7 21l3-9 4 4-7 5Z"/>',brain:'<path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 5 2V4a3 3 0 0 0-2 0ZM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-5 2V4a3 3 0 0 1 2 0Z"/>',
-  store:'<path d="M4 9h16l-1.5-5h-13L4 9Z"/><path d="M5 9v11h14V9M9 20v-6h6v6"/>'
+  store:'<path d="M4 9h16l-1.5-5h-13L4 9Z"/><path d="M5 9v11h14V9M9 20v-6h6v6"/>',
+  gift:'<path d="M4 11h16v9H4zM3 7h18v4H3zM12 7v13"/><path d="M12 7c-1.5-3-5-3-5-1s3 1 5 1ZM12 7c1.5-3 5-3 5-1s-3 1-5 1Z"/>',
+  mega:'<path d="M4 10v4a1 1 0 0 0 1 1h2l6 4V5L7 9H5a1 1 0 0 0-1 1Z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/>',
+  truck:'<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
+  box:'<path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5M12 13v8"/>',
+  card:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>'
 };
 function I(n,c){return '<svg class="cb-i'+(c?' '+c:'')+'" viewBox="0 0 24 24" aria-hidden="true">'+(P[n]||'')+'</svg>'}
 var TIPOS={regla_negocio:['Regla','list'],correccion:['Corrección','alert'],faq:['Pregunta frecuente','help'],producto_info:['Producto','tag'],preferencia_cliente:['Cliente','user']};
@@ -13883,10 +14060,10 @@ function fuenteLbl(f){return FUENTES[f]||('Luz · '+String(f||'automático').rep
 function layer(){var l=$('cbLayer');if(!l){l=D.createElement('div');l.id='cbLayer';l.className='cb-layer';D.body.appendChild(l)}return l}
 function toast(msg,kind){var l=layer(),o=l.querySelector('.cb-toast');if(o)o.remove();var t=D.createElement('div');t.className='cb-toast '+(kind||'');t.setAttribute('role','status');t.innerHTML=I(kind==='bad'?'alert':'check','s')+'<span>'+E(msg)+'</span>';l.appendChild(t);setTimeout(function(){t.style.transition='opacity .25s';t.style.opacity='0';setTimeout(function(){t.remove()},260)},2600)}
 function modal(o){
-  var bg=D.createElement('div');bg.className='cb-bg';
-  bg.innerHTML='<div class="cb-modal'+(o.wide?' wide':'')+'" role="dialog" aria-modal="true" aria-label="'+E(o.title)+'"><div class="cb-mh"><div><b>'+E(o.title)+'</b>'+(o.sub?'<small>'+E(o.sub)+'</small>':'')+'</div>'+(o.right||'')+'<button type="button" class="cb-x" data-x aria-label="Cerrar">'+I('x','s')+'</button></div><div class="cb-mb"></div><div class="cb-mf"></div></div>';
-  layer().appendChild(bg);
-  var m={bg:bg,body:bg.querySelector('.cb-mb'),foot:bg.querySelector('.cb-mf'),head:bg.querySelector('.cb-mh'),close:function(force){if(!force&&o.beforeClose&&o.beforeClose()===false)return;bg.remove();D.removeEventListener('keydown',onKey);o.onClose&&o.onClose()}};
+  var bg=D.createElement('div');bg.className='cb-bg'+(o.drawer?' dr':'');
+  bg.innerHTML='<div class="cb-modal'+(o.wide?' wide':'')+(o.drawer?' cb-drawer':'')+'" role="dialog" aria-modal="true" aria-label="'+E(o.title)+'"><div class="cb-mh"><div><b>'+E(o.title)+'</b>'+(o.sub?'<small>'+E(o.sub)+'</small>':'')+'</div>'+(o.right||'')+'<button type="button" class="cb-x" data-x aria-label="Cerrar">'+I('x','s')+'</button></div><div class="cb-mb"></div><div class="cb-mf"></div></div>';
+  layer().appendChild(bg);Brain.sync();
+  var m={bg:bg,body:bg.querySelector('.cb-mb'),foot:bg.querySelector('.cb-mf'),head:bg.querySelector('.cb-mh'),close:function(force){if(!force&&o.beforeClose&&o.beforeClose()===false)return;bg.remove();Brain.sync();D.removeEventListener('keydown',onKey);o.onClose&&o.onClose()}};
   function onKey(e){if(e.key==='Escape')m.close();else if(o.onKey)o.onKey(e)}
   D.addEventListener('keydown',onKey);
   bg.addEventListener('mousedown',function(e){if(e.target===bg)m.close()});
@@ -13898,7 +14075,7 @@ function confirmBox(title,text,okLbl,fn){var m=modal({title:title,sub:text});m.b
 
 /* ═════════════ CEREBRO (canvas) ═════════════ */
 var Brain=(function(){
-  var cv,ctx,box,st,stx,dpr=1,w=0,h=0,G=null,run=false,raf=0,last=0,t0=performance.now(),sats=[],sigs=[],hops=[],pulse=0,vis=true,io=null,level={};
+  var cv,ctx,box,st,stx,dpr=1,dprB=1,w=0,h=0,Q=1,fts=[],G=null,run=false,raf=0,last=0,t0=performance.now(),sats=[],sigs=[],hops=[],pulse=0,vis=true,io=null,level={};
   var seed=7;function rnd(){seed=(seed*16807)%2147483647;return (seed-1)/2147483646}
   // Cerebro visto de frente: dos hemisferios con pliegues, cerebelo y tallo que baja al núcleo
   function hemiPt(side,th,f,wob){
@@ -13940,9 +14117,9 @@ var Brain=(function(){
   function poly(c,pts,g,close){c.moveTo(X(pts[0][0],g),Y(pts[0][1],g));for(var i=1;i<pts.length;i++)c.lineTo(X(pts[i][0],g),Y(pts[i][1],g));if(close)c.closePath()}
   function drawStatic(){
     if(!G)build();
-    st=st||D.createElement('canvas');st.width=cv.width;st.height=cv.height;stx=st.getContext('2d');stx.setTransform(dpr,0,0,dpr,0,0);stx.clearRect(0,0,w,h);
+    st.width=Math.round(w*dprB);st.height=Math.round(h*dprB);stx=st.getContext('2d');stx.setTransform(dprB,0,0,dprB,0,0);stx.clearRect(0,0,w,h);
     var g=geo(),c=stx,cx=X(.5,g),cy=Y(.42,g);
-    var rg=c.createRadialGradient(cx,cy,g.s*.05,cx,cy,g.s*.75);rg.addColorStop(0,'rgba(90,110,255,.30)');rg.addColorStop(.5,'rgba(100,60,230,.12)');rg.addColorStop(1,'rgba(20,20,80,0)');c.fillStyle=rg;c.fillRect(0,0,w,h);
+    var rg=c.createRadialGradient(cx,cy,g.s*.05,cx,cy,Math.max(g.s*.3,Math.min(g.s*.75,h-cy-2)));rg.addColorStop(0,'rgba(90,110,255,.30)');rg.addColorStop(.5,'rgba(100,60,230,.12)');rg.addColorStop(1,'rgba(20,20,80,0)');c.fillStyle=rg;c.fillRect(0,0,w,h);
     // núcleo (plataforma) y haz de luz
     var py=Y(.965,g),pr=g.s*.36;
     var pg=c.createRadialGradient(cx,py,4,cx,py,pr*1.25);pg.addColorStop(0,'rgba(130,210,255,.5)');pg.addColorStop(.5,'rgba(60,110,255,.16)');pg.addColorStop(1,'rgba(40,60,200,0)');
@@ -13988,14 +14165,17 @@ var Brain=(function(){
   function interval(k){var n=level[k]||0;return Math.max(700,Math.min(4200,4200/(1+Math.log(1+n))))}
   function frame(now){
     raf=0;if(!run)return;
-    if(now-last<30){raf=requestAnimationFrame(frame);return}last=now;
+    var minGap=Q>0?33:50;if(now-last<minGap){raf=requestAnimationFrame(frame);return}
+    if(last){fts.push(now-last);if(fts.length>45){var avg=fts.reduce(function(a,b){return a+b},0)/fts.length;fts=[];if(avg>(Q>0?52:80)&&Q>-1){Q--;applyQ()}}}last=now;
+    var t0f=performance.now();
     var t=(now-t0)/1000,g=geo();
-    ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(st,0,0);ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);ctx.setTransform(dpr,0,0,dpr,0,0);
     ctx.globalCompositeOperation='lighter';
     var br=.5+.5*Math.sin(t*1.35),cx=X(.5,g),cy=Y(.43,g),rr=g.s*(.16+.025*br+pulse*.1);
     var cg=ctx.createRadialGradient(cx,cy,2,cx,cy,rr);cg.addColorStop(0,'rgba(210,235,255,'+(.2+.1*br+pulse*.35)+')');cg.addColorStop(1,'rgba(90,120,255,0)');ctx.fillStyle=cg;ctx.beginPath();ctx.arc(cx,cy,rr,0,6.283);ctx.fill();
     pulse*=.94;
-    G.bright.forEach(function(ix){var n=G.nodes[ix],a=.2+.8*(.5+.5*Math.sin(t*n.s+n.p));var r=.9+n.s*.8*a;ctx.fillStyle=n.c>.88?'rgba(240,248,255,'+a+')':n.c>.72?'rgba(130,225,255,'+a*.95+')':'rgba(195,150,255,'+a*.9+')';ctx.beginPath();ctx.arc(X(n.x,g),Y(n.y,g),r,0,6.283);ctx.fill()});
+    var bl=Q>0?G.bright:G.bright.filter(function(_,i){return i%(Q<0?4:2)===0});
+    bl.forEach(function(ix){var n=G.nodes[ix],a=.2+.8*(.5+.5*Math.sin(t*n.s+n.p));var r=.9+n.s*.8*a;ctx.fillStyle=n.c>.88?'rgba(240,248,255,'+a+')':n.c>.72?'rgba(130,225,255,'+a*.95+')':'rgba(195,150,255,'+a*.9+')';ctx.beginPath();ctx.arc(X(n.x,g),Y(n.y,g),r,0,6.283);ctx.fill()});
     var py=Y(.965,g);ctx.save();ctx.translate(cx,py);ctx.scale(1,.2);ctx.strokeStyle='rgba(150,225,255,.5)';ctx.lineWidth=2;ctx.setLineDash([22,16]);ctx.lineDashOffset=-t*18;ctx.beginPath();ctx.arc(0,0,g.s*.36*.9,0,6.283);ctx.stroke();ctx.restore();ctx.setLineDash([]);
     sats.forEach(function(sa){if(now>=sa.next){sa.next=now+interval(sa.key)*(.7+Math.random()*.6);sigs.push({c:sa.curves[Math.floor(Math.random()*sa.curves.length)],t:0,sp:.35+Math.random()*.25})}});
     for(var i=sigs.length-1;i>=0;i--){var s=sigs[i];s.t+=s.sp*.03;if(s.t>=1){sigs.splice(i,1);var end=bz(s.c,1);startHop(nearestNode(end[0],end[1]));continue}
@@ -14005,14 +14185,15 @@ var Brain=(function(){
     ctx.globalCompositeOperation='source-over';
     raf=requestAnimationFrame(frame);
   }
-  function startHop(ix){if(hops.length>40||!G)return;var v=Math.random()<.5;var nb=G.adj[ix];if(!nb||!nb.length)return;hops.push({a:ix,b:nb[Math.floor(Math.random()*nb.length)],t:0,left:4+Math.floor(Math.random()*6),col:v?'rgba(160,230,255,.95)':'rgba(205,165,255,.95)',col2:v?'rgba(160,230,255,.35)':'rgba(205,165,255,.35)'})}
-  function resize(){if(!cv)return;var r=cv.getBoundingClientRect();if(r.width<2||r.height<2)return;w=r.width;h=r.height;dpr=Math.min(2,W.devicePixelRatio||1);cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);ctx=cv.getContext('2d');layoutSats();drawStatic();placeCore();if(!run)paintOnce()}
-  function placeCore(){var c=box&&box.querySelector('.cb-core');if(!c)return;var g=geo();c.style.top=(cv.offsetTop+Y(1.0,g))+'px'}
-  function paintOnce(){if(!st||!ctx)return;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(st,0,0);var g=geo();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalCompositeOperation='lighter';G.bright.forEach(function(ix){var n=G.nodes[ix];ctx.fillStyle=n.c>.8?'rgba(235,245,255,.8)':'rgba(150,200,255,.7)';ctx.beginPath();ctx.arc(X(n.x,g),Y(n.y,g),1.4,0,6.283);ctx.fill()});ctx.globalCompositeOperation='source-over'}
-  function should(){return vis&&!D.hidden&&D.body.classList.contains('hl-cerebro-active')&&!REDUCE&&S.view==='neural'}
+  function startHop(ix){if(hops.length>(Q>0?26:10)||!G)return;var v=Math.random()<.5;var nb=G.adj[ix];if(!nb||!nb.length)return;hops.push({a:ix,b:nb[Math.floor(Math.random()*nb.length)],t:0,left:4+Math.floor(Math.random()*6),col:v?'rgba(160,230,255,.95)':'rgba(205,165,255,.95)',col2:v?'rgba(160,230,255,.35)':'rgba(205,165,255,.35)'})}
+  function applyQ(){var d=W.devicePixelRatio||1;dprB=Math.min(Q>0?1.5:1,d);dpr=Math.min(Q>0?1.25:1,d);if(cv&&w){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);ctx=cv.getContext('2d')}}
+  function resize(){if(!cv)return;var r=cv.getBoundingClientRect();if(r.width<2||r.height<2)return;w=r.width;h=r.height;applyQ();layoutSats();drawStatic();placeCore();if(!run)paintOnce()}
+  function placeCore(){var c=box&&box.querySelector('.cb-core'),wr=cv&&cv.parentNode;if(!c||!wr)return;var g=geo();c.style.top=(wr.offsetTop+Y(1.0,g))+'px'}
+  function paintOnce(){if(!st||!ctx||!G)return;ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);var g=geo();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalCompositeOperation='lighter';G.bright.forEach(function(ix){var n=G.nodes[ix];ctx.fillStyle=n.c>.8?'rgba(235,245,255,.8)':'rgba(150,200,255,.7)';ctx.beginPath();ctx.arc(X(n.x,g),Y(n.y,g),1.4,0,6.283);ctx.fill()});ctx.globalCompositeOperation='source-over'}
+  function should(){return vis&&!D.hidden&&D.body.classList.contains('hl-cerebro-active')&&!REDUCE&&S.view==='neural'&&!D.querySelector('#cbLayer .cb-bg')}
   function sync(){var go=should()&&!!st;if(go&&!run){run=true;last=0;raf=requestAnimationFrame(frame)}else if(!go&&run){run=false;if(raf)cancelAnimationFrame(raf);raf=0;paintOnce()}}
   return {
-    mount:function(canvas,host){cv=canvas;box=host;resize();
+    mount:function(canvas,host,bg){cv=canvas;box=host;st=bg;try{var hc=navigator.hardwareConcurrency||8,dm=navigator.deviceMemory||8;if(hc<=4||dm<=4)Q=0}catch(e){}resize();
       if('IntersectionObserver' in W){io=new IntersectionObserver(function(en){vis=en[0].isIntersecting;sync()});io.observe(cv)}
       if('ResizeObserver' in W){new ResizeObserver(debounce(function(){resize();sync()},120)).observe(host)}else W.addEventListener('resize',debounce(function(){resize();sync()},150));
       D.addEventListener('visibilitychange',sync);sync()},
@@ -14034,37 +14215,40 @@ function mount(){
   root=D.createElement('div');root.id='cbRoot';
   root.innerHTML=
     '<header class="cb-head"><div class="cb-title"><h1>Cerebro de Luz</h1><p>Conocimiento que conecta. Agentes que actúan.</p></div>'+
-      '<div class="cb-head-r"><span class="cb-live" id="cbLive"><i></i><span>Conectando…</span></span><button type="button" class="cb-pill" data-a="organizar">'+I('broom','s')+'Organizar memoria</button><div class="cb-tag">Inteligencia<br>al servicio<br>de la hospitalidad</div></div></header>'+
+      '<div class="cb-head-r"><span class="cb-live" id="cbLive"><i></i><span>Conectando…</span></span><button type="button" class="cb-pill" data-a="analizar" title="Luz revisa ahora todas las áreas (máx. cada 5 min)">'+I('spark','s')+'Analizar ahora</button><button type="button" class="cb-pill" data-a="organizar">'+I('broom','s')+'Organizar memoria</button><div class="cb-tag">Inteligencia<br>al servicio<br>de la hospitalidad</div></div></header>'+
     '<nav class="cb-tabs" role="tablist" aria-label="Secciones del cerebro">'+
-      [['neural','Vista neural'],['agentes','Agentes'],['conocimiento','Conocimiento'],['actividad','Actividad']].map(function(t){return '<button type="button" role="tab" data-a="tab" class="cb-tab'+(t[0]==='neural'?' on':'')+'" data-v="'+t[0]+'">'+t[1]+(t[0]==='conocimiento'?'<span class="n" id="cbTabN" hidden></span>':'')+'</button>'}).join('')+'</nav>'+
+      [['neural','Vista neural'],['agentes','Agentes'],['propuestas','Propuestas'],['conocimiento','Conocimiento'],['memoria','Memoria'],['actividad','Actividad']].map(function(t){return '<button type="button" role="tab" data-a="tab" class="cb-tab'+(t[0]==='neural'?' on':'')+'" data-v="'+t[0]+'">'+t[1]+(t[0]==='conocimiento'?'<span class="n" id="cbTabN" hidden></span>':t[0]==='propuestas'?'<span class="n" id="cbTabP" hidden></span>':'')+'</button>'}).join('')+'</nav>'+
     '<section class="cb-view" id="cbVneural">'+
-      '<div class="cb-stage"><div class="cb-brainbox" id="cbBox"><canvas id="cbCanvas" aria-hidden="true"></canvas>'+
+      '<div class="cb-stage"><div class="cb-brainbox" id="cbBox"><div class="cb-cv" id="cbCv"><canvas id="cbCanvasBg" aria-hidden="true"></canvas><canvas id="cbCanvas" aria-hidden="true"></canvas></div>'+
         '<div class="cb-sats">'+
-          sat('conv','Conversaciones','chat','',{left:'2%',top:'5%'})+
-          sat('oper','Operación','bars','',{left:'7%',top:'41%'})+
-          sat('know','Conocimiento','doc','r',{right:'2%',top:'5%'})+
-          sat('mem','Memoria','db','r',{right:'4%',top:'41%'})+
+          sat('cliente','Cliente','user','',{left:'2%',top:'5%'})+
+          sat('conocimiento','Conocimiento','book','',{left:'5%',top:'43%'})+
+          sat('comercio','Comercio','store','r',{right:'2%',top:'5%'})+
+          sat('operacion','Operación','bars','r',{right:'5%',top:'43%'})+
+          '<button type="button" class="cb-bridge" id="cbBridge" data-a="agente" data-v="pagos" hidden></button>'+
         '</div>'+
         '<div class="cb-core"><b>NÚCLEO LUZ</b><span>Señales · Memoria · Decisiones</span></div>'+
         '<div class="cb-quote">Aquí también<br>se aprende<br>a través<br>de las personas</div>'+
       '</div>'+
       '<aside class="cb-panel cb-agents" id="cbAgents" aria-label="Agentes de Luz"><h3>Agentes de Luz</h3>'+[0,1,2,3].map(function(){return '<div class="cb-ag"><span class="cb-ag-ic cb-skel"></span><div class="cb-ag-b"><div class="cb-skel" style="height:16px;width:60%"></div><div class="cb-skel" style="height:12px;width:80%;margin-top:8px"></div></div></div>'}).join('')+'</aside></div>'+
-      '<div class="cb-cards">'+
+      '<div class="cb-learn" id="cbLearn" hidden></div><div class="cb-cards">'+
         '<article class="cb-panel cb-card"><div class="cb-card-h"><span class="cb-card-ic">'+I('doc','l')+'</span><div><b>Alimentar a Luz</b><p>Añade reglas, políticas, respuestas y lo que quieras que Luz sepa de tu restaurante. Lo que escribes tú se usa de inmediato.</p></div></div>'+
           '<div class="cb-card-f"><button type="button" class="cb-btn pri block" data-a="alimentar">'+I('plus','s')+'Añadir conocimiento</button></div></article>'+
         '<article class="cb-panel cb-card" id="cbSup"><div class="cb-card-h"><span class="cb-card-ic">'+I('trend','l')+'</span><div><b>Aprendizaje supervisado</b><p>Propuestas de mejora generadas por los agentes.</p></div></div><div id="cbSpark"><div class="cb-skel" style="height:84px;margin-top:14px"></div></div>'+
-          '<div class="cb-card-f"><span class="cb-count" id="cbSupN"></span><span style="flex:1"></span><button type="button" class="cb-btn" data-a="revisar" id="cbSupBtn">Revisar propuestas'+I('arrow','s')+'</button></div></article>'+
+          '<div class="cb-card-f"><span class="cb-count" id="cbSupN"></span><span style="flex:1"></span><button type="button" class="cb-btn" data-a="revisar" id="cbSupBtn">Revisar propuestas'+I('arrow','s')+'</button></div><button type="button" class="cb-link" id="cbSupP" data-a="tab" data-v="propuestas" hidden></button></article>'+
         '<article class="cb-panel cb-card"><div class="cb-card-h"><span class="cb-card-ic">'+I('clock','l')+'</span><div><b>Actividad neuronal</b><p>Eventos recientes del cerebro de Luz.</p></div></div><ul class="cb-tl" id="cbMini"></ul></article>'+
       '</div><p class="cb-note">Datos reales de tu restaurante · se actualiza cada minuto mientras estás aquí.</p>'+
     '</section>'+
     '<section class="cb-view" id="cbVagentes" hidden></section>'+
+    '<section class="cb-view" id="cbVpropuestas" hidden></section>'+
+    '<section class="cb-view" id="cbVmemoria" hidden></section>'+
     '<section class="cb-view" id="cbVconocimiento" hidden></section>'+
     '<section class="cb-view" id="cbVactividad" hidden></section>';
   page.appendChild(root);
   root.addEventListener('click',onClick);
   root.addEventListener('input',onInput);
   root.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.matches('.cb-edit .cb-ta')&&(e.metaKey||e.ctrlKey)){var b=e.target.closest('.cb-row').querySelector('[data-a="k-save"]');b&&b.click()}});
-  Brain.mount($('cbCanvas'),$('cbBox'));
+  Brain.mount($('cbCanvas'),$('cbBox'),$('cbCanvasBg'));
   return root;
 }
 function sat(k,title,ic,side,pos){
@@ -14077,8 +14261,10 @@ async function load(silent){
   var r=rid();if(!r)return;
   if(S.loading)return;S.loading=true;
   try{
+    var pc=loadCore(silent);
     var d=await api('/api/cerebro/resumen?restaurante_id='+encodeURIComponent(r));
     S.res=d;S.lastOk=Date.now();S.err=false;
+    await pc;
     renderAll();
   }catch(e){
     S.err=true;setLive();
@@ -14090,8 +14276,10 @@ function renderAll(){
   setLive();var d=S.res;if(!d)return;
   var k=d.conocimiento||{},pend=(k.propuestas||0)+(k.preguntas||0);
   var tn=$('cbTabN');if(tn){tn.hidden=!pend;tn.textContent=pend>99?'99+':pend}
-  renderSats(d);renderAgentsPanel(d);renderSup(d);renderMini(d);
-  Brain.setLevel({conv:(d.fuentes.conversaciones.mensajes_hoy||0),oper:(d.fuentes.operacion.pedidos_hoy||0)+(d.fuentes.operacion.pedidos_activos||0)*3,know:(k.propuestas||0)+(d.fuentes.conocimiento.activos?4:0),mem:Math.min(30,(d.fuentes.memoria.clientes||0)/10)});
+  renderSup(d);renderMini(d);
+  if(!renderRegions())renderRegionsLegacy(d);
+  if(!renderCorePanel())renderAgentsPanel(d);
+  renderLearn();loadCoreBadges();Brain.relayout();
   if(S.view==='agentes')renderAgentes();
   if(S.view==='actividad')renderActividad();
   if(S.view==='conocimiento')renderKHead();
@@ -14105,6 +14293,15 @@ function renderSats(d){
   set('know',L(k.activos,'aprendizajes aprobados')+L(f.conocimiento.enseñado_por_ti,'enseñados por tu equipo')+L(k.propuestas,'propuestas por revisar'));
   set('mem',L(f.memoria.clientes,'clientes conocidos')+L(f.memoria.preferencias,'preferencias guardadas')+L(k.archivados,'notas archivadas'));
   Brain.relayout();
+}
+function renderRegionsLegacy(d){
+  var f=d.fuentes,k=d.conocimiento;function L(n,t){return '<span><em>'+N(n)+'</em>'+E(t)+'</span>'}
+  var set=function(id,h){var el=$('cbSat_'+id);if(el)el.innerHTML=h};
+  set('cliente',L(f.conversaciones.chats_hoy,'chats hoy')+L(f.memoria.clientes,'clientes conocidos')+L(k.preguntas,'preguntas por responder'));
+  set('operacion',L(f.operacion.pedidos_hoy,'pedidos hoy')+L(f.operacion.pedidos_activos,'en curso ahora')+L(f.operacion.eventos_despacho_hoy||0,'eventos de despacho hoy'));
+  set('conocimiento',L(k.activos,'aprendizajes aprobados')+L(k.propuestas,'propuestas por revisar')+L(k.archivados,'notas archivadas'));
+  set('comercio','<span>Menu Intelligence, Growth y Marketing</span><span>se activan con Luz Core.</span>');
+  Brain.setLevel({cliente:(f.conversaciones.mensajes_hoy||0),operacion:(f.operacion.pedidos_hoy||0)+(f.operacion.pedidos_activos||0)*3,conocimiento:(k.propuestas||0)+(f.conocimiento.activos?4:0),comercio:0});
 }
 var AG={atencion:'chat',operaciones:'gear',conocimiento:'book',supervisor:'shield'};
 var STC={conversando:'blue',coordinando:'blue',disponible:'green',al_dia:'green',estable:'green',aprendiendo:'amber',esperando:'violet'};
@@ -14124,10 +14321,10 @@ function renderSup(d){
   if(host){
     if(!tot){host.innerHTML='<div class="cb-empty" style="padding:16px 4px 4px;text-align:left">Luz todavía no ha propuesto mejoras en las últimas 2 semanas.</div>'}
     else{
-      var W0=Math.max(200,Math.round(host.clientWidth||300)),H0=84,max=Math.max.apply(null,ser.map(function(x){return x.propuestas}))||1,stp=W0/(ser.length-1);
+      var W0=300,H0=84,max=Math.max.apply(null,ser.map(function(x){return x.propuestas}))||1,stp=W0/(ser.length-1);
       var pts=ser.map(function(x,i){return [i*stp,H0-8-(x.propuestas/max)*(H0-18)]});
       var dl='M'+pts.map(function(p){return p[0].toFixed(1)+' '+p[1].toFixed(1)}).join(' L');
-      host.innerHTML='<svg class="cb-spark" viewBox="0 0 '+W0+' '+H0+'" role="img" aria-label="Propuestas por día, últimos 14 días"><defs><linearGradient id="cbSparkG" x1="0" x2="1"><stop offset="0" stop-color="#6a38ff"/><stop offset="1" stop-color="#c7a8ff"/></linearGradient><linearGradient id="cbSparkA" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="rgba(140,90,255,.35)"/><stop offset="1" stop-color="rgba(140,90,255,0)"/></linearGradient></defs><path class="a" d="'+dl+' L'+W0+' '+H0+' L0 '+H0+' Z"/><path class="l" d="'+dl+'" vector-effect="non-scaling-stroke"/>'+pts.filter(function(p,i){return i%3===0||i===pts.length-1}).map(function(p,i,a){return '<circle '+(i===a.length-1?'class="last" ':'')+'cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="3.5" vector-effect="non-scaling-stroke"/>'}).join('')+'</svg><div class="cb-spark-cap">'+N(tot)+' propuestas en 14 días · '+N(ser.reduce(function(s,x){return s+x.aprobadas},0))+' aprobadas</div>';
+      host.innerHTML='<svg class="cb-spark" viewBox="0 0 '+W0+' '+H0+'" preserveAspectRatio="none" role="img" aria-label="Propuestas por día, últimos 14 días"><defs><linearGradient id="cbSparkG" x1="0" x2="1"><stop offset="0" stop-color="#6a38ff"/><stop offset="1" stop-color="#c7a8ff"/></linearGradient><linearGradient id="cbSparkA" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="rgba(140,90,255,.35)"/><stop offset="1" stop-color="rgba(140,90,255,0)"/></linearGradient></defs><path class="a" d="'+dl+' L'+W0+' '+H0+' L0 '+H0+' Z"/><path class="l" d="'+dl+'" vector-effect="non-scaling-stroke"/></svg><div class="cb-spark-cap">'+N(tot)+' propuestas en 14 días · '+N(ser.reduce(function(s,x){return s+x.aprobadas},0))+' aprobadas</div>';
     }
   }
   var n=$('cbSupN');if(n)n.innerHTML='<b>'+N(pend)+'</b>'+(pend===1?'mejora por revisar':'mejoras por revisar');
@@ -14136,17 +14333,19 @@ function renderSup(d){
 var ACT={aprobado:['Aprendizaje aprobado','ok'],rechazado:['Propuesta rechazada','bad'],archivado:['Aprendizaje archivado','mu'],limpieza:['Limpieza aplicada','ok'],propuesta_limpieza:['Luz propone una limpieza','wa'],pregunta:['Pregunta sin respuesta','wa'],propuesta:['Nueva propuesta de mejora','vi'],ensenado:['Aprendizaje','cy'],operacion:['Operación','cy']};
 function actTitle(a){if(a.tipo==='ensenado')return a.fuente==='admin'?'Enseñado por ti':a.fuente==='cocina'?'Enseñado por tu cocina':'Aprendido automáticamente';if(a.tipo==='archivado'&&a.n)return 'Memoria organizada';return (ACT[a.tipo]||['Evento'])[0]}
 function actCls(a){return (ACT[a.tipo]||[0,'cy'])[1]}
-function tlItem(a){return '<li><i class="'+actCls(a)+'"></i><time>'+hhmm(a.t)+'</time><div><b>'+E(actTitle(a))+'</b><small>'+E(a.texto)+'</small></div></li>'}
-function renderMini(d){var el=$('cbMini');if(!el)return;var a=(d.actividad||[]).slice(0,3);el.innerHTML=a.length?a.map(tlItem).join(''):'<li style="display:block"><small>Sin eventos todavía.</small></li>'}
+function tlItem(a){return '<li><i class="'+(a.cls||actCls(a))+'"></i><time>'+hhmm(a.t)+'</time><div><b>'+E(a.titulo||actTitle(a))+'</b><small>'+E(a.texto)+'</small></div></li>'}
+function renderMini(d){var el=$('cbMini');if(!el)return;var a=allActs().slice(0,3);el.innerHTML=a.length?a.map(tlItem).join(''):'<li style="display:block"><small>Sin eventos todavía.</small></li>'}
 
 /* ═════════════ VISTAS ═════════════ */
 function setView(v){
   S.view=v;
   D.querySelectorAll('#cbRoot .cb-tab').forEach(function(b){var on=b.getAttribute('data-v')===v;b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
-  ['neural','agentes','conocimiento','actividad'].forEach(function(x){var s=$('cbV'+x);if(!s)return;var on=x===v;s.hidden=!on;if(on){s.classList.remove('in');void s.offsetWidth;s.classList.add('in')}});
+  ['neural','agentes','propuestas','conocimiento','memoria','actividad'].forEach(function(x){var s=$('cbV'+x);if(!s)return;var on=x===v;s.hidden=!on;if(on){s.classList.remove('in');void s.offsetWidth;s.classList.add('in')}});
   if(v==='agentes')renderAgentes();
   if(v==='conocimiento'){renderKShell();loadItems(true)}
   if(v==='actividad')renderActividad();
+  if(v==='propuestas')renderPropuestas();
+  if(v==='memoria')renderMemoria();
   if(v==='neural')setTimeout(function(){Brain.relayout()},30);
   Brain.sync();
 }
@@ -14157,6 +14356,7 @@ var AGX={
   supervisor:['Nada llega a WhatsApp sin tu visto bueno: aquí apruebas, editas o rechazas lo que proponen los agentes.',function(d){return [[d.por_revisar,'por revisar'],[d.aprobadas_7d,'aprobadas en 7 días'],[d.rechazadas_7d,'rechazadas en 7 días']]},[['Revisar propuestas','revisar']],null]
 };
 function renderAgentes(){
+  if(renderAgentes13())return;
   var v=$('cbVagentes');if(!v)return;var d=S.res;
   if(!d){v.innerHTML='<div class="cb-empty">Cargando…</div>';return}
   v.innerHTML='<div class="cb-agrid">'+d.agentes.map(function(a){var x=AGX[a.id],dd=a.datos||{};
@@ -14166,8 +14366,8 @@ function renderAgentes(){
     '<div class="cb-honest">'+I('info','s')+'<span>Los agentes son las funciones de Luz que ya trabajan en tu restaurante. Los estados salen de datos reales: mensajes, pedidos y aprendizajes de hoy. Si algo no ha pasado, verás cero: no inventamos actividad.</span></div>';
 }
 function renderActividad(){
-  var v=$('cbVactividad');if(!v)return;var a=(S.res&&S.res.actividad)||[];
-  if(!a.length){v.innerHTML='<div class="cb-empty"><div class="ic">'+I('clock','l')+'</div><b>Sin actividad todavía</b>Cuando Luz aprenda algo o apruebes una propuesta lo verás aquí.</div>';return}
+  var v=$('cbVactividad');if(!v)return;var a=allActs();
+  if(!a.length){v.innerHTML='<div class="cb-empty"><div class="ic">'+I('clock','l')+'</div><b>Sin actividad todavía</b>Cuando un agente detecte algo, Luz aprenda o apruebes una propuesta lo verás aquí.</div>';return}
   var h='<div class="cb-feed">',cur='';
   a.forEach(function(x){var dl=dayLabel(x.t);if(dl!==cur){if(cur)h+='</ul>';cur=dl;h+='<div class="cb-day">'+E(dl)+'</div><ul class="cb-tl">'}h+=tlItem(x)});
   v.innerHTML=h+'</ul></div>';
@@ -14255,7 +14455,7 @@ function openAlimentar(pre){
     var txt=($('cbATxt').value||'').trim(),err=$('cbAErr'),btn=this;
     if(txt.length<6){err.textContent='Escribe un poco más para que Luz lo entienda.';err.classList.remove('on');void err.offsetWidth;err.classList.add('on');return}
     btn.disabled=true;btn.innerHTML='<span class="spin"></span>Guardando…';
-    try{await api('/api/aprendizajes',{restaurante_id:rid(),tipo:tipo,contenido:txt,fuente:'admin'});m.close(true);buzz(12);toast('Luz lo aprendió · ya lo usa en WhatsApp','ok');Brain.ping('know');await load(true);if(S.view==='conocimiento'&&S.k.estado==='activo')loadItems(true)}
+    try{await api('/api/aprendizajes',{restaurante_id:rid(),tipo:tipo,contenido:txt,fuente:'admin'});m.close(true);buzz(12);toast('Luz lo aprendió · ya lo usa en WhatsApp','ok');Brain.ping('conocimiento');await load(true);if(S.view==='conocimiento'&&S.k.estado==='activo')loadItems(true)}
     catch(e){btn.disabled=false;btn.innerHTML=I('check','s')+'Enseñar a Luz';err.textContent=e.message;err.classList.add('on')}
   };
 }
@@ -14316,7 +14516,7 @@ async function openReview(startId){
     var old=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spin"></span>';
     try{
       var d=await api(path,body);rv.done++;buzz(10);
-      if(kind==='aprobar'||kind==='responder')Brain.ping('know');
+      if(kind==='aprobar'||kind==='responder')Brain.ping('conocimiento');
       var card=m.body.querySelector('.cb-rv-card');if(card)card.classList.add('leave');
       setTimeout(function(){rv.q.splice(rv.i,1);if(rv.i>=rv.q.length)rv.i=0;draw()},200);
       if(kind==='aprobar'&&d.archivados)toast('Aprobada · '+N(d.archivados)+' notas viejas archivadas','ok');
@@ -14329,7 +14529,7 @@ async function openReview(startId){
       m.body.innerHTML='<div class="cb-done"><div class="ic" style="background:rgba(113,59,255,.15);color:#cdb6ff"><span class="spin" style="width:30px;height:30px;border:3px solid rgba(205,182,255,.3);border-top-color:#cdb6ff;border-radius:50%;animation:cbSpin .8s linear infinite"></span></div><b>Aprobando…</b><p id="cbBulkP">0 de '+ids.length+'</p></div>';m.foot.innerHTML='';
       var ok=0,arch=0;
       for(var i=0;i<ids.length;i+=100){try{var d=await api('/api/cerebro/revisar-lote',{restaurante_id:rid(),accion:'aprobar',ids:ids.slice(i,i+100)});ok+=d.procesados;arch+=d.archivados}catch(e){toast(e.message,'bad')}var p=$('cbBulkP');if(p)p.textContent=Math.min(ids.length,i+100)+' de '+ids.length}
-      rv.done+=ok;rv.q=rv.q.filter(function(y){return y.estado!=='propuesta'});rv.i=0;draw();Brain.ping('know');toast(N(ok)+' aprobadas'+(arch?' · '+N(arch)+' notas archivadas':''),'ok');
+      rv.done+=ok;rv.q=rv.q.filter(function(y){return y.estado!=='propuesta'});rv.i=0;draw();Brain.ping('conocimiento');toast(N(ok)+' aprobadas'+(arch?' · '+N(arch)+' notas archivadas':''),'ok');
     });
   }
   m.foot.addEventListener('click',function(e){var b=e.target.closest('[data-rv]');if(!b)return;var k=b.getAttribute('data-rv');if(k==='prev')go(-1);else if(k==='next')go(1);else if(k==='todas')todas();else act(k,b)});
@@ -14377,7 +14577,7 @@ async function openOrganizar(){
       }
       if(p.est==='fail')continue;
       if(p.tipo!=='preguntas'&&!O.cancel){p.msg='Uniendo duplicados…';draw();try{await api('/api/cerebro/organizar/fusionar',{restaurante_id:r,run_id:plan.run_id,tipo:p.tipo})}catch(e){}}
-      p.est='done';draw();Brain.ping('know');
+      p.est='done';draw();Brain.ping('conocimiento');
     }
     O.running=false;
     if(O.cancel)return;
@@ -14388,14 +14588,227 @@ async function openOrganizar(){
   };
 }
 
+/* ═════════════ LUZ CORE · MULTI-AGENTE ═════════════
+   Estados, propuestas, memoria y actividad salen de /api/luz-core/* (datos reales).
+   Si el servidor todavía no tiene Luz Core, el Cerebro sigue funcionando como antes. */
+var REGS=[['cliente','Cliente','user'],['comercio','Comercio','store'],['operacion','Operación','bars'],['conocimiento','Conocimiento','book']];
+var AGI={conversaciones:'chat',clientes:'user',loyalty:'gift',menu:'list',growth:'trend',marketing:'mega',pedidos:'doc',operaciones:'gear',despacho:'truck',inventory:'box',pagos:'card',conocimiento:'book',guardian:'shield'};
+var EST_C={IDLE:'gray',OBSERVING:'green',ANALYZING:'blue',WAITING_APPROVAL:'violet',ACTING:'blue',DEGRADED:'amber',ERROR:'red'};
+var EST_ORD={WAITING_APPROVAL:0,ERROR:1,DEGRADED:2,ACTING:3,ANALYZING:4,OBSERVING:5,IDLE:6};
+var PRIO_L={CRITICAL:['Crítico','red'],HIGH:['Alta','amber'],MEDIUM:['Media','vi'],LOW:['Baja','cy'],BACKGROUND:['Fondo','']};
+var CONF_L={HIGH:'Confianza alta',MEDIUM:'Confianza media',LOW:'Confianza baja',DATOS_INSUFICIENTES:'Datos insuficientes'};
+var NIVEL_C={REAL:'ok',PARCIAL:'cy',PREPARADO:'wa','NO IMPLEMENTADO':''};
+function core(){return S.core&&S.core.ok?S.core:null}
+function agById(id){var c=core();return c?c.agentes.find(function(a){return a.id===id}):null}
+function stPill(a,small){var lbl=a.id==='guardian'?'Protección activa ✓':a.estado_lbl;return '<span class="cb-st '+(a.id==='guardian'?'green':EST_C[a.estado]||'gray')+(small?' sm':'')+'"><i></i>'+E(lbl)+'</span>'}
+function agLinea(a){
+  if(a.id==='guardian')return a.hoy.bloqueos?N(a.hoy.bloqueos)+(a.hoy.bloqueos===1?' intervención hoy':' intervenciones hoy'):'Revisa cada acción antes de ejecutarla';
+  if(a.estado==='DEGRADED'||a.estado==='ERROR')return 'Aislado: tu operación sigue normal';
+  if(a.pendientes)return N(a.pendientes)+(a.pendientes===1?' propuesta espera tu aprobación':' propuestas esperan tu aprobación');
+  var h=(a.hallazgos||[]).find(function(f){return f.prioridad!=='BACKGROUND'})||(a.hallazgos||[])[0];
+  if(h&&h.prioridad!=='BACKGROUND')return h.titulo;
+  if(a.corto)return a.corto;
+  if(h)return h.titulo;
+  if(a.confianza==='DATOS_INSUFICIENTES')return 'Aprendiendo · pocos datos todavía';
+  return a.trabajo;
+}
+var CORTO={clientes:'Customer Intel.',menu:'Menu Intel.',conocimiento:'Knowledge & Memory'};
+var EST_CORTO={IDLE:'En reposo',OBSERVING:'Observando',ANALYZING:'Analizando',WAITING_APPROVAL:'Por aprobar',ACTING:'Actuando',DEGRADED:'Degradado',ERROR:'Error'};
+function regionLine(a){var st=a.id==='guardian'?'Activa ✓':a.pendientes?N(a.pendientes)+' por aprobar':EST_CORTO[a.estado]||a.estado_lbl;return '<span class="cb-ra" role="button" tabindex="0" data-a="agente" data-v="'+a.id+'" title="'+E(a.nombre+' · '+(a.id==='guardian'?'Protección activa':a.estado_lbl))+'"><i class="d '+(a.id==='guardian'?'green':EST_C[a.estado]||'gray')+'"></i>'+E(CORTO[a.id]||a.nombre)+'<em>'+E(st)+'</em></span>'}
+function renderRegions(){
+  var c=core();if(!c)return false;
+  REGS.forEach(function(r){var el=$('cbSat_'+r[0]);if(!el)return;var ags=c.agentes.filter(function(a){return a.region===r[0]});el.innerHTML=ags.map(regionLine).join('')});
+  var p=agById('pagos'),br=$('cbBridge');
+  if(br&&p){var e=c.pagos||{},txt=e.recibidos?N(e.recibidos)+' comprobante'+(e.recibidos===1?'':'s')+' por revisar':p.pendientes?N(p.pendientes)+' por revisar':'Sin comprobantes pendientes';
+    br.hidden=false;br.innerHTML='<i class="d '+(EST_C[p.estado]||'gray')+'"></i><b>Pagos</b><span>'+E(txt)+'</span>'}
+  var lv={};REGS.forEach(function(r){var g=c.regiones[r[0]]||{};lv[r[0]]=(g.eventos_hoy||0)+(g.pendientes||0)*4+(g.activos||0)*2});Brain.setLevel(lv);
+  return true;
+}
+function renderCorePanel(){
+  var el=$('cbAgents'),c=core();if(!el||!c)return false;
+  var mob=W.innerWidth<=900,ags=c.agentes.slice(),h='<div class="cb-agh"><h3>Agentes de Luz</h3><span>'+N(ags.length)+' agentes · 4 regiones</span></div>';
+  if(mob){
+    ags.sort(function(a,b){return (EST_ORD[a.estado]-EST_ORD[b.estado])||(b.pendientes-a.pendientes)});
+    var imp=ags.filter(function(a){return a.id!=='guardian'}).slice(0,5);
+    h+='<div class="cb-agl">'+imp.map(agRow).join('')+agRow(agById('guardian'))+'</div><button type="button" class="cb-btn sm ghost block" data-a="tab" data-v="agentes" style="margin-top:8px">Ver los '+N(ags.length)+' agentes'+I('arrow','xs')+'</button>';
+  }else{
+    h+='<div class="cb-agl">'+REGS.map(function(r){var g=ags.filter(function(a){return a.region===r[0]||(r[0]==='comercio'&&a.region==='puente')});return '<div class="cb-agr"><small>'+E(r[1])+(r[0]==='comercio'?' · Pagos conecta con Operación':'')+'</small>'+g.map(agRow).join('')+'</div>'}).join('')+'</div>';
+  }
+  var per=c.persistencia||{};
+  h+=per.activa?'<div class="cb-agents-foot">Mismo equipo.<br>Más posibilidades.</div>':'<div class="cb-ro">'+I('info','xs')+'<span>'+E(per.texto||'Modo lectura')+'</span></div>';
+  el.innerHTML=h;el.classList.add('v3');return true;
+}
+function agRow(a){if(!a)return '';return '<button type="button" class="cb-ag2" data-a="agente" data-v="'+a.id+'"><span class="cb-ag2-ic '+(a.id==='guardian'?'green':EST_C[a.estado]||'gray')+'">'+I(AGI[a.id]||'spark','s')+'</span><span class="cb-ag2-b"><span class="cb-ag2-r"><b>'+E(a.nombre)+'</b>'+stPill(a,true)+'</span><small>'+E(agLinea(a))+'</small></span></button>'}
+function renderLearn(){
+  var el=$('cbLearn'),c=core();if(!el)return;
+  if(!c||!c.aprendiendo||!c.aprendiendo.activo){el.hidden=true;el.innerHTML='';return}
+  el.hidden=false;el.innerHTML='<span class="cb-learn-s">✦</span><div><b>LUZ ESTÁ APRENDIENDO</b><p>Estoy observando cómo funciona tu restaurante para generar recomendaciones más útiles. Mientras tanto uso reglas, más vendidos, stock, tiempos y tu configuración.</p></div>';
+}
+function coreActs(){var c=core();if(!c)return [];return (c.actividad||[]).map(function(x){var cls=x.tipo==='guardian_bloqueo'||x.tipo==='accion_fallida'||x.tipo==='agente_error'?'bad':x.tipo==='propuesta'?'vi':x.tipo==='accion'||x.tipo==='aprobada'?'ok':(x.prioridad==='CRITICAL'||x.prioridad==='HIGH')?'wa':x.agent_id==='guardian'?'mu':'cy';return {t:x.created_at,titulo:x.titulo,texto:x.detalle||'',cls:cls,agente:x.agent_id}})}
+function allActs(){var a=((S.res&&S.res.actividad)||[]).concat(coreActs());a.sort(function(x,y){return x.t<y.t?1:-1});return a}
+function pingNew(){
+  var c=core();if(!c)return;var ts=(c.actividad||[]).map(function(x){return x.created_at}).sort().pop()||'';
+  if(S.lastAct&&ts>S.lastAct){var reg={};(c.actividad||[]).forEach(function(x){if(x.created_at>S.lastAct){var a=agById(x.agent_id);if(a)reg[a.region==='puente'?'comercio':a.region]=1}});Object.keys(reg).slice(0,2).forEach(function(k){Brain.ping(k)})}
+  S.lastAct=ts;
+}
+
+/* ── Drawer del agente ── */
+async function openAgente(id){
+  var r=rid(),a0=agById(id);if(!r)return;
+  if(!a0){setView('agentes');return}
+  var m=modal({title:a0.nombre+' ✦',sub:a0.trabajo,drawer:true,right:stPill(a0),onClose:function(){S.dr=null}});
+  S.dr={id:id,m:m};
+  m.body.innerHTML='<div class="cb-skel" style="height:90px"></div><div class="cb-skel" style="height:160px;margin-top:14px"></div>';m.foot.remove();
+  var d;try{d=await api('/api/luz-core/agente?restaurante_id='+encodeURIComponent(r)+'&agent_id='+encodeURIComponent(id))}catch(e){m.body.innerHTML='<div class="cb-empty"><div class="ic">'+I('alert','l')+'</div><b>No se pudo cargar</b>'+E(e.message)+'</div>';return}
+  var a=d.agente,hoy=a.hoy||{},h='';
+  h+='<div class="cb-dr-lv"><span class="cb-badge '+(NIVEL_C[a.nivel]||'')+'">'+E(a.nivel)+'</span><p>'+E(a.nivel_razon)+'</p></div>';
+  if(a.error)h+='<div class="cb-why bad">'+I('alert','s')+'<span><b>'+(a.estado==='DEGRADED'?'En modo degradado':'Último error')+':</b> '+E(a.error)+'. Tu operación no se afecta.</span></div>';
+  var k=a.id==='guardian'?[[hoy.bloqueos||0,'intervenciones hoy'],[core()?core().pendientes.total:0,'acciones esperando'],[13,'agentes vigilados']]:[[hoy.eventos,'eventos observados hoy'],[hoy.runs,'análisis hoy'],[hoy.omitidas,'sin acción (no hacía falta)'],[hoy.hallazgos,'hallazgos'],[hoy.propuestas,'propuestas'],[hoy.acciones,'acciones']];
+  h+='<div class="cb-sec">Hoy</div><div class="cb-kpis k'+k.length+'">'+k.map(function(x){return '<div class="cb-kpi"><b>'+N(x[0])+'</b><span>'+E(x[1])+'</span></div>'}).join('')+'</div>';
+  if(a.resumen)h+='<p class="cb-dr-sum">'+I('info','xs')+E(a.resumen)+(a.confianza?' · '+E(CONF_L[a.confianza]||a.confianza):'')+'</p>';
+  var hs=(a.hallazgos||[]);
+  h+='<div class="cb-sec">Lo que ve ahora</div>'+(hs.length?'<ul class="cb-fl">'+hs.map(function(f){var p=PRIO_L[f.prioridad]||['',''];return '<li><div><b>'+E(f.titulo)+'</b>'+(f.detalle?'<small>'+E(f.detalle)+'</small>':'')+'</div><span class="cb-fl-m">'+(p[0]&&f.prioridad!=='BACKGROUND'?'<span class="cb-badge '+p[1]+'">'+p[0]+'</span>':'')+'<em>'+E(CONF_L[f.confianza]||'')+'</em></span></li>'}).join('')+'</ul>':'<div class="cb-empty sm">'+(a.confianza==='DATOS_INSUFICIENTES'?'Todavía hay pocos datos para concluir algo. Luz no inventa.':'Nada que reportar ahora mismo.')+'</div>');
+  var pend=(d.propuestas||[]).filter(function(p){return p.estado==='pendiente'});
+  if(pend.length)h+='<div class="cb-sec">Esperando tu aprobación</div><div class="cb-plist">'+pend.map(function(p){return propCard(p,true)}).join('')+'</div>';
+  var hist=(d.propuestas||[]).filter(function(p){return p.estado!=='pendiente'}).slice(0,4);
+  if(hist.length)h+='<div class="cb-sec">Decisiones recientes</div><ul class="cb-fl">'+hist.map(function(p){return '<li><div><b>'+E(p.titulo)+'</b><small>'+E(EST_P[p.estado]||p.estado)+(p.resultado&&p.resultado.texto?' · '+E(p.resultado.texto):'')+'</small></div><span class="cb-fl-m"><em>'+E(ago(p.updated_at||p.created_at))+'</em></span></li>'}).join('')+'</ul>';
+  h+='<div class="cb-sec">Actividad reciente</div>'+((d.actividad||[]).length?'<ul class="cb-tl">'+d.actividad.map(function(x){return tlItem({t:x.created_at,titulo:x.titulo,texto:x.detalle||'',cls:x.tipo==='guardian_bloqueo'?'bad':x.tipo==='accion'?'ok':x.tipo==='propuesta'?'vi':'cy'})}).join('')+'</ul>':'<div class="cb-empty sm">Sin actividad registrada todavía.</div>');
+  h+='<details class="cb-src"><summary>'+I('list','xs')+'Qué puede hacer y qué observa</summary><ul>'+(a.capacidades||[]).map(function(x){return '<li>'+E(x)+'</li>'}).join('')+'<li><em>Riesgo: '+E((a.contrato||{}).risk_level||'')+' · Contexto: '+E(((a.contrato||{}).required_context||[]).join(', ')||'—')+'</em></li></ul></details>';
+  m.body.innerHTML=h;
+  m.body.addEventListener('click',onPropClick);
+}
+function fechaLbl(f){try{return new Date(f+'T12:00:00').toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long'})}catch(e){return f}}
+var EST_P={pendiente:'Pendiente',aprobada:'Aprobada',rechazada:'Rechazada',ignorada:'Ignorada',ejecutada:'Hecha',bloqueada:'Bloqueada por Guardian',expirada:'Expirada',fallida:'Falló'};
+
+/* ── Propuestas (human-in-the-loop) ── */
+function propCard(p,compact){
+  var pr=PRIO_L[p.prioridad]||['',''],ag=agById(p.agent_id),pay=p.payload||{},camp=p.action_type==='SEND_AUTHORIZED_MESSAGE',blk=p.guardian_decision==='BLOCK';
+  var h='<article class="cb-prop'+(camp?' camp':'')+'" data-pid="'+p.id+'"><div class="cb-prop-h"><span class="cb-ag2-ic '+(ag?EST_C[ag.estado]:'gray')+'">'+I(AGI[p.agent_id]||'spark','s')+'</span><div><small>'+E(ag?ag.nombre:p.agent_id)+(p.agent_id==='marketing'?' ✦':'')+'</small><b>'+E(p.titulo)+'</b></div>'+(pr[0]?'<span class="cb-badge '+pr[1]+'">'+pr[0]+'</span>':'')+'</div>';
+  if(camp){
+    var au=pay.audiencia||{},v=pay.ventana||{};
+    var F=[['Objetivo',pay.objetivo],['Audiencia',(au.segmento||'')+' · '+(au.criterio||'')],['Alcance',N(au.total)+' clientes · '+N(au.enviables)+' con consentimiento'+(au.sin_consentimiento?' · '+N(au.sin_consentimiento)+' sin consentimiento (no se contactan)':'')+(au.opt_out?' · '+N(au.opt_out)+' pidieron no recibir':'')+(au.frecuencia?' · '+N(au.frecuencia)+' por límite de frecuencia':'')],['Canal',String(pay.canal||'').toUpperCase()],['Oferta',(pay.oferta||{}).texto],['CTA',pay.cta],['Ventana recomendada',v.fecha?(fechaLbl(v.fecha)+' · '+(v.desde||'')+'–'+(v.hasta||'')):''],['Razón',pay.razon],['Métrica',pay.metrica]];
+    h+='<dl class="cb-cmp">'+F.filter(function(f){return f[1]}).map(function(f){return '<dt>'+f[0]+'</dt><dd>'+E(f[1])+'</dd>'}).join('')+'</dl>';
+    h+='<label class="cb-label">Mensaje (WhatsApp)</label><textarea class="cb-ta cb-pmsg" maxlength="900" aria-label="Mensaje de la campaña"'+(p.estado!=='pendiente'?' disabled':'')+'>'+E(pay.mensaje||'')+'</textarea>';
+  }else h+='<p class="cb-prop-t">'+E(p.resumen||'')+'</p>';
+  var notas=(p.guardian_razones||[]).filter(function(x){return !/requiere tu aprobación|Aprobado por el restaurante/.test(x)});
+  if(notas.length)h+='<div class="cb-why '+(blk?'bad':'')+'">'+I('shield','s')+'<span><b>Guardian'+(blk?' bloquea':'')+':</b> '+E(notas.join(' · '))+'</span></div>';
+  h+='<div class="cb-prop-m"><span>'+E(CONF_L[p.confianza]||'')+'</span><span>·</span><span>'+E(ago(p.created_at))+'</span>'+(p.editada?'<span>·</span><span>Editada por ti</span>':'')+'</div>';
+  if(p.estado==='pendiente'){
+    h+='<div class="cb-prop-a">'+(camp?'<button type="button" class="cb-btn sm ghost" data-p="redactar">'+I('spark','xs')+'Redactar con Luz</button><button type="button" class="cb-btn sm ghost" data-p="guardar">'+I('edit','xs')+'Guardar cambios</button>':'')+
+      '<span class="sp"></span><button type="button" class="cb-btn sm ghost" data-p="ignorar">Ignorar</button><button type="button" class="cb-btn sm bad" data-p="rechazar">Rechazar</button><button type="button" class="cb-btn sm ok" data-p="aprobar"'+(blk?' disabled title="Guardian bloquea esta propuesta"':'')+'>'+I('check','xs')+(camp?'Aprobar campaña':'Aprobar')+'</button></div>';
+  }else h+='<div class="cb-prop-m"><b>'+E(EST_P[p.estado]||p.estado)+'</b>'+(p.resultado&&p.resultado.texto?' · '+E(p.resultado.texto):'')+'</div>';
+  return h+'</article>';
+}
+var propCache={};
+async function decidir(pid,dec,extra,btn){
+  var old=btn?btn.innerHTML:'';if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span>'}
+  try{
+    var r=await fetch('/api/luz-core/propuestas/decidir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({restaurante_id:rid(),id:pid,decision:dec},extra||{}))});
+    var d=await r.json().catch(function(){return {}});
+    if(!r.ok&&!d.bloqueada)throw new Error(d.error||'No se pudo registrar');
+    if(d.bloqueada)toast('Guardian bloqueó: '+String(d.error||'').slice(0,120),'bad');
+    else if(d.repetida)toast(d.texto||'Ya estaba decidida','ok');
+    else if(dec==='editar')toast(d.guardian&&d.guardian.decision==='BLOCK'?'Guardado · Guardian lo bloquea: revisa el texto':'Cambios guardados',d.guardian&&d.guardian.decision==='BLOCK'?'bad':'ok');
+    else if(dec==='aprobar')toast(d.ok?(d.resultado&&d.resultado.texto||'Aprobado'):'No se pudo ejecutar: '+(d.resultado&&d.resultado.texto||''),d.ok?'ok':'bad');
+    else toast(dec==='rechazar'?'Rechazada · Luz lo tendrá en cuenta':'Ignorada','ok');
+    if(dec==='aprobar'&&d.ok)Brain.ping('comercio');
+    await loadCore(true);
+    if(S.view==='propuestas')renderPropuestas();
+    if(S.dr){var id=S.dr.id;S.dr.m.close(true);openAgente(id)}
+    return d;
+  }catch(e){toast(e.message,'bad');if(btn){btn.disabled=false;btn.innerHTML=old}}
+}
+function onPropClick(e){
+  var b=e.target.closest('[data-p]');if(!b)return;var card=b.closest('.cb-prop'),pid=card&&card.getAttribute('data-pid'),k=b.getAttribute('data-p');if(!pid)return;
+  var ta=card.querySelector('.cb-pmsg');
+  if(k==='guardar'){decidir(pid,'editar',{cambios:{mensaje:ta?ta.value:''}},b);return}
+  if(k==='redactar'){(async function(){var old=b.innerHTML;b.disabled=true;b.innerHTML='<span class="spin"></span>Redactando…';try{var r=await fetch('/api/luz-core/marketing/redactar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rid(),id:pid})});var d=await r.json();if(d.ok&&ta){ta.value=d.mensaje;toast('Nuevo texto listo · revisa y guarda cambios','ok')}else toast(d.error||'No se pudo redactar','bad')}catch(x){toast('No se pudo redactar','bad')}b.disabled=false;b.innerHTML=old})();return}
+  if(k==='aprobar'){var camp=card.classList.contains('camp');if(camp){confirmBox('¿Aprobar esta campaña?','Guardian revisará consentimiento, frecuencia, horario y oferta antes de cualquier envío. Solo se contacta a clientes con consentimiento.','Aprobar',function(){decidir(pid,'aprobar',null,b)});return}decidir(pid,'aprobar',null,b);return}
+  decidir(pid,k,null,b);
+}
+async function renderPropuestas(){
+  var v=$('cbVpropuestas');if(!v)return;var r=rid();if(!r)return;
+  var hist=S.pHist;
+  if(!v.firstChild||!$('cbPList'))v.innerHTML='<div class="cb-kbar"><div class="cb-seg" id="cbPSeg"></div><span class="sp" style="flex:1"></span><button type="button" class="cb-btn sm" data-a="analizar">'+I('spark','xs')+'Analizar ahora</button></div><div id="cbPHead"></div><div class="cb-plist" id="cbPList"></div>';
+  $('cbPSeg').innerHTML='<button type="button" class="'+(hist?'':'on')+'" data-a="p-seg" data-v="0">Esperando aprobación<em>'+N(core()?core().pendientes.total:0)+'</em></button><button type="button" class="'+(hist?'on':'')+'" data-a="p-seg" data-v="1">Historial</button>';
+  var c=core(),hd=$('cbPHead');
+  if(hd)hd.innerHTML=c&&!c.persistencia.activa?'<div class="cb-honest">'+I('info','s')+'<span>'+E(c.persistencia.texto)+'</span></div>':'';
+  var l=$('cbPList');l.innerHTML='<div class="cb-skel" style="height:120px"></div>';
+  if(!c){l.innerHTML='<div class="cb-empty"><div class="ic">'+I('alert','l')+'</div><b>Luz Core no está disponible</b>El servidor todavía no tiene el sistema de agentes.</div>';return}
+  try{
+    var d=await api('/api/luz-core/propuestas?restaurante_id='+encodeURIComponent(r)+'&estado='+(hist?'historial':'pendiente')+'&limit=60');
+    var ps=d.propuestas||[];var ord={CRITICAL:0,HIGH:1,MEDIUM:2,LOW:3,BACKGROUND:4};if(!hist)ps.sort(function(a,b){return (ord[a.prioridad]-ord[b.prioridad])||(a.created_at<b.created_at?1:-1)});
+    l.innerHTML=ps.length?ps.map(function(p){return propCard(p)}).join(''):'<div class="cb-empty"><div class="ic">'+I(hist?'clock':'check','l')+'</div><b>'+(hist?'Sin decisiones todavía':'Nada espera tu aprobación')+'</b>'+(hist?'Cuando apruebes o rechaces algo aparecerá aquí.':'Cuando un agente proponga algo lo verás aquí. Nada se publica ni se envía sin ti.')+'</div>';
+  }catch(e){l.innerHTML='<div class="cb-empty"><div class="ic">'+I('alert','l')+'</div><b>No se pudo cargar</b>'+E(e.message)+'</div>'}
+}
+
+/* ── Agentes (13) ── */
+function renderAgentes13(){
+  var v=$('cbVagentes'),c=core();if(!v||!c)return false;
+  var h='';
+  REGS.forEach(function(r){var g=c.agentes.filter(function(a){return a.region===r[0]||(r[0]==='operacion'&&a.region==='puente')});
+    h+='<div class="cb-day">'+E(r[1])+(r[0]==='operacion'?' · Pagos conecta Comercio y Operación':'')+'</div><div class="cb-agrid g3">'+g.map(function(a){var hoy=a.hoy||{};
+      return '<button type="button" class="cb-panel cb-agc" data-a="agente" data-v="'+a.id+'"><span class="cb-agc-h"><span class="cb-ag2-ic '+(a.id==='guardian'?'green':EST_C[a.estado]||'gray')+'">'+I(AGI[a.id]||'spark','s')+'</span><span class="cb-agc-t"><b>'+E(a.nombre)+'</b><small>'+E(a.trabajo)+'</small></span></span>'+
+        '<span class="cb-agc-s">'+stPill(a,true)+'<span class="cb-badge '+(NIVEL_C[a.nivel]||'')+'">'+E(a.nivel)+'</span></span>'+
+        '<span class="cb-agc-l">'+E(agLinea(a))+'</span>'+
+        '<span class="cb-agc-k">'+(a.id==='guardian'?'<span><em>'+N(hoy.bloqueos||0)+'</em>intervenciones</span>':'<span><em>'+N(hoy.eventos)+'</em>eventos</span><span><em>'+N(hoy.hallazgos)+'</em>hallazgos</span><span><em>'+N(hoy.propuestas)+'</em>propuestas</span>')+'</span>'+
+        '<span class="cb-when">'+(a.ultima_actividad_at?'Última actividad: '+ago(a.ultima_actividad_at):a.ultima_ejecucion_at?'Revisó '+ago(a.ultima_ejecucion_at):'Aún no ha corrido')+'</span></button>'}).join('')+'</div>'});
+  h+='<div class="cb-honest">'+I('info','s')+'<span>Cada agente muestra su estado real y qué tan implementado está: <b>REAL</b> funciona con tus datos, <b>PARCIAL</b> funciona pero le falta una parte y <b>PREPARADO</b> está listo pero falta información (por ejemplo, inventario). Si algo no ha pasado verás cero: no inventamos actividad. Toca un agente para ver el detalle.</span></div>';
+  v.innerHTML=h;return true;
+}
+
+/* ── Memoria ── */
+async function renderMemoria(){
+  var v=$('cbVmemoria'),r=rid();if(!v||!r)return;
+  v.innerHTML='<div class="cb-skel" style="height:100px;margin-top:24px"></div>';
+  var d;try{d=await api('/api/luz-core/memoria?restaurante_id='+encodeURIComponent(r))}catch(e){v.innerHTML='<div class="cb-empty"><div class="ic">'+I('alert','l')+'</div><b>Memoria no disponible</b>'+(e.status===404?'El servidor todavía no tiene Luz Core.':E(e.message))+'</div>';return}
+  var mem=d.memoria||[],h='<div class="cb-memg"><section><div class="cb-sec">Lo que Luz recuerda de tus decisiones</div><p class="cb-help">Memoria: patrones aprendidos de lo que apruebas o rechazas. Solo aparece cuando hay evidencia real. Puedes corregirla o invalidarla.</p>';
+  h+=mem.length?'<div class="cb-list">'+mem.map(function(m){var inv=m.estado==='invalidada';return '<div class="cb-row'+(inv?' off':'')+'" data-mid="'+m.id+'"><span class="cb-row-ic">'+I('db','s')+'</span><div class="cb-row-b"><p>'+E(m.contenido)+'</p><div class="cb-row-m"><span class="cb-badge '+(inv?'':'vi')+'">'+(inv?'Invalidada':m.estado==='corregida'?'Corregida por ti':E(CONF_L[m.confianza]||''))+'</span><span>Fuente: '+E(m.evidencia&&m.evidencia.decisiones?N(m.evidencia.decisiones)+' decisiones tuyas':m.fuente)+'</span><span>·</span><span>'+E(ago(m.updated_at))+'</span></div></div><div class="cb-row-a">'+(inv?'<button type="button" class="cb-btn sm ghost" data-a="m-do" data-v="restaurar">'+I('undo','xs')+'Restaurar</button>':'<button type="button" class="cb-btn sm ghost" data-a="m-fix">'+I('edit','xs')+'Corregir</button><button type="button" class="cb-btn sm ghost" data-a="m-do" data-v="invalidar">'+I('x','xs')+'Invalidar</button>')+'</div></div>'}).join('')+'</div>':'<div class="cb-empty"><div class="ic">'+I('db','l')+'</div><b>Luz todavía no tiene recuerdos de tus decisiones</b>Cuando apruebes o rechaces varias propuestas del mismo tipo, Luz lo recordará aquí, con la evidencia.</div>';
+  h+='</section><section><div class="cb-sec">Conocimiento aprobado de tu configuración</div><p class="cb-help">Conocimiento: hechos aprobados de tu restaurante. Se editan en Configuración y Promociones; aquí solo se muestran.</p><dl class="cb-cmp">'+(d.conocimiento_config||[]).map(function(x){return '<dt>'+E(x.titulo)+'</dt><dd>'+E(x.valor)+'<small>'+E(x.fuente)+'</small></dd>'}).join('')+'</dl>'+
+    '<button type="button" class="cb-btn sm" data-a="tab" data-v="conocimiento" style="margin-top:14px">Ver lo que Luz sabe'+I('arrow','xs')+'</button></section></div>';
+  if(d.persistencia&&!d.persistencia.activa)h='<div class="cb-honest">'+I('info','s')+'<span>'+E(d.persistencia.texto)+'</span></div>'+h;
+  v.innerHTML=h;
+}
+async function memDo(el,acc){
+  var row=el.closest('[data-mid]'),id=row&&row.getAttribute('data-mid');if(!id)return;var body={restaurante_id:rid(),id:id,accion:acc};
+  if(acc==='corregir'){var ta=row.querySelector('.cb-ta');body.contenido=ta?ta.value:''}
+  try{await api('/api/luz-core/memoria/actualizar',body);toast(acc==='invalidar'?'Invalidado · Luz deja de usarlo':acc==='restaurar'?'Restaurado':'Corregido','ok');Brain.ping('conocimiento');renderMemoria()}catch(e){toast(e.message,'bad')}
+}
+
+/* ── Carga ── */
+async function loadCore(silent){
+  var r=rid();if(!r)return;
+  try{var d=await api('/api/luz-core/estado?restaurante_id='+encodeURIComponent(r));S.core=d;S.coreErr=null}
+  catch(e){S.coreErr=e;if(!silent||!S.core)S.core=null}
+  loadCoreBadges();
+  if(core()){renderRegions();renderCorePanel();renderLearn();pingNew();if(S.res)renderMini(S.res);if(S.view==='agentes')renderAgentes13();if(S.view==='actividad')renderActividad()}
+}
+function loadCoreBadges(){
+  var n=core()?core().pendientes.total:0;
+  var tn=$('cbTabP');if(tn){tn.hidden=!n;tn.textContent=n>99?'99+':n}
+  var sp=$('cbSupP');if(sp){sp.hidden=!n;sp.innerHTML=N(n)+(n===1?' propuesta de los agentes espera tu aprobación':' propuestas de los agentes esperan tu aprobación')+I('arrow','xs')}
+}
+async function analizarAhora(btn){
+  var old=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spin"></span>Analizando…';
+  try{var d=await api('/api/luz-core/analizar',{restaurante_id:rid()});var rs=d.resumen||{};toast('Análisis listo · '+N(rs.propuestas||0)+' propuestas nuevas · '+N(rs.no_action||0)+' agentes sin nada que hacer','ok');Brain.ping();await loadCore(true);if(S.view==='propuestas')renderPropuestas()}
+  catch(e){toast(e.message,'bad')}
+  btn.disabled=false;btn.innerHTML=old;
+}
+
 /* ═════════════ EVENTOS ═════════════ */
 function onClick(e){
+  if(e.target.closest('[data-p]'))return onPropClick(e);
   var t=e.target.closest('[data-a]');if(!t)return;var a=t.getAttribute('data-a'),v=t.getAttribute('data-v');
+  if(a==='analizar')return analizarAhora(t);
+  if(a==='p-seg'){S.pHist=v==='1';renderPropuestas();return}
+  if(a==='m-do')return memDo(t,v);
+  if(a==='m-fix'){var rw=t.closest('[data-mid]'),pp=rw&&rw.querySelector('.cb-row-b p');if(pp&&!rw.querySelector('.cb-ta')){pp.outerHTML='<div class="cb-edit"><textarea class="cb-ta" maxlength="600" aria-label="Corregir recuerdo">'+E(pp.textContent)+'</textarea><div class="cb-edit-f"><button type="button" class="cb-btn sm pri" data-a="m-do" data-v="corregir">Guardar corrección</button></div></div>'}return}
   if(a==='tab'||t.classList.contains('cb-tab'))return setView(t.getAttribute('data-v'));
   if(a==='alimentar')return openAlimentar();
   if(a==='revisar')return openReview(v||null);
   if(a==='organizar')return openOrganizar();
   if(a==='reload')return load();
+  if(a==='agente'&&core())return openAgente(v);
   if(a==='agente'){setView('agentes');setTimeout(function(){var el=$('cbAgx_'+v);if(el){el.scrollIntoView({behavior:REDUCE?'auto':'smooth',block:'center'});el.animate&&el.animate([{boxShadow:'0 0 0 0 rgba(155,77,255,.0)'},{boxShadow:'0 0 0 3px rgba(155,77,255,.6)'},{boxShadow:'0 0 0 0 rgba(155,77,255,0)'}],{duration:900})}},60);return}
   if(a==='goto'){var le=$('tab-'+v);if(le&&typeof le.click==='function'&&v!=='luz-ia')le.click();else if(typeof showTab==='function')showTab(v);return}
   if(a==='preguntas'){S.k.estado='pregunta';setView('conocimiento');return}
@@ -14412,7 +14825,7 @@ var qDeb=debounce(function(v){S.k.q=v.trim();loadItems(true)},280);
 function onInput(e){if(e.target.id==='cbKQ')qDeb(e.target.value)}
 
 /* ═════════════ CICLO DE VIDA ═════════════ */
-function startPoll(){stopPoll();S.poll=setInterval(function(){if(D.hidden||!D.body.classList.contains('hl-cerebro-active')||S.rv||S.org)return;load(true)},60000)}
+function startPoll(){stopPoll();S.poll=setInterval(function(){if(D.hidden||!D.body.classList.contains('hl-cerebro-active')||S.rv||S.org)return;load(true)},45000)}
 function stopPoll(){if(S.poll){clearInterval(S.poll);S.poll=null}}
 CB.show=function(){if(!mount())return;D.body.classList.add('hl-cerebro-active');load();startPoll();Brain.sync();setTimeout(function(){Brain.relayout()},60);headPad()};
 CB.state=function(){return {view:S.view,res:S.res,k:S.k}};
