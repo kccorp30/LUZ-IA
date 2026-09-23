@@ -9541,31 +9541,730 @@ body.d12-domis-active #page-domis.active{display:block!important;position:fixed!
 })();
 </script>
 
-<style id="hlSettlementAdminCSS">
-.hl-settlement-alert{position:fixed;z-index:1900;right:18px;bottom:22px;width:min(360px,calc(100vw - 28px));display:none;grid-template-columns:54px 1fr auto;gap:11px;align-items:center;padding:12px;border-radius:20px;border:1px solid rgba(119,85,255,.34);background:radial-gradient(circle at 0 0,rgba(115,68,255,.25),transparent 42%),linear-gradient(145deg,rgba(8,20,52,.97),rgba(4,11,31,.96));box-shadow:0 22px 70px rgba(0,0,0,.48),0 0 38px rgba(96,68,255,.13);backdrop-filter:blur(22px);color:#fff}.hl-settlement-alert.on{display:grid;animation:hlSettleIn .35s cubic-bezier(.2,.9,.2,1)}@keyframes hlSettleIn{from{opacity:0;transform:translateY(18px) scale(.97)}}.hl-settlement-orb{width:52px;height:52px;border-radius:50%;position:relative;background:radial-gradient(circle at 35% 28%,#fff 0 4%,#c09bff 10%,#7a51ff 33%,#215bdc 62%,transparent 68%);box-shadow:0 0 22px rgba(133,83,255,.62),0 0 52px rgba(42,175,255,.23);animation:hlSettleOrb 1.6s ease-in-out infinite}.hl-settlement-orb:after{content:'';position:absolute;inset:-7px;border-radius:50%;border:1px solid rgba(82,223,255,.28);animation:hlSettleSpin 5s linear infinite}@keyframes hlSettleOrb{50%{transform:scale(1.06);filter:brightness(1.18)}}@keyframes hlSettleSpin{to{transform:rotate(360deg)}}.hl-settlement-alert b{display:block;font-size:12px}.hl-settlement-alert span{display:block;margin-top:4px;font-size:8px;color:#8ea5cc;line-height:1.45}.hl-settlement-alert button{border:1px solid rgba(87,206,255,.24);background:rgba(62,128,255,.10);color:#dff8ff;border-radius:11px;padding:9px 10px;font-size:8px;font-weight:900}.hl-settlement-overlay{position:fixed;z-index:2100;inset:0;display:none;align-items:flex-end;justify-content:center;background:rgba(1,5,17,.72);backdrop-filter:blur(12px)}.hl-settlement-overlay.on{display:flex}.hl-settlement-sheet{width:min(760px,100%);max-height:92vh;overflow:auto;border-radius:28px 28px 0 0;padding:20px;background:radial-gradient(circle at 90% 0,rgba(101,62,255,.18),transparent 32%),linear-gradient(180deg,#091936,#030b20);border:1px solid rgba(95,119,223,.26);box-shadow:0 -30px 100px rgba(0,0,0,.65);color:#fff}.hl-settlement-sheet header{display:flex;justify-content:space-between;gap:12px}.hl-settlement-sheet header span{font-size:7px;color:#57ddff;letter-spacing:.16em;font-weight:900}.hl-settlement-sheet h2{font-size:24px;letter-spacing:-.04em;margin-top:4px}.hl-settlement-close{width:40px;height:40px;border-radius:12px;border:1px solid rgba(99,126,218,.2);background:#0a1b3d;color:#fff;font-size:20px}.hl-cuadre-list{display:flex;flex-direction:column;gap:9px;margin-top:16px}.hl-cuadre-card{padding:13px;border-radius:17px;border:1px solid rgba(91,121,213,.16);background:linear-gradient(145deg,rgba(13,28,65,.9),rgba(7,16,41,.86))}.hl-cuadre-card.top{border-color:rgba(255,199,85,.28)}.hl-cuadre-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.hl-cuadre-head b{font-size:13px}.hl-cuadre-head i{font-style:normal;padding:5px 8px;border-radius:999px;font-size:7px;font-weight:900;background:rgba(129,83,255,.12);color:#cbbcff;border:1px solid rgba(129,83,255,.2)}.hl-cuadre-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px}.hl-cuadre-metric{padding:9px;border-radius:11px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.045)}.hl-cuadre-metric span{font-size:6.5px;text-transform:uppercase;letter-spacing:.08em;color:#6379a3}.hl-cuadre-metric b{font:800 12px 'JetBrains Mono',monospace;margin-top:4px}.hl-cuadre-action{width:100%;min-height:44px;margin-top:10px;border-radius:12px;border:1px solid rgba(69,199,255,.25);background:linear-gradient(105deg,rgba(49,105,255,.22),rgba(116,67,255,.20));color:#fff;font-size:9px;font-weight:900}.hl-review-amount{width:100%;margin-top:11px;padding:13px;border-radius:12px;border:1px solid rgba(80,218,255,.25);background:#071630;color:#fff;font:800 18px 'JetBrains Mono',monospace}.hl-review-note{width:100%;min-height:68px;margin-top:8px;padding:11px;border-radius:12px;border:1px solid rgba(94,122,215,.15);background:#07142e;color:#fff;resize:none}.hl-receipt{margin-top:12px;padding:12px;border-radius:13px;text-align:center;border:1px solid rgba(54,225,174,.22);background:rgba(54,225,174,.07)}.hl-receipt b{font:800 15px 'JetBrains Mono',monospace;color:#68edc7}@keyframes hlReceiptPop{from{opacity:0;transform:scale(.72) translateY(12px)}to{opacity:1;transform:none}}.hl-settlement-success{text-align:center;padding:24px 8px 12px}.hl-settlement-success .hl-settlement-orb{margin:0 auto 12px;width:82px;height:82px}.hl-settlement-success .check{width:42px;height:42px;margin:-25px auto 12px;position:relative;z-index:2;border-radius:50%;display:grid;place-items:center;background:#35e2b2;color:#041914;font-size:22px;font-weight:950;box-shadow:0 0 28px rgba(53,226,178,.42);animation:hlReceiptPop .5s .2s both}.hl-settlement-success h3{font-size:25px;letter-spacing:-.04em}.hl-settlement-success p{margin-top:6px;font-size:9px;color:#8096bb}.hl-settlement-success .hl-receipt{animation:hlReceiptPop .55s .35s both;padding:16px}.hl-settlement-success .hl-receipt span{display:block;font-size:7px;color:#69aa99;letter-spacing:.12em}.hl-settlement-success .hl-receipt b{display:block;margin-top:5px;font-size:18px}.hl-settlement-alert.confirmed{display:grid;border-color:rgba(53,226,178,.34);box-shadow:0 22px 70px rgba(0,0,0,.48),0 0 42px rgba(53,226,178,.14)}
-@media(max-width:600px){.hl-settlement-alert{right:10px;left:10px;bottom:12px;width:auto}.hl-cuadre-grid{grid-template-columns:1fr 1fr}}
+<style id="hlShiftSyncRestCSS">
+/* HOLA LUZ · SHIFT SYNC EXPERIENCE V2 · Restaurante — todo dentro de #hlsrTray, #hlsr, #hlsrPrint y .hlr */
+#hlsrTray,#hlsr{--ff:'Plus Jakarta Sans',system-ui,sans-serif;--b0:#020817;--b1:#06122B;--b2:#0A1736;--b3:#10234A;--t1:#2F6BFF;--t2:#4B8CFF;--cy:#27D7FF;--cy2:#61E8FF;--ind:#5B4DFF;--lz:#7A4DFF;--lz2:#B94CFF;--ok:#31E6A1;--warn:#FFBE4B;--bad:#FF5C7A;--tx:#F5F8FF;--tx2:#A9B9D6;--tx3:#6F86AD;font-family:var(--ff);color:var(--tx)}
+#hlsrTray button,#hlsr button{font-family:var(--ff);cursor:pointer;-webkit-tap-highlight-color:transparent}
+#hlsrTray button:active,#hlsr button:active{transform:scale(.97);transition:transform .11s}
+#hlsr .hlsr-btn:focus-visible,#hlsrTray button:focus-visible,#hlsr button:focus-visible{outline:2px solid var(--cy2);outline-offset:2px}
+
+/* ── Tarjeta entrante (IncomingSettlementCard) ── */
+#hlsrTray{position:fixed;z-index:1900;right:18px;bottom:22px;width:min(372px,calc(100vw - 28px));display:grid;gap:10px;pointer-events:none}
+#hlsrTray>*{pointer-events:auto}
+#hlsrTray .hlsr-in{position:relative;overflow:hidden;border-radius:24px;padding:14px 14px 13px;border:1px solid rgba(39,215,255,.34);background:radial-gradient(260px 120px at 12% -10%,rgba(39,215,255,.16),transparent 70%),radial-gradient(240px 140px at 110% 120%,rgba(122,77,255,.2),transparent 70%),linear-gradient(180deg,rgba(16,35,74,.97),rgba(6,18,43,.97));box-shadow:0 22px 60px rgba(2,8,23,.6),0 0 0 1px rgba(245,248,255,.03) inset;backdrop-filter:blur(18px);animation:hlsrCardIn .42s cubic-bezier(.2,.8,.2,1) both}
+#hlsrTray .hlsr-in::before{content:"";position:absolute;inset:-1px;border-radius:24px;pointer-events:none;box-shadow:0 0 0 0 rgba(39,215,255,.55);animation:hlsrPulse 2.6s ease-out infinite}
+@keyframes hlsrCardIn{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes hlsrPulse{0%{box-shadow:0 0 0 0 rgba(39,215,255,.5)}70%{box-shadow:0 0 0 14px rgba(39,215,255,0)}100%{box-shadow:0 0 0 0 rgba(39,215,255,0)}}
+#hlsrTray .hlsr-in header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#hlsrTray .hlsr-kick{display:inline-flex;align-items:center;gap:7px;font:800 10px/1 var(--ff);letter-spacing:.18em;color:var(--cy2)}
+#hlsrTray .hlsr-kick i,#hlsr .hlsr-live i{width:7px;height:7px;border-radius:50%;background:var(--cy);box-shadow:0 0 10px var(--cy);animation:hlsrBlink 1.6s ease-in-out infinite}
+@keyframes hlsrBlink{50%{opacity:.35}}
+#hlsrTray .hlsr-min{width:28px;height:28px;border-radius:9px;border:1px solid rgba(169,185,214,.14);background:rgba(245,248,255,.04);color:var(--tx2);font:700 15px/1 var(--ff)}
+#hlsrTray .hlsr-in-row{display:flex;align-items:center;gap:12px;margin:12px 0 10px}
+#hlsrTray .hlsr-in-row>div:nth-child(2){flex:1;min-width:0}
+#hlsrTray .hlsr-in-row b{display:block;font:700 15.5px/1.2 var(--ff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hlsrTray .hlsr-in-row>div span{display:block;font:500 11.5px/1.4 var(--ff);color:var(--tx2);margin-top:3px}
+#hlsrTray .hlsr-state{display:flex;align-items:center;gap:8px;margin-bottom:11px;padding:8px 10px;border-radius:12px;background:rgba(2,8,23,.45);border:1px solid rgba(169,185,214,.08);font:600 12px var(--ff);color:var(--tx2)}
+#hlsrTray .hlsr-state i{width:8px;height:8px;border-radius:50%;background:var(--cy);flex:0 0 8px}
+#hlsrTray .hlsr-in.warn .hlsr-state i{background:var(--warn)}
+#hlsrTray .hlsr-in.ready .hlsr-state i{background:var(--ok)}
+#hlsrTray .hlsr-in.warn{border-color:rgba(255,190,75,.45)}
+#hlsrTray .hlsr-in.warn::before{animation-name:hlsrPulseW}
+@keyframes hlsrPulseW{0%{box-shadow:0 0 0 0 rgba(255,190,75,.45)}70%{box-shadow:0 0 0 14px rgba(255,190,75,0)}100%{box-shadow:none}}
+#hlsrTray .hlsr-pill{justify-self:end;display:inline-flex;align-items:center;gap:9px;height:44px;padding:0 16px 0 12px;border-radius:999px;border:1px solid rgba(39,215,255,.4);background:linear-gradient(135deg,rgba(16,35,74,.97),rgba(6,18,43,.97));color:var(--tx);font:700 12.5px var(--ff);box-shadow:0 14px 34px rgba(2,8,23,.55)}
+#hlsrTray .hlsr-more{justify-self:end;background:none;border:0;color:var(--cy2);font:700 12px var(--ff);padding:4px 6px}
+.hlsr-av{width:46px;height:46px;border-radius:50%;flex:0 0 46px;display:grid;place-items:center;font:700 15px var(--ff,system-ui);color:#F5F8FF;background:linear-gradient(145deg,#2F6BFF,#7A4DFF);overflow:hidden;box-shadow:0 0 0 2px #06122B,0 0 0 3px rgba(97,232,255,.35)}
+.hlsr-av img{width:100%;height:100%;object-fit:cover}
+.hlsr-miniorb{display:grid!important;position:relative;width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center}
+.hlsr-miniorb i{display:block;width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#F5F8FF 0 6%,#B94CFF 26%,#7A4DFF 52%,#0A1736 100%);box-shadow:0 0 16px rgba(122,77,255,.6);animation:hlsrBreath 4.5s ease-in-out infinite}
+.hlsr-miniorb::after{content:"";position:absolute;inset:2px;border-radius:50%;border:1px solid rgba(97,232,255,.25);border-top-color:rgba(97,232,255,.9);animation:hlsrOrbit 6s linear infinite}
+@keyframes hlsrBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes hlsrOrbit{to{transform:rotate(360deg)}}
+
+/* Botones */
+#hlsrTray .hlsr-btn,#hlsr .hlsr-btn{height:48px;border-radius:15px;border:0;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;font:800 12.5px var(--ff);letter-spacing:.08em;color:var(--tx);transition:transform .11s,opacity .2s,box-shadow .2s}
+#hlsrTray .hlsr-btn.pri,#hlsr .hlsr-btn.pri{background:linear-gradient(135deg,#2F6BFF,#5B4DFF 55%,#7A4DFF);box-shadow:inset 0 1px 0 rgba(245,248,255,.28),0 10px 24px rgba(47,107,255,.32)}
+#hlsr .hlsr-btn.ok{height:56px;font-size:13.5px;background:linear-gradient(135deg,#27D7FF,#31E6A1);color:var(--b0);box-shadow:inset 0 1px 0 rgba(245,248,255,.4),0 12px 28px rgba(49,230,161,.26)}
+#hlsr .hlsr-btn.warn{background:linear-gradient(135deg,#FFBE4B,#FF9F43);color:var(--b0)}
+#hlsr .hlsr-btn.sec{background:rgba(245,248,255,.04);border:1px solid rgba(169,185,214,.16);color:var(--tx2)}
+#hlsr .hlsr-btn[disabled]{opacity:.45;pointer-events:none}
+
+/* ── Cajón grande (RestaurantSettlementDrawer) ── */
+#hlsr{position:fixed;inset:0;z-index:2100;display:none;justify-content:flex-end;background:rgba(1,5,17,.62);backdrop-filter:blur(10px)}
+#hlsr.on{display:flex;animation:hlsrFade .25s ease both}
+@keyframes hlsrFade{from{opacity:0}to{opacity:1}}
+#hlsr .hlsr-panel{position:relative;width:min(1140px,100vw);height:100%;display:flex;flex-direction:column;overflow:hidden;overflow:clip;background:var(--b0);border-left:1px solid rgba(97,232,255,.14);box-shadow:-30px 0 90px rgba(0,0,0,.55);animation:hlsrSlide .38s cubic-bezier(.2,.8,.2,1) both}
+@keyframes hlsrSlide{from{transform:translateX(28px);opacity:.4}to{transform:none;opacity:1}}
+#hlsr .hlsr-bg{position:absolute;inset:0;pointer-events:none;background:radial-gradient(640px 360px at 50% -10%,rgba(122,77,255,.2),transparent 70%),radial-gradient(420px 300px at 100% 100%,rgba(39,215,255,.07),transparent 70%),linear-gradient(180deg,var(--b1),var(--b0) 55%)}
+#hlsr .hlsr-bg::after{content:"";position:absolute;inset:-80px;opacity:.05;background-image:radial-gradient(circle at 1px 1px,#A9B9D6 1px,transparent 1.5px);background-size:34px 34px;animation:hlsrDrift 36s linear infinite alternate}
+@keyframes hlsrDrift{to{transform:translate3d(-34px,-24px,0)}}
+#hlsr .hlsr-head{position:relative;z-index:2;display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid rgba(169,185,214,.08)}
+#hlsr .hlsr-head-copy{flex:1;min-width:0;display:flex;align-items:center;gap:12px}
+#hlsr .hlsr-head-copy>div{min-width:0}
+#hlsr .hlsr-live{display:inline-flex;align-items:center;gap:7px;font:800 10.5px/1 var(--ff);letter-spacing:.2em;color:var(--cy2)}
+#hlsr [hidden],#hlsrTray [hidden]{display:none!important}
+#hlsr .hlsr-live.off{color:var(--lz2)}
+#hlsr .hlsr-live.done{color:var(--ok)}
+#hlsr .hlsr-live.done i{background:var(--ok);box-shadow:0 0 10px var(--ok);animation:none}
+#hlsr .hlsr-live.off i{background:var(--lz2);box-shadow:0 0 10px var(--lz2)}
+#hlsr .hlsr-head h2{font:700 18px/1.25 var(--ff);margin:5px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em;color:var(--tx)}
+#hlsr .hlsr-online{display:inline-flex;align-items:center;gap:6px;margin-left:8px;font:700 11px var(--ff);color:var(--tx3);vertical-align:middle;letter-spacing:0}
+#hlsr .hlsr-online i{width:7px;height:7px;border-radius:50%;background:var(--tx3)}
+#hlsr .hlsr-online.on{color:var(--ok)}
+#hlsr .hlsr-online.on i{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+#hlsr .hlsr-ico{width:42px;height:42px;flex:0 0 42px;border-radius:13px;display:grid;place-items:center;border:1px solid rgba(169,185,214,.12);background:rgba(245,248,255,.04);color:var(--tx2)}
+#hlsr .hlsr-ico svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#hlsr .hlsr-net{display:none;position:relative;z-index:2;align-items:center;justify-content:center;gap:8px;padding:8px 12px;font:700 11.5px var(--ff);color:var(--warn);background:rgba(255,190,75,.08);border-bottom:1px solid rgba(255,190,75,.24)}
+#hlsr.offline .hlsr-net{display:flex}
+#hlsr .hlsr-body{position:relative;z-index:1;flex:1;overflow-y:auto;padding:20px}
+#hlsr .hlsr-grid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(340px,1.2fr) minmax(270px,.95fr);gap:18px;align-items:start}
+#hlsr .hlsr-col{display:grid;gap:14px;min-width:0}
+#hlsr .hlsr-card{border-radius:22px;padding:16px;border:1px solid rgba(169,185,214,.09);background:linear-gradient(180deg,rgba(16,35,74,.55),rgba(6,18,43,.55))}
+#hlsr .hlsr-card h3{font:800 10.5px/1 var(--ff);letter-spacing:.18em;color:var(--tx3);margin:0 0 12px}
+#hlsr .hlsr-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid rgba(169,185,214,.07);font:500 13px var(--ff);color:var(--tx2)}
+#hlsr .hlsr-row:last-child{border-bottom:0}
+#hlsr .hlsr-row b{font:600 13.5px var(--ff);color:var(--tx);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+#hlsr .hlsr-row em{display:block;font-style:normal;font:500 11px var(--ff);color:var(--tx3);margin-top:2px}
+#hlsr .hlsr-row.w b{color:var(--warn)}
+#hlsr .hlsr-row.g b{color:var(--ok)}
+#hlsr .hlsr-row.r b{color:var(--bad)}
+
+/* Centro: conexión + total */
+#hlsr .hlsr-center{text-align:center;border-radius:26px;padding:22px 18px 18px;border:1px solid rgba(97,232,255,.16);background:radial-gradient(420px 200px at 50% -10%,rgba(122,77,255,.18),transparent 70%),linear-gradient(180deg,rgba(16,35,74,.6),rgba(6,18,43,.7))}
+#hlsr .hlsr-pair{display:grid;grid-template-columns:84px 1fr 104px 1fr 84px;align-items:center}
+#hlsr .hlsr-node{display:flex;flex-direction:column;align-items:center;gap:7px;min-width:0}
+#hlsr .hlsr-node .hlsr-av{width:60px;height:60px;flex-basis:60px;font-size:18px;transition:box-shadow .45s}
+#hlsr .hlsr-node.rest .hlsr-av{background:linear-gradient(145deg,#10234A,#5B4DFF)}
+#hlsr .hlsr-node small{font:600 11px var(--ff);color:var(--tx3);max-width:84px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hlsr .hlsr-wire{height:2px;position:relative;border-radius:2px;background:repeating-linear-gradient(90deg,rgba(111,134,173,.55) 0 6px,transparent 6px 12px);transition:background .45s}
+#hlsr .hlsr-wire::after{content:"";position:absolute;inset:-3px 0;border-radius:4px;opacity:0;transition:opacity .45s}
+#hlsr .hlsr-orb{position:relative;width:104px;height:104px;display:grid;place-items:center;margin:0 auto}
+#hlsr .hlsr-orb i.core{width:66px;height:66px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#F5F8FF 0 5%,#B94CFF 22%,#7A4DFF 48%,#5B4DFF 70%,#0A1736 100%);box-shadow:0 0 0 1px rgba(185,76,255,.45),0 0 28px rgba(122,77,255,.55),inset 0 -8px 16px rgba(2,8,23,.35);animation:hlsrBreath 4.5s ease-in-out infinite}
+#hlsr .hlsr-orb i.ring{position:absolute;inset:6px;border-radius:50%;border:1px solid rgba(97,232,255,.26);border-top-color:rgba(97,232,255,.85);animation:hlsrOrbit 8s linear infinite}
+#hlsr .hlsr-orb i.ring.r2{inset:-4px;border-color:rgba(185,76,255,.16);border-right-color:rgba(185,76,255,.7);animation-duration:10s;animation-direction:reverse}
+#hlsr .hlsr-pair.linked .hlsr-wire{background:linear-gradient(90deg,#27D7FF,#61E8FF);box-shadow:0 0 10px rgba(39,215,255,.6)}
+#hlsr .hlsr-pair.linked .hlsr-av{box-shadow:0 0 0 2px var(--b1),0 0 0 3px rgba(39,215,255,.8),0 0 20px rgba(39,215,255,.45)}
+#hlsr .hlsr-pair.linked .hlsr-orb i.core{animation:hlsrBreath 4.5s ease-in-out infinite,hlsrCyan .45s ease-out}
+@keyframes hlsrCyan{0%{box-shadow:0 0 0 1px rgba(185,76,255,.45),0 0 0 0 rgba(39,215,255,.7)}100%{box-shadow:0 0 0 1px rgba(185,76,255,.45),0 0 0 24px rgba(39,215,255,0)}}
+#hlsr .hlsr-pair.flow .hlsr-wire::after{opacity:1;background:linear-gradient(90deg,transparent,rgba(245,248,255,.9),transparent);background-size:40% 100%;background-repeat:no-repeat;animation:hlsrFlow 1.3s linear infinite}
+#hlsr .hlsr-pair.flow .hlsr-wire.w2::after{animation-direction:reverse}
+@keyframes hlsrFlow{from{background-position:-40% 0}to{background-position:140% 0}}
+#hlsr .hlsr-pair.done .hlsr-wire{background:linear-gradient(90deg,#27D7FF,#31E6A1);box-shadow:0 0 12px rgba(49,230,161,.65)}
+#hlsr .hlsr-pair.done .hlsr-av{box-shadow:0 0 0 2px var(--b1),0 0 0 3px rgba(49,230,161,.9),0 0 22px rgba(49,230,161,.5)}
+#hlsr .hlsr-pair.done .hlsr-orb i.core{background:radial-gradient(circle at 36% 30%,#F5F8FF 0 6%,#61E8FF 26%,#31E6A1 60%,#0A1736 100%);animation:hlsrBreath 4.5s ease-in-out infinite,hlsrFlash .5s ease-out}
+@keyframes hlsrFlash{0%{box-shadow:0 0 0 0 rgba(49,230,161,.9)}60%{box-shadow:0 0 0 18px rgba(49,230,161,.12),0 0 40px 10px rgba(245,248,255,.25)}100%{box-shadow:0 0 0 26px rgba(49,230,161,0),0 0 30px rgba(49,230,161,.45)}}
+#hlsr .hlsr-pair.done .me{animation:hlsrMeet .5s cubic-bezier(.2,.8,.2,1) both}
+#hlsr .hlsr-pair.done .rest{animation:hlsrMeetR .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes hlsrMeet{50%{transform:translateX(12px)}}
+@keyframes hlsrMeetR{50%{transform:translateX(-12px)}}
+#hlsr .hlsr-status{margin:14px 0 4px;min-height:48px}
+#hlsr .hlsr-status b{display:block;font:800 13px var(--ff);letter-spacing:.18em;color:var(--cy2)}
+#hlsr .hlsr-status span{display:block;font:500 12.5px/1.5 var(--ff);color:var(--tx2);margin-top:5px}
+#hlsr .hlsr-status.wait b{color:var(--tx2)}#hlsr .hlsr-status.warn b{color:var(--warn)}#hlsr .hlsr-status.ok b{color:var(--ok)}#hlsr .hlsr-status.bad b{color:var(--bad)}
+#hlsr .hlsr-total{margin-top:14px;padding:20px 16px 18px;border-radius:22px;border:1px solid rgba(97,232,255,.22);background:radial-gradient(320px 140px at 50% -10%,rgba(39,215,255,.14),transparent 70%),rgba(2,8,23,.4)}
+#hlsr .hlsr-total small{display:block;font:800 10.5px var(--ff);letter-spacing:.2em;color:var(--cy2)}
+#hlsr .hlsr-total strong{display:block;font:800 48px/1.05 var(--ff);letter-spacing:-.03em;margin-top:8px;font-variant-numeric:tabular-nums;color:var(--tx)}
+#hlsr .hlsr-total span{display:block;font:500 12px var(--ff);color:var(--tx2);margin-top:6px}
+#hlsr .hlsr-total.diff{border-color:rgba(255,190,75,.45)}
+#hlsr .hlsr-total.done{border-color:rgba(49,230,161,.45);background:radial-gradient(320px 140px at 50% -10%,rgba(49,230,161,.16),transparent 70%),rgba(2,8,23,.4)}
+#hlsr .hlsr-confs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+#hlsr .hlsr-conf{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:15px;border:1px solid rgba(169,185,214,.09);background:rgba(2,8,23,.35);text-align:left}
+#hlsr .hlsr-conf i{width:26px;height:26px;flex:0 0 26px;border-radius:50%;display:grid;place-items:center;font-style:normal;font:800 12px var(--ff);border:1.5px dashed rgba(169,185,214,.35);color:var(--tx3)}
+#hlsr .hlsr-conf.yes i{border:0;background:var(--ok);color:var(--b0)}
+#hlsr .hlsr-conf b{display:block;font:700 12px var(--ff);color:var(--tx)}
+#hlsr .hlsr-conf span{display:block;font:500 11px var(--ff);color:var(--tx3);margin-top:2px}
+
+/* Comparación de diferencia */
+#hlsr .hlsr-vs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+#hlsr .hlsr-vs div{padding:12px;border-radius:15px;background:rgba(2,8,23,.4);border:1px solid rgba(169,185,214,.09)}
+#hlsr .hlsr-vs span{display:block;font:700 10px var(--ff);letter-spacing:.12em;color:var(--tx3)}
+#hlsr .hlsr-vs b{display:block;font:800 20px var(--ff);margin-top:4px;font-variant-numeric:tabular-nums}
+#hlsr .hlsr-vs .drv{border-color:rgba(255,190,75,.35)}
+#hlsr .hlsr-evid{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px;border-radius:14px;border:1px solid rgba(169,185,214,.12);color:var(--tx2);font:600 12px var(--ff);text-decoration:none}
+#hlsr .hlsr-evid img{width:54px;height:54px;border-radius:10px;object-fit:cover}
+#hlsr .hlsr-quote{margin-top:8px;padding:10px 12px;border-radius:12px;background:rgba(2,8,23,.4);font:500 12.5px/1.5 var(--ff);color:var(--tx2)}
+#hlsr .hlsr-quote b{color:var(--warn);font-weight:700}
+
+/* Línea de tiempo */
+#hlsr .hlsr-tl{display:grid;gap:0;position:relative}
+#hlsr .hlsr-tl div{position:relative;display:flex;gap:10px;padding:0 0 12px 18px;font:500 12px/1.4 var(--ff);color:var(--tx2)}
+#hlsr .hlsr-tl div::before{content:"";position:absolute;left:3px;top:5px;width:7px;height:7px;border-radius:50%;background:var(--t2)}
+#hlsr .hlsr-tl div::after{content:"";position:absolute;left:6px;top:14px;bottom:0;width:1px;background:rgba(169,185,214,.15)}
+#hlsr .hlsr-tl div:last-child::after{display:none}
+#hlsr .hlsr-tl div.ok::before{background:var(--ok)}#hlsr .hlsr-tl div.w::before{background:var(--warn)}
+#hlsr .hlsr-tl time{margin-left:auto;color:var(--tx3);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* Acciones */
+#hlsr .hlsr-field{display:block;margin:12px 0}
+#hlsr .hlsr-field span{display:block;font:700 11.5px var(--ff);color:var(--tx2);margin-bottom:6px}
+#hlsr .hlsr-field textarea,#hlsr .hlsr-field input{width:100%;border-radius:14px;border:1px solid rgba(169,185,214,.16);background:rgba(2,8,23,.6);color:var(--tx);font:500 14px var(--ff);padding:12px 13px;outline:none;resize:none}
+#hlsr .hlsr-field textarea{min-height:78px}
+#hlsr .hlsr-field textarea:focus,#hlsr .hlsr-field input:focus{border-color:rgba(39,215,255,.55);box-shadow:0 0 0 3px rgba(39,215,255,.12)}
+#hlsr .hlsr-opt{display:flex;gap:11px;width:100%;text-align:left;padding:13px;border-radius:16px;margin-bottom:9px;border:1px solid rgba(169,185,214,.14);background:rgba(2,8,23,.35);color:var(--tx)}
+#hlsr .hlsr-opt i{width:20px;height:20px;flex:0 0 20px;border-radius:50%;border:2px solid rgba(169,185,214,.4);margin-top:1px}
+#hlsr .hlsr-opt.on{border-color:rgba(39,215,255,.6);background:rgba(39,215,255,.07)}
+#hlsr .hlsr-opt.on i{border:6px solid var(--cy)}
+#hlsr .hlsr-opt b{display:block;font:700 13.5px var(--ff)}
+#hlsr .hlsr-opt span{display:block;font:500 11.5px/1.45 var(--ff);color:var(--tx2);margin-top:3px}
+#hlsr .hlsr-help{font:500 11.5px/1.5 var(--ff);color:var(--tx3);margin-top:10px;text-align:center}
+#hlsr .hlsr-flag{padding:12px 14px;border-radius:16px;font:500 12.5px/1.5 var(--ff);color:var(--tx2);border:1px solid rgba(255,190,75,.3);background:rgba(255,190,75,.06)}
+#hlsr .hlsr-flag b{display:block;color:var(--warn);font:800 11px var(--ff);letter-spacing:.14em;margin-bottom:3px}
+#hlsr .hlsr-flag.info{border-color:rgba(75,140,255,.28);background:rgba(47,107,255,.06)}#hlsr .hlsr-flag.info b{color:var(--t2)}
+#hlsr .hlsr-flag.ok{border-color:rgba(49,230,161,.3);background:rgba(49,230,161,.06)}#hlsr .hlsr-flag.ok b{color:var(--ok)}
+#hlsr .hlsr-err{padding:12px 14px;border-radius:14px;border:1px solid rgba(255,92,122,.35);background:rgba(255,92,122,.07);font:500 12.5px/1.5 var(--ff);color:var(--tx2)}
+#hlsr .hlsr-err b{display:block;color:var(--bad);font-weight:700}
+
+/* PIN · desbloqueo */
+#hlsr .hlsr-pin{max-width:400px;margin:6vh auto 0;text-align:center}
+#hlsr .hlsr-pin h3{font:700 22px var(--ff);margin:14px 0 6px;letter-spacing:-.02em}
+#hlsr .hlsr-pin p{font:500 13px/1.55 var(--ff);color:var(--tx2);margin:0 0 18px}
+#hlsr .hlsr-pin input{width:220px;height:62px;border-radius:18px;border:1px solid rgba(97,232,255,.3);background:rgba(2,8,23,.6);color:var(--tx);text-align:center;font:800 28px var(--ff);letter-spacing:.6em;padding-left:.6em;outline:none}
+#hlsr .hlsr-pin input:focus{box-shadow:0 0 0 4px rgba(39,215,255,.14)}
+#hlsr .hlsr-pin .hlsr-btn{max-width:260px;margin:16px auto 0}
+#hlsr .hlsr-pin .hlsr-pinerr{min-height:20px;margin-top:10px;font:600 12.5px var(--ff);color:var(--bad)}
+#hlsr .hlsr-shake{animation:hlsrShake .38s}
+@keyframes hlsrShake{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+
+/* Historial */
+#hlsr .hlsr-hist{max-width:820px;margin:0 auto;display:grid;gap:14px}
+#hlsr .hlsr-hist h3{font:800 10.5px var(--ff);letter-spacing:.18em;color:var(--tx3);margin:6px 0 0}
+#hlsr .hlsr-item{display:flex;align-items:center;gap:13px;width:100%;padding:13px 14px;border-radius:18px;border:1px solid rgba(169,185,214,.09);background:rgba(6,18,43,.55);color:var(--tx);text-align:left}
+#hlsr .hlsr-item:hover{border-color:rgba(97,232,255,.3)}
+#hlsr .hlsr-item .hlsr-av{width:40px;height:40px;flex-basis:40px;font-size:13px}
+#hlsr .hlsr-item>div:not(.hlsr-av){flex:1;min-width:0}
+#hlsr .hlsr-item b{display:block;font:700 13.5px var(--ff)}
+#hlsr .hlsr-item span{display:block;font:500 11.5px var(--ff);color:var(--tx3);margin-top:2px}
+#hlsr .hlsr-item strong{font:800 15px var(--ff);font-variant-numeric:tabular-nums}
+#hlsr .hlsr-item em{font-style:normal;font:800 10px var(--ff);letter-spacing:.1em;padding:5px 8px;border-radius:999px;color:var(--ok);background:rgba(49,230,161,.1)}
+#hlsr .hlsr-item em.live{color:var(--cy2);background:rgba(39,215,255,.1)}
+#hlsr .hlsr-item em.warn{color:var(--warn);background:rgba(255,190,75,.1)}
+#hlsr .hlsr-search{width:100%;height:44px;border-radius:14px;border:1px solid rgba(169,185,214,.14);background:rgba(2,8,23,.5);color:var(--tx);font:500 13.5px var(--ff);padding:0 14px;outline:none}
+#hlsr .hlsr-empty{padding:26px;text-align:center;border-radius:18px;border:1px dashed rgba(169,185,214,.16);font:500 13px var(--ff);color:var(--tx3)}
+#hlsr .hlsr-receipt-wrap{max-width:560px;margin:0 auto}
+#hlsr .hlsr-hero{text-align:center;padding:10vh 0 0}
+#hlsr .hlsr-hero h3{font:700 20px var(--ff);margin:14px 0 6px}
+#hlsr .hlsr-hero p{font:500 13px var(--ff);color:var(--tx2)}
+
+@media (max-width:1024px){
+  #hlsr .hlsr-grid{grid-template-columns:minmax(0,1fr)}
+  #hlsr .hlsr-col.c2{order:-2}
+  #hlsr .hlsr-col.c3{order:-1}
+}
+@media (max-width:640px){
+  #hlsr .hlsr-body{padding:14px}
+  #hlsr .hlsr-head{padding:12px 14px}
+  #hlsr .hlsr-pair{grid-template-columns:66px 1fr 92px 1fr 66px}
+  #hlsr .hlsr-orb{width:92px;height:92px}
+  #hlsr .hlsr-total strong{font-size:40px}
+  #hlsr .hlsr-confs{grid-template-columns:1fr}
+  #hlsrTray{right:10px;left:10px;bottom:12px;width:auto}
+  #hlsr .hlsr-item{flex-wrap:wrap}
+  #hlsr .hlsr-item>div:not(.hlsr-av){flex:1 1 calc(100% - 60px)}
+  #hlsr .hlsr-item strong{margin-left:53px}
+}
+
+/* Recibo (idéntico al del domiciliario: mismo snapshot, mismo diseño) */
+.hlr{--ff:'Plus Jakarta Sans',system-ui,sans-serif;border-radius:24px;padding:20px 18px;margin:0;color:#F5F8FF;font-family:var(--ff);border:1px solid rgba(49,230,161,.3);background:radial-gradient(300px 120px at 50% -10%,rgba(49,230,161,.12),transparent 70%),linear-gradient(180deg,#10234A,#06122B);animation:hlrIn .3s cubic-bezier(.2,.8,.2,1) both;text-align:left}
+@keyframes hlrIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.hlr-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-start;padding-bottom:14px;border-bottom:1px dashed rgba(169,185,214,.25)}
+.hlr-brand{min-width:0}
+.hlr-brand small{display:block;font:800 10px/1 var(--ff);letter-spacing:.22em;color:#B94CFF}
+.hlr-brand b{display:block;font:800 18px/1.2 var(--ff);margin-top:5px;letter-spacing:.02em}
+.hlr-no{margin-left:auto;flex:0 0 auto;white-space:nowrap;text-align:right;font:600 11px/1.4 var(--ff);color:#A9B9D6}
+.hlr-no b{display:block;font:700 12.5px var(--ff);color:#F5F8FF;font-variant-numeric:tabular-nums}
+.hlr-badge{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;margin-top:12px;height:26px;padding:0 11px;border-radius:999px;font:800 10.5px var(--ff);letter-spacing:.12em;color:#31E6A1;background:rgba(49,230,161,.1);border:1px solid rgba(49,230,161,.4)}
+.hlr-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding:14px 0;border-bottom:1px dashed rgba(169,185,214,.25)}
+.hlr-grid div span{display:block;font:600 10.5px var(--ff);color:#6F86AD;letter-spacing:.04em}
+.hlr-grid div b{display:block;font:600 13px var(--ff);margin-top:2px}
+.hlr-lines{padding:8px 0;border-bottom:1px dashed rgba(169,185,214,.25)}
+.hlr-line{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font:500 13px var(--ff);color:#A9B9D6}
+.hlr-line b{font:600 13px var(--ff);color:#F5F8FF;font-variant-numeric:tabular-nums}
+.hlr-total{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0;border-bottom:1px dashed rgba(169,185,214,.25)}
+.hlr-total span{font:800 11px var(--ff);letter-spacing:.14em;color:#61E8FF}
+.hlr-total b{font:800 26px var(--ff);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.hlr-notes{padding:10px 0;font:500 12px/1.5 var(--ff);color:#A9B9D6;border-bottom:1px dashed rgba(169,185,214,.25)}
+.hlr-notes b{color:#FFBE4B}
+.hlr-conf{display:grid;gap:6px;padding:12px 0 4px;font:500 12.5px var(--ff);color:#A9B9D6}
+.hlr-conf div{display:flex;justify-content:space-between}
+.hlr-conf b{color:#31E6A1;font-weight:700}
+.hlr-foot{margin-top:10px;font:500 10px/1.5 var(--ff);color:#6F86AD;text-align:center;word-break:break-all}
+#hlsrPrint{display:none}
+
+@media (prefers-reduced-motion: reduce){
+  #hlsrTray *,#hlsrTray *::before,#hlsrTray *::after,#hlsr,#hlsr *,#hlsr *::before,#hlsr *::after,.hlr{animation:none!important;transition:none!important}
+}
+@media print{
+  body.hlsr-printing > *:not(#hlsrPrint){display:none!important}
+  body.hlsr-printing{background:#fff!important}
+  body.hlsr-printing #hlsrPrint{display:block!important;padding:0;margin:0}
+  body.hlsr-printing .hlr{animation:none!important;border:1px solid #cbd5e1!important;background:#fff!important;color:#020817!important;max-width:680px;margin:0 auto!important;box-shadow:none!important}
+  body.hlsr-printing .hlr *{color:#020817!important}
+  body.hlsr-printing .hlr .hlr-badge{border-color:#16a34a!important;background:#fff!important}
+  body.hlsr-printing .hlr-head,body.hlsr-printing .hlr-grid,body.hlsr-printing .hlr-lines,body.hlsr-printing .hlr-total,body.hlsr-printing .hlr-notes{border-color:#94a3b8!important}
+  @page{size:auto;margin:14mm}
+}
 </style>
-<div class="hl-settlement-alert" id="hlSettlementAlert"><div class="hl-settlement-orb"></div><div><b id="hlSettlementAlertTitle">Cuadre en proceso</b><span id="hlSettlementAlertText">Luz está sincronizando el cierre del domiciliario.</span></div><button onclick="hlOpenSettlements()">VER</button></div>
-<div class="hl-settlement-overlay" id="hlSettlementOverlay" onclick="if(event.target===this)hlCloseSettlements()"><div class="hl-settlement-sheet"><header><div><span>HOLA LUZ · CONTROL DE CAJA</span><h2>Cuadres de domiciliarios</h2></div><button class="hl-settlement-close" onclick="hlCloseSettlements()">×</button></header><div id="hlSettlementContent" class="hl-cuadre-list"></div></div></div>
-<script id="hlSettlementAdminJS">
+
+<script id="hlShiftSyncRestJS">
+/* HOLA LUZ · SHIFT SYNC EXPERIENCE V2 · Restaurante
+   IncomingSettlementCard · RestaurantSettlementDrawer · SettlementReconciliation · SettlementDifferenceReview
+   SettlementApproval · SettlementReceiptPreview · SettlementHistoryPanel
+   El servidor (función hl-shift-sync + base de datos) decide estados y totales. Aquí solo se muestran. */
 (function(){
- var settlements=[],timer=null;
- function money2(v){return '$'+Math.round(Number(v||0)).toLocaleString('es-CO')}
- function currentRestId(){try{return rest&&rest.id?rest.id:null}catch(e){return null}}
- async function load(show){var rid=currentRestId();if(!rid)return;try{var r=await fetch('/api/domi-admin/cuadres?restaurante_id='+encodeURIComponent(rid),{cache:'no-store'}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'cuadres');settlements=d.cuadres||[];renderAlert();if(show)renderSheet()}catch(e){}}
- function renderAlert(){var a=document.getElementById('hlSettlementAlert');if(!a)return;var active=settlements.find(function(c){return c.estado==='presentado'})||settlements.find(function(c){return c.estado==='iniciado'||c.estado==='diferencia'});if(!active){a.classList.remove('on');return}a.classList.add('on');var presented=active.estado==='presentado';document.getElementById('hlSettlementAlertTitle').textContent=presented?'Cuadre listo para revisar':(active.domiciliario_nombre||'Domiciliario')+' está haciendo el cuadre';document.getElementById('hlSettlementAlertText').textContent=presented?(active.domiciliario_nombre+' presentó '+money2(active.efectivo_entregado)+' en efectivo.'):('Luz está consolidando '+active.pedidos_count+' entregas y pagos del día.');}
- function statusText(c){return c.estado==='confirmado'?'Confirmado':c.estado==='presentado'?'Listo para revisar':c.estado==='diferencia'?'Con diferencia':'En proceso'}
- function renderSheet(){var box=document.getElementById('hlSettlementContent');if(!box)return;if(!settlements.length){box.innerHTML='<div class="d11-empty">No hay cuadres iniciados hoy.</div>';return}box.innerHTML=settlements.map(function(c){var review=c.estado==='presentado'||c.estado==='diferencia';return '<article class="hl-cuadre-card '+(review?'top':'')+'"><div class="hl-cuadre-head"><b>'+esc(c.domiciliario_nombre||'Domiciliario')+'</b><i>'+statusText(c)+'</i></div><div class="hl-cuadre-grid"><div class="hl-cuadre-metric"><span>Entregas</span><b>'+Number(c.pedidos_count||0)+'</b></div><div class="hl-cuadre-metric"><span>Efectivo esperado</span><b>'+money2(c.efectivo_esperado)+'</b></div><div class="hl-cuadre-metric"><span>Entregado</span><b>'+money2(c.efectivo_entregado)+'</b></div><div class="hl-cuadre-metric"><span>Digital</span><b>'+money2(c.pagos_digitales)+'</b></div><div class="hl-cuadre-metric"><span>Datáfono</span><b>'+money2(c.pagos_datafono)+'</b></div><div class="hl-cuadre-metric"><span>Domicilios</span><b>'+money2(c.domicilios_ganados)+'</b></div></div>'+(review?'<button class="hl-cuadre-action" onclick="hlReviewSettlement(\''+esc(c.id)+'\')">REVISAR Y CONFIRMAR →</button>':c.estado==='confirmado'?'<div class="hl-receipt"><span>RECIBO</span><b>'+esc(c.receipt_code||'CONFIRMADO')+'</b></div>':'<div style="font-size:8px;color:#748bb5;margin-top:9px">Esperando que el domiciliario presente el efectivo.</div>')+'</article>'}).join('')}
- window.hlOpenSettlements=function(){document.getElementById('hlSettlementOverlay').classList.add('on');load(true)};
- window.hlCloseSettlements=function(){document.getElementById('hlSettlementOverlay').classList.remove('on')};
- window.hlReviewSettlement=function(id){var c=settlements.find(function(x){return String(x.id)===String(id)});if(!c)return;var box=document.getElementById('hlSettlementContent');box.innerHTML='<article class="hl-cuadre-card top"><div class="hl-cuadre-head"><b>Cuadre · '+esc(c.domiciliario_nombre||'Domiciliario')+'</b><i>'+statusText(c)+'</i></div><div class="hl-cuadre-grid"><div class="hl-cuadre-metric"><span>Efectivo esperado</span><b>'+money2(c.efectivo_esperado)+'</b></div><div class="hl-cuadre-metric"><span>Declarado</span><b>'+money2(c.efectivo_entregado)+'</b></div><div class="hl-cuadre-metric"><span>Domicilios ganados</span><b>'+money2(c.domicilios_ganados)+'</b></div></div><label style="display:block;margin-top:11px;font-size:7px;color:#6d84ad;font-weight:900">EFECTIVO QUE RECIBES</label><input id="hlReceivedAmount" class="hl-review-amount" inputmode="numeric" value="'+Math.round(Number(c.efectivo_entregado||0))+'"><textarea id="hlReviewNote" class="hl-review-note" placeholder="Nota opcional del restaurante"></textarea><button class="hl-cuadre-action" onclick="hlConfirmSettlement(\''+esc(c.id)+'\')">CONFIRMAR CUADRE Y GENERAR RECIBO</button><button class="hl-cuadre-action" style="background:transparent" onclick="loadSettlementsView()">← Volver</button></article>'};
- window.loadSettlementsView=function(){load(true)};
- function celebrateSettlement(c){var box=document.getElementById('hlSettlementContent');if(!box||!c)return;box.innerHTML='<div class="hl-settlement-success"><div class="hl-settlement-orb"></div><div class="check">✓</div><h3>Cuadre cerrado</h3><p>'+(c.domiciliario_nombre||'Domiciliario')+' y el restaurante quedaron conciliados.</p><div class="hl-receipt"><span>RECIBO COMPARTIDO</span><b>'+esc(c.receipt_code||'CONFIRMADO')+'</b></div><button class="hl-cuadre-action" onclick="loadSettlementsView()">VER CUADRES →</button></div>';var alert=document.getElementById('hlSettlementAlert');if(alert){alert.classList.add('on','confirmed');document.getElementById('hlSettlementAlertTitle').textContent='Cuadre confirmado';document.getElementById('hlSettlementAlertText').textContent='Recibo '+(c.receipt_code||'generado')+' · cierre sincronizado.';setTimeout(function(){alert.classList.remove('confirmed');load(false)},5000)}}
- window.hlConfirmSettlement=async function(id){var rid=currentRestId();if(!rid)return;var amount=Number(String((document.getElementById('hlReceivedAmount')||{}).value||'0').replace(/\D/g,''))||0,note=((document.getElementById('hlReviewNote')||{}).value||'').trim();try{var r=await fetch('/api/domi-admin/cuadre/confirmar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rid,cuadre_id:id,efectivo_recibido:amount,notas:note})}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'No se pudo confirmar');if(typeof hlNotice==='function')hlNotice('success','Cuadre confirmado','Recibo '+(d.cuadre.receipt_code||'generado'),3200);celebrateSettlement(d.cuadre)}catch(e){if(typeof hlNotice==='function')hlNotice('error','No se pudo confirmar',String(e.message||e),4200)}};
- function mountButton(){var host=document.querySelector('#page-domis .d11-hero-actions');if(host&&!document.getElementById('hlSettlementHeroBtn')){var b=document.createElement('button');b.id='hlSettlementHeroBtn';b.className='d11-soft-btn';b.innerHTML='<span>◎</span><div><b>Cuadres de caja</b><small>Revisar cierres de domiciliarios</small></div><em>→</em>';b.onclick=hlOpenSettlements;host.appendChild(b)}}
- setInterval(function(){mountButton();load(false)},5000);setTimeout(function(){mountButton();load(false)},1300);
+'use strict';
+var EDGE=SU+'/functions/v1/hl-shift-sync';
+var SB_UMD='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.0/dist/umd/supabase.js';
+var OPEN=['pairing','connected','syncing','awaiting_driver','awaiting_restaurant','difference_review'];
+var DONE=['approved','approved_with_note'];
+var INCOMING_FALLBACK_MS=30000,LIVE_FALLBACK_MS=20000;
+var S={rid:null,incoming:[],seen:{},trayMin:false,el:null,view:'',id:null,stl:null,busy:false,err:'',changed:false,
+  res:'',note:'',hist:null,histQ:'',snap:null,backTo:'',pendingAfterPin:null,
+  sb:null,sbP:null,rch:null,pch:null,sch:null,schId:'',driverOnline:null,incT:null,getT:null,incFb:null,liveFb:null,wasDown:false,
+  mainSig:'',celebrated:{}};
+
+var ICO={
+  x:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  back:'<svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>',
+  hist:'<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>',
+  wifi:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5.5 12a10 10 0 0 1 13 0"/><path d="M9 15.5a5 5 0 0 1 6 0"/><circle cx="12" cy="19" r="1"/></svg>'
+};
+var EVENTS={settlement_created:'El domiciliario inició el cierre',pairing_started:'Luz buscó al restaurante',restaurant_online:'Restaurante en línea',connected:'Restaurante conectado',
+  sync_started:'Sincronización iniciada',data_synced:'Luz concilió los datos',restaurant_ready:'Cuadre listo para revisar',driver_confirmed:'Domiciliario confirmó',
+  restaurant_confirmed:'Restaurante confirmó',difference_reported:'Domiciliario reportó diferencia',difference_withdrawn:'Domiciliario retiró la diferencia',
+  difference_resolved:'Restaurante resolvió la diferencia',totals_changed:'Los totales se actualizaron',approved:'Cuadre aprobado',receipt_ready:'Recibo generado',cancelled:'Cierre cancelado'};
+
+/* ── utilidades ── */
+function $(id){return document.getElementById(id)}
+function E(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function N(v){return Number(v||0)}
+function M(v){return '$'+Math.round(N(v)).toLocaleString('es-CO')}
+function SM(v){v=N(v);return (v>0?'+':v<0?'−':'')+M(Math.abs(v))}
+function plural(n,a,b){return n===1?a:b}
+function first(n){return String(n||'Domiciliario').split(/\s+/)[0]}
+function initials(n){return String(n||'HL').split(/\s+/).filter(Boolean).slice(0,2).map(function(x){return x[0]}).join('').toUpperCase()}
+function avatar(url,name){return '<div class="hlsr-av">'+(url?'<img src="'+E(url)+'" alt="">':E(initials(name)))+'</div>'}
+function tlabel(at){try{return new Date(at).toLocaleTimeString('es-CO',{hour:'numeric',minute:'2-digit',timeZone:'America/Bogota'})}catch(e){return ''}}
+function isOpen(s){return !!s&&OPEN.indexOf(s.status)>=0}
+function isDone(s){return !!s&&DONE.indexOf(s.status)>=0}
+function buzz(p){try{if(navigator.vibrate)navigator.vibrate(p)}catch(e){}}
+function chime(kind){try{var A=window.AudioContext||window.webkitAudioContext;if(!A)return;var c=new A(),t=c.currentTime;var notes=kind==='ok'?[523.25,659.25,783.99]:[659.25,880];
+  notes.forEach(function(f,i){var o=c.createOscillator(),g=c.createGain(),s=t+i*.11;o.type='sine';o.frequency.setValueAtTime(f,s);g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(.03,s+.02);g.gain.exponentialRampToValueAtTime(.0001,s+.3);o.connect(g);g.connect(c.destination);o.start(s);o.stop(s+.32)});
+  setTimeout(function(){try{c.close()}catch(e){}},1200)}catch(e){}}
+function toast(m,color){try{if(typeof notif==='function')notif(m,color)}catch(e){}}
+function restNombre(){try{return (rest&&rest.nombre)||'Restaurante'}catch(e){return 'Restaurante'}}
+function restLogo(){try{return rest&&rest.logo_url}catch(e){return null}}
+
+/* ── sesión del restaurante para cierres (PIN, 12 h, solo en esta pestaña) ── */
+function tokKey(){return 'hl_stl_rest_'+S.rid}
+function getTok(){try{var x=JSON.parse(sessionStorage.getItem(tokKey())||'null');if(x&&x.t&&x.exp>Date.now()+60000)return x.t}catch(e){}return ''}
+function setTok(t,sec){try{sessionStorage.setItem(tokKey(),JSON.stringify({t:t,exp:Date.now()+(Number(sec)||43200)*1000}))}catch(e){}S.memTok={t:t,exp:Date.now()+(Number(sec)||43200)*1000}}
+function tok(){var t=getTok();if(t)return t;if(S.memTok&&S.memTok.exp>Date.now()+60000)return S.memTok.t;return ''}
+function clearTok(){try{sessionStorage.removeItem(tokKey())}catch(e){}S.memTok=null}
+
+async function api(action,body){
+  var c=new AbortController(),tm=setTimeout(function(){try{c.abort()}catch(e){}},15000);
+  var h={'Content-Type':'application/json','apikey':SK};var t=tok();if(t)h['x-hl-rest-token']=t;
+  try{
+    var r=await fetch(EDGE,{method:'POST',cache:'no-store',signal:c.signal,headers:h,body:JSON.stringify(Object.assign({action:action},body||{}))});
+    var x=await r.text(),d={};try{d=x?JSON.parse(x):{}}catch(e){}
+    if(!r.ok||d.ok===false){var er=new Error(d.error||'No pudimos sincronizar. Intenta de nuevo.');er.code=d.code||'';er.status=r.status;if(d.code==='restaurant_session')clearTok();throw er}
+    setOffline(false);return d;
+  }catch(e){
+    if(e&&e.name==='AbortError'){var a=new Error('La conexión tardó demasiado.');a.net=true;setOffline(true);throw a}
+    if(e instanceof TypeError){var b=new Error('Sin conexión. Reconectando…');b.net=true;setOffline(true);throw b}
+    throw e;
+  }finally{clearTimeout(tm)}
+}
+
+/* ── Realtime: presencia del panel + señales de cambio ── */
+function loadSb(){
+  if(window.supabase&&window.supabase.createClient)return Promise.resolve(window.supabase);
+  if(S.sbP)return S.sbP;
+  S.sbP=new Promise(function(res,rej){var s=document.createElement('script');s.src=SB_UMD;s.async=true;s.crossOrigin='anonymous';
+    s.onload=function(){window.supabase&&window.supabase.createClient?res(window.supabase):rej(new Error('realtime'))};
+    s.onerror=function(){S.sbP=null;rej(new Error('realtime'))};document.head.appendChild(s)});
+  return S.sbP;
+}
+async function client(){if(S.sb)return S.sb;var lib=await loadSb();S.sb=lib.createClient(SU,SK,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'hl-stl-rest'}});return S.sb}
+async function connectRestaurant(){
+  var rid=S.rid;if(!rid)return;
+  try{
+    var sb=await client();if(S.rid!==rid)return;
+    // Presencia: el domiciliario sabe si el panel del restaurante está abierto.
+    var pc=sb.channel('hl-presence:'+rid,{config:{presence:{key:'restaurant:'+rid}}});
+    pc.subscribe(function(st){if(st==='SUBSCRIBED'){try{pc.track({role:'restaurant',at:new Date().toISOString()})}catch(e){}}});
+    S.pch=pc;
+    // Señal "algo cambió" en los cierres de este restaurante.
+    var rc=sb.channel('settlements:'+rid,{config:{broadcast:{self:false}}});
+    rc.on('broadcast',{event:'state'},function(m){var p=m&&m.payload||{};loadIncomingSoon(80);if(S.id&&p.id===S.id)refetchSoon(80)});
+    rc.subscribe(function(st){if(S.rch!==rc)return;if(st==='SUBSCRIBED'){if(S.wasDown){S.wasDown=false;loadIncomingSoon(40);if(S.id)refetchSoon(40)}setOffline(false)}else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'){S.wasDown=true;setOffline(true)}});
+    S.rch=rc;
+  }catch(e){}
+}
+async function watchSettlement(id){
+  if(S.schId===id&&S.sch)return;
+  unwatchSettlement();S.schId=id;S.driverOnline=null;
+  try{
+    var sb=await client();if(S.schId!==id)return;
+    var ch=sb.channel('settlement:'+id,{config:{broadcast:{self:false},presence:{key:'restaurant:'+S.rid}}});
+    ch.on('broadcast',{event:'state'},function(){refetchSoon(60)});
+    ch.on('presence',{event:'sync'},function(){var st=ch.presenceState(),on=false;Object.keys(st).forEach(function(k){(st[k]||[]).forEach(function(p){if(p&&p.role==='driver')on=true})});S.driverOnline=on;paintOnline()});
+    ch.subscribe(function(st){if(S.sch!==ch)return;if(st==='SUBSCRIBED'){try{ch.track({role:'restaurant',at:new Date().toISOString()})}catch(e){}setOffline(false)}else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'){setOffline(true)}});
+    S.sch=ch;
+  }catch(e){}
+}
+function unwatchSettlement(){var ch=S.sch;S.sch=null;S.schId='';if(ch&&S.sb){try{S.sb.removeChannel(ch)}catch(e){}}}
+function setOffline(v){if(!v&&!navigator.onLine)v=true;if(S.el)S.el.classList.toggle('offline',!!v)}
+
+/* ── IncomingSettlementCard ── */
+function loadIncomingSoon(ms){clearTimeout(S.incT);S.incT=setTimeout(loadIncoming,ms||150)}
+async function loadIncoming(){
+  if(!S.rid)return;
+  try{var d=await api('restaurant_incoming',{restaurante_id:S.rid});var list=Array.isArray(d.incoming)?d.incoming:[];
+    var fresh=list.some(function(x){return !S.seen[x.id]});
+    list.forEach(function(x){if(!S.seen[x.id]){S.seen[x.id]=1}});
+    if(fresh&&S.loadedOnce){S.trayMin=false;chime('in');buzz(10)}
+    S.loadedOnce=true;S.incoming=list;renderTray();
+  }catch(e){}
+}
+function inState(x){
+  switch(x.status){
+    case 'pairing':return['','Quiere sincronizar el cierre contigo'];
+    case 'connected':case 'syncing':return['','Sincronizando…'];
+    case 'awaiting_driver':return['','Esperando la confirmación de '+first(x.driver_nombre)];
+    case 'awaiting_restaurant':return['ready',first(x.driver_nombre)+' confirmó · falta tu confirmación'];
+    case 'difference_review':return['warn','Diferencia reportada · revisa'];
+  }
+  return['',''];
+}
+function renderTray(){
+  var tray=$('hlsrTray');
+  if(!tray){tray=document.createElement('div');tray.id='hlsrTray';tray.setAttribute('aria-live','polite');document.body.appendChild(tray);tray.addEventListener('click',onTray)}
+  var list=S.incoming.filter(function(x){return !(S.el&&S.el.classList.contains('on')&&S.id===x.id)});
+  if(!list.length){tray.innerHTML='';return}
+  if(S.trayMin){tray.innerHTML='<button type="button" class="hlsr-pill" data-a="expand"><span class="hlsr-miniorb"><i></i></span>'+list.length+' '+plural(list.length,'cierre de turno en vivo','cierres de turno en vivo')+'</button>';return}
+  var shown=list.slice(0,2);
+  tray.innerHTML=shown.map(function(x){var st=inState(x);
+    return '<article class="hlsr-in '+st[0]+'" data-id="'+E(x.id)+'"><header><span class="hlsr-kick"><i></i>'+(x.status==='pairing'?'NUEVO CIERRE DE TURNO':'CIERRE EN VIVO')+'</span><button type="button" class="hlsr-min" data-a="min" aria-label="Minimizar">–</button></header>'+
+      '<div class="hlsr-in-row">'+avatar(x.driver_foto,x.driver_nombre)+'<div><b>'+E(x.driver_nombre||'Domiciliario')+'</b><span>Turno '+E(x.turno_inicio_label||'')+' – '+E(x.turno_fin_label||'')+' · '+N(x.deliveries_count)+' '+plural(N(x.deliveries_count),'entrega','entregas')+'</span></div><span class="hlsr-miniorb" aria-hidden="true"><i></i></span></div>'+
+      '<div class="hlsr-state"><i></i>'+E(st[1])+'</div>'+
+      '<button type="button" class="hlsr-btn pri" data-a="review" data-id="'+E(x.id)+'">REVISAR CUADRE</button></article>'}).join('')+
+    (list.length>2?'<button type="button" class="hlsr-more" data-a="list">+'+(list.length-2)+' '+plural(list.length-2,'cierre más','cierres más')+' →</button>':'');
+}
+function onTray(e){var t=e.target.closest&&e.target.closest('[data-a]');if(!t)return;var a=t.getAttribute('data-a');
+  if(a==='min'){S.trayMin=true;renderTray()}
+  else if(a==='expand'){S.trayMin=false;renderTray()}
+  else if(a==='review'){buzz(10);openSettlement(t.getAttribute('data-id'))}
+  else if(a==='list'){openHistory()}}
+
+/* ── Cajón ── */
+function ensure(){
+  if(S.el)return S.el;
+  var el=document.createElement('div');el.id='hlsr';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-labelledby','hlsrTitle');
+  el.innerHTML='<div class="hlsr-panel"><div class="hlsr-bg" aria-hidden="true"></div>'+
+    '<header class="hlsr-head"><button type="button" class="hlsr-ico" data-a="back" id="hlsrBack" aria-label="Volver" hidden>'+ICO.back+'</button><div class="hlsr-head-copy" id="hlsrHead"></div>'+
+    '<button type="button" class="hlsr-ico" data-a="history" aria-label="Historial de cierres">'+ICO.hist+'</button><button type="button" class="hlsr-ico" data-a="close" aria-label="Cerrar">'+ICO.x+'</button></header>'+
+    '<div class="hlsr-net" role="status">'+ICO.wifi+'<span>CONEXIÓN INTERRUMPIDA · Reconectando…</span></div>'+
+    '<div class="hlsr-body" id="hlsrBody"></div></div>';
+  document.body.appendChild(el);S.el=el;
+  el.addEventListener('click',function(e){if(e.target===el){close();return}onClick(e)});
+  el.addEventListener('input',onInput);
+  el.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target&&e.target.id==='hlsrPin'){e.preventDefault();submitPin()}});
+  return el;
+}
+function show(){ensure();S.el.classList.add('on');setOffline(!navigator.onLine);renderTray()}
+function close(){if(!S.el)return;S.el.classList.remove('on');unwatchSettlement();stopLive();S.id=null;S.stl=null;S.view='';S.err='';renderTray();loadIncomingSoon(50)}
+function head(html){var h=$('hlsrHead');if(h)h.innerHTML=html}
+function setView(v){S.view=v;var b=$('hlsrBack');if(b)b.hidden=!(v==='receipt'||(v==='history'&&S.backTo==='live'));render()}
+function orb(){return '<div class="hlsr-orb" aria-hidden="true"><i class="core"></i><i class="ring"></i><i class="ring r2"></i></div>'}
+
+function render(){
+  var b=$('hlsrBody');if(!b)return;var v=S.view;
+  if(v==='pin'){head('<div><span class="hlsr-live off"><i></i>CONFIRMACIÓN SEGURA</span><h2 id="hlsrTitle">Cierres de turno</h2></div>');
+    b.innerHTML='<div class="hlsr-pin" id="hlsrPinBox">'+orb()+'<h3>Confirma que eres el restaurante</h3><p>Por seguridad, los cuadres de caja se abren con el PIN de '+E(restNombre())+'. Quedará activo en esta pestaña durante 12 horas.</p>'+
+      '<input id="hlsrPin" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="4" aria-label="PIN del restaurante" placeholder="••••">'+
+      '<div class="hlsr-pinerr" id="hlsrPinErr" role="alert"></div><button type="button" class="hlsr-btn pri" data-a="pin" id="hlsrPinBtn">DESBLOQUEAR</button></div>';
+    setTimeout(function(){var i=$('hlsrPin');if(i)try{i.focus()}catch(e){}},60);return}
+  if(v==='loading'){head('<div><span class="hlsr-live"><i></i>CUADRE EN VIVO</span><h2 id="hlsrTitle">Conectando…</h2></div>');b.innerHTML='<div class="hlsr-hero">'+orb()+'<h3>Conectando con el domiciliario…</h3><p>Luz está enlazando el cierre de turno.</p></div>';return}
+  if(v==='error'){head('<div><span class="hlsr-live off"><i></i>CUADRE EN VIVO</span><h2 id="hlsrTitle">No pudimos sincronizar</h2></div>');b.innerHTML='<div class="hlsr-hero">'+orb()+'<h3>No pudimos sincronizar</h3><p>El turno del domiciliario sigue activo.</p><div class="hlsr-err" style="max-width:420px;margin:14px auto 0"><b>Detalle</b>'+E(S.err||'Intenta nuevamente.')+'</div><div style="max-width:260px;margin:16px auto 0"><button type="button" class="hlsr-btn pri" data-a="retry">REINTENTAR</button></div></div>';return}
+  if(v==='live')return renderLive(b);
+  if(v==='history')return renderHistory(b);
+  if(v==='receipt'){head('<div><span class="hlsr-live off"><i></i>RECIBO DE CIERRE</span><h2 id="hlsrTitle">'+E(S.snap&&S.snap.driver&&S.snap.driver.nombre||'Recibo')+'</h2></div>');
+    b.innerHTML='<div class="hlsr-receipt-wrap">'+receiptHtml(S.snap)+'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px"><button type="button" class="hlsr-btn sec" data-a="back">VOLVER</button><button type="button" class="hlsr-btn pri" data-a="print">IMPRIMIR / PDF</button></div></div>';return}
+}
+
+/* Vista en vivo */
+function renderLive(b){
+  var s=S.stl;if(!s)return;
+  var dn=(s.driver&&s.driver.nombre)||'Domiciliario';
+  b.innerHTML='<div class="hlsr-grid">'+
+    '<section class="hlsr-col c1" id="hlsrC1" aria-label="Conciliación"></section>'+
+    '<section class="hlsr-col c2"><div class="hlsr-center"><div class="hlsr-pair" id="hlsrPair">'+
+      '<div class="hlsr-node me">'+avatar(s.driver&&s.driver.foto_url,dn)+'<small>'+E(first(dn))+'</small></div><div class="hlsr-wire"></div>'+orb()+'<div class="hlsr-wire w2"></div>'+
+      '<div class="hlsr-node rest">'+avatar(restLogo()||(s.restaurant&&s.restaurant.logo_url),restNombre())+'<small>Tú</small></div></div>'+
+      '<div class="hlsr-status" id="hlsrStatus" aria-live="polite"></div><div id="hlsrC2"></div></div></section>'+
+    '<section class="hlsr-col c3" id="hlsrC3" aria-label="Acciones"></section></div>';
+  S.mainSig='';update();
+}
+function paintHead(){
+  var s=S.stl;if(!s||S.view!=='live')return;var dn=(s.driver&&s.driver.nombre)||'Domiciliario',done=isDone(s);
+  var on=S.driverOnline;
+  head(avatar(s.driver&&s.driver.foto_url,dn)+'<div><span class="hlsr-live'+(done?' done':s.status==='cancelled'?' off':'')+'"><i></i>'+(done?'CUADRE SINCRONIZADO':s.status==='cancelled'?'CIERRE CANCELADO':'CUADRE EN VIVO')+'</span>'+
+    '<h2 id="hlsrTitle">'+E(dn)+(isOpen(s)?'<span class="hlsr-online'+(on?' on':'')+'" id="hlsrOnline"><i></i>'+(on?'Online':on===false?'Desconectado':'Conectando…')+'</span>':'')+'</h2></div>');
+}
+function paintOnline(){var o=$('hlsrOnline');if(!o){if(S.stl&&isOpen(S.stl))paintHead();return}var on=S.driverOnline;o.className='hlsr-online'+(on?' on':'');o.innerHTML='<i></i>'+(on?'Online':on===false?'Desconectado':'Conectando…')}
+function statusInfo(s){
+  var dn=first(s.driver&&s.driver.nombre),pend=N(s.pending_orders);
+  switch(s.status){
+    case 'pairing':return{k:'',b:'BUSCANDO RESTAURANTE',t:'Conectando con '+dn+'…'};
+    case 'connected':return{k:'',b:'RESTAURANTE CONECTADO',t:'Enlazado con '+dn+'.'};
+    case 'syncing':return{k:'',b:'SINCRONIZANDO OPERACIÓN',t:'Luz está conciliando entregas, efectivo y pagos.'};
+    case 'awaiting_driver':
+      if(pend>0)return{k:'warn',b:'⚠ DIFERENCIA DETECTADA',t:pend+' '+plural(pend,'pedido asignado','pedidos asignados')+' sin entregar.'};
+      if(restConfirmed(s))return{k:'wait',b:'ESPERANDO AL DOMICILIARIO…',t:'Confirmaste. Falta la confirmación de '+dn+'.'};
+      return{k:'',b:'CUADRE LISTO',t:'Revisa la conciliación y confirma.'};
+    case 'awaiting_restaurant':return{k:'ok',b:dn.toUpperCase()+' YA CONFIRMÓ',t:'Falta tu confirmación para cerrar su turno.'};
+    case 'difference_review':return{k:'warn',b:'DIFERENCIA REPORTADA',t:dn+' reportó '+M(s.driver_amount)+' ('+SM(s.difference_amount)+').'};
+    case 'approved':case 'approved_with_note':return{k:'ok',b:'CUADRE SINCRONIZADO',t:'Ambas partes confirmaron la operación.'};
+    case 'cancelled':return{k:'bad',b:'CIERRE CANCELADO',t:dn+' canceló el cierre. Su turno sigue activo.'};
+  }
+  return{k:'wait',b:'SINCRONIZANDO',t:''};
+}
+function restConfirmed(s){return !!s.restaurant_confirmed_at&&s.restaurant_confirmed_revision===s.revision}
+function driverConfirmed(s){return !!s.driver_confirmed_at&&s.driver_confirmed_revision===s.revision}
+function pairClass(s){if(isDone(s))return 'hlsr-pair linked done';if(s.status==='syncing')return 'hlsr-pair linked flow';if(s.status==='pairing'||s.status==='cancelled')return 'hlsr-pair';return 'hlsr-pair linked'}
+function update(){
+  var s=S.stl;if(!s||S.view!=='live')return;
+  var pair=$('hlsrPair');if(!pair){renderLive($('hlsrBody'));return}
+  paintHead();
+  var pc=pairClass(s);if(pair.className!==pc)pair.className=pc;
+  var si=statusInfo(s),st=$('hlsrStatus');if(st){var h='<b>'+E(si.b)+'</b><span>'+E(si.t)+'</span>';if(st.innerHTML!==h)st.innerHTML=h;st.className='hlsr-status'+(si.k?' '+si.k:'')}
+  var sig=[s.status,s.revision,s.amount_due,s.driver_amount,s.restaurant_note,s.resolution,s.driver_confirmed_at,s.restaurant_confirmed_at,s.pending_orders,s.evidence_count,(s.events||[]).length,S.changed?1:0,S.err,S.busy?1:0,S.res,s.receipt_number||''].join('|');
+  if(S.mainSig===sig)return;
+  var keepNote=($('hlsrNote')||{}).value;
+  S.mainSig=sig;
+  $('hlsrC1').innerHTML=reconHtml(s);
+  $('hlsrC2').innerHTML=centerHtml(s);
+  $('hlsrC3').innerHTML=actionsHtml(s);
+  var n=$('hlsrNote');if(n&&keepNote!=null&&keepNote!=='')n.value=keepNote;
+}
+
+/* SettlementReconciliation */
+function reconHtml(s){
+  var synced=!!s.synced_at,h='';
+  if(!synced&&!isDone(s)){return '<div class="hlsr-card"><h3>CONCILIACIÓN DEL SISTEMA</h3><div class="hlsr-help" style="text-align:left;margin:0">Los datos aparecen cuando Luz termina de sincronizar.</div></div>'+timelineHtml(s)}
+  var dN=N(s.deliveries_count),ev=N(s.evidence_count),pend=N(s.pending_orders),adj=N(s.adjustments_total);
+  h+='<div class="hlsr-card"><h3>CONCILIACIÓN DEL SISTEMA</h3>'+
+    row('Entregas conciliadas',dN)+
+    row('Efectivo recibido','<b>'+M(s.cash_total)+'</b>',N(s.cash_count)+' '+plural(N(s.cash_count),'pedido','pedidos')+' · incluye domicilio',1)+
+    row('Domicilios','<b>'+M(s.delivery_fee_total)+'</b>','Ganancia del domiciliario',1,'g')+
+    row('Pagos digitales','<b>'+M(s.digital_total)+'</b>',N(s.digital_count)+' '+plural(N(s.digital_count),'pago','pagos')+' · no se entrega',1)+
+    row('Datáfono','<b>'+M(s.card_total)+'</b>',N(s.card_count)+' '+plural(N(s.card_count),'pago','pagos')+' · no se entrega',1)+
+    row('Propinas','<b>'+M(s.tips_total)+'</b>',null,1)+
+    row('Ajustes','<b>'+SM(adj)+'</b>',null,1,adj<0?'r':adj>0?'g':'')+
+    row('Pedidos pendientes','<b>'+pend+'</b>',null,1,pend>0?'w':'')+
+    row('Evidencias de entrega','<b>'+ev+'/'+dN+'</b>',null,1,ev<dN?'w':'')+'</div>';
+  if(s.driver_amount!=null||s.restaurant_note){
+    h+='<div class="hlsr-card"><h3>'+(s.status==='difference_review'?'DIFERENCIA REPORTADA':'NOTAS DEL CIERRE')+'</h3>';
+    if(s.driver_amount!=null)h+='<div class="hlsr-vs"><div><span>SISTEMA</span><b>'+M(N(s.driver_amount)-N(s.difference_amount))+'</b></div><div class="drv"><span>DOMICILIARIO</span><b>'+M(s.driver_amount)+'</b></div></div>'+
+      row('Diferencia','<b>'+SM(s.difference_amount)+'</b>',null,1,N(s.difference_amount)<0?'r':'w')+
+      '<div class="hlsr-quote"><b>Motivo:</b> '+E(s.difference_reason||'')+(s.driver_note?'<br>“'+E(s.driver_note)+'”':'')+'</div>'+
+      (s.difference_evidence_url?'<a class="hlsr-evid" href="'+E(s.difference_evidence_url)+'" target="_blank" rel="noopener"><img src="'+E(s.difference_evidence_url)+'" alt="Evidencia">Ver evidencia del domiciliario →</a>':'');
+    if(s.restaurant_note)h+='<div class="hlsr-quote"><b>Tu nota:</b> '+E(s.restaurant_note)+'</div>';
+    h+='</div>';
+  }
+  return h+timelineHtml(s);
+}
+function row(label,val,sub,raw,cls){return '<div class="hlsr-row'+(cls?' '+cls:'')+'"><span>'+E(label)+(sub?'<em>'+E(sub)+'</em>':'')+'</span>'+(raw?val:'<b>'+E(val)+'</b>')+'</div>'}
+function timelineHtml(s){
+  var ev=(s.events||[]).filter(function(e){return EVENTS[e.type]});if(!ev.length)return '';
+  return '<div class="hlsr-card"><h3>HISTORIAL DEL CIERRE</h3><div class="hlsr-tl">'+ev.slice(-12).map(function(e){
+    var c=/approved|confirmed|receipt|synced/.test(e.type)?'ok':/difference|cancel|totals/.test(e.type)?'w':'';
+    return '<div class="'+c+'"><span>'+E(EVENTS[e.type])+'</span><time>'+E(tlabel(e.at))+'</time></div>'}).join('')+'</div></div>';
+}
+
+/* Centro: total dominante + confirmaciones (o recibo al aprobar) */
+function centerHtml(s){
+  if(isDone(s))return receiptHtml(s.receipt_snapshot);
+  if(s.status==='cancelled')return '';
+  var diff=s.status==='difference_review',dc=driverConfirmed(s),rc=restConfirmed(s);
+  var dn=first(s.driver&&s.driver.nombre);
+  return '<div class="hlsr-total'+(diff?' diff':'')+'"><small>TOTAL A ENTREGAR</small><strong>'+M(s.amount_due)+'</strong><span>'+(s.synced_at?'Efectivo que '+E(dn)+' entrega al restaurante':'Preliminar · se confirma al sincronizar')+'</span></div>'+
+    '<div class="hlsr-confs"><div class="hlsr-conf'+(dc?' yes':'')+'"><i>'+(dc?'✓':'')+'</i><div><b>'+E(dn)+'</b><span>'+(dc?'Confirmó '+E(tlabel(s.driver_confirmed_at)):diff?'Reportó diferencia':'Pendiente')+'</span></div></div>'+
+    '<div class="hlsr-conf'+(rc?' yes':'')+'"><i>'+(rc?'✓':'')+'</i><div><b>Restaurante</b><span>'+(rc?'Confirmaste '+E(tlabel(s.restaurant_confirmed_at)):'Pendiente')+'</span></div></div></div>'+
+    '<div class="hlsr-help">Turno '+E(s.turno_inicio_label||'')+' – '+E(s.turno_fin_label||'')+' · '+E(s.duration_label||'')+'. El turno se cierra solo cuando ambos confirman.</div>';
+}
+
+/* SettlementApproval / SettlementDifferenceReview */
+function actionsHtml(s){
+  var b=S.busy,h='';
+  if(S.err)h+='<div class="hlsr-err"><b>No se pudo completar</b>'+E(S.err)+'</div>';
+  if(S.changed)h+='<div class="hlsr-flag"><b>LOS TOTALES CAMBIARON</b>Entró un movimiento nuevo del turno. Luz actualizó el cuadre: revisa y confirma de nuevo.</div>';
+  if(isDone(s))return h+'<div class="hlsr-card"><h3>RECIBO</h3><div class="hlsr-flag ok"><b>'+E(s.receipt_number||'')+'</b>El turno de '+E(first(s.driver&&s.driver.nombre))+' quedó cerrado. Este recibo es el mismo que ve el domiciliario.</div>'+
+    '<div style="display:grid;gap:9px;margin-top:12px"><button type="button" class="hlsr-btn pri" data-a="print">IMPRIMIR / GUARDAR PDF</button><button type="button" class="hlsr-btn sec" data-a="close">LISTO</button></div></div>';
+  if(s.status==='cancelled')return h+'<div class="hlsr-card"><h3>CIERRE CANCELADO</h3><div class="hlsr-help" style="text-align:left;margin:0">El domiciliario canceló este cierre. Su turno sigue activo y puede iniciar uno nuevo.</div><div style="margin-top:12px"><button type="button" class="hlsr-btn sec" data-a="close">CERRAR</button></div></div>';
+  if(s.status==='pairing'||s.status==='connected'||s.status==='syncing')return h+'<div class="hlsr-card"><h3>SINCRONIZANDO</h3><div class="hlsr-help" style="text-align:left;margin:0">Luz está preparando la conciliación. Las acciones aparecen cuando termine.</div></div>';
+  var pend=N(s.pending_orders);
+  if(pend>0)h+='<div class="hlsr-flag"><b>PEDIDOS SIN ENTREGAR</b>'+pend+' '+plural(pend,'pedido asignado','pedidos asignados')+' a este domiciliario aún no se entrega'+(pend===1?'':'n')+'. Complétalo'+(pend===1?'':'s')+' o reasígnalo'+(pend===1?'':'s')+' antes de confirmar.</div>';
+  if(s.status==='difference_review'){
+    var sys=N(s.driver_amount)-N(s.difference_amount);
+    h+='<div class="hlsr-card"><h3>REVISAR DIFERENCIA</h3>'+
+      '<button type="button" class="hlsr-opt'+(S.res==='accept_driver'?' on':'')+'" data-a="res" data-v="accept_driver"><i></i><div><b>Aceptar '+M(s.driver_amount)+' del domiciliario</b><span>Queda como ajuste de '+SM(s.difference_amount)+'. El cuadre se aprueba de inmediato.</span></div></button>'+
+      '<button type="button" class="hlsr-opt'+(S.res==='keep_system'?' on':'')+'" data-a="res" data-v="keep_system"><i></i><div><b>Mantener '+M(sys)+' del sistema</b><span>El domiciliario verá tu nota y deberá confirmar de nuevo.</span></div></button>'+
+      '<label class="hlsr-field"><span>Nota para el domiciliario (obligatoria)</span><textarea id="hlsrNote" maxlength="500" placeholder="Explica la decisión"></textarea></label>'+
+      '<button type="button" class="hlsr-btn '+(S.res==='accept_driver'?'ok':'warn')+'" data-a="resolve"'+(b||!S.res||pend>0?' disabled':'')+'>'+(b?'GUARDANDO…':'RESOLVER DIFERENCIA')+'</button></div>';
+    return h;
+  }
+  if(restConfirmed(s)){
+    return h+'<div class="hlsr-card"><h3>TU CONFIRMACIÓN</h3><div class="hlsr-flag ok"><b>CONFIRMASTE '+M(s.amount_due)+'</b>Esperando a que '+E(first(s.driver&&s.driver.nombre))+' confirme. Te avisamos al instante.</div><div style="margin-top:12px"><button type="button" class="hlsr-btn sec" data-a="close">SEGUIR TRABAJANDO</button></div></div>';
+  }
+  return h+'<div class="hlsr-card"><h3>CONFIRMAR CUADRE</h3>'+
+    '<div class="hlsr-help" style="text-align:left;margin:0">Confirma que recibes <b style="color:#F5F8FF">'+M(s.amount_due)+'</b> en efectivo de '+E(first(s.driver&&s.driver.nombre))+'.</div>'+
+    '<label class="hlsr-field"><span>Nota (opcional)</span><textarea id="hlsrNote" maxlength="500" placeholder="Queda en el recibo"></textarea></label>'+
+    '<button type="button" class="hlsr-btn ok" data-a="confirm"'+(b||pend>0?' disabled':'')+'>'+(b?'CONFIRMANDO…':'CONFIRMAR CUADRE · '+M(s.amount_due))+'</button>'+
+    '<div class="hlsr-help">'+(driverConfirmed(s)?'El domiciliario ya confirmó: al confirmar se cierra su turno y se genera el recibo.':'El turno se cierra cuando ambos confirmen.')+'</div></div>';
+}
+
+/* SettlementReceiptPreview (desde el snapshot inmutable) */
+function receiptHtml(sn){
+  if(!sn)return '<div class="hlsr-err"><b>Recibo no disponible</b>Intenta de nuevo en unos segundos.</div>';
+  var t=sn.totals||{},sh=sn.shift||{},df=sn.difference,cf=sn.confirmations||{},adj=N(t.adjustments_total);
+  return '<article class="hlr" aria-label="Recibo de cierre">'+
+    '<div class="hlr-head"><div class="hlr-brand"><small>HOLA LUZ</small><b>RECIBO DE CIERRE</b><span class="hlr-badge">✓ '+E(sn.status_label||'CUADRE APROBADO')+'</span></div>'+
+    '<div class="hlr-no">No.<b>'+E(sn.receipt_number||'')+'</b>'+E(sn.generated_label||'')+'</div></div>'+
+    '<div class="hlr-grid"><div><span>RESTAURANTE</span><b>'+E(sn.restaurant&&sn.restaurant.nombre||'')+'</b></div><div><span>DOMICILIARIO</span><b>'+E(sn.driver&&sn.driver.nombre||'')+'</b></div>'+
+    '<div><span>FECHA</span><b>'+E(sh.date_label||'')+'</b></div><div><span>TURNO</span><b>'+E(sh.start_label||'')+' – '+E(sh.end_label||'')+'</b></div>'+
+    '<div><span>DURACIÓN</span><b>'+E(sh.duration_label||'')+'</b></div><div><span>ENTREGAS</span><b>'+N(t.deliveries)+'</b></div></div>'+
+    '<div class="hlr-lines">'+
+      '<div class="hlr-line"><span>Efectivo recibido ('+N(t.cash_count)+')</span><b>'+M(t.cash_total)+'</b></div>'+
+      '<div class="hlr-line"><span>Domicilios (ganancia)</span><b>'+M(t.delivery_fee_total)+'</b></div>'+
+      '<div class="hlr-line"><span>Pagos digitales ('+N(t.digital_count)+') · incl. datáfono</span><b>'+M(t.digital_total)+'</b></div>'+
+      '<div class="hlr-line"><span>Propinas</span><b>'+M(t.tips_total)+'</b></div>'+
+      '<div class="hlr-line"><span>Ajustes</span><b>'+SM(adj)+'</b></div>'+
+      '<div class="hlr-line"><span>Evidencias de entrega</span><b>'+N(t.evidence_count)+'/'+N(t.deliveries)+'</b></div></div>'+
+    '<div class="hlr-total"><span>TOTAL ENTREGADO</span><b>'+M(t.amount_due)+'</b></div>'+
+    (df?'<div class="hlr-notes">'+(df.driver_amount!=null?'<div><b>Diferencia reportada:</b> '+M(df.driver_amount)+' ('+SM(df.difference_amount)+') · '+E(df.reason||'')+(df.driver_note?' — '+E(df.driver_note):'')+'</div>':'')+
+      (df.resolution?'<div><b>Resolución:</b> '+(df.resolution==='accept_driver'?'Se aceptó el monto del domiciliario':'Se mantuvo el monto del sistema')+'</div>':'')+
+      (df.restaurant_note?'<div><b>Nota del restaurante:</b> '+E(df.restaurant_note)+'</div>':'')+'</div>':'')+
+    '<div class="hlr-conf"><div><span>Domiciliario confirmó</span><b>✓ '+E(cf.driver_label||'')+'</b></div><div><span>Restaurante confirmó</span><b>✓ '+E(cf.restaurant_label||'')+'</b></div></div>'+
+    '<div class="hlr-foot">Cierre bilateral verificado por Luz · ID '+E(sn.settlement_id||'')+'</div></article>';
+}
+function printSnap(sn){
+  if(!sn)return;var p=$('hlsrPrint');if(!p){p=document.createElement('div');p.id='hlsrPrint';document.body.appendChild(p)}
+  p.innerHTML=receiptHtml(sn);document.body.classList.add('hlsr-printing');
+  var done=function(){document.body.classList.remove('hlsr-printing');window.removeEventListener('afterprint',done)};
+  window.addEventListener('afterprint',done);try{window.print()}catch(e){}
+  setTimeout(function(){if(!window.matchMedia||!window.matchMedia('print').matches)done()},1500);
+}
+
+/* SettlementHistoryPanel */
+function renderHistory(b){
+  head('<div><span class="hlsr-live off"><i></i>HOLA LUZ · CONTROL DE CAJA</span><h2 id="hlsrTitle">Cierres de turno</h2></div>');
+  var live=S.incoming||[],q=S.histQ.toLowerCase();
+  var h='<div class="hlsr-hist">';
+  h+='<h3>EN VIVO</h3>'+(live.length?live.map(function(x){var st=inState(x);return '<button type="button" class="hlsr-item" data-a="review" data-id="'+E(x.id)+'">'+avatar(x.driver_foto,x.driver_nombre)+'<div><b>'+E(x.driver_nombre||'Domiciliario')+'</b><span>'+E(st[1])+'</span></div><em class="'+(st[0]==='warn'?'warn':'live')+'">EN VIVO</em></button>'}).join(''):'<div class="hlsr-empty">No hay cierres en curso.</div>');
+  h+='<h3>HISTORIAL</h3><input class="hlsr-search" id="hlsrQ" placeholder="Buscar por domiciliario o número de recibo" value="'+E(S.histQ)+'">';
+  if(!S.hist)h+='<div class="hlsr-empty">Cargando…</div>';
+  else{var list=S.hist.filter(function(x){return !q||String(x.driver_nombre||'').toLowerCase().indexOf(q)>=0||String(x.receipt_number||'').toLowerCase().indexOf(q)>=0});
+    h+=list.length?list.map(function(x,i){var sn=x.receipt_snapshot||{},sh=sn.shift||{};return '<button type="button" class="hlsr-item" data-a="histOpen" data-i="'+S.hist.indexOf(x)+'">'+avatar(sn.driver&&sn.driver.foto_url,x.driver_nombre)+'<div><b>'+E(x.driver_nombre||'')+' · '+E(sh.date_label||'')+'</b><span>'+E(x.receipt_number||'')+' · '+E(sh.start_label||'')+' – '+E(sh.end_label||'')+' · '+N(x.deliveries_count)+' '+plural(N(x.deliveries_count),'entrega','entregas')+'</span></div><strong>'+M(x.amount_due)+'</strong><em>'+(x.status==='approved_with_note'?'CON NOTA':'APROBADO')+'</em></button>'}).join(''):'<div class="hlsr-empty">'+(q?'Sin resultados.':'Aún no hay cierres aprobados.')+'</div>';}
+  b.innerHTML=h+'</div>';
+}
+
+/* ── acciones ── */
+function needPin(after){S.pendingAfterPin=after;show();setView('pin')}
+async function submitPin(){
+  var i=$('hlsrPin'),btn=$('hlsrPinBtn'),err=$('hlsrPinErr');if(!i||S.busy)return;var pin=String(i.value||'').replace(/\D/g,'');
+  if(pin.length!==4){if(err)err.textContent='Escribe el PIN de 4 dígitos.';return}
+  S.busy=true;if(btn){btn.disabled=true;btn.textContent='VERIFICANDO…'}if(err)err.textContent='';
+  try{var d=await api('restaurant_session',{restaurante_id:S.rid,pin:pin});setTok(d.token,d.expires_in);S.busy=false;buzz(20);var f=S.pendingAfterPin;S.pendingAfterPin=null;if(f)f();else openHistory()}
+  catch(e){S.busy=false;if(btn){btn.disabled=false;btn.textContent='DESBLOQUEAR'}if(err)err.textContent=e.message;i.value='';var box=$('hlsrPinBox');if(box){box.classList.remove('hlsr-shake');void box.offsetWidth;box.classList.add('hlsr-shake')}buzz([40,30,40])}
+}
+async function openSettlement(id){
+  if(!id)return;
+  if(!tok())return needPin(function(){openSettlement(id)});
+  show();S.id=id;S.stl=null;S.err='';S.changed=false;S.res='';S.backTo='';setView('loading');renderTray();watchSettlement(id);
+  try{var d=await api('restaurant_open',{id:id});apply(d.settlement);setView('live');startLive()}
+  catch(e){if(e.code==='restaurant_session')return needPin(function(){openSettlement(id)});S.err=e.message;setView('error')}
+}
+function apply(s){
+  if(!s)return;var prev=S.stl&&S.stl.id===s.id?S.stl:null;
+  if(s.totals_changed){S.changed=true;delete s.totals_changed}
+  else if(prev&&prev.revision!==s.revision&&(prev.driver_confirmed_at||prev.restaurant_confirmed_at))S.changed=true;
+  if(prev&&prev.status!==s.status){S.err='';if(s.status!=='awaiting_driver')S.changed=false;if(prev.status==='pairing'||prev.status==='connected')buzz(20)}
+  if(prev&&prev.status==='difference_review'&&s.status!=='difference_review')S.res='';
+  S.stl=s;
+  if(isDone(s)&&!S.celebrated[s.id]){S.celebrated[s.id]=1;if(prev){buzz([20,40,20]);chime('ok')}stopLive();unwatchSettlement();loadIncomingSoon(60);
+    try{if(typeof d9Refresh==='function')d9Refresh(false)}catch(e){}}
+  if(s.status==='cancelled'){stopLive();unwatchSettlement();loadIncomingSoon(60)}
+  update();
+}
+function refetchSoon(ms){clearTimeout(S.getT);S.getT=setTimeout(refetch,ms||120)}
+async function refetch(){if(!S.id||!S.stl)return;try{var d=await api('restaurant_get',{id:S.id});apply(d.settlement)}catch(e){if(e.code==='restaurant_session')return needPin(function(){openSettlement(S.id)});if(!e.net){S.err=e.message;update()}}}
+function startLive(){stopLive();S.liveFb=setInterval(function(){if(document.hidden)return;if(S.stl&&isOpen(S.stl))refetch();else stopLive()},LIVE_FALLBACK_MS)}
+function stopLive(){if(S.liveFb){clearInterval(S.liveFb);S.liveFb=null}}
+async function confirmIt(){
+  var s=S.stl;if(!s||S.busy)return;var note=String(($('hlsrNote')||{}).value||'').trim();
+  var body={id:s.id,revision:s.revision,note:note||null,resolution:null};
+  if(s.status==='difference_review'){if(!S.res){S.err='Elige cómo resolver la diferencia.';update();return}if(!note){S.err='Escribe una nota para el domiciliario.';S.mainSig='';update();var n=$('hlsrNote');if(n){n.value='';n.focus()}return}body.resolution=S.res}
+  S.busy=true;S.err='';buzz(10);S.mainSig='';update();var nn=$('hlsrNote');if(nn)nn.value=note;
+  try{var d=await api('restaurant_confirm',body);S.busy=false;if(!(d.settlement&&d.settlement.totals_changed))S.changed=false;S.mainSig='';apply(d.settlement)}
+  catch(e){S.busy=false;if(e.code==='restaurant_session')return needPin(function(){openSettlement(s.id)});S.err=e.message;S.mainSig='';update();var n2=$('hlsrNote');if(n2)n2.value=note;if(/HL_STL_BAD_STATE|HL_STL_PENDING/.test(e.code||''))refetchSoon(10)}
+}
+async function openHistory(){
+  if(!tok())return needPin(openHistory);
+  show();if(S.view==='live'){S.backTo='live'}else{S.backTo='';unwatchSettlement();stopLive();S.id=null;S.stl=null}
+  S.hist=null;setView('history');loadIncomingSoon(10);
+  try{var d=await api('restaurant_history');S.hist=Array.isArray(d.history)?d.history:[]}catch(e){if(e.code==='restaurant_session')return needPin(openHistory);S.hist=[]}
+  if(S.view==='history')render();
+}
+function back(){
+  if(S.view==='receipt'){setView('history');return}
+  if(S.view==='history'&&S.backTo==='live'&&S.stl){S.backTo='';setView('live');S.mainSig='';update();return}
+  close();
+}
+function onClick(e){
+  var t=e.target.closest&&e.target.closest('[data-a]');if(!t||t.disabled)return;var a=t.getAttribute('data-a');
+  switch(a){
+    case 'close':return close();
+    case 'back':return back();
+    case 'history':return openHistory();
+    case 'pin':return submitPin();
+    case 'retry':return S.id?openSettlement(S.id):openHistory();
+    case 'review':return openSettlement(t.getAttribute('data-id'));
+    case 'histOpen':var x=S.hist&&S.hist[Number(t.getAttribute('data-i'))];if(x){S.snap=x.receipt_snapshot;setView('receipt')}return;
+    case 'print':return printSnap(S.view==='receipt'?S.snap:(S.stl&&S.stl.receipt_snapshot));
+    case 'res':S.res=t.getAttribute('data-v')||'';S.err='';buzz(10);S.mainSig='';update();return;
+    case 'resolve':case 'confirm':return confirmIt();
+  }
+}
+function onInput(e){
+  if(e.target&&e.target.id==='hlsrPin'){var v=String(e.target.value||'').replace(/\D/g,'').slice(0,4);if(e.target.value!==v)e.target.value=v;if(v.length===4)submitPin()}
+  if(e.target&&e.target.id==='hlsrQ'){S.histQ=e.target.value;var pos=e.target.selectionStart;renderHistory($('hlsrBody'));var q=$('hlsrQ');if(q){q.focus();try{q.setSelectionRange(pos,pos)}catch(x){}}}
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&S.el&&S.el.classList.contains('on'))back()});
+window.addEventListener('online',function(){setOffline(false);loadIncomingSoon(50);if(S.stl&&isOpen(S.stl))refetchSoon(50)});
+window.addEventListener('offline',function(){setOffline(true)});
+document.addEventListener('visibilitychange',function(){if(!document.hidden){loadIncomingSoon(60);if(S.stl&&isOpen(S.stl))refetchSoon(60)}});
+
+/* Acceso desde Despacho & Tracking (mismo lugar donde estaba "Cuadres de caja") */
+function mountButton(){var host=document.querySelector('#page-domis .d11-hero-actions');if(host&&!document.getElementById('hlSettlementHeroBtn')){var b=document.createElement('button');b.id='hlSettlementHeroBtn';b.type='button';b.className='d11-soft-btn';b.innerHTML='<span>◎</span><div><b>Cierres de turno</b><small>Cuadres en vivo e historial</small></div><em>→</em>';b.onclick=openHistory;host.appendChild(b)}}
+
+function init(){
+  var rid=null;try{rid=rest&&rest.id}catch(e){}
+  if(!rid||S.rid===rid)return;
+  S.rid=rid;S.seen={};S.loadedOnce=false;
+  connectRestaurant();loadIncoming();
+  clearInterval(S.incFb);S.incFb=setInterval(function(){if(!document.hidden)loadIncoming()},INCOMING_FALLBACK_MS);
+  setTimeout(mountButton,1300);setInterval(mountButton,4000);
+}
+window.HLSettlementRest={open:openSettlement,history:openHistory,close:close,refresh:loadIncoming,state:function(){return S.stl}};
+window.hlOpenSettlements=openHistory;
+window.hlCloseSettlements=close;
+var _goApp=goApp;goApp=function(){var r=_goApp.apply(this,arguments);setTimeout(init,300);return r};
+try{if(rest&&rest.id)setTimeout(init,300)}catch(e){}
 })();
 </script>
+
 
 <style id="hlDispatchRecoveryLayoutFix">
 /* HOLA LUZ · Layout authority + dispatch recovery V2 */
