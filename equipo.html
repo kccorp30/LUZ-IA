@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020817">
+<meta name="robots" content="noindex">
+<title>Hola Luz · Equipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--b0:#020817;--b1:#06122B;--b2:#0A1736;--line:rgba(75,140,255,.16);--line2:rgba(169,185,214,.1);--t1:#2F6BFF;--cy:#27D7FF;--lz:#7A4DFF;--lz2:#B94CFF;--ok:#31E6A1;--warn:#FFBE4B;--bad:#FF5C7A;--tx:#F5F8FF;--tx2:#A9B9D6;--tx3:#6F86AD;--glass:linear-gradient(160deg,rgba(12,28,68,.78),rgba(5,13,36,.9));--ff:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;--ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:radial-gradient(1100px 700px at 20% 10%,rgba(91,77,255,.22),transparent),radial-gradient(900px 600px at 90% 90%,rgba(39,120,255,.16),transparent),var(--b0);color:var(--tx);font-family:var(--ff);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;min-height:100dvh}
+button,input,select,textarea{font-family:inherit}
+button{cursor:pointer}
+.hide{display:none!important}
+.wrap{max-width:1280px;margin:0 auto;padding:18px 18px calc(24px + env(safe-area-inset-bottom))}
+.brand{display:flex;align-items:center;gap:11px}
+.orb{width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 36% 30%,#fff 0,#c7d2ff 12%,#7a5cff 40%,#2a1d8a 72%,#0b0f3a);box-shadow:0 0 22px rgba(122,77,255,.6);flex:none}
+.brand b{display:block;font-size:15px;letter-spacing:.08em}
+.brand small{display:block;font-size:11px;color:var(--tx2);letter-spacing:.02em}
+.card{background:var(--glass);border:1px solid var(--line);border-radius:22px;box-shadow:inset 0 1px 0 rgba(245,248,255,.06),0 18px 44px rgba(0,0,0,.3);padding:20px}
+.btn{appearance:none;border:1px solid var(--line);background:rgba(16,35,74,.6);color:var(--tx);font:800 14px var(--ff);padding:14px 18px;border-radius:15px;min-height:52px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .12s var(--ease),filter .15s}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.pri{border-color:rgba(122,77,255,.55);background:linear-gradient(135deg,var(--t1),var(--lz));box-shadow:0 10px 26px rgba(91,77,255,.4),inset 0 1px 0 rgba(255,255,255,.22)}
+.btn.ok{border-color:rgba(49,230,161,.5);background:linear-gradient(135deg,#0f8f67,#1fbf8a);box-shadow:0 10px 26px rgba(49,230,161,.25)}
+.btn.warn{border-color:rgba(255,190,75,.5);background:rgba(255,190,75,.14);color:#ffe0a3}
+.btn.bad{border-color:rgba(255,92,122,.5);background:rgba(255,92,122,.12);color:#ffb6c4}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:40px;padding:9px 13px;font-size:12.5px;border-radius:12px}
+.btn.block{width:100%}
+.btn:focus-visible,.in:focus-visible,.key:focus-visible,.pcard:focus-visible,.tab:focus-visible{outline:2px solid var(--cy);outline-offset:2px}
+.in,.sel,.ta{width:100%;min-width:0;padding:13px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(4,12,32,.8);color:#fff;font:600 16px var(--ff);min-height:50px}
+.ta{min-height:96px;resize:vertical;line-height:1.45}
+.in::placeholder,.ta::placeholder{color:#5b6f93}
+label.f{display:block;margin-bottom:12px}
+label.f>span{display:block;font-size:12px;font-weight:800;color:var(--tx2);margin-bottom:6px;letter-spacing:.03em}
+.err{color:#ff9fb2;font-size:13px;min-height:18px;margin-top:8px}
+.note{font-size:12.5px;color:var(--tx3);line-height:1.55}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid var(--line);color:var(--tx2);background:rgba(16,35,74,.5);white-space:nowrap}
+.chip.ok{color:#8ff7d2;border-color:rgba(49,230,161,.38);background:rgba(49,230,161,.08)}
+.chip.warn{color:#ffd48a;border-color:rgba(255,190,75,.38);background:rgba(255,190,75,.08)}
+.chip.bad{color:#ffabbd;border-color:rgba(255,92,122,.4);background:rgba(255,92,122,.08)}
+.chip.lz{color:#dccbff;border-color:rgba(122,77,255,.45);background:rgba(122,77,255,.12)}
+.chip i{width:7px;height:7px;border-radius:50%;background:currentColor}
+/* ── LUZ CHECK (tablet) ── */
+.k-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.k-clock{text-align:right}
+.k-clock b{display:block;font-size:30px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.k-clock small{color:var(--tx2);font-size:12px}
+.k-main{display:grid;grid-template-columns:minmax(300px,440px) minmax(0,1fr);gap:18px;align-items:start}
+.scan{position:relative;aspect-ratio:1;border-radius:50%;margin:6px auto 14px;max-width:340px;width:100%;display:grid;place-items:center}
+.scan .r{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(47,107,255,.35)}
+.scan .r2{inset:7%;border-color:rgba(122,77,255,.35)}
+.scan .r3{inset:14%;border:2px dashed rgba(39,215,255,.3);animation:spin 18s linear infinite}
+.scan .glow{position:absolute;inset:20%;border-radius:50%;background:radial-gradient(circle,rgba(91,77,255,.35),rgba(10,23,54,.9) 70%);box-shadow:0 0 60px rgba(91,77,255,.35),inset 0 0 40px rgba(39,215,255,.12)}
+.scan .face{position:relative;width:46%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-size:clamp(34px,6vw,56px);font-weight:800;background:linear-gradient(145deg,#1b3a78,#3a2a8a);box-shadow:0 0 0 3px rgba(97,232,255,.25)}
+.scan[data-s="checking"] .r3{animation-duration:2.4s;border-color:rgba(39,215,255,.7)}
+.scan[data-s="done"] .r{border-color:rgba(49,230,161,.7);box-shadow:0 0 40px rgba(49,230,161,.3)}
+.scan[data-s="done"] .face{box-shadow:0 0 0 4px rgba(49,230,161,.7)}
+.scan[data-s="failed"] .r{border-color:rgba(255,92,122,.6)}
+.scan[data-s="wait"] .r3{border-color:rgba(255,190,75,.6)}
+.scan[data-s="camera"] .r3{border-color:rgba(39,215,255,.8);animation-duration:4s}
+@keyframes spin{to{transform:rotate(360deg)}}
+.k-state{text-align:center}
+.k-state b{display:block;font-size:17px;letter-spacing:.12em;font-weight:800}
+.k-state small{display:block;color:var(--tx2);font-size:13px;margin-top:4px;line-height:1.45}
+.k-state[data-s="done"] b{color:#7ff5cb}.k-state[data-s="failed"] b{color:#ff9fb2}.k-state[data-s="wait"] b{color:#ffd48a}
+.k-bio{margin-top:14px;padding:11px 12px;border-radius:14px;border:1px solid var(--line2);background:rgba(8,20,48,.5);font-size:12px;color:var(--tx2);line-height:1.45}
+.k-panel h2{margin:0 0 4px;font-size:22px;font-weight:800;letter-spacing:-.01em}
+.k-panel>p{margin:0 0 14px;color:var(--tx2);font-size:14px}
+.search{margin-bottom:12px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;max-height:calc(100vh - 290px);overflow:auto;padding:2px}
+.pcard{appearance:none;border:1px solid var(--line2);background:rgba(8,20,48,.6);color:var(--tx);border-radius:18px;padding:14px 10px;text-align:center;min-height:150px;display:flex;flex-direction:column;align-items:center;gap:6px;transition:border-color .15s,transform .12s var(--ease)}
+.pcard:hover{border-color:rgba(97,232,255,.4)}
+.pcard:active{transform:scale(.98)}
+.av{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:19px;background:linear-gradient(145deg,#1b3a78,#3a2a8a);box-shadow:0 0 0 3px rgba(111,134,173,.3);overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover}
+.pcard[data-st="ACTIVE"] .av{box-shadow:0 0 0 3px rgba(49,230,161,.65)}
+.pcard[data-st="ON_BREAK"] .av{box-shadow:0 0 0 3px rgba(255,190,75,.7)}
+.pcard b{font-size:14px;line-height:1.2}
+.pcard small{font-size:11.5px;color:var(--tx3)}
+.acts{display:grid;gap:10px;margin:14px 0}
+.acts .btn{min-height:64px;font-size:16px;letter-spacing:.06em}
+.pinbox{display:flex;justify-content:center;gap:12px;margin:10px 0 14px}
+.pinbox span{width:18px;height:18px;border-radius:50%;border:2px solid rgba(169,185,214,.45)}
+.pinbox span.on{background:linear-gradient(135deg,var(--cy),var(--lz));border-color:transparent;box-shadow:0 0 12px rgba(39,215,255,.5)}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:360px;margin:0 auto}
+.key{appearance:none;border:1px solid var(--line);background:rgba(16,35,74,.6);color:#fff;font:800 26px var(--ff);border-radius:18px;min-height:66px;font-variant-numeric:tabular-nums}
+.key:active{background:rgba(47,107,255,.35)}
+.key.sm{font-size:15px;color:var(--tx2)}
+.done-big{font-size:28px;font-weight:800;margin:4px 0 2px;letter-spacing:.02em}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;margin-top:12px}
+.kv span{color:var(--tx3)}
+.banner{margin:0 0 14px;padding:12px 14px;border-radius:14px;font-size:13.5px;border:1px solid rgba(255,190,75,.4);background:rgba(255,190,75,.08);color:#ffe2a8}
+.banner.info{border-color:rgba(97,232,255,.3);background:rgba(39,215,255,.07);color:#bff3ff}
+.countdown{font-size:13px;color:var(--tx2);text-align:center;margin-top:8px;font-variant-numeric:tabular-nums}
+.foot{margin-top:18px;text-align:center;font-size:11.5px;color:var(--tx3)}
+/* ── MI TURNO (celular) ── */
+.m-wrap{max-width:560px;margin:0 auto;padding:16px 14px calc(96px + env(safe-area-inset-bottom))}
+.m-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.hello{display:flex;align-items:center;gap:12px;margin:4px 0 14px}
+.hello .av{width:48px;height:48px;font-size:16px}
+.hello b{display:block;font-size:18px}
+.hello small{color:var(--tx2);font-size:12.5px}
+.ring{display:grid;grid-template-columns:130px 1fr;gap:16px;align-items:center}
+.ring svg{width:130px;height:130px;transform:rotate(-90deg)}
+.ring .big{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.ring .big b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.ring .big small{font-size:11px;color:var(--tx2)}
+.stack{display:grid;gap:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line2)}
+.row:first-child{border-top:0}
+.row b{font-size:14px}.row small{display:block;font-size:12px;color:var(--tx3);margin-top:2px}
+.sec-t{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--tx2);margin:18px 0 8px;text-transform:uppercase}
+.nav{position:fixed;left:0;right:0;bottom:0;background:rgba(3,9,26,.94);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:20}
+.tab{appearance:none;border:0;background:none;color:var(--tx3);font:800 11px var(--ff);display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 10px;border-radius:12px;min-width:64px}
+.tab.on{color:#fff;background:rgba(47,107,255,.2)}
+.tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pay{border-radius:18px;padding:16px;background:linear-gradient(135deg,rgba(47,107,255,.18),rgba(122,77,255,.16));border:1px solid rgba(122,77,255,.4)}
+.pay strong{font-size:28px;display:block;font-variant-numeric:tabular-nums}
+.doc{white-space:pre-wrap;font-size:14px;line-height:1.6;color:#d6e2f7;background:rgba(4,12,32,.7);border:1px solid var(--line2);padding:14px;border-radius:14px;max-height:52vh;overflow:auto}
+.avail{display:grid;grid-template-columns:42px 26px minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center;margin-bottom:8px}
+.avail .in{min-height:44px;padding:8px 6px;font-size:14px;min-width:0}
+.avail input[type=checkbox]{width:22px;height:22px;accent-color:#7A4DFF}
+.layer{position:fixed;inset:0;z-index:50;background:rgba(2,6,18,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;padding:12px}
+.sheet{width:min(560px,100%);max-height:92vh;overflow:auto;border-radius:24px;background:linear-gradient(165deg,rgba(12,28,68,.98),rgba(4,11,30,.99));border:1px solid rgba(97,232,255,.18);padding:20px;animation:up .22s var(--ease)}
+@media(min-width:700px){.layer{align-items:center}}
+.sheet h3{margin:0 0 4px;font-size:19px}
+.sheet .x{float:right;border:0;background:rgba(111,134,173,.16);color:#cfe0ff;width:38px;height:38px;border-radius:12px;font-size:17px}
+@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.bigpin{font-size:44px;font-weight:800;letter-spacing:.24em;text-align:center;padding:16px;border-radius:18px;background:rgba(4,12,32,.8);border:1px solid rgba(122,77,255,.45);margin:10px 0;font-variant-numeric:tabular-nums}
+.seg{display:flex;gap:6px;padding:5px;border-radius:14px;background:rgba(6,18,43,.8);border:1px solid var(--line2);margin-bottom:14px}
+.seg button{flex:1;appearance:none;border:0;background:none;color:var(--tx2);font:800 13px var(--ff);padding:11px;border-radius:10px}
+.seg button.on{background:linear-gradient(135deg,rgba(47,107,255,.4),rgba(122,77,255,.35));color:#fff}
+.center{min-height:100vh;display:grid;place-items:center;padding:18px}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:60;padding:12px 16px;border-radius:14px;background:rgba(6,16,40,.97);border:1px solid rgba(97,232,255,.3);font:700 14px var(--ff);max-width:calc(100vw - 28px)}
+@media(max-width:900px){.k-main{grid-template-columns:1fr}.scan{max-width:240px}.pgrid{max-height:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app" aria-live="polite"></div>
+<script>
+(function(){
+'use strict';
+var D=document,W=window,$=function(id){return D.getElementById(id)};
+var Q=new URLSearchParams(location.search),RID=(Q.get('r')||'').toLowerCase(),MODO=Q.get('modo')||'';
+var S={off:0,tz:'America/Bogota',rest:null,online:true};
+function E(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
+function now(){return Date.now()+S.off}
+function tzp(d){var o={};new Intl.DateTimeFormat('en-CA',{timeZone:S.tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(d)).forEach(function(p){o[p.type]=p.value});return o}
+function hm12(d){if(!d)return '—';return new Intl.DateTimeFormat('es-CO',{timeZone:S.tz,hour:'numeric',minute:'2-digit',hour12:true}).format(new Date(d))}
+function dia(d){return new Intl.DateTimeFormat('es-CO',{timeZone:S.tz,weekday:'long',day:'numeric',month:'long'}).format(new Date(d))}
+function diaC(d){return new Intl.DateTimeFormat('es-CO',{timeZone:S.tz,weekday:'short',day:'numeric',month:'short'}).format(new Date(d))}
+function fmtMin(m){m=Math.max(0,Math.round(m||0));var h=Math.floor(m/60),r=m%60;return h?h+'h '+String(r).padStart(2,'0')+'m':r+'m'}
+function ini(n){return String(n||'?').trim().split(/\s+/).slice(0,2).map(function(x){return x.charAt(0)}).join('').toUpperCase()}
+function av(p){return '<span class="av" aria-hidden="true">'+(p&&p.foto_url?'<img src="'+E(p.foto_url)+'" alt="">':E(ini(p&&p.nombre)))+'</span>'}
+function uuid(){try{return crypto.randomUUID()}catch(e){return 'k'+Date.now()+Math.random().toString(36).slice(2)}}
+function toast(m){var t=D.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=m;D.body.appendChild(t);setTimeout(function(){t.remove()},3200)}
+async function call(method,path,body,headers){
+  var r,j={};
+  try{r=await fetch(path,{method:method,headers:Object.assign({'Content-Type':'application/json'},headers||{}),body:body?JSON.stringify(body):undefined,cache:'no-store'})}
+  catch(e){S.online=false;var ne=new Error('Sin conexión. No se registró nada: intenta de nuevo.');ne.code='offline';throw ne}
+  S.online=true;try{j=await r.json()}catch(e){}
+  if(j&&j.servidor_at)S.off=new Date(j.servidor_at).getTime()-Date.now();
+  if(!r.ok){var er=new Error(j.error||('Error '+r.status));er.code=j.code;er.data=j;er.status=r.status;throw er}
+  return j;
+}
+function layer(html){var l=D.createElement('div');l.className='layer';l.setAttribute('role','dialog');l.setAttribute('aria-modal','true');l.innerHTML='<div class="sheet"><button class="x" type="button" aria-label="Cerrar">✕</button>'+html+'</div>';D.body.appendChild(l);var close=function(){l.remove()};l.querySelector('.x').onclick=close;l.addEventListener('mousedown',function(e){if(e.target===l)close()});setTimeout(function(){var f=l.querySelector('input,textarea,button:not(.x)');if(f)f.focus()},50);return {el:l.querySelector('.sheet'),close:close}}
+var ICON={turno:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/></svg>',cal:'<svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg>',horas:'<svg viewBox="0 0 24 24"><path d="M5 19V9M10 19V5M15 19v-7M20 19v-4"/></svg>',mas:'<svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></svg>',sup:'<svg viewBox="0 0 24 24"><path d="M12 3.5 5 6.5v5c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9v-5z"/><path d="m9 12 2 2 4-4"/></svg>'};
+
+/* ═══ Arranque ═══ */
+async function boot(){
+  var app=$('app');
+  if(!/^[0-9a-f-]{36}$/.test(RID)){app.innerHTML='<div class="center"><div class="card" style="max-width:420px;text-align:center"><div class="brand" style="justify-content:center;margin-bottom:12px"><span class="orb"></span><div><b>HOLA LUZ</b><small>Equipo</small></div></div><p>Abre el enlace que te dio tu restaurante.</p></div></div>';return}
+  try{var p=await call('GET','/api/equipo/publico/'+RID);S.rest=p.restaurante}catch(e){app.innerHTML='<div class="center"><div class="card" style="max-width:420px;text-align:center"><b>'+(e.code==='offline'?'Sin conexión':'No disponible')+'</b><p class="note">'+E(e.message)+'</p><button class="btn" onclick="location.reload()">Reintentar</button></div></div>';return}
+  if(ls('hl_wf_dev_'+RID))return kiosk();
+  if(MODO==='check')return kioskActivar();
+  return portal();
+}
+
+/* ═══════════════ LUZ CHECK (tablet) ═══════════════ */
+var K={data:null,sel:null,accion:null,pin:'',key:null,acc:null,idle:null,poll:null,altPoll:null,state:'ready',temp:false};
+function devTok(){return ls('hl_wf_dev_'+RID)}
+function kHead(){return '<div class="k-head"><div class="brand"><span class="orb"></span><div><b>LUZ CHECK ✦</b><small>'+E(S.rest&&S.rest.nombre||'')+' · entrada y salida del equipo</small></div></div><div class="k-clock"><b id="kClock">—</b><small id="kDate"></small></div></div>'}
+function kioskActivar(){
+  $('app').innerHTML='<div class="center"><div class="card" style="max-width:460px;width:100%"><div class="brand" style="margin-bottom:14px"><span class="orb"></span><div><b>ACTIVAR LUZ CHECK</b><small>'+E(S.rest.nombre)+'</small></div></div><p class="note">Esta tablet quedará fija en el restaurante para que el equipo marque entrada, descanso y salida. Solo la administración puede activarla, con el PIN del restaurante.</p><label class="f"><span>Nombre de este dispositivo</span><input class="in" id="aN" value="Tablet entrada" maxlength="60"></label><label class="f"><span>PIN del restaurante</span><input class="in" id="aP" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></label><button class="btn pri block" id="aGo">Activar LUZ CHECK</button><div class="err" id="aE" role="alert"></div><p class="note" style="margin-top:14px">Sin GPS. Sin fotos. Solo se registra la hora del servidor.</p><button class="btn ghost block sm" id="aBack">Soy del equipo: ir a MI TURNO</button></div></div>';
+  $('aBack').onclick=function(){history.replaceState(null,'','?r='+RID);portal()};
+  $('aGo').onclick=async function(){var b=this;b.disabled=true;try{var r=await call('POST','/api/equipo/kiosko/activar',{restaurante_id:RID,pin:$('aP').value.trim(),nombre:$('aN').value.trim()});ls('hl_wf_dev_'+RID,r.token);history.replaceState(null,'','?r='+RID);kiosk()}catch(e){$('aE').textContent=e.message;b.disabled=false}};
+}
+async function kLoad(){var d=await call('GET','/api/equipo/kiosko/estado',null,{'x-wf-device':devTok()});K.data=d;S.tz=d.zona_horaria||S.tz;return d}
+async function kiosk(){
+  $('app').innerHTML='<div class="wrap">'+kHead()+'<div id="kBan"></div><div class="k-main"><div class="card"><div class="scan" id="kScan" data-s="ready"><div class="r"></div><div class="r r2"></div><div class="r r3"></div><div class="glow"></div><div class="face" id="kFace">✦</div></div><div class="k-state" id="kState" data-s="ready"><b>LISTO</b><small>Toca tu nombre para marcar</small></div><div class="k-bio" id="kBio"></div></div><div class="card k-panel" id="kPanel"></div></div><div class="foot">Sin GPS · Sin fotos · La hora la pone el servidor, no esta tablet · <button class="btn ghost sm" id="kOut" style="min-height:30px;padding:4px 8px">Administrar dispositivo</button></div></div>';
+  $('kOut').onclick=kSalir;
+  clock();setInterval(clock,1000);
+  D.addEventListener('pointerdown',kTouch,true);D.addEventListener('keydown',kKey);
+  try{await kLoad()}catch(e){if(e.status===401){ls('hl_wf_dev_'+RID,null);return kioskActivar()}kBanner(e.message);}
+  kReady();
+  clearInterval(K.poll);K.poll=setInterval(function(){if(K.state==='ready'&&!D.hidden)kLoad().then(function(){if(K.state==='ready')kReady(true)}).catch(function(e){kBanner(e.message)})},30000);
+}
+function clock(){var c=$('kClock');if(!c)return;c.textContent=hm12(now());$('kDate').textContent=dia(now())}
+function kBanner(m){var b=$('kBan');if(b)b.innerHTML=m?'<div class="banner" role="alert">'+E(m)+'</div>':''}
+function kTouch(){clearTimeout(K.idle);if(K.state!=='ready'&&K.state!=='wait')K.idle=setTimeout(kReset,45000)}
+function kVis(s,title,sub,face){var sc=$('kScan'),st=$('kState');if(!sc)return;K.state=s;sc.dataset.s=s;st.dataset.s=s;st.innerHTML='<b>'+E(title)+'</b>'+(sub?'<small>'+E(sub)+'</small>':'');$('kFace').textContent=face||'✦'}
+function kReset(){kUnmount();clearInterval(K.altPoll);K.sel=null;K.accion=null;K.pin='';K.key=null;K.acc=null;K.temp=false;kLoad().catch(function(){}).then(function(){kReady()})}
+function kReady(soft){
+  var d=K.data;if(!d)return;var b=d.biometria||{};kBanner(S.online?'':'Sin conexión con el servidor.');
+  $('kBio').innerHTML=b.configurado?'<b>Reconocimiento facial activo.</b><br>Si no tienes LUZ ID, o la cámara falla, marca con tu PIN.':'<b>Reconocimiento facial no configurado.</b><br>Marca con tu PIN personal de trabajo. Si no puedes, pide verificación alternativa a tu supervisor.';
+  if(!soft)kVis('ready','LISTO','Toca tu nombre para marcar');
+  var q=(($('kQ')||{}).value||'');
+  $('kPanel').innerHTML='<h2>¿Quién eres?</h2><p>'+d.personas.length+' personas del equipo</p>'+(d.personas.length>8?'<input class="in search" id="kQ" placeholder="Busca tu nombre" aria-label="Buscar" value="'+E(q)+'">':'')+'<div class="pgrid" id="kGrid"></div>';
+  var draw=function(){var f=(($('kQ')||{}).value||'').toLowerCase();$('kGrid').innerHTML=d.personas.filter(function(p){return !f||p.nombre.toLowerCase().indexOf(f)!==-1}).map(function(p){var s=p.sesion,c=s?(s.estado==='ON_BREAK'?'<span class="chip warn"><i></i>Descanso</span>':'<span class="chip ok"><i></i>En turno</span>'):'<span class="chip">Fuera</span>';return '<button class="pcard" type="button" data-id="'+p.id+'" data-st="'+(s?s.estado:'OUT')+'">'+av(p)+'<b>'+E(p.nombre)+'</b>'+c+(s?'<small>desde '+hm12(s.estado==='ON_BREAK'?s.descanso_inicio_at:s.entrada_at)+'</small>':'')+'</button>'}).join('')||'<p class="note">Nadie coincide.</p>';$('kGrid').querySelectorAll('.pcard').forEach(function(c){c.onclick=function(){kPerson(c.dataset.id)}})};
+  draw();var qi=$('kQ');if(qi){qi.oninput=draw}
+  if(!d.personas.length)$('kGrid').innerHTML='<p class="note">Aún no hay personas registradas. La administración las agrega en el panel: Equipo → Personal.</p>';
+}
+var ACC={entrada:['INICIAR TURNO','pri','ENTRADA'],descanso_inicio:['INICIAR DESCANSO','warn','DESCANSO'],descanso_fin:['TERMINAR DESCANSO','ok','REGRESO'],salida:['FINALIZAR TURNO','bad','SALIDA']};
+function kPerson(id){
+  var p=K.data.personas.filter(function(x){return x.id===id})[0];if(!p)return;K.sel=p;kTouch();
+  var s=p.sesion,acts=!s?['entrada']:s.estado==='ACTIVE'?['descanso_inicio','salida']:['descanso_fin','salida'];
+  kVis('person',p.nombre.toUpperCase(),s?(s.estado==='ON_BREAK'?'En descanso desde '+hm12(s.descanso_inicio_at):'En turno desde '+hm12(s.entrada_at)):'Fuera de turno',ini(p.nombre));
+  $('kPanel').innerHTML='<h2>Hola, '+E(p.nombre.split(' ')[0])+'</h2><p>¿Qué quieres registrar?</p><div class="acts">'+acts.map(function(a){return '<button class="btn '+ACC[a][1]+'" type="button" data-a="'+a+'">'+ACC[a][0]+'</button>'}).join('')+'</div>'+(p.pin_bloqueado||!p.tiene_pin?'<div class="banner">'+(p.pin_bloqueado?'Tu PIN está bloqueado por intentos.':'Aún no has creado tu PIN de trabajo.')+' Usa la verificación alternativa.</div>':'')+'<button class="btn ghost block" type="button" id="kAlt">No puedo usar mi PIN · Verificación alternativa</button><button class="btn ghost block" type="button" id="kBack" style="margin-top:8px">← No soy yo</button>';
+  var faceOk=!!(K.data.biometria&&K.data.biometria.configurado&&p.luz_id);
+  $('kPanel').querySelectorAll('[data-a]').forEach(function(b){b.onclick=function(){K.accion=b.dataset.a;K.key=uuid();K.temp=false;if(faceOk)kFace();else kPin()}});
+  $('kAlt').onclick=function(){kAltPedir(p.pin_bloqueado?'pin_bloqueado':!p.tiene_pin?'sin_pin':'olvide_pin')};$('kBack').onclick=kReset;
+}
+function kPin(msg){
+  var p=K.sel,len=K.temp?6:null;K.pin='';
+  kVis('pin',ACC[K.accion][2],K.temp?'Escribe el PIN temporal que te dijo tu supervisor':'Escribe tu PIN personal',ini(p.nombre));
+  $('kPanel').innerHTML='<h2>'+(K.temp?'PIN temporal':'Tu PIN de trabajo')+'</h2><p>'+E(p.nombre)+' · '+E(ACC[K.accion][0].toLowerCase())+'</p><div class="pinbox" id="kDots" aria-label="PIN" aria-live="polite"></div><div class="err" id="kErr" role="alert" style="text-align:center">'+E(msg||'')+'</div><div class="keys">'+[1,2,3,4,5,6,7,8,9].map(function(n){return '<button class="key" type="button" data-k="'+n+'">'+n+'</button>'}).join('')+'<button class="key sm" type="button" data-k="back" aria-label="Borrar">Borrar</button><button class="key" type="button" data-k="0">0</button><button class="key sm" type="button" data-k="ok" style="color:#fff;background:linear-gradient(135deg,#2F6BFF,#7A4DFF)">OK</button></div>'+(K.temp&&K.accExp?'<div class="countdown" id="kCd"></div>':'')+'<button class="btn ghost block" type="button" id="kBack" style="margin-top:14px">Cancelar</button>';
+  var dots=function(){var n=Math.max(K.temp?6:4,K.pin.length);$('kDots').innerHTML=Array.from({length:n}).map(function(_,i){return '<span class="'+(i<K.pin.length?'on':'')+'"></span>'}).join('')};dots();
+  $('kPanel').querySelectorAll('[data-k]').forEach(function(b){b.onclick=function(){var k=b.dataset.k;if(k==='back')K.pin=K.pin.slice(0,-1);else if(k==='ok')return kEnviar();else if(K.pin.length<(K.temp?6:6))K.pin+=k;dots();if(K.temp&&K.pin.length===6)kEnviar()}});
+  K.dots=dots;$('kBack').onclick=kReset;
+  if(K.temp&&K.accExp){clearInterval(K.cd);K.cd=setInterval(function(){var el=$('kCd');if(!el){clearInterval(K.cd);return}var ms=K.accExp-now();el.textContent=ms>0?'Vence en '+Math.floor(ms/60000)+':'+String(Math.floor(ms%60000/1000)).padStart(2,'0'):'Vencido: pide uno nuevo'},500)}
+}
+/* Reconocimiento facial (solo con proveedor configurado y LUZ ID). Estados visuales = estados técnicos reales. */
+function kLoadLiveness(){return new Promise(function(ok,no){if(W.LuzLiveness)return ok();var sc=D.createElement('script');sc.src='/equipo-liveness.js';sc.onload=function(){W.LuzLiveness?ok():no(new Error('Componente de verificación no instalado'))};sc.onerror=function(){no(new Error('No se pudo cargar el componente de verificación'))};D.head.appendChild(sc)})}
+async function kFace(){
+  var p=K.sel;clearTimeout(K.idle);
+  kVis('camera','CÁMARA','Preparando la verificación facial',ini(p.nombre));
+  $('kPanel').innerHTML='<h2>Verificación facial</h2><p>'+E(p.nombre)+' · '+E(ACC[K.accion][0].toLowerCase())+'</p><div id="kLive" style="min-height:360px;border-radius:18px;overflow:hidden"></div><div class="err" id="kErr" role="alert"></div><button class="btn block" type="button" id="kUsePin" style="margin-top:12px">Usar mi PIN</button><button class="btn ghost block" type="button" id="kBack" style="margin-top:8px">Cancelar</button>';
+  $('kUsePin').onclick=function(){kUnmount();K.key=uuid();kPin()};$('kBack').onclick=function(){kUnmount();kReset()};
+  var ses;
+  try{await kLoadLiveness();ses=await call('POST','/api/equipo/kiosko/liveness',{empleado_id:p.id},{'x-wf-device':devTok()})}
+  catch(e){return kFallback(e.message)}
+  K.live=W.LuzLiveness.mount($('kLive'),{sessionId:ses.session_id,region:ses.region,credenciales:ses.credenciales,
+    onComplete:function(){kUnmount();kFaceEnviar(ses.session_id)},
+    onCancel:function(){kUnmount();kReset()},
+    onError:function(er){kUnmount();kFallback(er&&er.estado==='CAMERA_ACCESS_ERROR'?'No hay permiso para la cámara.':'La verificación facial no se pudo completar'+(er&&er.estado?' ('+er.estado+')':'')+'.')}});
+}
+function kUnmount(){try{K.live&&K.live.unmount()}catch(e){}K.live=null}
+function kFallback(msg){K.key=uuid();kPin(msg+' Marca con tu PIN personal.');var st=$('kState');if(st){st.dataset.s='failed';st.innerHTML='<b>USA TU PIN</b><small>'+E(msg)+'</small>'}}
+async function kFaceEnviar(sid){
+  var p=K.sel;kVis('checking','VERIFICANDO…','Comparando con tu LUZ ID',ini(p.nombre));
+  try{var r=await call('POST','/api/equipo/kiosko/fichar',{empleado_id:p.id,accion:K.accion,metodo:'face',liveness_session_id:sid,client_key:K.key},{'x-wf-device':devTok()});kDone(r)}
+  catch(e){var d=e.data||{};if(e.code==='offline')return kFallback('Sin conexión. No se registró nada.');kVis('failed','NO VERIFICADO',e.message,ini(p.nombre));
+    $('kPanel').innerHTML='<h2>No pudimos verificar tu identidad</h2><div class="banner" role="alert">'+E(e.message)+(d.fallos?' Intento '+d.fallos+' de '+(K.data.pin_temporal.fallos_para_alternativa||3)+'.':'')+'</div><div class="acts"><button class="btn pri" type="button" id="kRe">Intentar de nuevo</button><button class="btn" type="button" id="kUsePin">Usar mi PIN</button>'+(d.sugerir_alternativa?'<button class="btn warn" type="button" id="kAlt">SOLICITAR VERIFICACIÓN ALTERNATIVA</button>':'')+'</div><button class="btn ghost block" type="button" id="kBack">Volver al inicio</button>';
+    $('kRe').onclick=function(){K.key=uuid();kFace()};$('kUsePin').onclick=function(){K.key=uuid();kPin()};$('kBack').onclick=kReset;var a=$('kAlt');if(a)a.onclick=function(){kAltPedir('rostro_no_reconocido')}}
+}
+function kKey(e){if(K.state!=='pin')return;if(/^[0-9]$/.test(e.key)&&K.pin.length<6){K.pin+=e.key;K.dots&&K.dots()}else if(e.key==='Backspace'){K.pin=K.pin.slice(0,-1);K.dots&&K.dots()}else if(e.key==='Enter')kEnviar()}
+async function kEnviar(){
+  if(K.state!=='pin')return;var p=K.sel;if(K.pin.length<4){$('kErr').textContent='El PIN tiene al menos 4 números.';return}
+  kVis('checking','VERIFICANDO…','Comprobando con el servidor',ini(p.nombre));
+  var body={empleado_id:p.id,accion:K.accion,metodo:K.temp?'pin_temporal':'pin',pin:K.pin,client_key:K.key};if(K.temp)body.acceso_id=K.acc;
+  try{var r=await call('POST','/api/equipo/kiosko/fichar',body,{'x-wf-device':devTok()});kDone(r)}
+  catch(e){
+    // Si fue red, el mismo client_key evita duplicar al reintentar.
+    var d=e.data||{};K.pin='';
+    if(e.code==='offline'){kVis('failed','SIN CONEXIÓN','No se registró nada. Intenta de nuevo.',ini(p.nombre));return kPin('Sin conexión. No se registró nada.')}
+    if(['pin_bloqueado','sin_pin','pin_temporal_bloqueado','pin_expirado'].indexOf(e.code)>=0||d.sugerir_alternativa){kVis('failed','NO VERIFICADO',e.message,ini(p.nombre));return kFail(e.message,true)}
+    if(e.code==='pin_incorrecto'){K.key=uuid();kVis('failed','PIN INCORRECTO',d.intentos_restantes!=null?'Te quedan '+d.intentos_restantes+' intentos':'',ini(p.nombre));return kPin('PIN incorrecto.'+(d.intentos_restantes!=null?' Te quedan '+d.intentos_restantes+'.':''))}
+    kVis('failed','NO SE REGISTRÓ',e.message,ini(p.nombre));kFail(e.message,false);
+  }
+}
+function kFail(msg,alt){$('kPanel').innerHTML='<h2>No se registró</h2><div class="banner" role="alert">'+E(msg)+'</div>'+(alt?'<button class="btn pri block" type="button" id="kAlt">SOLICITAR VERIFICACIÓN ALTERNATIVA</button>':'')+'<button class="btn ghost block" type="button" id="kBack" style="margin-top:10px">Volver al inicio</button>';var a=$('kAlt');if(a)a.onclick=function(){kAltPedir(K.sel.pin_bloqueado?'pin_bloqueado':'olvide_pin')};$('kBack').onclick=kReset}
+function kDone(r){
+  var p=K.sel,s=r.sesion||{},h=Number(tzp(now()).hour),sal=h<5?'Buenas noches':h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches',lbl=ACC[r.accion||K.accion][2];
+  var via=r.verificado_con==='FACE'?'IDENTIDAD VERIFICADA':r.verificado_con==='TEMPORARY_PIN'?'PIN TEMPORAL VERIFICADO':'PIN VERIFICADO';
+  kVis('done',via,(r.accion==='salida'?'¡Gracias por tu trabajo!':sal)+', '+p.nombre.split(' ')[0]+'.','✓');
+  var extra='';if(r.accion==='salida'&&s.minutos_trabajados!=null)extra='<span>Trabajado</span><b>'+fmtMin(s.minutos_trabajados)+'</b>';
+  if(s.turno)extra+='<span>Turno</span><b>'+hm12(s.turno.inicio)+' – '+hm12(s.turno.fin)+'</b>';
+  var fl=(s.banderas||[]).filter(function(b){return b.tipo==='tarde'})[0];
+  $('kPanel').innerHTML='<h2>'+E(lbl)+' registrada</h2><div class="done-big">'+E(lbl)+' · '+E(hm12(r.servidor_at))+'</div><p style="margin:0;color:var(--tx2)">'+E(dia(r.servidor_at))+'</p><div class="kv"><span>Persona</span><b>'+E(p.nombre)+'</b>'+extra+'<span>Verificado con</span><b>'+E(r.verificado_con==='TEMPORARY_PIN'?'PIN temporal aprobado':r.verificado_con==='FACE'?'LUZ ID':'PIN personal')+'</b></div>'+(fl?'<p class="note">Llegaste '+fmtMin(fl.minutos)+' después del inicio del turno. Si hubo un motivo, puedes contarlo en MI TURNO.</p>':'')+(r.idempotente?'<p class="note">Ya estaba registrado: no se duplicó.</p>':'')+'<button class="btn pri block" type="button" id="kBack" style="margin-top:16px">Listo</button>';
+  $('kBack').onclick=kReset;clearTimeout(K.idle);K.idle=setTimeout(kReset,7000);
+}
+async function kAltPedir(motivo){
+  var p=K.sel;kVis('checking','SOLICITANDO…','',ini(p.nombre));
+  try{var r=await call('POST','/api/equipo/kiosko/alternativa',{empleado_id:p.id,motivo:motivo},{'x-wf-device':devTok()});K.acc=r.acceso.id;kAltEsperar()}
+  catch(e){kVis('failed','NO SE PUDO',e.message,ini(p.nombre));kFail(e.message,false)}
+}
+function kAltEsperar(){
+  var p=K.sel;kVis('wait','ESPERANDO APROBACIÓN','Un supervisor debe aprobar',ini(p.nombre));clearTimeout(K.idle);
+  $('kPanel').innerHTML='<h2>Verificación alternativa</h2><p>Pídele a tu supervisor que la apruebe en Equipo → AHORA (o en su MI TURNO). Te dirá en persona un PIN de 6 números que sirve una sola vez.</p><div class="banner info" id="kAltSt">Esperando aprobación…</div><button class="btn ghost block" type="button" id="kBack">Cancelar</button>';
+  $('kBack').onclick=kReset;clearInterval(K.altPoll);var t0=Date.now();
+  K.altPoll=setInterval(async function(){
+    if(Date.now()-t0>16*60000){clearInterval(K.altPoll);return kReset()}
+    try{var r=await call('GET','/api/equipo/kiosko/alternativa/'+K.acc,null,{'x-wf-device':devTok()}),a=r.acceso;
+      if(a.estado==='aprobada'){clearInterval(K.altPoll);K.temp=true;K.accExp=a.expira_at?new Date(a.expira_at).getTime():0;if(!K.accion){var s=p.sesion;K.accion=!s?'entrada':s.estado==='ON_BREAK'?'descanso_fin':'salida'}K.key=uuid();kPin()}
+      else if(a.estado!=='pendiente'){clearInterval(K.altPoll);kVis('failed',a.estado==='rechazada'?'RECHAZADA':'VENCIDA','',ini(p.nombre));kFail(a.estado==='rechazada'?'Tu supervisor rechazó la solicitud.':'La solicitud venció. Pide una nueva.',false)}
+    }catch(e){var st=$('kAltSt');if(st)st.textContent=e.message}
+  },3000);
+}
+function kSalir(){var l=layer('<h3>Administrar este dispositivo</h3><p class="note">Para quitar LUZ CHECK de esta tablet escribe el PIN del restaurante. Para desactivarla del todo, hazlo también en el panel (Equipo → Personal → Tablets).</p><label class="f"><span>PIN del restaurante</span><input class="in" id="sP" type="password" inputmode="numeric" maxlength="8"></label><button class="btn bad block" type="button" id="sGo">Quitar LUZ CHECK de esta tablet</button><div class="err" id="sE"></div>');l.el.querySelector('#sGo').onclick=async function(){try{await call('POST','/api/equipo/sesion',{restaurante_id:RID,pin:l.el.querySelector('#sP').value.trim()});ls('hl_wf_dev_'+RID,null);location.href='?r='+RID}catch(e){l.el.querySelector('#sE').textContent=e.message}}}
+
+/* ═══════════════ MI TURNO (celular) ═══════════════ */
+var M={tab:'turno',d:null,tick:null};
+function empTok(){try{var x=JSON.parse(ls('hl_wf_emp_'+RID)||'null');if(x&&x.exp>Date.now())return x.t}catch(e){}return null}
+function setEmp(t,exp){ls('hl_wf_emp_'+RID,JSON.stringify({t:t,exp:new Date(exp).getTime()}))}
+function api(m,p,b){return call(m,p,b,{Authorization:'Bearer '+(empTok()||'')}).catch(function(e){if(e.status===401&&e.code==='sesion_invalida'){ls('hl_wf_emp_'+RID,null);login(e.message)}throw e})}
+function portal(){if(empTok())return mApp();login()}
+function login(msg,modo){
+  modo=modo||'entrar';
+  $('app').innerHTML='<div class="center"><div class="card" style="max-width:440px;width:100%"><div class="brand" style="margin-bottom:16px"><span class="orb"></span><div><b>MI TURNO</b><small>'+E(S.rest.nombre)+'</small></div></div><div class="seg" role="tablist"><button type="button" data-m="entrar" class="'+(modo==='entrar'?'on':'')+'">Entrar</button><button type="button" data-m="activar" class="'+(modo==='activar'?'on':'')+'">Primera vez</button></div>'+
+  (modo==='entrar'?'<label class="f"><span>Tu teléfono</span><input class="in" id="lT" inputmode="tel" autocomplete="tel" maxlength="15"></label><label class="f"><span>Tu PIN de trabajo</span><input class="in" id="lP" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></label><button class="btn pri block" id="lGo">Entrar</button>':
+  '<p class="note" style="margin-top:0">Tu administrador te dio un código de 8 letras. Con él creas tu propio PIN de trabajo. Nadie más lo conoce, ni el restaurante.</p><label class="f"><span>Tu teléfono</span><input class="in" id="lT" inputmode="tel" maxlength="15"></label><label class="f"><span>Código de activación</span><input class="in" id="lC" maxlength="9" autocapitalize="characters" style="letter-spacing:.2em;text-transform:uppercase"></label><label class="f"><span>Crea tu PIN (4 a 6 números)</span><input class="in" id="lP" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></label><label class="f"><span>Repite tu PIN</span><input class="in" id="lP2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></label><button class="btn pri block" id="lGo">Crear mi PIN y entrar</button>')+
+  '<div class="err" id="lE" role="alert">'+E(msg||'')+'</div><p class="note" style="margin-top:14px">MI TURNO solo muestra tus datos. No usa GPS ni cámara.</p>'+(MODO!=='check'?'<button class="btn ghost block sm" id="lK" style="margin-top:6px">¿Es la tablet del restaurante? Activar LUZ CHECK</button>':'')+'</div></div>';
+  D.querySelectorAll('.seg button').forEach(function(b){b.onclick=function(){login('',b.dataset.m)}});
+  var k=$('lK');if(k)k.onclick=kioskActivar;
+  $('lGo').onclick=async function(){var b=this,e=$('lE');e.textContent='';b.disabled=true;try{var r;if(modo==='entrar')r=await call('POST','/api/equipo/empleado/login',{restaurante_id:RID,telefono:$('lT').value,pin:$('lP').value});else{if($('lP').value!==$('lP2').value)throw new Error('Los PIN no coinciden.');r=await call('POST','/api/equipo/empleado/activar',{restaurante_id:RID,telefono:$('lT').value,codigo:$('lC').value,pin:$('lP').value})}setEmp(r.token,r.expira_at);mApp()}catch(x){e.textContent=x.message;b.disabled=false}};
+}
+async function mApp(){
+  $('app').innerHTML='<div class="m-wrap"><div class="m-head"><div class="brand"><span class="orb"></span><div><b>MI TURNO</b><small>'+E(S.rest.nombre)+'</small></div></div><button class="btn ghost sm" id="mOut">Salir</button></div><div id="mV"><div class="card" style="height:220px"></div></div></div><nav class="nav" id="mNav" aria-label="Secciones"></nav>';
+  $('mOut').onclick=function(){ls('hl_wf_emp_'+RID,null);login()};
+  await mLoad();
+}
+async function mLoad(){try{M.d=await api('GET','/api/equipo/mi/resumen');S.tz=M.d.zona_horaria||S.tz;mNav();mRender()}catch(e){if(e.status!==401)$('mV').innerHTML='<div class="card"><b>'+(e.code==='offline'?'Sin conexión':'No se pudo cargar')+'</b><p class="note">'+E(e.message)+'</p><button class="btn" id="mR">Reintentar</button></div>',$('mR')&&($('mR').onclick=mLoad)}}
+function mNav(){var t=[['turno','Mi turno',ICON.turno],['horarios','Horarios',ICON.cal],['horas','Mis horas',ICON.horas]];if(M.d.supervisa||M.d.aprueba_pin)t.push(['sup','Supervisar',ICON.sup]);t.push(['mas','Más',ICON.mas]);$('mNav').innerHTML=t.map(function(x){return '<button class="tab'+(M.tab===x[0]?' on':'')+'" type="button" data-t="'+x[0]+'" aria-current="'+(M.tab===x[0]?'page':'false')+'">'+x[2]+x[1]+'</button>'}).join('');$('mNav').querySelectorAll('.tab').forEach(function(b){b.onclick=function(){M.tab=b.dataset.t;mNav();mRender();scrollTo(0,0)}})}
+function mRender(){clearInterval(M.tick);({turno:vTurno,horarios:vHorarios,horas:vHoras,sup:vSup,mas:vMas})[M.tab]()}
+function liveMin(s){if(!s)return 0;var n=now(),br=Number(s.descanso_seg||0)*1000;if(s.descanso_inicio_at)br+=n-new Date(s.descanso_inicio_at).getTime();return Math.max(0,(n-new Date(s.entrada_at).getTime()-br)/60000)}
+function vTurno(){
+  var d=M.d,s=d.sesion_abierta,y=d.yo,next=d.proximos_turnos[0],cur=next&&new Date(next.inicio).getTime()<=now()?next:null,pend=(d.documentos||[]).filter(function(x){return x.estado==='pendiente'}).length;
+  var tot=cur?(new Date(cur.fin)-new Date(cur.inicio))/60000:480,C=2*Math.PI*56;
+  var h='<div class="hello">'+av(y)+'<div><b>Hola, '+E(y.nombre.split(' ')[0])+'</b><small>'+E({cocina:'Cocina',salon:'Salón',caja:'Caja',domicilio:'Domicilio',manager:'Manager',otro:'Equipo'}[y.rol]||y.rol)+'</small></div></div>';
+  if(pend)h+='<div class="banner info">Tienes '+pend+' documento(s) por revisar en Más.</div>';
+  if(s){h+='<div class="card"><span class="chip '+(s.estado==='ON_BREAK'?'warn':'ok')+'"><i></i>'+(s.estado==='ON_BREAK'?'En descanso':'En turno')+' · <span id="mLive">'+fmtMin(liveMin(s))+'</span> trabajadas</span><div class="ring" style="margin-top:14px"><div style="position:relative;width:130px;height:130px"><svg viewBox="0 0 130 130" aria-hidden="true"><circle cx="65" cy="65" r="56" stroke="rgba(111,134,173,.2)" stroke-width="10" fill="none"/><circle id="mArc" cx="65" cy="65" r="56" stroke="url(#g)" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="'+C+'" stroke-dashoffset="'+C+'"/><defs><linearGradient id="g"><stop offset="0" stop-color="#27D7FF"/><stop offset="1" stop-color="#7A4DFF"/></linearGradient></defs></svg><div class="big"><div><b id="mBig">'+fmtMin(liveMin(s))+'</b><small>de '+fmtMin(tot)+'</small></div></div></div><div><div class="row"><div><small>Entrada</small><b>'+hm12(s.entrada_at)+'</b></div></div><div class="row"><div><small>Descanso</small><b>'+(s.descanso_inicio_at?'Desde '+hm12(s.descanso_inicio_at):fmtMin((s.descanso_seg||0)/60))+'</b></div></div>'+(cur?'<div class="row"><div><small>Salida programada</small><b>'+hm12(cur.fin)+'</b></div></div>':'')+'</div></div>'+mMarcar(s)+'</div>';}
+  else h+='<div class="card"><span class="chip">Fuera de turno</span>'+(next?'<div class="row" style="margin-top:10px"><div><small>Tu próximo turno</small><b style="text-transform:capitalize">'+E(dia(next.inicio))+'</b><small>'+hm12(next.inicio)+' – '+hm12(next.fin)+'</small></div></div>':'<p class="note">No tienes turnos publicados próximamente.</p>')+mMarcar(null)+'</div>';
+  h+='<div class="sec-t">Esta semana</div><div class="card"><div class="row"><div><small>Horas cerradas desde el lunes</small><b>'+fmtMin(d.semana.minutos_cerrados)+'</b></div></div></div>';
+  if(d.pago&&d.pago.item){var p=d.pago,it=p.item;h+='<div class="sec-t">Mi pago</div><div class="pay"><span class="chip '+(p.etiqueta==='ESTIMADO'?'warn':p.etiqueta==='APROBADO'?'ok':'lz')+'">'+E(p.etiqueta)+'</span><strong style="margin-top:8px">'+(it.total==null?'—':money(it.total,p.moneda))+'</strong><p class="note" style="margin:4px 0 0">Periodo '+E(diaC(p.periodo.inicio+'T12:00:00Z'))+' – '+E(diaC(p.periodo.fin+'T12:00:00Z'))+' · '+fmtMin(it.minutos_normales)+' normales · '+fmtMin(it.minutos_extra)+' extra'+(it.bonos?' · bonos '+money(it.bonos,p.moneda):'')+(it.deducciones?' · deducciones '+money(it.deducciones,p.moneda):'')+'</p><p class="note" style="margin:8px 0 0">'+(p.etiqueta==='ESTIMADO'?'Es un estimado: puede cambiar hasta que el restaurante lo apruebe.':p.etiqueta==='APROBADO'?'Aprobado por el restaurante. Aún no está registrado como pagado.':'El restaurante registró que ya pagó este periodo.')+' No incluye descuentos de ley.</p></div>'}
+  $('mV').innerHTML=h;
+  if(s){var upd=function(){var m=liveMin(s),a=$('mArc');if(!a){clearInterval(M.tick);return}$('mLive').textContent=fmtMin(m);$('mBig').textContent=fmtMin(m);a.setAttribute('stroke-dashoffset',String(C*(1-Math.min(1,m/tot))))};upd();M.tick=setInterval(upd,15000)}
+  D.querySelectorAll('[data-fa]').forEach(function(b){b.onclick=function(){mFichar(b.dataset.fa)}});
+}
+function money(n,m){try{return new Intl.NumberFormat(m==='USD'?'en-US':'es-CO',{style:'currency',currency:m||'COP',maximumFractionDigits:m==='USD'?2:0}).format(n)}catch(e){return '$'+Math.round(n)}}
+function mMarcar(s){if(!M.d.marcar_desde_celular)return '<p class="note" style="margin-top:14px">Para marcar entrada, descanso o salida usa la tablet LUZ CHECK del restaurante.</p>';var a=!s?['entrada']:s.estado==='ACTIVE'?['descanso_inicio','salida']:['descanso_fin','salida'];return '<div class="acts">'+a.map(function(x){return '<button class="btn '+ACC[x][1]+'" type="button" data-fa="'+x+'">'+ACC[x][0]+'</button>'}).join('')+'</div>'}
+function mFichar(accion){var key=uuid(),l=layer('<h3>'+E(ACC[accion][0])+'</h3><p class="note">Confirma con tu PIN. La hora la registra el servidor.</p><label class="f"><span>Tu PIN</span><input class="in" id="fP" type="password" inputmode="numeric" maxlength="6"></label><button class="btn pri block" id="fGo">Confirmar</button><div class="err" id="fE" role="alert"></div>');l.el.querySelector('#fGo').onclick=async function(){var b=this;b.disabled=true;try{var r=await api('POST','/api/equipo/mi/fichar',{accion:accion,pin:l.el.querySelector('#fP').value,client_key:key});l.close();toast(ACC[accion][2]+' registrada · '+hm12(r.servidor_at));mLoad()}catch(e){l.el.querySelector('#fE').textContent=e.message;b.disabled=false}}}
+function vHorarios(){
+  var d=M.d,by={};d.proximos_turnos.forEach(function(t){var k=tzp(t.inicio);(by[k.year+k.month+k.day]=by[k.year+k.month+k.day]||[]).push(t)});
+  var h='<div class="sec-t" style="margin-top:0">Mis próximos turnos</div><div class="card">'+(d.proximos_turnos.length?Object.keys(by).map(function(k){return by[k].map(function(t){return '<div class="row"><div><b style="text-transform:capitalize">'+E(dia(t.inicio))+'</b><small>'+hm12(t.inicio)+' – '+hm12(t.fin)+(t.notas?' · '+E(t.notas):'')+'</small></div><span class="chip lz">'+E({cocina:'Cocina',salon:'Salón',caja:'Caja',domicilio:'Domicilio',manager:'Manager',otro:'Turno'}[t.rol]||t.rol)+'</span></div>'}).join('')}).join(''):'<p class="note">Aún no hay turnos publicados para ti.</p>')+'</div>';
+  h+='<div class="sec-t">Mi disponibilidad</div><div class="card"><p class="note" style="margin-top:0">Cuéntale al restaurante cuándo puedes trabajar. No es un turno: ayuda a planear.</p><div id="aL"><div class="note">Cargando…</div></div><button class="btn pri block" id="aSave" style="margin-top:6px">Guardar disponibilidad</button><div class="err" id="aE" role="alert"></div></div>';
+  $('mV').innerHTML=h;
+  var DN=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],ord=[1,2,3,4,5,6,0];
+  api('GET','/api/equipo/mi/disponibilidad').then(function(r){var m={};r.disponibilidad.forEach(function(x){m[x.dia_semana]=x});$('aL').innerHTML=ord.map(function(dw){var x=m[dw];return '<div class="avail"><b>'+DN[dw]+'</b><input type="checkbox" data-d="'+dw+'" aria-label="Disponible el '+DN[dw]+'"'+(x?' checked':'')+'><input class="in" type="time" data-f="'+dw+'" value="'+(x?x.desde.slice(0,5):'12:00')+'" aria-label="Desde"><input class="in" type="time" data-h="'+dw+'" value="'+(x?x.hasta.slice(0,5):'22:00')+'" aria-label="Hasta"></div>'}).join('')}).catch(function(e){$('aL').innerHTML='<p class="err">'+E(e.message)+'</p>'});
+  $('aSave').onclick=async function(){var b=this,arr=[];D.querySelectorAll('[data-d]').forEach(function(c){if(c.checked){var dw=c.dataset.d;arr.push({dia_semana:+dw,desde:D.querySelector('[data-f="'+dw+'"]').value,hasta:D.querySelector('[data-h="'+dw+'"]').value})}});b.disabled=true;try{await api('PUT','/api/equipo/mi/disponibilidad',{disponibilidad:arr});toast('Disponibilidad guardada')}catch(e){$('aE').textContent=e.message}b.disabled=false};
+}
+function vHoras(){
+  var d=M.d,FL={tarde:'Tarde',sin_turno:'Sin turno',salida_temprana:'Salida temprana',turno_largo:'Turno largo',corregida:'Corregida',manual:'Registro manual',temprano:'Temprano'},EI={abierta:['Abierta','warn'],info_solicitada:['Te piden información','warn'],aprobada:['Aprobada','ok'],parcial:['Aprobada en parte','ok'],rechazada:['No aprobada','bad']};
+  var h='<div class="card"><div class="row"><div><small>Horas cerradas esta semana</small><b style="font-size:22px">'+fmtMin(d.semana.minutos_cerrados)+'</b></div></div></div>';
+  if(d.incidencias.length)h+='<div class="sec-t">Mis reportes</div><div class="card">'+d.incidencias.map(function(i){var e=EI[i.estado]||[i.estado,''];return '<div class="row" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><b style="white-space:pre-wrap;font-size:13.5px;font-weight:600">'+E(i.descripcion)+'</b><span class="chip '+e[1]+'">'+E(e[0])+'</span></div>'+(i.resolucion?'<small>Respuesta: '+E(i.resolucion)+'</small>':'')+(i.estado==='info_solicitada'?'<div style="display:flex;gap:8px;margin-top:8px"><input class="in" data-ri="'+i.id+'" placeholder="Tu respuesta"><button class="btn sm pri" data-rb="'+i.id+'">Enviar</button></div>':'')+'</div>'}).join('')+'</div>';
+  h+='<div class="sec-t">Mis registros (últimos 20 días)</div><div class="card">'+(d.sesiones.length?d.sesiones.map(function(s){return '<div class="row"><div><b style="text-transform:capitalize">'+E(diaC(s.entrada_at))+'</b><small>'+hm12(s.entrada_at)+' – '+hm12(s.salida_at)+' · '+fmtMin(s.minutos_trabajados)+(s.banderas&&s.banderas.length?' · '+s.banderas.map(function(b){return FL[b.tipo]||b.tipo}).join(', '):'')+'</small></div><button class="btn sm ghost" data-rep="'+s.id+'">¿No coincide?</button></div>'}).join(''):'<p class="note">Aún no tienes registros.</p>')+'</div><p class="note">Si una hora no coincide, repórtala: tu supervisor la revisa. Nadie cambia tus horas sin dejar razón y registro.</p>';
+  $('mV').innerHTML=h;
+  D.querySelectorAll('[data-rep]').forEach(function(b){b.onclick=function(){var s=d.sesiones.filter(function(x){return x.id===b.dataset.rep})[0];reportar(s)}});
+  D.querySelectorAll('[data-rb]').forEach(function(b){b.onclick=async function(){var inp=D.querySelector('[data-ri="'+b.dataset.rb+'"]');try{await api('POST','/api/equipo/mi/incidencias/'+b.dataset.rb+'/responder',{texto:inp.value});toast('Respuesta enviada');mLoad()}catch(e){toast(e.message)}}});
+}
+function reportar(s){var l=layer('<h3>Reportar una diferencia</h3><p class="note">'+E(diaC(s.entrada_at))+' · '+hm12(s.entrada_at)+' – '+hm12(s.salida_at)+'</p><label class="f"><span>¿Qué pasó?</span><select class="sel" id="rT"><option value="diferencia_horas">La hora registrada no es correcta</option><option value="salida_faltante">No pude marcar mi salida</option><option value="otro">Otro</option></select></label><label class="f"><span>Hora real de salida (opcional)</span><input class="in" type="time" id="rH"></label><label class="f"><span>Cuéntalo</span><textarea class="ta" id="rD" maxlength="600" placeholder="Ej.: salí a las 10:40 pm porque cerramos tarde"></textarea></label><button class="btn pri block" id="rGo">Enviar a mi supervisor</button><div class="err" id="rE" role="alert"></div>');
+  l.el.querySelector('#rGo').onclick=async function(){var b=this,hh=l.el.querySelector('#rH').value,hp=null;if(hh){var base=s.salida_at||s.entrada_at,p=tzp(base),day=p.year+'-'+p.month+'-'+p.day,g=new Date(day+'T'+hh+':00Z').getTime(),off=(function(){var q=tzp(g);return Math.round((Date.UTC(+q.year,+q.month-1,+q.day,+q.hour,+q.minute)-g)/60000)})();hp=new Date(g-off*60000);if(hp<new Date(s.entrada_at))hp=new Date(hp.getTime()+864e5);hp=hp.toISOString()}b.disabled=true;try{await api('POST','/api/equipo/mi/incidencias',{sesion_id:s.id,tipo:l.el.querySelector('#rT').value,descripcion:l.el.querySelector('#rD').value,hora_propuesta:hp});l.close();toast('Enviado. Tus horas no cambian hasta que lo revisen.');mLoad()}catch(e){l.el.querySelector('#rE').textContent=e.message;b.disabled=false}}}
+async function vSup(){
+  $('mV').innerHTML='<div class="sec-t" style="margin-top:0">Verificaciones por aprobar</div><div class="card" id="sA"><p class="note">Cargando…</p></div><div class="sec-t">Equipo ahora</div><div class="card" id="sN"><p class="note">Cargando…</p></div>';
+  var MOT={olvide_pin:'Olvidó su PIN',pin_bloqueado:'PIN bloqueado',sin_pin:'Aún sin PIN',rostro_no_reconocido:'Rostro no reconocido',camara_no_disponible:'Cámara no disponible',otro:'Otro'};
+  if(M.d.aprueba_pin)api('GET','/api/equipo/accesos').then(function(r){var p=r.accesos.filter(function(a){return a.estado==='pendiente'});$('sA').innerHTML=p.length?p.map(function(a){return '<div class="row"><div><b>'+E(a.empleado?a.empleado.nombre:'Persona')+'</b><small>'+E(MOT[a.motivo]||a.motivo)+'</small></div>'+(a.propia?'<span class="chip warn">Tuya: la aprueba otra persona</span>':'<div style="display:flex;gap:6px"><button class="btn sm ok" data-ap="'+a.id+'">Aprobar</button><button class="btn sm bad" data-rj="'+a.id+'">Rechazar</button></div>')+'</div>'}).join(''):'<p class="note">No hay solicitudes pendientes.</p>';
+    D.querySelectorAll('[data-ap]').forEach(function(b){b.onclick=async function(){b.disabled=true;try{var x=await api('POST','/api/equipo/accesos/'+b.dataset.ap+'/decidir',{decision:'aprobar'});var l=layer('<h3>PIN temporal para '+E(x.para)+'</h3><p class="note">Díselo en persona. No lo envíes por chat ni captura. Sirve una sola vez.</p><div class="bigpin">'+E(x.pin)+'</div><p class="note" style="text-align:center">Vence en '+Math.round(x.expira_seg/60)+' minutos.</p><button class="btn pri block" id="pOk">Ya se lo dije</button>');l.el.querySelector('#pOk').onclick=function(){l.close();vSup()}}catch(e){toast(e.message);vSup()}}});
+    D.querySelectorAll('[data-rj]').forEach(function(b){b.onclick=function(){var l=layer('<h3>Rechazar</h3><label class="f"><span>Razón</span><textarea class="ta" id="zR"></textarea></label><button class="btn bad block" id="zGo">Rechazar</button><div class="err" id="zE"></div>');l.el.querySelector('#zGo').onclick=async function(){try{await api('POST','/api/equipo/accesos/'+b.dataset.rj+'/decidir',{decision:'rechazar',razon:l.el.querySelector('#zR').value});l.close();vSup()}catch(e){l.el.querySelector('#zE').textContent=e.message}}}})
+  }).catch(function(e){$('sA').innerHTML='<p class="err">'+E(e.message)+'</p>'});else $('sA').innerHTML='<p class="note">Tu rol no aprueba verificaciones.</p>';
+  if(M.d.supervisa)api('GET','/api/equipo/ahora').then(function(a){var k=a.conteos,EST={ACTIVE:['En turno','ok'],ON_BREAK:['Descanso','warn'],NO_LLEGA:['No ha llegado','bad'],PROGRAMADO:['Programado','lz'],TERMINO:['Terminó',''],FUERA:['Fuera','']};$('sN').innerHTML='<p class="note" style="margin-top:0">'+k.en_turno+' en turno · '+k.en_descanso+' en descanso · '+k.no_llegan+' sin llegar</p>'+a.personas.filter(function(p){return p.estado!=='FUERA'}).map(function(p){var e=EST[p.estado]||['',''];return '<div class="row"><div><b>'+E(p.nombre)+'</b><small>'+(p.sesion?'Entró '+hm12(p.sesion.entrada_at):p.turno?hm12(p.turno.inicio)+' – '+hm12(p.turno.fin):'')+'</small></div><span class="chip '+e[1]+'">'+e[0]+'</span></div>'}).join('')}).catch(function(e){$('sN').innerHTML='<p class="err">'+E(e.message)+'</p>'});else $('sN').innerHTML='<p class="note">Tu rol no ve el equipo.</p>';
+}
+function vMas(){
+  var d=M.d,ED={pendiente:['Por revisar','warn'],aceptado:['Aceptado','ok'],firmado:['Firmado','ok'],rechazado:['No aceptado',''],revocado:['Revocado',''],vencido:['Vencido','']};
+  $('mV').innerHTML='<div class="sec-t" style="margin-top:0">Mis documentos</div><div class="card">'+(d.documentos.length?d.documentos.map(function(x){var e=ED[x.estado]||[x.estado,''];return '<div class="row"><div><b>'+E(x.titulo)+'</b><small>Versión '+E(x.version)+'</small></div><div style="display:flex;gap:6px;align-items:center"><span class="chip '+e[1]+'">'+e[0]+'</span><button class="btn sm" data-doc="'+x.id+'">Abrir</button></div></div>'}).join(''):'<p class="note">No tienes documentos.</p>')+'</div><div class="sec-t">LUZ ID ✦</div><div class="card"><p class="note" style="margin-top:0">'+(d.yo.luz_id?'Tienes LUZ ID activo. Puedes revocarlo cuando quieras desde tu autorización biométrica.':'Marcas con tu PIN personal. El reconocimiento facial es opcional y solo se usa si tú lo autorizas.')+'</p></div><div class="sec-t">Seguridad</div><div class="card"><button class="btn block" id="cP">Cambiar mi PIN</button><button class="btn ghost block" id="cO" style="margin-top:8px">Cerrar sesión</button></div><p class="note" style="text-align:center;margin-top:16px">MI TURNO no usa GPS ni cámara. Solo ves tus propios datos.</p>';
+  D.querySelectorAll('[data-doc]').forEach(function(b){b.onclick=function(){abrirDoc(b.dataset.doc)}});
+  $('cO').onclick=function(){ls('hl_wf_emp_'+RID,null);login()};
+  $('cP').onclick=function(){var l=layer('<h3>Cambiar mi PIN</h3><label class="f"><span>PIN actual</span><input class="in" id="pA" type="password" inputmode="numeric" maxlength="6"></label><label class="f"><span>PIN nuevo</span><input class="in" id="pN" type="password" inputmode="numeric" maxlength="6"></label><button class="btn pri block" id="pGo">Guardar</button><div class="err" id="pE"></div>');l.el.querySelector('#pGo').onclick=async function(){try{var r=await api('POST','/api/equipo/mi/pin',{actual:l.el.querySelector('#pA').value,nuevo:l.el.querySelector('#pN').value});setEmp(r.token,r.expira_at);l.close();toast('PIN actualizado')}catch(e){l.el.querySelector('#pE').textContent=e.message}}};
+}
+async function abrirDoc(id){
+  try{var r=await api('GET','/api/equipo/mi/documentos/'+id)}catch(e){return toast(e.message)}
+  var x=r.documento,pend=x.estado==='pendiente',bio=x.tipo==='autorizacion_biometrica';
+  var l=layer('<h3>'+E(x.titulo)+'</h3><p class="note">Versión '+E(x.version)+(x.contenido_hash?' · huella '+E(x.contenido_hash.slice(0,12)):'')+'</p><div class="doc" id="dT" tabindex="0">'+E(x.contenido_texto||'')+'</div>'+(pend?'<p class="note" id="dH">Lee hasta el final para poder responder.</p><button class="btn pri block" id="dA" disabled>'+(bio?'Autorizo el uso de mis datos biométricos':'Acepto')+'</button><button class="btn ghost block" id="dR" style="margin-top:8px">'+(bio?'No autorizo (seguiré usando mi PIN)':'No acepto')+'</button>':'')+(x.estado==='aceptado'&&bio?'<button class="btn bad block" id="dV" style="margin-top:12px">Revocar mi autorización</button>':'')+'<div class="err" id="dE" role="alert"></div>');
+  var t=l.el.querySelector('#dT'),a=l.el.querySelector('#dA');
+  var chk=function(){if(a&&t.scrollTop+t.clientHeight>=t.scrollHeight-8){a.disabled=false;var hh=l.el.querySelector('#dH');if(hh)hh.textContent='Gracias por leer. Tú decides.'}};if(t){t.addEventListener('scroll',chk);setTimeout(chk,60)}
+  var dec=async function(v){try{await api('POST','/api/equipo/mi/documentos/'+id+'/decidir',{decision:v,leido:true,hash:x.contenido_hash});l.close();toast(v==='aceptar'?'Registrado. Gracias.':'Registrado. Todo sigue igual con tu PIN.');mLoad()}catch(e){l.el.querySelector('#dE').textContent=e.message}};
+  if(a)a.onclick=function(){dec('aceptar')};var rj=l.el.querySelector('#dR');if(rj)rj.onclick=function(){dec('rechazar')};
+  var rv=l.el.querySelector('#dV');if(rv)rv.onclick=async function(){try{var z=await api('POST','/api/equipo/mi/documentos/'+id+'/revocar');l.close();toast(z.nota);mLoad()}catch(e){l.el.querySelector('#dE').textContent=e.message}};
+}
+D.addEventListener('visibilitychange',function(){if(!D.hidden&&M.d&&$('mV'))mLoad()});
+boot();
+})();
+</script>
+</body>
+</html>
