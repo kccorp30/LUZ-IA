@@ -104,6 +104,33 @@ body{background:radial-gradient(70% 45% at 50% -8%,rgba(62,55,255,.24),transpare
 @media(max-width:390px){.cc-experience{grid-template-columns:64px 1fr}.cc-luz-core{width:60px;height:60px}.cc-actions{grid-template-columns:1fr 56px}}
 </style>
 
+<style id="hl-v11-premium-polish">
+/* HOLA LUZ · Domiciliario V11 — visual polish only. No business logic changed. */
+:root{--v11-cyan:#3de6ff;--v11-blue:#3478ff;--v11-violet:#8b4dff;--v11-ink:#05091d;--v11-glass:rgba(8,16,49,.70)}
+body{background:radial-gradient(900px 620px at 88% 8%,rgba(101,52,255,.16),transparent 58%),radial-gradient(760px 620px at 8% 56%,rgba(0,210,255,.10),transparent 62%),#040719!important}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.24;background-image:linear-gradient(rgba(72,116,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(72,116,255,.055) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,transparent 0,#000 15%,#000 80%,transparent 100%)}
+.status-card{background:linear-gradient(135deg,rgba(8,16,47,.76),rgba(9,20,58,.54))!important;border:1px solid rgba(111,137,255,.16)!important;box-shadow:0 22px 70px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.055)!important;backdrop-filter:blur(24px) saturate(135%)}
+#homeHero{position:relative;isolation:isolate}
+#homeHero:before{content:"";position:absolute;inset:8% 2% auto 36%;height:58%;z-index:-1;background:radial-gradient(circle,rgba(137,71,255,.18),rgba(33,204,255,.07) 38%,transparent 70%);filter:blur(26px);animation:v11breath 4.8s ease-in-out infinite}
+.control-center{position:relative;overflow:hidden;background:linear-gradient(155deg,rgba(8,20,59,.86),rgba(12,21,67,.68) 48%,rgba(23,17,76,.74))!important;border:1px solid rgba(89,202,255,.22)!important;box-shadow:0 28px 90px rgba(0,0,0,.34),0 0 50px rgba(52,119,255,.07),inset 0 1px rgba(255,255,255,.07)!important;backdrop-filter:blur(28px) saturate(145%)}
+.control-center:before{content:"";position:absolute;width:240px;height:240px;right:-95px;top:-100px;border-radius:50%;background:radial-gradient(circle,rgba(139,77,255,.22),rgba(61,230,255,.06) 45%,transparent 70%);filter:blur(8px);pointer-events:none}
+.control-center:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 0 42%,rgba(255,255,255,.035) 50%,transparent 58%);transform:translateX(-100%);animation:v11scan 7s ease-in-out infinite}
+.cc-kicker{color:#64e8ff!important;letter-spacing:.18em!important;text-shadow:0 0 18px rgba(61,230,255,.26)}
+.cc-title{letter-spacing:-.045em!important;text-shadow:0 8px 30px rgba(0,0,0,.28)}
+.cc-live{backdrop-filter:blur(12px);box-shadow:inset 0 1px rgba(255,255,255,.06)}
+.cc-live.live{box-shadow:0 0 28px rgba(52,255,188,.12),inset 0 1px rgba(255,255,255,.08)}
+#ccSettleBtn,.hero-btn,.primary-btn{position:relative;overflow:hidden;box-shadow:0 14px 40px rgba(63,91,255,.26),0 0 34px rgba(61,230,255,.08)!important;transform:translateZ(0)}
+#ccSettleBtn:after,.hero-btn:after,.primary-btn:after{content:"";position:absolute;top:-80%;left:-30%;width:28%;height:260%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);transform:rotate(18deg);animation:v11shine 5.5s ease-in-out infinite;pointer-events:none}
+.bottom-nav{background:rgba(4,9,28,.88)!important;border:1px solid rgba(111,137,255,.18)!important;box-shadow:0 -8px 42px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.055)!important;backdrop-filter:blur(28px) saturate(150%)}
+.nav.on{background:linear-gradient(145deg,rgba(80,53,204,.54),rgba(35,72,183,.42))!important;box-shadow:inset 0 1px rgba(255,255,255,.08),0 8px 30px rgba(64,66,255,.14)}
+.toast,.notice{backdrop-filter:blur(28px) saturate(150%);box-shadow:0 22px 70px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.06)!important}
+[data-mode="ready"] #homeHero:before{background:radial-gradient(circle,rgba(46,255,187,.18),rgba(61,230,255,.08) 38%,transparent 70%)}
+[data-mode="busy"] #homeHero:before{background:radial-gradient(circle,rgba(52,120,255,.20),rgba(139,77,255,.09) 42%,transparent 72%)}
+@keyframes v11breath{0%,100%{opacity:.58;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes v11scan{0%,72%,100%{transform:translateX(-120%)}84%{transform:translateX(120%)}}
+@keyframes v11shine{0%,70%,100%{left:-35%;opacity:0}78%{opacity:.75}90%{left:120%;opacity:0}}
+@media (prefers-reduced-motion:reduce){#homeHero:before,.control-center:after,#ccSettleBtn:after,.hero-btn:after,.primary-btn:after{animation:none!important}}
+</style>
 </head>
 <body>
 <div class="bgfx"><div class="gridfx"></div></div>
