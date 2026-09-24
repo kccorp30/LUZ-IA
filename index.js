@@ -8486,9 +8486,9 @@ function wfDiaAccion(abrir) { return wfRoute(async function (req, res) {
     row = prev ? (await wfPatch("wf_operacion", "id=eq." + prev.id, { abierto_at: now, abierto_por: req.wf.nombre, avisos_apertura: avisos, cerrado_at: null, cerrado_por: null }))[0]
       : (await wfPost("wf_operacion", { restaurante_id: rid, tipo: "dia", clave: hoy, abierto_at: now, abierto_por: req.wf.nombre, avisos_apertura: avisos }, { upsert: true, qs: "on_conflict=restaurante_id,tipo,clave" }))[0];
   } else {
-    if (!prev || !prev.abierto_at) throw wfErr(409, "sin_iniciar", "El día no se ha iniciado.");
-    if (prev.cerrado_at) return res.json({ ok: true, ya: true, registro: prev });
-    row = (await wfPatch("wf_operacion", "id=eq." + prev.id + "&cerrado_at=is.null", { cerrado_at: now, cerrado_por: req.wf.nombre, avisos_cierre: avisos }))[0];
+    if (prev && prev.cerrado_at) return res.json({ ok: true, ya: true, registro: prev });
+    row = prev ? (await wfPatch("wf_operacion", "id=eq." + prev.id + "&cerrado_at=is.null", { cerrado_at: now, cerrado_por: req.wf.nombre, avisos_cierre: avisos }))[0]
+      : (await wfPost("wf_operacion", { restaurante_id: rid, tipo: "dia", clave: hoy, cerrado_at: now, cerrado_por: req.wf.nombre, avisos_cierre: avisos }, { upsert: true, qs: "on_conflict=restaurante_id,tipo,clave" }))[0];
     // Cerrar el día NO marca salidas de nadie. Solo vence solicitudes de PIN temporal abandonadas.
     await wfPatch("wf_accesos_temporales", "restaurante_id=eq." + rid + "&estado=eq.pendiente", { estado: "expirada" });
   }
@@ -8643,13 +8643,15 @@ app.get("/api/equipo/mi/resumen", wfAuthEmp, wfRoute(async function (req, res) {
   if (cfg.mostrar_estimado_empleado && r[4][0]) {
     var p = r[4][0], it = (await wfGet("wf_nomina_items?periodo_id=eq." + p.id + "&empleado_id=eq." + eid + "&limit=1"))[0];
     pago = { periodo: { inicio: p.inicio, fin: p.fin, estado: p.estado }, etiqueta: p.estado === "pagado" || p.estado === "cerrado" ? "PAGO REGISTRADO" : p.estado === "aprobado" ? "APROBADO" : "ESTIMADO",
-      calculado_at: p.calculado_at, item: it ? { minutos_normales: it.minutos_normales, minutos_extra: it.minutos_extra, bonos: it.bonos, deducciones: it.deducciones, total: it.detalle && it.detalle.total_estimado === null ? null : it.total, ajustes: (it.detalle && it.detalle.ajustes) || [] } : null, moneda: cfg.moneda };
+      calculado_at: p.calculado_at, aprobado_at: p.aprobado_at, pago_registrado_at: p.pago_registrado_at,
+      item: it ? { minutos_normales: it.minutos_normales, minutos_extra: it.minutos_extra, tarifa_hora: it.tarifa_hora, bruto_normal: it.bruto_normal, bruto_extra: it.bruto_extra, factor_extra: (it.detalle && it.detalle.factor_extra) || cfg.horas_extra.factor, bonos: it.bonos, deducciones: it.deducciones, total: it.detalle && it.detalle.total_estimado === null ? null : it.total, ajustes: (it.detalle && it.detalle.ajustes) || [], dias: (it.detalle && it.detalle.dias) || [] } : null, moneda: cfg.moneda };
   }
-  var e = req.wf.emp;
+  var e = req.wf.emp, evAb = abierta ? await wfGet("wf_eventos?restaurante_id=eq." + rid + "&sesion_id=eq." + abierta.id + "&accion=in.(entrada,descanso_inicio,descanso_fin)&resultado=eq.ok&select=accion,at&order=at.asc&limit=40") : [];
+  var provMi = wfBio(cfg);
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, servidor_at: wfNowISO(), zona_horaria: tz, restaurante: { id: rid, nombre: (r[5][0] || {}).nombre },
     yo: { id: e.id, nombre: e.nombre, rol: e.rol, permiso: e.permiso, metodo_verificacion: e.metodo_verificacion, luz_id: r[6][0] || null },
-    sesion_abierta: wfSesionPublica(abierta), semana: { desde: lun, minutos_cerrados: semMin }, proximos_turnos: r[1],
+    sesion_abierta: wfSesionPublica(abierta), eventos_sesion: evAb, biometria: { configurado: provMi.estado().configurado, proveedor: provMi.id }, semana: { desde: lun, minutos_cerrados: semMin }, proximos_turnos: r[1],
     sesiones: ses.filter(function (s) { return s.estado === "CLOCKED_OUT"; }).slice(0, 40).map(function (s) { var o = wfSesionPublica(s); o.dia = wfDay(s.entrada_at, tz); return o; }),
     incidencias: r[2], documentos: r[3], pago: pago, marcar_desde_celular: !!cfg.marcar_desde_celular, supervisa: WF_RANK[e.permiso] >= WF_RANK.supervisor, aprueba_pin: (cfg.pin_temporal.aprobadores || []).indexOf(e.permiso) >= 0 });
 }));
@@ -8861,6 +8863,85 @@ app.post("/api/equipo/kiosko/liveness", wfKiosk, wfRoute(async function (req, re
   res.json(Object.assign({ ok: true }, await prov.crearSesionLiveness({ rid: rid, empleado_id: eid, proposito: "verificacion" })));
 }));
 app.get("/equipo-liveness.js", function (req, res) { res.set("Cache-Control", "public, max-age=86400"); res.sendFile(path.join(__dirname, "equipo-liveness.js"), function (e) { if (e && !res.headersSent) res.status(404).type("js").send("/* componente de liveness no instalado */"); }); });
+
+// ═══ Entrega 15 ═════════════════════════════════════════════════════════════
+// 1) El proxy genérico /api/supabase/* usa la llave maestra sin autenticación. Las tablas de Equipo
+//    NUNCA pasan por ahí (PIN con hash, nómina, documentos, identidades).
+app.use("/api/supabase", function (req, res, next) {
+  var p = String(req.path || "").replace(/^\/+/, "").split(/[?/]/)[0].toLowerCase();
+  if (/^wf_/.test(p)) return res.status(403).json({ ok: false, error: "Tabla protegida: usa /api/equipo" });
+  next();
+});
+
+// 2) INICIAR DÍA ✦ desde el panel: el computador/tablet del restaurante se registra como LUZ CHECK con la sesión de administración.
+app.post("/api/equipo/dispositivos", wfAuth("dispositivos"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, nombre = wfClean(req.body && req.body.nombre || "Panel del restaurante", 60), tok = wfB64u(crypto.randomBytes(32));
+  var d = (await wfPost("wf_dispositivos", { restaurante_id: rid, nombre: nombre.length >= 2 ? nombre : "Panel del restaurante", token_hash: wfSha(tok) }))[0];
+  await wfEvento(rid, { accion: "dispositivo_activado", dispositivo_id: d.id, fuente: "panel", metadata: { nombre: d.nombre, actor: req.wf.nombre } });
+  res.json({ ok: true, token: tok, dispositivo: { id: d.id, nombre: d.nombre } });
+}));
+
+// 3) Actividad del equipo para el Inicio (entradas, descansos, salidas de hoy). Nombres y horas, nada más.
+app.get("/api/equipo/kiosko/actividad", wfKiosk, wfRoute(async function (req, res) {
+  var rid = req.wfRid, desde = new Date(Date.now() - 20 * 3600e3).toISOString();
+  var ev = await wfGet("wf_eventos?restaurante_id=eq." + rid + "&accion=in.(entrada,salida,descanso_inicio,descanso_fin)&resultado=eq.ok&at=gte." + desde + "&select=accion,empleado_id,metodo_verificacion,at&order=at.desc&limit=20");
+  var ids = ev.map(function (e) { return e.empleado_id; }).filter(function (v, i, s) { return v && s.indexOf(v) === i; });
+  var emps = ids.length ? await wfGet("wf_empleados?id=" + wfIn(ids) + "&select=id,nombre,foto_url") : [], m = {}; emps.forEach(function (e) { m[e.id] = e; });
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, servidor_at: wfNowISO(), eventos: ev.map(function (e) { var p = m[e.empleado_id] || {}; return { accion: e.accion, at: e.at, metodo: e.metodo_verificacion, nombre: p.nombre || "Alguien", foto_url: p.foto_url || null }; }) });
+}));
+
+// 4) LUZ ID en autoservicio desde MI TURNO: la propia persona autoriza y registra su rostro.
+async function wfMiAutorizacion(rid, eid) {
+  var r = await wfGet("wf_documentos?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&tipo=eq.autorizacion_biometrica&version=eq." + WF_DOC_BIO.version + "&select=id,estado,tipo,version,titulo,contenido_hash,decision_at,created_at&order=created_at.desc&limit=1");
+  return r[0] || null;
+}
+app.get("/api/equipo/mi/luz-id", wfAuthEmp, wfRoute(async function (req, res) {
+  var rid = req.wf.rid, eid = req.wf.id, cfg = await wfConfig(rid), prov = wfBio(cfg);
+  var r = await Promise.all([wfMiAutorizacion(rid, eid), wfGet("wf_identidades?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&estado=eq.activa&select=proveedor,enrolado_at&limit=1")]);
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, biometria: Object.assign({ proveedor: prov.id }, prov.estado()), autorizacion: r[0], identidad: r[1][0] || null, plantilla: { version: WF_DOC_BIO.version, titulo: WF_DOC_BIO.titulo } });
+}));
+app.post("/api/equipo/mi/luz-id/autorizacion", wfAuthEmp, wfRoute(async function (req, res) {
+  // La persona pide ver la autorización para decidir ella misma (misma plantilla, versión y huella).
+  var rid = req.wf.rid, eid = req.wf.id, ya = await wfMiAutorizacion(rid, eid);
+  if (ya && (ya.estado === "pendiente" || ya.estado === "aceptado")) return res.json({ ok: true, documento: ya, existente: true });
+  var row = (await wfPost("wf_documentos", { restaurante_id: rid, empleado_id: eid, estado: "pendiente", tipo: WF_DOC_BIO.tipo, titulo: WF_DOC_BIO.titulo, version: WF_DOC_BIO.version, contenido_texto: WF_DOC_BIO.texto, contenido_hash: WF_DOC_BIO.hash }))[0];
+  await wfEvento(rid, { empleado_id: eid, accion: "documento_solicitado", fuente: "portal", metadata: { tipo: WF_DOC_BIO.tipo, version: WF_DOC_BIO.version } });
+  delete row.contenido_texto; res.json({ ok: true, documento: row });
+}));
+app.post("/api/equipo/mi/luz-id/iniciar", wfAuthEmp, wfRoute(async function (req, res) {
+  var rid = req.wf.rid, eid = req.wf.id, rt = wfRate("mli:" + eid, 8, 60 * 60000); if (rt.bloqueado) throw wfErr(429, "intentos", "Hiciste varios intentos. Espera un rato o pide ayuda a tu supervisor."); rt.fallo();
+  var cfg = await wfConfig(rid), prov = wfBio(cfg); if (prov.id === "none") throw wfErr(409, "biometria_no_configurada", "Tu restaurante aún no activó el reconocimiento facial.");
+  var c = await wfConsentimientoVigente(rid, eid); if (!c) throw wfErr(409, "sin_autorizacion", "Primero lee y acepta la autorización.");
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, liveness: await prov.crearSesionLiveness({ rid: rid, empleado_id: eid, proposito: "enrolamiento" }) });
+}));
+app.post("/api/equipo/mi/luz-id/completar", wfAuthEmp, wfRoute(async function (req, res) {
+  var rid = req.wf.rid, eid = req.wf.id, cfg = await wfConfig(rid), prov = wfBio(cfg); if (prov.id === "none") throw wfErr(409, "biometria_no_configurada", "Reconocimiento facial no configurado");
+  var c = await wfConsentimientoVigente(rid, eid); if (!c) throw wfErr(409, "sin_autorizacion", "Falta tu autorización vigente.");
+  var r = await prov.enrolar({ rid: rid, empleado_id: eid, liveness_session_id: String(req.body && req.body.liveness_session_id || ""), cfg: cfg });
+  if (!r || !r.referencia || r.live !== true) throw wfErr(422, "enrolamiento_fallido", "No se confirmó una captura real. No se registró nada.");
+  var viejas = await wfGet("wf_identidades?empleado_id=eq." + eid + "&restaurante_id=eq." + rid + "&estado=eq.activa&select=referencia,proveedor&limit=5");
+  for (var i = 0; i < viejas.length; i++) { var pv = WF_BIO[viejas[i].proveedor]; if (pv && pv.id !== "none") { try { await pv.eliminar({ rid: rid, referencia: viejas[i].referencia }); } catch (e) {} } }
+  await wfPatch("wf_identidades", "empleado_id=eq." + eid + "&restaurante_id=eq." + rid + "&estado=eq.activa", { estado: "revocada", revocado_at: wfNowISO(), revocado_por: "reemplazada por la persona" });
+  var idn = (await wfPost("wf_identidades", { restaurante_id: rid, empleado_id: eid, proveedor: prov.id, referencia: r.referencia, documento_id: c.id }))[0];
+  await wfPatch("wf_empleados", "id=eq." + eid + "&restaurante_id=eq." + rid, { metodo_verificacion: "face", updated_at: wfNowISO() }); wfEmpInvalidar(rid, eid);
+  // Queda a la vista de la administración: "X registró su LUZ ID desde su celular".
+  await wfEvento(rid, { empleado_id: eid, accion: "luz_id_registrado", metodo: "FACE", fuente: "portal", metadata: { autoservicio: true, proveedor: prov.id } });
+  res.json({ ok: true, identidad: { proveedor: idn.proveedor, enrolado_at: idn.enrolado_at } });
+}));
+
+// 5) Resumen para el Inicio del panel (mismo nivel de acceso que LUZ CHECK: nombres, estado y conteos; nada de pagos ni PIN).
+app.get("/api/equipo/kiosko/inicio", wfKiosk, wfRoute(async function (req, res) {
+  var rid = req.wfRid, cfg = await wfConfig(rid), desde = new Date(Date.now() - 20 * 3600e3).toISOString();
+  var r = await Promise.all([wfAhora(rid, cfg), wfGet("wf_eventos?restaurante_id=eq." + rid + "&accion=in.(entrada,salida,descanso_inicio,descanso_fin)&resultado=eq.ok&at=gte." + desde + "&select=accion,empleado_id,at&order=at.desc&limit=12")]);
+  var a = r[0], m = {}; a.personas.forEach(function (p) { m[p.id] = p; });
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, servidor_at: wfNowISO(), zona_horaria: cfg.zona_horaria, conteos: a.conteos, total_activos: a.total_activos,
+    personas: a.personas.map(function (p) { return { nombre: p.nombre, foto_url: p.foto_url || null, rol: p.rol, estado: p.estado }; }),
+    eventos: r[1].map(function (e) { var p = m[e.empleado_id] || {}; return { accion: e.accion, at: e.at, nombre: p.nombre || "Alguien", foto_url: p.foto_url || null }; }) });
+}));
 
 
 // ═══════════════════════════════════════════════════════════
