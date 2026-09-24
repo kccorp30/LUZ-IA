@@ -207,12 +207,19 @@ async function getNextOrderNumber(restauranteId) {
     console.log("[orderNum] Restaurante", restauranteId.substring(0,8), "→ #" + next, "(max DB:", maxNum, "cache:", cached + ")");
     return next;
   } catch(e) {
-    // Fallback: usar cache local + 1
-    var cached2 = orderCounterCache[restauranteId] || 100;
-    var next2 = cached2 + 1;
-    orderCounterCache[restauranteId] = next2;
-    console.warn("[orderNum] Error Supabase, usando cache:", next2, e.message);
-    return next2;
+    // HOTFIX 13: reintentar antes de inventar un número. Solo se usa la cache si ya se leyó la base antes.
+    for (var intN = 0; intN < 3; intN++) {
+      await new Promise(function(ok){ setTimeout(ok, 800 * (intN + 1)); });
+      try {
+        var rN = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId + "&select=numero_pedido&order=numero_pedido.desc&limit=1", { headers: sbH(true), timeout: 8000 });
+        var mN = rN.data && rN.data[0] ? parseInt(rN.data[0].numero_pedido) || 0 : 0;
+        var nN = Math.max(mN, orderCounterCache[restauranteId] || 0) + 1;
+        orderCounterCache[restauranteId] = nN; return nN;
+      } catch (eN) {}
+    }
+    if (orderCounterCache[restauranteId]) { orderCounterCache[restauranteId]++; console.warn("[orderNum] base no responde, uso cache:", orderCounterCache[restauranteId]); return orderCounterCache[restauranteId]; }
+    console.error("[orderNum] sin número confiable (base no responde):", e.message);
+    throw new Error("sin_numero_pedido");
   }
 }
 
@@ -232,12 +239,17 @@ async function initOrderCounter() {
       orderCounter = 99; // primer pedido será #100
       console.log("[init] Sin pedidos en BD — empezando desde #100");
     }
+    orderCounterListo = true;
   } catch(e) {
-    console.warn("[init] ⚠️ orderCounter fallback 100:", e.message);
+    // HOTFIX 13: no usar 100 como si fuera real. Se reintenta hasta leer la base.
+    console.warn("[init] ⚠️ orderCounter sin leer (" + e.message + "), reintento en 15 s");
+    if (++orderCounterIntentos < 40) setTimeout(initOrderCounter, 15000);
   }
 }
+var orderCounterListo = false, orderCounterIntentos = 0;
 initOrderCounter();
-function nextOrderNumber() { return ++orderCounter; }
+// Número provisional en memoria. El número definitivo SIEMPRE lo asigna la base por restaurante al guardar.
+function nextOrderNumber() { return orderCounterListo ? ++orderCounter : 0; }
 
 
 // ── COLA PARALELA ─────────────────────────────────────────────────────────────
@@ -653,12 +665,12 @@ FLUJO:
 5. Confirma -> si el cliente NO indico metodo de pago desde el menu, pregunta como quiere pagar y da datos
 6. Pago:
    - Nequi o Bancolombia: da los datos.
-     * Si el cliente dice que paga AHORA: pide comprobante. El BACKEND decide después de analizar la imagen si la evidencia puede avanzar; tú NO autorices el pago por tu cuenta.
+     * Si el cliente dice que paga AHORA: pide comprobante, cuando lo mande escribe PAGO_CONFIRMADO
      * Si el cliente dice "cuando llegue el pedido", "al recibirlo", "a la entrega":
        Responde confirmando y escribe PAGO_DATAFONO
    - Efectivo: pregunta valor -> escribe PAGO_EFECTIVO:[valor del billete]
    - Datafono: confirma que el domiciliario lo lleva -> escribe PAGO_DATAFONO
-7. Comprobante recibido -> NO confirmes por el simple hecho de recibir una imagen. Solo cuando el BACKEND inyecte explícitamente [COMPROBANTE DE PAGO VALIDADO...] puedes responder que el pedido entra a preparación y emitir PAGO_CONFIRMADO. Si el backend indica revisión, diferencia de monto, destinatario incorrecto, duplicado o baja confianza, NO emitas PAGO_CONFIRMADO.
+7. Comprobante recibido -> di EXACTAMENTE: "Listo! Recibimos tu comprobante, tu pedido entra a preparacion ahora mismo. Te avisamos cuando este listo y cuando salga el domiciliario." -> escribe PAGO_CONFIRMADO
 8. NUNCA digas "el domiciliario ya va en camino" al confirmar. El pedido va a PREPARACION primero, luego LISTO, luego EN CAMINO.
 9. NUNCA inventes tiempos. Si el cliente pregunta cuanto demora ANTES de confirmar: "Normalmente entre 30 y 50 minutos desde que confirmamos." Si ya confirmo: "Tu pedido esta en preparacion, te avisamos cada paso."
 POST-CONFIRMACION:
@@ -686,12 +698,12 @@ Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
 Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
 Cancelar pedido: CANCELAR_PEDIDO:[numero_pedido]
 PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
-- PAGO_CONFIRMADO: SOLO si el BACKEND indicó explícitamente en ESTE turno que el comprobante actual fue VALIDADO. Una imagen por sí sola NUNCA autoriza este tag.
+- Cliente MANDA UNA IMAGEN (comprobante de transferencia): PAGO_CONFIRMADO
 - Cliente dice que va a pagar en EFECTIVO y da el valor del billete: PAGO_EFECTIVO:[valor]
 - Cliente dice que va a pagar con DATAFONO o paga al recibir: PAGO_DATAFONO
 MUY IMPORTANTE:
 - Si el cliente solo dice "Nequi" o "Bancolombia" = NO escribas ningun tag. Solo dale los datos y pide el comprobante.
-- PAGO_CONFIRMADO solo va cuando el BACKEND haya validado el mediaId actual y te lo indique explícitamente. Recibir una imagen NO equivale a validar pago.
+- PAGO_CONFIRMADO solo va cuando el cliente MANDA LA IMAGEN del comprobante, nunca antes.
 - Aplica promos del dia. Si no existe el producto, ofrece alternativas.
 - NO seas insistente ni repitas preguntas que el cliente ya respondio. Si dio una respuesta (aunque sea parcial), acéptala y avanza. Ser fastidioso espanta clientes.
 - Si el cliente dice "porteria", "conjunto", "casa", "el mismo de siempre" o cualquier referencia de entrega: acepta y confirma, no sigas preguntando detalles innecesarios.
@@ -765,9 +777,36 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
       cliente_nombre: nombreClientePedido,
       cliente_nivel: nivelClientePedido
     };
-    var response = await axios.post(SUPABASE_URL + "/rest/v1/pedidos", payload, {
-      headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }
-    });
+    // HOTFIX 13: validar, vincular bien el adicional, reintentar y NUNCA perder un pedido en silencio.
+    if (!Array.isArray(payload.items) || !payload.items.length || !(Number(payload.total) > 0)) {
+      await hlPedidoNoGuardado(restauranteId, pedidoData, "el pedido llegó sin productos o sin total", false);
+      return null;
+    }
+    payload.pedido_adicional_de = await hlResolverPedidoPadre(restauranteId, payload.cliente_tel, pedidoData.pedidoAdicionalDe, pedidoData.orderNumber, true);
+    var response = null, errIns = null; pedidoData._t0 = pedidoData._t0 || new Date(Date.now() - 60000).toISOString(); var t0Ins = pedidoData._t0;
+    for (var intP = 0; intP < 4 && !response; intP++) {
+      try {
+        if (!payload.numero_pedido) { payload.numero_pedido = pedidoData.orderNumber = await getNextOrderNumber(restauranteId); }
+        if (intP > 0) { // si un intento anterior sí entró (timeout), no duplicar
+          var yaP = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId + "&cliente_tel=eq." + encodeURIComponent(payload.cliente_tel) + "&total=eq." + Number(payload.total) + "&created_at=gte." + t0Ins + "&select=*&limit=1", { headers: sbH(true), timeout: 8000 });
+          if (yaP.data && yaP.data[0]) { response = { data: yaP.data }; break; }
+        }
+        response = await axios.post(SUPABASE_URL + "/rest/v1/pedidos", payload, {
+          headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }, timeout: 12000
+        });
+      } catch (eIns) {
+        errIns = eIns; var stIns = eIns.response && eIns.response.status;
+        if (stIns && stIns < 500 && stIns !== 408 && stIns !== 429) break;
+        await new Promise(function(ok){ setTimeout(ok, 1000 * (intP + 1)); });
+      }
+    }
+    if (!response) {
+      var detErr = errIns ? (errIns.response ? JSON.stringify(errIns.response.data).slice(0, 200) : errIns.message) : "sin respuesta";
+      console.error("Error guardando pedido (tras reintentos):", detErr);
+      await hlPedidoNoGuardado(restauranteId, pedidoData, detErr, !(errIns && errIns.response && errIns.response.status < 500));
+      return null;
+    }
+    pedidoData.orderNumber = payload.numero_pedido;
     var savedOrder = response.data && response.data[0] ? response.data[0] : null;
     console.log("Pedido #" + pedidoData.orderNumber + " guardado. ID:", savedOrder?.id || "?");
     // Verificación de persistencia del comprobante. Si el pedido nació desde una
@@ -835,10 +874,63 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
     return savedOrder;
   } catch (err) {
     console.error("Error guardando pedido:", err.response ? JSON.stringify(err.response.data) : err.message);
-    // CRÍTICO: el caller NO puede borrar orderState ni decir que el pedido entró si Supabase falló.
-    throw err;
+    return null;
   }
 }
+
+// ── HOTFIX 13 · pedidos a prueba de pérdidas ─────────────────────────────────
+var HL_ESTADOS_ACTIVOS = ["confirmado", "en_preparacion", "listo", "en_camino"];
+async function hlPedidosActivosCliente(restauranteId, tel, horas) {
+  var t = stripCountryCode(String(tel || "")), full = "57" + t;
+  var r = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId + "&or=(cliente_tel.eq." + encodeURIComponent(t) + ",cliente_tel.eq." + encodeURIComponent(full) + ")&estado=in.(" + HL_ESTADOS_ACTIVOS.join(",") + ")&created_at=gte." + new Date(Date.now() - (horas || 24) * 3600e3).toISOString() + "&select=id,numero_pedido,estado,items,total,subtotal,desechables,domicilio,notas_especiales,direccion,metodo_pago,created_at&order=created_at.desc&limit=5", { headers: sbH(true), timeout: 8000 });
+  return r.data || [];
+}
+// El pedido "padre" de un adicional debe ser un pedido ACTIVO del mismo cliente. Nunca uno entregado ni él mismo.
+async function hlResolverPedidoPadre(restauranteId, tel, reclamado, propioNumero, autoVincular) {
+  try {
+    var act = await hlPedidosActivosCliente(restauranteId, tel, 24), rec = String(reclamado || "").replace(/[^0-9]/g, "");
+    act = act.filter(function (p) { return String(p.numero_pedido) !== String(propioNumero || ""); });
+    if (rec) { var m = act.filter(function (p) { return String(p.numero_pedido) === rec; })[0]; if (m) return String(m.numero_pedido); return act[0] ? String(act[0].numero_pedido) : null; }
+    if (autoVincular && act[0] && Date.now() - new Date(act[0].created_at).getTime() < 3 * 3600e3) return String(act[0].numero_pedido);
+    return null;
+  } catch (e) { return reclamado && String(reclamado) !== String(propioNumero || "") ? String(reclamado) : null; }
+}
+// Nequi/Bancolombia muestran el titular enmascarado: "Jos* Gre***** Cha**** Pal****". Cada palabra visible debe
+// empezar igual y tener el mismo largo que una palabra del titular configurado, en orden (mínimo 2 palabras).
+function hlTokNombre(x) { return String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/[^a-z0-9*]+/).filter(Boolean); }
+function hlNombreEnmascaradoCoincide(visible, esperado) {
+  var vt = hlTokNombre(visible), et = hlTokNombre(esperado), j = 0, hits = 0;
+  if (!vt.length || !et.length || !vt.some(function (t) { return t.indexOf("*") !== -1; })) return false;
+  for (var i = 0; i < vt.length && j < et.length; i++) {
+    var t = vt[i], pre = t.split("*")[0]; if (pre.length < 2) continue;
+    for (var k = j; k < et.length; k++) { if (et[k].indexOf(pre) === 0 && (t.indexOf("*") === -1 ? t === et[k] : t.length === et[k].length)) { hits++; j = k + 1; break; } }
+  }
+  return hits >= Math.min(2, et.length) && hits >= Math.ceil(et.length * 0.66);
+}
+var hlColaPedidos = [];
+async function hlPedidoNoGuardado(restauranteId, pedidoData, motivo, reintentar) {
+  if (pedidoData && pedidoData._reintento) return; // la cola ya lo tiene
+  var items = Array.isArray(pedidoData.items) ? pedidoData.items.map(function (i) { return typeof i === "string" ? i : ((i.qty || 1) + "x " + (i.nombre || "")); }).join(", ") : "(sin productos)";
+  var txt = "🚨 PEDIDO NO REGISTRADO — revisa y créalo si hace falta.\n📱 " + stripCountryCode(pedidoData.phone || "") + "\n📋 " + items + "\n💰 $" + Number(pedidoData.total || 0).toLocaleString("es-CO") + " · " + (pedidoData.paymentMethod || "?") + "\n📍 " + (pedidoData.address || "Por confirmar") + "\nMotivo: " + motivo + (reintentar ? "\nLuz lo seguirá intentando guardar automáticamente." : "");
+  try { await guardarMensajeSupabase(restauranteId, stripCountryCode(pedidoData.phone || ""), txt, "alerta_pregunta", null); } catch (e) {}
+  try {
+    var rr = await axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restauranteId + "&select=telefono_dueno,whatsapp_phone_id", { headers: sbH(true), timeout: 8000 });
+    var ri = rr.data && rr.data[0];
+    if (ri && ri.telefono_dueno) await sendWhatsAppMessage("57" + stripCountryCode(ri.telefono_dueno), txt, ri.whatsapp_phone_id).catch(function () {});
+  } catch (e) {}
+  if (reintentar) hlColaPedidos.push({ rid: restauranteId, data: Object.assign({}, pedidoData, { _reintento: true }), intentos: 0, desde: Date.now() });
+}
+setInterval(async function () {
+  if (!hlColaPedidos.length) return;
+  var cola = hlColaPedidos.splice(0, hlColaPedidos.length);
+  for (var i = 0; i < cola.length; i++) {
+    var x = cola[i]; x.intentos++;
+    var ok = await guardarPedidoSupabase(x.rid, x.data).catch(function () { return null; });
+    if (ok) { guardarMensajeSupabase(x.rid, stripCountryCode(x.data.phone || ""), "✅ Pedido #" + ok.numero_pedido + " quedó registrado (reintento automático).", "alerta_pregunta", null).catch(function () {}); }
+    else if (x.intentos < 30) hlColaPedidos.push(x);
+    else guardarMensajeSupabase(x.rid, stripCountryCode(x.data.phone || ""), "🚨 No se pudo registrar el pedido tras 30 intentos. Créalo manualmente.", "alerta_pregunta", null).catch(function () {});
+  }
+}, 60000);
 
 // ── CHAT LIVE HUB · persistence first, realtime second ────────────────────────
 var chatLiveStreams = new Map();
@@ -863,8 +955,20 @@ async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo, co
     var mensajeSafe = String(mensaje||"").substring(0, 4000);
     var payload = { restaurante_id: restauranteId, telefono: chatTelKey(telefono), mensaje: mensajeSafe, tipo, comprobante_media_id: comprobanteMediaId || null };
     if (comprobanteUrl) payload.comprobante_url = comprobanteUrl;
-    var r=await axios.post(SUPABASE_URL + "/rest/v1/mensajes", payload,
-      { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" } });
+    var hdrM={ headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey, "Content-Type": "application/json", "Prefer": "return=representation" }, timeout: 10000 };
+    var r=null;
+    // HOTFIX 13: nunca perder un mensaje. Si la columna comprobante_url no existe (400), se guarda sin ella:
+    // la imagen se sigue viendo por comprobante_media_id (/api/comprobante/:id busca en Storage y luego en Meta).
+    for(var intM=0;intM<3&&!r;intM++){
+      try{ r=await axios.post(SUPABASE_URL + "/rest/v1/mensajes", payload, hdrM); }
+      catch(eM){
+        var stM=eM.response&&eM.response.status;
+        if(stM>=400&&stM<500&&payload.comprobante_url!==undefined){ delete payload.comprobante_url; continue; }
+        if(stM&&stM<500&&stM!==408&&stM!==429) throw eM;
+        if(intM===2) throw eM;
+        await new Promise(function(ok){setTimeout(ok,700*(intM+1))});
+      }
+    }
     var row=r.data&&r.data[0]||payload;chatLiveEmit(restauranteId,telefono,row);return row;
   } catch (e) { console.error("guardarMensaje:", e.message); return null; }
 }
@@ -872,7 +976,7 @@ async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo, co
 app.get("/api/chat-stream/:telefono",function(req,res){
   var rid=String(req.query.restaurante_id||"");if(!rid)return res.status(400).end();
   var tel=chatTelKey(req.params.telefono),key=chatLiveKey(rid,tel);
-  res.setHeader("Content-Type","text/event-stream; charset=utf-8");res.setHeader("Cache-Control","no-cache, no-transform");res.setHeader("X-Accel-Buffering","no");
+  res.setHeader("Content-Type","text/event-stream");res.setHeader("Cache-Control","no-cache, no-transform");res.setHeader("Connection","keep-alive");
   if(res.flushHeaders)res.flushHeaders();
   var set=chatLiveStreams.get(key);if(!set){set=new Set();chatLiveStreams.set(key,set)}set.add(res);
   res.write("event: ready\ndata: {\"ok\":true}\n\n");
@@ -883,7 +987,7 @@ app.get("/api/chat-stream/:telefono",function(req,res){
 app.get("/api/chat-stream",function(req,res){
   var rid=String(req.query.restaurante_id||"");if(!rid)return res.status(400).end();
   var key=rid+":*";
-  res.setHeader("Content-Type","text/event-stream; charset=utf-8");res.setHeader("Cache-Control","no-cache, no-transform");res.setHeader("X-Accel-Buffering","no");
+  res.setHeader("Content-Type","text/event-stream");res.setHeader("Cache-Control","no-cache, no-transform");res.setHeader("Connection","keep-alive");
   if(res.flushHeaders)res.flushHeaders();
   var set=chatLiveStreams.get(key);if(!set){set=new Set();chatLiveStreams.set(key,set)}set.add(res);
   res.write("event: ready\ndata: {\"ok\":true,\"scope\":\"restaurant\"}\n\n");
@@ -1353,7 +1457,10 @@ async function verificarComprobante(mediaId, totalEsperado, phoneNumberId, resta
     var nequiRaw=String(paymentCfg.metodo_pago_nequi||'').trim();
     var bankRaw=String(paymentCfg.metodo_pago_banco||'').trim();
     var nequiDigits=digits(nequiRaw),bankDigits=digits(bankRaw);
-    var recipientMatch=!!(expectedName&&dst&&(dst===expectedName||dst.indexOf(expectedName)!==-1||expectedName.indexOf(dst)!==-1));
+    // HOTFIX 13: admite varios titulares ("José Gregorio Charris / La Curva") y nombres enmascarados por Nequi/Bancolombia.
+    var nombresEsperados=String(paymentCfg.metodo_pago_nombre||paymentCfg.nombre||'').split(/\s*(?:\/|\||;|,|\so\s)\s*/i).map(normText).filter(Boolean);
+    var recipientMatch=!!(dst&&nombresEsperados.some(function(en){return dst===en||dst.indexOf(en)!==-1||en.indexOf(dst)!==-1}))||
+      String(paymentCfg.metodo_pago_nombre||'').split(/\s*(?:\/|\||;|,|\so\s)\s*/i).some(function(n){return hlNombreEnmascaradoCoincide(v.destinatario,n)});
     var accountMatch=false;
     if(acct){
       if(nequiDigits.length>=7 && (acct===nequiDigits||acct.endsWith(nequiDigits.slice(-7)))) accountMatch=true;
@@ -4286,6 +4393,7 @@ app.post("/api/pedido-manual", async function(req, res) {
   if (!restaurante_id || !telefono || !items || !total) return res.status(400).json({ ok: false, error: "Faltan datos: restaurante_id, telefono, items, total" });
   try {
     var num = await getNextOrderNumber(restaurante_id);
+    if (pedido_adicional_de) pedido_adicional_de = await hlResolverPedidoPadre(restaurante_id, telefono, pedido_adicional_de, num, false); // HOTFIX 13
     var subtotal = req.body.subtotal || (Number(total) - Number(desechables) - Number(domicilio) + Number(descuento));
     var svcKey = SUPABASE_SERVICE_KEY_VAL;
     var itemsArr = Array.isArray(items) ? items : items.split("\n").filter(function(l){return l.trim();});
@@ -4543,9 +4651,9 @@ app.get("/api/chat/:telefono", async function(req, res) {
     var r = await axios.get(
       SUPABASE_URL + "/rest/v1/mensajes?restaurante_id=eq." + req.query.restaurante_id +
       "&or=(telefono.eq." + encodeURIComponent(telLocal) + ",telefono.eq." + encodeURIComponent(telFull) + ")" +
-      "&order=created_at.asc,id.asc&limit=300",
+      "&order=created_at.desc,id.desc&limit=300",
       { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } });
-    res.json({ ok: true, mensajes: r.data || [] });
+    res.json({ ok: true, mensajes: (r.data || []).slice().reverse() }); // HOTFIX 13: los 300 más recientes, en orden
   } catch (e) { res.json({ ok: true, mensajes: [] }); }
 });
 
@@ -4979,7 +5087,7 @@ Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
 Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
 Cancelar pedido: CANCELAR_PEDIDO:[numero_pedido]
 PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
-- PAGO_CONFIRMADO: SOLO si el BACKEND indicó explícitamente en ESTE turno que el comprobante actual fue VALIDADO. Una imagen por sí sola NUNCA autoriza este tag.
+- Cliente MANDA UNA IMAGEN (comprobante de transferencia): PAGO_CONFIRMADO
 - Cliente dice que va a pagar en EFECTIVO y da el valor del billete: PAGO_EFECTIVO:[valor]
 - Cliente dice que va a pagar con DATAFONO o paga al recibir: PAGO_DATAFONO\nMUY IMPORTANTE:
 - Si el cliente da su barrio y está en una zona: cobra el precio de esa zona.
@@ -5217,7 +5325,7 @@ app.post("/api/domi-turno", async function(req,res){
   // HOLA LUZ — PREMIUM SHIFT SETTLEMENT
   // ====================================================
   if(!req.body.activo)return res.status(409).json({ok:false,error:"Completa el cierre bilateral con el restaurante. El turno sigue abierto."});
-  try{var activo=!!req.body.activo,now=new Date().toISOString(),svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};var patch={turno_activo:activo,ultimo_acceso_at:now};if(activo)patch.turno_inicio_at=now;else patch.turno_fin_at=now;var sr=null;try{sr=await axios.post(SUPABASE_URL+"/rest/v1/rpc/hl_premium_start_shift",{p_rid:t.rid,p_did:t.did},{headers:sbPrivilegedHeaders()});}catch(rpcErr){var rpcStatus=rpcErr&&rpcErr.response&&rpcErr.response.status;var rpcData=rpcErr&&rpcErr.response&&rpcErr.response.data;var rpcText=String((rpcData&&rpcData.message)||rpcData||rpcErr.message||"");var rpcMissing=rpcStatus===404||/hl_premium_start_shift|function.*does not exist|schema cache|PGRST202/i.test(rpcText);if(!rpcMissing)throw rpcErr;console.warn("[domi-turno] hl_premium_start_shift no disponible; usando fallback seguro",rpcStatus,rpcText);var fallbackHeaders={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};var fallbackPatch={turno_activo:true,turno_inicio_at:now,ultimo_acceso_at:now};var fallbackResp=await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+encodeURIComponent(t.did)+"&restaurante_id=eq."+encodeURIComponent(t.rid),fallbackPatch,{headers:fallbackHeaders});if(!fallbackResp.data||!fallbackResp.data[0])return res.status(404).json({ok:false,error:"No se encontró el domiciliario para este restaurante"});sr={data:{started:true,turno_inicio_at:fallbackResp.data[0].turno_inicio_at||now,fallback:true}};}now=sr.data&&sr.data.turno_inicio_at||now;if(sr.data&&sr.data.started===false)return res.json({ok:true,turno_activo:true,turno_inicio_at:now,auto_asignacion:null});var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did+"&select=nombre",{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}}).catch(function(){return{data:[]};});var nombre=dr.data&&dr.data[0]&&dr.data[0].nombre||"Domiciliario";var auto=null;if(activo){try{auto=await autoAsignarPendienteParaDomi(t.rid,t.did);}catch(e){}}await registrarEventoDomi(t.rid,t.did,null,activo?"turno_iniciado":"turno_finalizado",{});await registrarEventoLuz(t.rid,null,"restaurante",null,activo?"domi_turno_iniciado":"domi_turno_finalizado",activo?nombre+" inició turno":nombre+" finalizó turno",activo?"Luz lo tendrá en cuenta para nuevas asignaciones cuando el GPS esté sincronizado.":"Dejó de recibir nuevas misiones.",{domiciliario_id:t.did},"domiciliario",t.did);res.json({ok:true,turno_activo:activo,turno_inicio_at:now,auto_asignacion:auto});}catch(e){res.status(500).json({ok:false,error:e.message});}
+  try{var activo=!!req.body.activo,now=new Date().toISOString(),svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};var patch={turno_activo:activo,ultimo_acceso_at:now};if(activo)patch.turno_inicio_at=now;else patch.turno_fin_at=now;var sr=await axios.post(SUPABASE_URL+"/rest/v1/rpc/hl_premium_start_shift",{p_rid:t.rid,p_did:t.did},{headers:sbPrivilegedHeaders()});now=sr.data.turno_inicio_at;if(!sr.data.started)return res.json({ok:true,turno_activo:true,turno_inicio_at:now,auto_asignacion:null});var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did+"&select=nombre",{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}}).catch(function(){return{data:[]};});var nombre=dr.data&&dr.data[0]&&dr.data[0].nombre||"Domiciliario";var auto=null;if(activo){try{auto=await autoAsignarPendienteParaDomi(t.rid,t.did);}catch(e){}}await registrarEventoDomi(t.rid,t.did,null,activo?"turno_iniciado":"turno_finalizado",{});await registrarEventoLuz(t.rid,null,"restaurante",null,activo?"domi_turno_iniciado":"domi_turno_finalizado",activo?nombre+" inició turno":nombre+" finalizó turno",activo?"Luz lo tendrá en cuenta para nuevas asignaciones cuando el GPS esté sincronizado.":"Dejó de recibir nuevas misiones.",{domiciliario_id:t.did},"domiciliario",t.did);res.json({ok:true,turno_activo:activo,turno_inicio_at:now,auto_asignacion:auto});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
 app.post("/api/domi-perfil", async function(req,res){
@@ -6772,8 +6880,9 @@ async function lcCiclo(rid, tipo, opts) {
     var pregPend = function () { return lcPreguntasPendientes(rid); };
     var env = { ev: ev, findings: s.findings, memoria: memoria, conflictos: resumen.conflictos, preguntasPendientes: pregPend };
     var orden = tipo === "profundo"
-      ? ["clientes", "menu", "inventory", "loyalty", "growth", "marketing", "conocimiento", "pedidos", "operaciones", "despacho", "pagos", "conversaciones"]
-      : ["conversaciones", "pedidos", "operaciones", "despacho", "pagos"];
+      ? ["clientes", "menu", "inventory", "loyalty", "growth", "marketing", "conocimiento", "pedidos", "operaciones", "despacho", "workforce", "pagos", "conversaciones"]
+      : ["conversaciones", "pedidos", "operaciones", "despacho", "workforce", "pagos"];
+    orden = orden.filter(function (id) { return LC_AGENT_BY_ID[id]; });
     var todas = [];
     for (var i = 0; i < orden.length; i++) {
       var def = LC_AGENT_BY_ID[orden[i]], ag = lcAg(rid, def.id), bk = rid + ":" + def.id;
@@ -7225,6 +7334,1533 @@ app.post("/api/luz/eventos", async function (req, res) {
   if (!per.activa || !rows.length) return;
   lcPost("luz_menu_events", rows, "resolution=ignore-duplicates,return=minimal", "on_conflict=restaurante_id,event_key").catch(function (e) { console.warn("[luz-core] eventos menú:", e.message); });
 });
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOLA LUZ · WORKFORCE (EQUIPO) — backend autoritativo  /api/equipo/*
+//
+// Reglas de este bloque:
+//   · La hora SIEMPRE es la del servidor. El navegador nunca manda horas de fichaje.
+//   · El frontend nunca decide: horas, extras, nómina, validez de PIN, identidad,
+//     aceptación de fichaje, permisos, tarifas ni estado de periodos.
+//   · Multi-tenant: el restaurante sale SIEMPRE del token firmado, nunca del body.
+//   · Solo service_role toca las tablas wf_* (RLS activo, sin políticas para anon).
+//   · Biometría desacoplada (BiometricProvider). Proveedor por defecto: "none" →
+//     "Reconocimiento facial no configurado". Nunca se simula liveness ni match.
+//   · El agente Workforce nunca despide, suspende, sanciona ni recorta pagos.
+// ═══════════════════════════════════════════════════════════════════════════
+var WF = { rate: new Map(), empCache: new Map(), devCache: new Map(), ahoraCache: new Map(), migracion: null };
+var WF_VER = "1.0";
+var WF_RANK = { empleado: 0, supervisor: 1, manager: 2, admin: 3, owner: 4 };
+var WF_ROLES = ["cocina", "salon", "caja", "domicilio", "manager", "otro"];
+var WF_ROL_LBL = { cocina: "Cocina", salon: "Salón", caja: "Caja", domicilio: "Domicilio", manager: "Manager", otro: "Otro" };
+// Qué permiso mínimo necesita cada capacidad (el backend es la única fuente de verdad)
+var WF_PERM = { ver: "supervisor", personal: "manager", turnos: "manager", corregir: "manager", incidencias: "manager", nomina_ver: "manager", nomina_aprobar: "admin", nomina_pago: "admin", config: "admin", dispositivos: "admin", identidad: "manager", dia: "supervisor" };
+
+// Plantilla de autorización biométrica. Texto versionado y con hash: lo que el empleado
+// acepta queda fijado. DEBE revisarlo un abogado antes de usarse en producción.
+var WF_DOC_BIO = {
+  tipo: "autorizacion_biometrica", version: "2026-09-v1", titulo: "Autorización para el tratamiento de datos biométricos (LUZ ID)",
+  texto: [
+    "¿Qué es? LUZ ID usa una plantilla matemática de tu rostro para confirmar que eres tú cuando marcas entrada, descanso o salida en la tablet del restaurante.",
+    "Dato sensible. Tu rostro es un dato biométrico, considerado dato sensible. No estás obligado(a) a autorizarlo.",
+    "Si no autorizas, no pasa nada. Seguirás marcando con tu PIN personal de trabajo. Negarte no afecta tu empleo, tus turnos ni tu pago.",
+    "Para qué se usa. Únicamente para verificar tu identidad al marcar tiempo de trabajo. No se usa para vigilancia, seguimiento, evaluación de desempeño ni otros fines.",
+    "Qué se guarda. No se guardan fotos. Solo una referencia técnica que genera el proveedor de reconocimiento facial que el restaurante haya configurado (el proveedor y el país donde procesa los datos se muestran antes de registrar tu LUZ ID).",
+    "Tus derechos. Puedes conocer, actualizar, rectificar y pedir la supresión de tus datos, y revocar esta autorización en cualquier momento desde MI TURNO. Al revocar, tu LUZ ID se elimina y vuelves a marcar con PIN.",
+    "Responsable. El restaurante es el responsable del tratamiento de tus datos."
+  ].join("\n\n")
+};
+WF_DOC_BIO.hash = crypto.createHash("sha256").update(WF_DOC_BIO.version + "\n" + WF_DOC_BIO.texto).digest("hex");
+
+// Configuración por defecto (editable por restaurante; los valores legales son REFERENCIA, no asesoría)
+var WF_CFG_DEF = {
+  pais: "CO", zona_horaria: "America/Bogota", moneda: "COP",
+  tolerancia_tarde_min: 10, salida_faltante_horas: 14, turno_largo_horas: 12,
+  marcar_desde_celular: false, mostrar_estimado_empleado: true,
+  pin_temporal: { expira_seg: 300, longitud: 6, max_intentos: 3, aprobadores: ["owner", "admin", "manager", "supervisor"] },
+  biometria: { proveedor: "none", fallos_para_alternativa: 3, umbral_liveness: 90, umbral_similitud: 95 },
+  horas_extra: {
+    factor: 1, nota: "Referencia configurable. No incluye recargos legales: confírmalo con tu contador.",
+    reglas: [
+      { desde: "2024-07-15", diaria_horas: null, semanal_horas: 46 },
+      { desde: "2025-07-15", diaria_horas: null, semanal_horas: 44 },
+      { desde: "2026-07-15", diaria_horas: null, semanal_horas: 42 }
+    ]
+  },
+  nomina: { frecuencia: "quincenal" }
+};
+var WF_CFG_US = { pais: "US", zona_horaria: "America/New_York", moneda: "USD", horas_extra: { factor: 1, nota: "Referencia configurable (40 h semanales). Confirma las reglas de tu estado con tu contador.", reglas: [{ desde: "2000-01-01", diaria_horas: null, semanal_horas: 40 }] }, nomina: { frecuencia: "semanal" } };
+
+// ── utilidades ──────────────────────────────────────────────────────────────
+function wfUuid(v) { v = String(v || ""); return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v) ? v.toLowerCase() : null; }
+function wfNowISO() { return new Date().toISOString(); }
+function wfB64u(buf) { return Buffer.from(buf).toString("base64").replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_"); }
+function wfFromB64u(s) { s = String(s || "").replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return Buffer.from(s, "base64"); }
+function wfSha(s) { return crypto.createHash("sha256").update(String(s)).digest("hex"); }
+function wfClean(s, max) { return String(s == null ? "" : s).replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, max || 200); }
+function wfTel(v) { var d = String(v || "").replace(/\D/g, ""); if (d.length === 12 && d.indexOf("57") === 0) d = d.slice(2); if (d.length === 11 && d.indexOf("1") === 0) d = d.slice(1); return d; }
+function wfIp(req) { return String((req.headers["x-forwarded-for"] || req.ip || (req.socket && req.socket.remoteAddress) || "").split(",")[0]).trim(); }
+function wfHashPin(pin) { var salt = crypto.randomBytes(16).toString("hex"); return salt + ":" + crypto.scryptSync(String(pin), salt, 32).toString("hex"); }
+function wfVerifyPin(pin, stored) {
+  try {
+    if (!stored || stored.indexOf(":") < 0) return false;
+    var p = stored.split(":"), calc = crypto.scryptSync(String(pin), p[0], 32), exp = Buffer.from(p[1], "hex");
+    return exp.length === calc.length && crypto.timingSafeEqual(exp, calc);
+  } catch (e) { return false; }
+}
+function wfPinDebil(pin) {
+  if (!/^[0-9]{4,6}$/.test(pin)) return "El PIN debe tener de 4 a 6 números.";
+  if (/^(\d)\1+$/.test(pin)) return "Evita PIN con el mismo número repetido.";
+  var asc = "01234567890", desc = "09876543210";
+  if (asc.indexOf(pin) >= 0 || desc.indexOf(pin) >= 0) return "Evita secuencias como 1234.";
+  return null;
+}
+// Límite de intentos en memoria (por IP + restaurante + tipo)
+function wfRate(key, max, winMs) {
+  var now = Date.now(), x = WF.rate.get(key);
+  if (!x || now - x.t > winMs) { x = { t: now, n: 0 }; WF.rate.set(key, x); }
+  return { bloqueado: x.n >= max, fallo: function () { x.n++; }, ok: function () { WF.rate.delete(key); } };
+}
+setInterval(function () { var now = Date.now(); WF.rate.forEach(function (v, k) { if (now - v.t > 3600e3) WF.rate.delete(k); }); WF.ahoraCache.clear(); }, 10 * 60 * 1000).unref();
+
+// ── zona horaria (Intl, soporta horario de verano en USA) ───────────────────
+function wfParts(d, tz) {
+  var o = {}; new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })
+    .formatToParts(d).forEach(function (p) { o[p.type] = p.value; }); return o;
+}
+function wfDay(d, tz) { var o = wfParts(new Date(d), tz); return o.year + "-" + o.month + "-" + o.day; }
+function wfHM(d, tz) { var o = wfParts(new Date(d), tz); return o.hour + ":" + o.minute; }
+function wfOffMin(d, tz) { var o = wfParts(d, tz); return Math.round((Date.UTC(+o.year, +o.month - 1, +o.day, +o.hour, +o.minute, +o.second) - Math.floor(d.getTime() / 1000) * 1000) / 60000); }
+function wfLocalToDate(day, hm, tz) {
+  var a = day.split("-").map(Number), b = String(hm || "00:00").split(":").map(Number);
+  var guess = Date.UTC(a[0], a[1] - 1, a[2], b[0] || 0, b[1] || 0), off = wfOffMin(new Date(guess), tz), t = guess - off * 60000, off2 = wfOffMin(new Date(t), tz);
+  if (off2 !== off) t = guess - off2 * 60000; return new Date(t);
+}
+function wfAddDays(day, n) { var d = new Date(day + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function wfDow(day) { return new Date(day + "T12:00:00Z").getUTCDay(); }
+function wfMonday(day) { return wfAddDays(day, -((wfDow(day) + 6) % 7)); }
+function wfIsDay(s) { return /^\d{4}-\d{2}-\d{2}$/.test(String(s || "")) && !isNaN(new Date(s + "T12:00:00Z")); }
+function wfDiffDays(a, b) { return Math.round((new Date(b + "T12:00:00Z") - new Date(a + "T12:00:00Z")) / 864e5); }
+
+// ── acceso a datos (service_role, solo servidor) ────────────────────────────
+function wfH(extra) { return Object.assign({}, sbH(true), { "Content-Type": "application/json" }, extra || {}); }
+function wfErr(status, code, msg, extra) { var e = new Error(msg); e.wf = Object.assign({ status: status, code: code }, extra || {}); return e; }
+function wfDbErr(e) {
+  var st = e.response && e.response.status, d = (e.response && e.response.data) || {};
+  if (st === 404 && (d.code === "PGRST205" || /Could not find the table/i.test(d.message || ""))) { WF.migracion = { ok: false, t: Date.now() }; return wfErr(503, "migracion_pendiente", "Falta aplicar la migración de Equipo en la base de datos."); }
+  if (st === 409 || d.code === "23505") return wfErr(409, "conflicto", "Ese registro ya existe o cambió al mismo tiempo.", { db: d.message });
+  if (d.code === "23514" || d.code === "22P02" || d.code === "23503") return wfErr(400, "datos_invalidos", "Algún dato no es válido.", { db: d.message });
+  if (e.wf) return e;
+  return wfErr(502, "db_no_disponible", "La base de datos no respondió. Nada se guardó; intenta de nuevo.", { db: String(e.message || "").slice(0, 160) });
+}
+async function wfGet(path, ms) { try { var r = await axios.get(SUPABASE_URL + "/rest/v1/" + path, { headers: sbH(true), timeout: ms || 9000 }); return r.data || []; } catch (e) { throw wfDbErr(e); } }
+async function wfPost(table, rows, opts) {
+  opts = opts || {}; var prefer = ["return=representation"]; if (opts.upsert) prefer.push("resolution=merge-duplicates");
+  try { var r = await axios.post(SUPABASE_URL + "/rest/v1/" + table + (opts.qs ? "?" + opts.qs : ""), rows, { headers: wfH({ Prefer: prefer.join(",") }), timeout: opts.ms || 9000 }); return r.data || []; }
+  catch (e) { throw wfDbErr(e); }
+}
+async function wfPatch(table, filter, body) {
+  try { var r = await axios.patch(SUPABASE_URL + "/rest/v1/" + table + "?" + filter, body, { headers: wfH({ Prefer: "return=representation" }), timeout: 9000 }); return r.data || []; }
+  catch (e) { throw wfDbErr(e); }
+}
+async function wfDelete(table, filter) { try { await axios.delete(SUPABASE_URL + "/rest/v1/" + table + "?" + filter, { headers: wfH(), timeout: 9000 }); } catch (e) { throw wfDbErr(e); } }
+function wfIn(arr) { return "in.(" + arr.map(encodeURIComponent).join(",") + ")"; }
+
+// ── secreto para firmar sesiones (nunca la clave pública) ───────────────────
+function wfSecret() {
+  var base = process.env.WORKFORCE_SECRET || process.env.DOMI_SESSION_SECRET || "";
+  if (!base) { var k = String(SUPABASE_SERVICE_KEY_VAL || ""); if (k && k !== SUPABASE_KEY && !/^sb_publishable_/i.test(k) && k !== process.env.SUPABASE_ANON_KEY) base = k; }
+  if (!base) return null;
+  return crypto.createHmac("sha256", base).update("hola-luz-workforce-v1").digest();
+}
+function wfSign(payload) {
+  var sec = wfSecret(); if (!sec) throw wfErr(503, "sin_secreto", "Equipo no está disponible: falta configurar el secreto del servidor.");
+  var body = wfB64u(JSON.stringify(payload)); return "wf1." + body + "." + wfB64u(crypto.createHmac("sha256", sec).update(body).digest());
+}
+function wfVerifyTok(tok) {
+  try {
+    var sec = wfSecret(); if (!sec) return null;
+    var p = String(tok || "").split("."); if (p.length !== 3 || p[0] !== "wf1") return null;
+    var exp = crypto.createHmac("sha256", sec).update(p[1]).digest(), got = wfFromB64u(p[2]);
+    if (got.length !== exp.length || !crypto.timingSafeEqual(got, exp)) return null;
+    var d = JSON.parse(wfFromB64u(p[1]).toString("utf8")); if (!d || !d.exp || d.exp < Date.now() || !wfUuid(d.rid)) return null; return d;
+  } catch (e) { return null; }
+}
+function wfSend(res, e) {
+  var w = e && e.wf; if (!w) { console.warn("[equipo]", e && e.message); w = { status: 500, code: "error", }; }
+  var out = { ok: false, code: w.code, error: w.status === 500 ? "Algo falló en el servidor. Nada se guardó." : e.message };
+  Object.keys(w).forEach(function (k) { if (["status", "code", "db"].indexOf(k) < 0) out[k] = w[k]; });
+  res.status(w.status).json(out);
+}
+function wfRoute(fn) { return function (req, res) { Promise.resolve(fn(req, res)).catch(function (e) { wfSend(res, e); }); }; }
+
+// ── configuración ───────────────────────────────────────────────────────────
+function wfMerge(a, b) { var o = JSON.parse(JSON.stringify(a)); Object.keys(b || {}).forEach(function (k) { if (b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) && o[k] && typeof o[k] === "object" && !Array.isArray(o[k])) o[k] = wfMerge(o[k], b[k]); else o[k] = b[k]; }); return o; }
+async function wfConfig(rid) {
+  var r = await wfGet("wf_config?restaurante_id=eq." + rid + "&select=config,updated_at&limit=1");
+  var c = r[0] && r[0].config || {}, base = c.pais === "US" ? wfMerge(WF_CFG_DEF, WF_CFG_US) : WF_CFG_DEF;
+  var out = wfMerge(base, c); out._guardada = !!r[0]; return out;
+}
+function wfValidarConfig(inp, actual) {
+  var c = {}, e = function (m) { throw wfErr(400, "config_invalida", m); };
+  if (inp.pais != null) { if (["CO", "US"].indexOf(inp.pais) < 0) e("País no soportado."); c.pais = inp.pais; }
+  if (inp.zona_horaria != null) { try { new Intl.DateTimeFormat("en", { timeZone: inp.zona_horaria }); } catch (x) { e("Zona horaria inválida."); } c.zona_horaria = inp.zona_horaria; }
+  ["tolerancia_tarde_min", "salida_faltante_horas", "turno_largo_horas"].forEach(function (k) { if (inp[k] != null) { var n = Number(inp[k]); if (!isFinite(n) || n < 0 || n > (k === "tolerancia_tarde_min" ? 120 : 24)) e("Valor fuera de rango: " + k); c[k] = n; } });
+  ["marcar_desde_celular", "mostrar_estimado_empleado"].forEach(function (k) { if (inp[k] != null) c[k] = !!inp[k]; });
+  if (inp.pin_temporal) {
+    var p = inp.pin_temporal, pt = {};
+    if (p.expira_seg != null) { var s = Number(p.expira_seg); if (!(s >= 60 && s <= 900)) e("El PIN temporal debe durar entre 1 y 15 minutos."); pt.expira_seg = Math.round(s); }
+    if (p.max_intentos != null) { var m = Number(p.max_intentos); if (!(m >= 1 && m <= 5)) e("Intentos del PIN temporal: 1 a 5."); pt.max_intentos = Math.round(m); }
+    if (p.aprobadores != null) { if (!Array.isArray(p.aprobadores) || !p.aprobadores.length || p.aprobadores.some(function (x) { return ["owner", "admin", "manager", "supervisor"].indexOf(x) < 0; })) e("Aprobadores inválidos."); pt.aprobadores = p.aprobadores.indexOf("owner") < 0 ? ["owner"].concat(p.aprobadores) : p.aprobadores; }
+    c.pin_temporal = pt;
+  }
+  if (inp.biometria) { var b = inp.biometria, bt = {}; if (b.proveedor != null) { if (!WF_BIO[b.proveedor]) e("Proveedor biométrico no disponible."); bt.proveedor = b.proveedor; } if (b.fallos_para_alternativa != null) { var f = Number(b.fallos_para_alternativa); if (!(f >= 1 && f <= 5)) e("Fallos antes de la alternativa: 1 a 5."); bt.fallos_para_alternativa = Math.round(f); } c.biometria = bt; }
+  if (inp.horas_extra) {
+    var h = inp.horas_extra, ht = {};
+    if (h.factor != null) { var fa = Number(h.factor); if (!(fa >= 1 && fa <= 3)) e("El multiplicador de hora extra debe estar entre 1 y 3."); ht.factor = fa; }
+    if (h.reglas != null) {
+      if (!Array.isArray(h.reglas) || !h.reglas.length || h.reglas.length > 12) e("Reglas de horas extra inválidas.");
+      ht.reglas = h.reglas.map(function (r) {
+        if (!wfIsDay(r.desde)) e("Cada regla necesita fecha de vigencia.");
+        var d = r.diaria_horas == null || r.diaria_horas === "" ? null : Number(r.diaria_horas), s = r.semanal_horas == null || r.semanal_horas === "" ? null : Number(r.semanal_horas);
+        if (d != null && !(d >= 1 && d <= 16)) e("Horas diarias: 1 a 16."); if (s != null && !(s >= 1 && s <= 84)) e("Horas semanales: 1 a 84.");
+        if (d == null && s == null) e("Cada regla necesita límite diario o semanal.");
+        return { desde: r.desde, diaria_horas: d, semanal_horas: s };
+      }).sort(function (a, b) { return a.desde < b.desde ? -1 : 1; });
+    }
+    c.horas_extra = ht;
+  }
+  if (inp.nomina && inp.nomina.frecuencia != null) { if (["semanal", "quincenal", "mensual"].indexOf(inp.nomina.frecuencia) < 0) e("Frecuencia inválida."); c.nomina = { frecuencia: inp.nomina.frecuencia }; }
+  return c;
+}
+function wfRegla(cfg, day) { var rs = (cfg.horas_extra && cfg.horas_extra.reglas) || [], r = null; rs.forEach(function (x) { if (x.desde <= day) r = x; }); return r || { diaria_horas: null, semanal_horas: null }; }
+
+// ── BiometricProvider (desacoplado) ─────────────────────────────────────────
+// Interfaz: estado() · crearSesionLiveness(ctx) · resultadoLiveness(id) · enrolar(ctx) · verificar(ctx) · eliminar(ctx)
+// Solo se registra un proveedor cuando está implementado de verdad. Hoy: "none".
+var WF_BIO = {
+  none: {
+    id: "none", nombre: "Sin proveedor",
+    estado: function () { return { configurado: false, liveness: false, match: false, mensaje: "Reconocimiento facial no configurado", detalle: "Se marca con PIN personal. El PIN temporal aprobado por un supervisor queda como alternativa." }; },
+    crearSesionLiveness: async function () { throw wfErr(409, "biometria_no_configurada", "Reconocimiento facial no configurado"); },
+    resultadoLiveness: async function () { throw wfErr(409, "biometria_no_configurada", "Reconocimiento facial no configurado"); },
+    enrolar: async function () { throw wfErr(409, "biometria_no_configurada", "Reconocimiento facial no configurado"); },
+    verificar: async function () { throw wfErr(409, "biometria_no_configurada", "Reconocimiento facial no configurado"); },
+    eliminar: async function () { return { ok: true }; }
+  }
+};
+function wfBio(cfg) { var p = WF_BIO[(cfg.biometria || {}).proveedor] || WF_BIO.none; return p.estado().configurado ? p : WF_BIO.none; }
+
+// ── autenticación y permisos ────────────────────────────────────────────────
+async function wfEmpleado(rid, eid, fresh) {
+  var k = rid + ":" + eid, c = WF.empCache.get(k);
+  if (!fresh && c && Date.now() - c.t < 20000) return c.row;
+  var r = await wfGet("wf_empleados?id=eq." + eid + "&restaurante_id=eq." + rid + "&limit=1");
+  WF.empCache.set(k, { t: Date.now(), row: r[0] || null }); return r[0] || null;
+}
+function wfEmpInvalidar(rid, eid) { WF.empCache.delete(rid + ":" + eid); WF.ahoraCache.delete(rid); }
+async function wfActor(req) {
+  var tok = String(req.headers.authorization || "").replace(/^Bearer\s+/i, ""), d = wfVerifyTok(tok);
+  if (!d) throw wfErr(401, "sesion_invalida", "Tu sesión de Equipo venció. Vuelve a entrar.");
+  var q = wfUuid((req.body && req.body.restaurante_id) || (req.query && req.query.restaurante_id));
+  if (q && q !== d.rid) throw wfErr(403, "otro_restaurante", "No tienes acceso a ese restaurante.");
+  if (d.k === "adm") return { rid: d.rid, tipo: "owner", id: "owner", nombre: "Administración (PIN del restaurante)", permiso: "owner" };
+  if (d.k === "emp") {
+    var e = await wfEmpleado(d.rid, d.eid);
+    if (!e || !e.activo) throw wfErr(401, "sesion_invalida", "Tu acceso ya no está activo.");
+    if (e.pin_hash && d.ph && d.ph !== wfSha(e.pin_hash).slice(0, 12)) throw wfErr(401, "sesion_invalida", "Tu PIN cambió. Vuelve a entrar.");
+    return { rid: d.rid, tipo: "empleado", id: e.id, nombre: e.nombre, permiso: e.permiso, emp: e };
+  }
+  throw wfErr(401, "sesion_invalida", "Sesión inválida.");
+}
+function wfPuede(actor, cap) { return (WF_RANK[actor.permiso] || 0) >= WF_RANK[WF_PERM[cap] || "owner"]; }
+function wfAuth(cap) {
+  return function (req, res, next) {
+    wfActor(req).then(function (a) {
+      if (cap && !wfPuede(a, cap)) throw wfErr(403, "sin_permiso", "Tu rol no permite esta acción.");
+      req.wf = a; next();
+    }).catch(function (e) { wfSend(res, e); });
+  };
+}
+function wfAuthEmp(req, res, next) {
+  wfActor(req).then(function (a) { if (a.tipo !== "empleado") throw wfErr(403, "solo_empleado", "Esta sección es para cada persona del equipo."); req.wf = a; next(); }).catch(function (e) { wfSend(res, e); });
+}
+async function wfDevice(req) {
+  var tok = String(req.headers["x-wf-device"] || ""); if (tok.length < 30) throw wfErr(401, "dispositivo", "Este dispositivo no está activado como LUZ CHECK.");
+  var h = wfSha(tok), c = WF.devCache.get(h), row;
+  if (c && Date.now() - c.t < 60000) row = c.row;
+  else { var r = await wfGet("wf_dispositivos?token_hash=eq." + h + "&select=id,restaurante_id,nombre,activo&limit=1"); row = r[0] || null; WF.devCache.set(h, { t: Date.now(), row: row }); }
+  if (!row || !row.activo) throw wfErr(401, "dispositivo", "Este dispositivo fue desactivado. Actívalo de nuevo con el PIN del restaurante.");
+  return row;
+}
+function wfKiosk(req, res, next) { wfDevice(req).then(function (d) { req.dev = d; req.wfRid = d.restaurante_id; next(); }).catch(function (e) { wfSend(res, e); }); }
+async function wfRestPin(rid, pin) {
+  var r = await wfGet("restaurantes?id=eq." + rid + "&select=id,nombre,pin,estado&limit=1"), x = r[0];
+  if (!x || String(x.estado || "") === "suspendido") throw wfErr(403, "restaurante", "Restaurante no disponible.");
+  var a = Buffer.from(String(x.pin || "")), b = Buffer.from(String(pin || ""));
+  return { ok: a.length > 0 && a.length === b.length && crypto.timingSafeEqual(a, b), rest: x };
+}
+function wfEmpSafe(e) { if (!e) return null; var o = Object.assign({}, e); delete o.pin_hash; delete o.activacion_hash; o.tiene_pin = !!e.pin_hash; o.pin_bloqueado = !!(e.pin_bloqueado_hasta && new Date(e.pin_bloqueado_hasta) > new Date()); o.activacion_pendiente = !!(e.activacion_hash && e.activacion_expira && new Date(e.activacion_expira) > new Date()); return o; }
+
+// ── auditoría ───────────────────────────────────────────────────────────────
+async function wfEvento(rid, o) {
+  var row = { restaurante_id: rid, empleado_id: o.empleado_id || null, sesion_id: o.sesion_id || null, accion: o.accion, metodo_verificacion: o.metodo || null, dispositivo_id: o.dispositivo_id || null, resultado: o.resultado || "ok", fuente: o.fuente || "backend", client_key: o.client_key || null, metadata: o.metadata || {} };
+  try { var r = await wfPost("wf_eventos", row); return r[0]; }
+  catch (e) { if (e.wf && e.wf.status === 409 && o.client_key) return null; if (o.critico) throw e; console.warn("[equipo] evento no registrado:", e.message); return null; }
+}
+async function wfAjuste(rid, o) { return (await wfPost("wf_ajustes", Object.assign({ restaurante_id: rid }, o)))[0]; }
+
+// ── máquina de estados de la sesión de trabajo ──────────────────────────────
+//   (sin sesión) --entrada--> ACTIVE --descanso_inicio--> ON_BREAK --descanso_fin--> ACTIVE --salida--> CLOCKED_OUT
+//   Una sola sesión abierta por persona (índice único parcial en la base de datos).
+var WF_ACCIONES = { entrada: 1, descanso_inicio: 1, descanso_fin: 1, salida: 1 };
+async function wfSesionAbierta(rid, eid) { var r = await wfGet("wf_sesiones?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&estado=in.(ACTIVE,ON_BREAK)&limit=1"); return r[0] || null; }
+async function wfTurnoCercano(rid, eid, now) {
+  var r = await wfGet("wf_turnos?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&estado=eq.publicado&inicio=lte." + new Date(now + 3 * 3600e3).toISOString() + "&fin=gte." + new Date(now - 3600e3).toISOString() + "&select=id,inicio,fin,rol&order=inicio.asc&limit=4");
+  r.sort(function (a, b) { return Math.abs(new Date(a.inicio) - now) - Math.abs(new Date(b.inicio) - now); }); return r[0] || null;
+}
+function wfMinutos(s, finMs) {
+  var fin = finMs || (s.salida_at ? new Date(s.salida_at).getTime() : Date.now()), br = Number(s.descanso_seg || 0);
+  if (s.estado === "ON_BREAK" && s.descanso_inicio_at) br += Math.max(0, (fin - new Date(s.descanso_inicio_at).getTime()) / 1000);
+  return Math.max(0, Math.round((fin - new Date(s.entrada_at).getTime()) / 60000 - br / 60));
+}
+function wfSesionPublica(s, turno) {
+  if (!s) return null;
+  return { id: s.id, estado: s.estado, entrada_at: s.entrada_at, salida_at: s.salida_at, descanso_inicio_at: s.descanso_inicio_at, descanso_seg: s.descanso_seg, entrada_metodo: s.entrada_metodo, salida_metodo: s.salida_metodo, banderas: s.banderas || [], minutos_trabajados: s.minutos_trabajados, turno_id: s.turno_id, turno: turno || undefined };
+}
+async function wfEventoPorClave(rid, key) { var r = await wfGet("wf_eventos?restaurante_id=eq." + rid + "&client_key=eq." + encodeURIComponent(key) + "&limit=1"); return r[0] || null; }
+async function wfIdem(rid, key) {
+  var prev = await wfEventoPorClave(rid, key); if (!prev) return null;
+  var s = prev.sesion_id ? (await wfGet("wf_sesiones?id=eq." + prev.sesion_id + "&limit=1"))[0] : null;
+  return { ok: true, idempotente: true, accion: prev.accion, servidor_at: prev.at, sesion: wfSesionPublica(s) };
+}
+async function wfFichar(rid, emp, accion, ctx) {
+  if (!WF_ACCIONES[accion]) throw wfErr(400, "accion", "Acción no válida.");
+  var key = ctx.client_key ? wfClean(ctx.client_key, 80) : null;
+  if (key) { var ya = await wfIdem(rid, key); if (ya) return ya; }
+  var cfg = ctx.cfg || await wfConfig(rid), now = Date.now(), nowISO = new Date(now).toISOString(), tol = Number(cfg.tolerancia_tarde_min || 0) * 60000;
+  var open = await wfSesionAbierta(rid, emp.id), s = null, antes = open ? open.estado : "SIN_TURNO", turno = null, filas;
+  var carrera = async function (msg) { if (key) { await new Promise(function (r) { setTimeout(r, 250); }); var y = await wfIdem(rid, key); if (y) return y; } throw wfErr(409, "estado_cambio", msg); };
+  var hora = function (iso) { return wfHM(iso, cfg.zona_horaria); };
+  if (accion === "entrada") {
+    if (open) throw wfErr(409, "ya_en_turno", "Ya tienes un turno abierto desde las " + hora(open.entrada_at) + ".", { sesion: wfSesionPublica(open) });
+    turno = await wfTurnoCercano(rid, emp.id, now);
+    var band = [];
+    if (!turno) band.push({ tipo: "sin_turno" });
+    else { var ini = new Date(turno.inicio).getTime(); if (now > ini + tol) band.push({ tipo: "tarde", minutos: Math.round((now - ini) / 60000) }); else if (now < ini - 60 * 60000) band.push({ tipo: "temprano", minutos: Math.round((ini - now) / 60000) }); }
+    try { filas = await wfPost("wf_sesiones", { restaurante_id: rid, empleado_id: emp.id, turno_id: turno ? turno.id : null, estado: "ACTIVE", entrada_at: nowISO, entrada_metodo: ctx.metodo, banderas: band }); }
+    catch (e) { if (e.wf && e.wf.status === 409) return carrera("Ya hay un turno abierto para esta persona."); throw e; }
+    s = filas[0];
+  } else {
+    if (!open) throw wfErr(409, "sin_turno_abierto", "No tienes un turno abierto. Primero marca tu entrada.");
+    if (accion === "descanso_inicio") {
+      if (open.estado !== "ACTIVE") throw wfErr(409, "ya_en_descanso", "Ya estás en descanso desde las " + hora(open.descanso_inicio_at) + ".");
+      filas = await wfPatch("wf_sesiones", "id=eq." + open.id + "&estado=eq.ACTIVE", { estado: "ON_BREAK", descanso_inicio_at: nowISO, updated_at: nowISO });
+    } else if (accion === "descanso_fin") {
+      if (open.estado !== "ON_BREAK") throw wfErr(409, "no_en_descanso", "No estás en descanso.");
+      var seg = Math.max(0, Math.round((now - new Date(open.descanso_inicio_at).getTime()) / 1000));
+      filas = await wfPatch("wf_sesiones", "id=eq." + open.id + "&estado=eq.ON_BREAK", { estado: "ACTIVE", descanso_inicio_at: null, descanso_seg: Number(open.descanso_seg || 0) + seg, updated_at: nowISO });
+    } else {
+      var seg2 = open.estado === "ON_BREAK" && open.descanso_inicio_at ? Math.max(0, Math.round((now - new Date(open.descanso_inicio_at).getTime()) / 1000)) : 0;
+      var band2 = (open.banderas || []).slice(), min = wfMinutos(open, now);
+      if (open.turno_id) { var t = (await wfGet("wf_turnos?id=eq." + open.turno_id + "&select=fin&limit=1"))[0]; if (t && now < new Date(t.fin).getTime() - tol) band2.push({ tipo: "salida_temprana", minutos: Math.round((new Date(t.fin).getTime() - now) / 60000) }); }
+      if (min > Number(cfg.turno_largo_horas || 12) * 60) band2.push({ tipo: "turno_largo", minutos: min });
+      filas = await wfPatch("wf_sesiones", "id=eq." + open.id + "&estado=in.(ACTIVE,ON_BREAK)", { estado: "CLOCKED_OUT", salida_at: nowISO, salida_metodo: ctx.metodo, descanso_inicio_at: null, descanso_seg: Number(open.descanso_seg || 0) + seg2, minutos_trabajados: min, banderas: band2, updated_at: nowISO });
+    }
+    if (!filas.length) return carrera("El estado cambió mientras marcabas. Revisa y vuelve a intentar.");
+    s = filas[0];
+  }
+  var ev = await wfEvento(rid, { empleado_id: emp.id, sesion_id: s.id, accion: accion, metodo: ctx.metodo, dispositivo_id: ctx.dispositivo_id, fuente: ctx.fuente || "kiosko", client_key: key, metadata: { antes: antes, despues: s.estado, banderas: s.banderas || [], actor: ctx.actor || null } });
+  WF.ahoraCache.delete(rid);
+  return { ok: true, accion: accion, servidor_at: nowISO, sesion: wfSesionPublica(s, turno ? { inicio: turno.inicio, fin: turno.fin } : undefined), auditoria: !!ev };
+}
+
+// ── verificación de identidad en LUZ CHECK ──────────────────────────────────
+async function wfVerificarPinEmpleado(rid, emp, pin, ctx) {
+  if (emp.pin_bloqueado_hasta && new Date(emp.pin_bloqueado_hasta) > new Date()) throw wfErr(423, "pin_bloqueado", "Demasiados intentos. Pide verificación alternativa a tu supervisor.", { sugerir_alternativa: true });
+  if (!emp.pin_hash) throw wfErr(409, "sin_pin", "Aún no has creado tu PIN de trabajo. Pide tu código de activación.", { sugerir_alternativa: true });
+  if (!/^[0-9]{4,6}$/.test(String(pin || "")) || !wfVerifyPin(pin, emp.pin_hash)) {
+    var f = Number(emp.pin_fallos || 0) + 1, upd = { pin_fallos: f, updated_at: wfNowISO() };
+    if (f >= 5) { upd.pin_fallos = 0; upd.pin_bloqueado_hasta = new Date(Date.now() + 15 * 60000).toISOString(); }
+    await wfPatch("wf_empleados", "id=eq." + emp.id + "&restaurante_id=eq." + rid, upd); wfEmpInvalidar(rid, emp.id);
+    await wfEvento(rid, { empleado_id: emp.id, accion: "verificacion", metodo: "EMPLOYEE_PIN", dispositivo_id: ctx.dispositivo_id, resultado: "fallo", fuente: ctx.fuente || "kiosko" });
+    if (f >= 5) throw wfErr(423, "pin_bloqueado", "Demasiados intentos. Pide verificación alternativa a tu supervisor.", { sugerir_alternativa: true });
+    throw wfErr(401, "pin_incorrecto", "PIN incorrecto.", { intentos_restantes: 5 - f, sugerir_alternativa: f >= 3 });
+  }
+  if (emp.pin_fallos) { await wfPatch("wf_empleados", "id=eq." + emp.id + "&restaurante_id=eq." + rid, { pin_fallos: 0 }); wfEmpInvalidar(rid, emp.id); }
+  return "EMPLOYEE_PIN";
+}
+async function wfConsumirTemporal(rid, emp, accesoId, pin, cfg, ctx) {
+  var id = wfUuid(accesoId); if (!id) throw wfErr(400, "acceso", "Solicitud no válida.");
+  var a = (await wfGet("wf_accesos_temporales?id=eq." + id + "&restaurante_id=eq." + rid + "&empleado_id=eq." + emp.id + "&limit=1"))[0];
+  if (!a) throw wfErr(404, "acceso", "No encontramos esa solicitud.");
+  if (a.estado !== "aprobada") throw wfErr(409, "acceso_" + a.estado, a.estado === "usada" ? "Ese PIN temporal ya se usó." : a.estado === "pendiente" ? "Tu supervisor aún no aprueba la solicitud." : "Ese PIN temporal ya no es válido.");
+  if (new Date(a.expira_at) <= new Date()) { await wfPatch("wf_accesos_temporales", "id=eq." + id + "&estado=eq.aprobada", { estado: "expirada" }); throw wfErr(410, "pin_expirado", "El PIN temporal expiró. Pide uno nuevo."); }
+  if (!/^[0-9]{4,8}$/.test(String(pin || "")) || !wfVerifyPin(pin, a.pin_hash)) {
+    var n = Number(a.intentos || 0) + 1, max = Number(cfg.pin_temporal.max_intentos || 3), bloq = n >= max;
+    await wfPatch("wf_accesos_temporales", "id=eq." + id + "&estado=eq.aprobada", bloq ? { intentos: n, estado: "bloqueada", pin_hash: null } : { intentos: n });
+    await wfEvento(rid, { empleado_id: emp.id, accion: "verificacion", metodo: "TEMPORARY_PIN", dispositivo_id: ctx.dispositivo_id, resultado: "fallo", metadata: { acceso_id: id } });
+    if (bloq) throw wfErr(423, "pin_temporal_bloqueado", "PIN temporal bloqueado por intentos. Pide una nueva aprobación.");
+    throw wfErr(401, "pin_incorrecto", "PIN temporal incorrecto.", { intentos_restantes: max - n });
+  }
+  var u = await wfPatch("wf_accesos_temporales", "id=eq." + id + "&estado=eq.aprobada", { estado: "usada", usado_at: wfNowISO(), pin_hash: null });
+  if (!u.length) throw wfErr(409, "acceso_usada", "Ese PIN temporal ya se usó.");
+  return "TEMPORARY_PIN";
+}
+async function wfVerificarKiosko(rid, emp, body, cfg, ctx) {
+  var m = String(body.metodo || "");
+  if (m === "pin") return wfVerificarPinEmpleado(rid, emp, body.pin, ctx);
+  if (m === "pin_temporal") return wfConsumirTemporal(rid, emp, body.acceso_id, body.pin, cfg, ctx);
+  if (m === "face") {
+    var prov = wfBio(cfg);
+    if (prov.id === "none") throw wfErr(409, "biometria_no_configurada", "Reconocimiento facial no configurado", { sugerir_alternativa: false });
+    var idn = (await wfGet("wf_identidades?empleado_id=eq." + emp.id + "&restaurante_id=eq." + rid + "&estado=eq.activa&limit=1"))[0];
+    if (!idn) throw wfErr(409, "sin_luz_id", "Esta persona no tiene LUZ ID. Marca con PIN.");
+    var v = await prov.verificar({ rid: rid, referencia: idn.referencia, liveness_session_id: body.liveness_session_id, empleado_id: emp.id, cfg: cfg });
+    // Solo es VERIFICADO si el proveedor confirmó liveness Y match. Nada se asume.
+    if (!(v && v.live === true && v.match === true)) {
+      await wfEvento(rid, { empleado_id: emp.id, accion: "verificacion", metodo: "FACE", dispositivo_id: ctx.dispositivo_id, resultado: "fallo", metadata: { live: !!(v && v.live), match: !!(v && v.match) } });
+      var fallos = (await wfGet("wf_eventos?restaurante_id=eq." + rid + "&empleado_id=eq." + emp.id + "&metodo_verificacion=eq.FACE&resultado=eq.fallo&at=gte." + new Date(Date.now() - 30 * 60000).toISOString() + "&select=id&limit=10")).length;
+      throw wfErr(401, "rostro_no_verificado", "No pudimos verificar tu identidad.", { fallos: fallos, sugerir_alternativa: fallos >= Number(cfg.biometria.fallos_para_alternativa || 3) });
+    }
+    return "FACE";
+  }
+  throw wfErr(400, "metodo", "Método de verificación no válido.");
+}
+
+// ═══ Sesiones: administración, empleado, dispositivo ════════════════════════
+app.get("/api/equipo/publico/:rid", wfRoute(async function (req, res) {
+  var rid = wfUuid(req.params.rid); if (!rid) throw wfErr(400, "rid", "Restaurante no válido.");
+  var r = (await wfGet("restaurantes?id=eq." + rid + "&select=id,nombre,logo_url,estado&limit=1"))[0];
+  if (!r || r.estado === "suspendido") throw wfErr(404, "rid", "Restaurante no disponible.");
+  res.set("Cache-Control", "no-store"); res.json({ ok: true, restaurante: { id: r.id, nombre: r.nombre, logo_url: r.logo_url || null }, servidor_at: wfNowISO() });
+}));
+app.post("/api/equipo/sesion", wfRoute(async function (req, res) {
+  var rid = wfUuid(req.body && req.body.restaurante_id), pin = String(req.body && req.body.pin || "");
+  if (!rid || !/^[0-9]{4,8}$/.test(pin)) throw wfErr(400, "datos", "Escribe el PIN del restaurante.");
+  var rt = wfRate("adm:" + wfIp(req) + ":" + rid, 6, 15 * 60000); if (rt.bloqueado) throw wfErr(429, "intentos", "Demasiados intentos. Espera 15 minutos.");
+  var v = await wfRestPin(rid, pin); if (!v.ok) { rt.fallo(); throw wfErr(401, "pin_incorrecto", "PIN incorrecto."); }
+  rt.ok(); var exp = Date.now() + 12 * 3600e3;
+  await wfEvento(rid, { accion: "sesion_admin", metodo: "MANAGER", fuente: "panel", metadata: { ip: wfSha(wfIp(req)).slice(0, 16) } });
+  res.json({ ok: true, token: wfSign({ k: "adm", rid: rid, exp: exp, n: crypto.randomBytes(6).toString("hex") }), expira_at: new Date(exp).toISOString(), actor: { tipo: "owner", nombre: "Administración", permiso: "owner" } });
+}));
+async function wfEmpPorTel(rid, tel) { var r = await wfGet("wf_empleados?restaurante_id=eq." + rid + "&telefono=eq." + tel + "&limit=1"); return r[0] || null; }
+function wfTokEmp(e) { var exp = Date.now() + 12 * 3600e3; return { token: wfSign({ k: "emp", rid: e.restaurante_id, eid: e.id, ph: wfSha(e.pin_hash).slice(0, 12), exp: exp }), expira_at: new Date(exp).toISOString() }; }
+app.post("/api/equipo/empleado/activar", wfRoute(async function (req, res) {
+  var b = req.body || {}, rid = wfUuid(b.restaurante_id), tel = wfTel(b.telefono), code = String(b.codigo || "").toUpperCase().replace(/[^A-Z0-9]/g, ""), pin = String(b.pin || "");
+  if (!rid || tel.length < 7 || code.length !== 8) throw wfErr(400, "datos", "Revisa tu teléfono y el código de activación.");
+  var rt = wfRate("act:" + wfIp(req) + ":" + rid, 8, 15 * 60000); if (rt.bloqueado) throw wfErr(429, "intentos", "Demasiados intentos. Espera 15 minutos.");
+  var e = await wfEmpPorTel(rid, tel);
+  var okCode = e && e.activo && e.activacion_hash && e.activacion_expira && new Date(e.activacion_expira) > new Date() && crypto.timingSafeEqual(Buffer.from(e.activacion_hash), Buffer.from(wfSha(code + ":" + e.id)));
+  if (!okCode) { rt.fallo(); throw wfErr(401, "codigo", "Código no válido o vencido. Pide uno nuevo a tu administrador."); }
+  var deb = wfPinDebil(pin); if (deb) throw wfErr(400, "pin_debil", deb);
+  var restPin = await wfRestPin(rid, pin); if (restPin.ok) throw wfErr(400, "pin_debil", "Tu PIN personal no puede ser el PIN del restaurante.");
+  var ph = wfHashPin(pin);
+  var up = await wfPatch("wf_empleados", "id=eq." + e.id + "&restaurante_id=eq." + rid + "&activacion_hash=eq." + e.activacion_hash, { pin_hash: ph, activacion_hash: null, activacion_expira: null, pin_fallos: 0, pin_bloqueado_hasta: null, updated_at: wfNowISO() });
+  if (!up.length) throw wfErr(409, "codigo", "Ese código ya se usó.");
+  rt.ok(); wfEmpInvalidar(rid, e.id);
+  await wfEvento(rid, { empleado_id: e.id, accion: "pin_creado", metodo: "EMPLOYEE_PIN", fuente: "portal" });
+  res.json(Object.assign({ ok: true }, wfTokEmp(up[0]), { empleado: { id: e.id, nombre: e.nombre, permiso: e.permiso } }));
+}));
+app.post("/api/equipo/empleado/login", wfRoute(async function (req, res) {
+  var b = req.body || {}, rid = wfUuid(b.restaurante_id), tel = wfTel(b.telefono), pin = String(b.pin || "");
+  if (!rid || tel.length < 7 || !/^[0-9]{4,6}$/.test(pin)) throw wfErr(400, "datos", "Escribe tu teléfono y tu PIN.");
+  var rt = wfRate("emp:" + wfIp(req) + ":" + rid, 10, 15 * 60000); if (rt.bloqueado) throw wfErr(429, "intentos", "Demasiados intentos. Espera 15 minutos.");
+  var e = await wfEmpPorTel(rid, tel);
+  if (!e || !e.activo || !e.pin_hash) { rt.fallo(); wfVerifyPin(pin, "00:00"); throw wfErr(401, "credenciales", "Teléfono o PIN incorrecto."); }
+  try { await wfVerificarPinEmpleado(rid, e, pin, { fuente: "portal" }); } catch (x) { rt.fallo(); if (x.wf && x.wf.code === "pin_incorrecto") throw wfErr(401, "credenciales", "Teléfono o PIN incorrecto."); throw x; }
+  rt.ok();
+  res.json(Object.assign({ ok: true }, wfTokEmp(e), { empleado: { id: e.id, nombre: e.nombre, permiso: e.permiso } }));
+}));
+app.post("/api/equipo/kiosko/activar", wfRoute(async function (req, res) {
+  var b = req.body || {}, rid = wfUuid(b.restaurante_id), nombre = wfClean(b.nombre || "Tablet", 60);
+  if (!rid) throw wfErr(400, "datos", "Restaurante no válido.");
+  var rt = wfRate("kact:" + wfIp(req) + ":" + rid, 6, 15 * 60000); if (rt.bloqueado) throw wfErr(429, "intentos", "Demasiados intentos. Espera 15 minutos.");
+  var v = await wfRestPin(rid, b.pin); if (!v.ok) { rt.fallo(); throw wfErr(401, "pin_incorrecto", "PIN del restaurante incorrecto."); }
+  rt.ok(); var tok = wfB64u(crypto.randomBytes(32));
+  var d = (await wfPost("wf_dispositivos", { restaurante_id: rid, nombre: nombre.length >= 2 ? nombre : "Tablet", token_hash: wfSha(tok) }))[0];
+  await wfEvento(rid, { accion: "dispositivo_activado", dispositivo_id: d.id, fuente: "kiosko", metadata: { nombre: d.nombre } });
+  res.json({ ok: true, token: tok, dispositivo: { id: d.id, nombre: d.nombre }, restaurante: { id: rid, nombre: v.rest.nombre } });
+}));
+
+// ═══ LUZ CHECK (tablet) ═════════════════════════════════════════════════════
+app.get("/api/equipo/kiosko/estado", wfKiosk, wfRoute(async function (req, res) {
+  var rid = req.wfRid, cfg = await wfConfig(rid), prov = wfBio(cfg);
+  var r = await Promise.all([
+    wfGet("wf_empleados?restaurante_id=eq." + rid + "&activo=eq.true&select=id,nombre,rol,foto_url,pin_hash,pin_bloqueado_hasta&order=nombre.asc&limit=300"),
+    wfGet("wf_sesiones?restaurante_id=eq." + rid + "&estado=in.(ACTIVE,ON_BREAK)&select=id,empleado_id,estado,entrada_at,descanso_inicio_at,descanso_seg&limit=300"),
+    prov.id === "none" ? Promise.resolve([]) : wfGet("wf_identidades?restaurante_id=eq." + rid + "&estado=eq.activa&select=empleado_id&limit=300"),
+    wfGet("restaurantes?id=eq." + rid + "&select=nombre,logo_url&limit=1")
+  ]);
+  var ses = {}; r[1].forEach(function (s) { ses[s.empleado_id] = s; }); var bio = {}; r[2].forEach(function (x) { bio[x.empleado_id] = 1; });
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, servidor_at: wfNowISO(), zona_horaria: cfg.zona_horaria, dispositivo: { id: req.dev.id, nombre: req.dev.nombre }, restaurante: { id: rid, nombre: (r[3][0] || {}).nombre, logo_url: (r[3][0] || {}).logo_url || null },
+    biometria: Object.assign({ proveedor: prov.id }, prov.estado()), pin_temporal: { expira_seg: cfg.pin_temporal.expira_seg, fallos_para_alternativa: cfg.biometria.fallos_para_alternativa },
+    personas: r[0].map(function (e) { var s = ses[e.id]; return { id: e.id, nombre: e.nombre, rol: e.rol, foto_url: e.foto_url || null, tiene_pin: !!e.pin_hash, pin_bloqueado: !!(e.pin_bloqueado_hasta && new Date(e.pin_bloqueado_hasta) > new Date()), luz_id: !!bio[e.id], sesion: s ? { estado: s.estado, entrada_at: s.entrada_at, descanso_inicio_at: s.descanso_inicio_at, descanso_seg: s.descanso_seg } : null }; }) });
+}));
+app.post("/api/equipo/kiosko/fichar", wfKiosk, wfRoute(async function (req, res) {
+  var rid = req.wfRid, b = req.body || {}, eid = wfUuid(b.empleado_id); if (!eid) throw wfErr(400, "datos", "Selecciona tu nombre.");
+  var rt = wfRate("kf:" + req.dev.id + ":" + eid, 12, 15 * 60000); if (rt.bloqueado) throw wfErr(429, "intentos", "Demasiados intentos en este dispositivo. Espera unos minutos.");
+  var emp = await wfEmpleado(rid, eid, true); if (!emp || !emp.activo) throw wfErr(404, "empleado", "Persona no encontrada.");
+  var key = b.client_key ? wfClean(b.client_key, 80) : null;
+  if (key) { var ya = await wfIdem(rid, key); if (ya) return res.json(ya); }
+  var cfg = await wfConfig(rid), ctx = { dispositivo_id: req.dev.id, fuente: "kiosko" };
+  try { var metodo = await wfVerificarKiosko(rid, emp, b, cfg, ctx); } catch (e) { rt.fallo(); throw e; }
+  var out = await wfFichar(rid, emp, String(b.accion || ""), { metodo: metodo, dispositivo_id: req.dev.id, client_key: key, fuente: "kiosko", cfg: cfg });
+  out.verificado_con = metodo; out.persona = { id: emp.id, nombre: emp.nombre }; res.json(out);
+}));
+app.post("/api/equipo/kiosko/alternativa", wfKiosk, wfRoute(async function (req, res) {
+  var rid = req.wfRid, b = req.body || {}, eid = wfUuid(b.empleado_id), mot = String(b.motivo || "");
+  if (!eid || ["olvide_pin", "pin_bloqueado", "sin_pin", "rostro_no_reconocido", "camara_no_disponible", "otro"].indexOf(mot) < 0) throw wfErr(400, "datos", "Datos incompletos.");
+  var emp = await wfEmpleado(rid, eid); if (!emp || !emp.activo) throw wfErr(404, "empleado", "Persona no encontrada.");
+  var desde = new Date(Date.now() - 3600e3).toISOString();
+  var rec = await wfGet("wf_accesos_temporales?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&created_at=gte." + desde + "&select=id,estado,created_at&order=created_at.desc&limit=10");
+  var pend = rec.filter(function (a) { return a.estado === "pendiente" && Date.now() - new Date(a.created_at) < 15 * 60000; })[0];
+  if (pend) return res.json({ ok: true, acceso: { id: pend.id, estado: "pendiente" }, existente: true });
+  if (rec.length >= 3) throw wfErr(429, "demasiadas", "Ya hubo 3 solicitudes en la última hora. Habla con tu supervisor.");
+  var fb = 0; if (mot === "rostro_no_reconocido") fb = (await wfGet("wf_eventos?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&metodo_verificacion=eq.FACE&resultado=eq.fallo&at=gte." + new Date(Date.now() - 30 * 60000).toISOString() + "&select=id&limit=10")).length;
+  var a = (await wfPost("wf_accesos_temporales", { restaurante_id: rid, empleado_id: eid, dispositivo_id: req.dev.id, motivo: mot, fallos_biometricos: fb }))[0];
+  await wfEvento(rid, { empleado_id: eid, accion: "alternativa_solicitada", dispositivo_id: req.dev.id, metadata: { acceso_id: a.id, motivo: mot } });
+  WF.ahoraCache.delete(rid);
+  res.json({ ok: true, acceso: { id: a.id, estado: a.estado } });
+}));
+app.get("/api/equipo/kiosko/alternativa/:id", wfKiosk, wfRoute(async function (req, res) {
+  var id = wfUuid(req.params.id); if (!id) throw wfErr(400, "datos", "Solicitud no válida.");
+  var a = (await wfGet("wf_accesos_temporales?id=eq." + id + "&restaurante_id=eq." + req.wfRid + "&select=id,estado,expira_at,decidido_at,created_at&limit=1"))[0];
+  if (!a) throw wfErr(404, "acceso", "Solicitud no encontrada.");
+  if (a.estado === "pendiente" && Date.now() - new Date(a.created_at) > 15 * 60000) { await wfPatch("wf_accesos_temporales", "id=eq." + id + "&estado=eq.pendiente", { estado: "expirada" }); a.estado = "expirada"; }
+  if (a.estado === "aprobada" && new Date(a.expira_at) <= new Date()) a.estado = "expirada";
+  res.set("Cache-Control", "no-store"); res.json({ ok: true, acceso: { id: a.id, estado: a.estado, expira_at: a.estado === "aprobada" ? a.expira_at : null }, servidor_at: wfNowISO() });
+}));
+
+// ═══ Panel: quién soy, configuración ════════════════════════════════════════
+app.get("/api/equipo/yo", wfAuth(), wfRoute(async function (req, res) {
+  var a = req.wf, cfg = await wfConfig(a.rid), prov = wfBio(cfg), caps = {};
+  Object.keys(WF_PERM).forEach(function (k) { caps[k] = wfPuede(a, k); });
+  caps.aprobar_pin = (cfg.pin_temporal.aprobadores || []).indexOf(a.permiso) >= 0;
+  res.json({ ok: true, actor: { tipo: a.tipo, id: a.id, nombre: a.nombre, permiso: a.permiso }, puede: caps, servidor_at: wfNowISO(), config: { pais: cfg.pais, zona_horaria: cfg.zona_horaria, moneda: cfg.moneda, guardada: cfg._guardada }, biometria: Object.assign({ proveedor: prov.id }, prov.estado()) });
+}));
+app.get("/api/equipo/config", wfAuth("ver"), wfRoute(async function (req, res) {
+  var cfg = await wfConfig(req.wf.rid); res.json({ ok: true, config: cfg, proveedores_biometricos: Object.keys(WF_BIO).map(function (k) { return Object.assign({ id: k, nombre: WF_BIO[k].nombre }, WF_BIO[k].estado()); }) });
+}));
+app.put("/api/equipo/config", wfAuth("config"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, actual = await wfConfig(rid), cambios = wfValidarConfig(req.body && req.body.config || {}, actual);
+  var prev = (await wfGet("wf_config?restaurante_id=eq." + rid + "&select=config&limit=1"))[0], guardar = wfMerge(prev ? prev.config : {}, cambios);
+  await wfPost("wf_config", { restaurante_id: rid, config: guardar, updated_at: wfNowISO() }, { upsert: true, qs: "on_conflict=restaurante_id" });
+  await wfEvento(rid, { accion: "config_cambiada", fuente: "panel", metadata: { actor: req.wf.nombre, cambios: cambios } });
+  res.json({ ok: true, config: await wfConfig(rid) });
+}));
+
+// ═══ PERSONAL ═══════════════════════════════════════════════════════════════
+function wfValidarEmp(b, actor, parcial) {
+  var o = {}, e = function (m) { throw wfErr(400, "datos", m); };
+  if (!parcial || b.nombre != null) { var n = wfClean(b.nombre, 80); if (n.length < 2) e("Escribe el nombre."); o.nombre = n; }
+  if (!parcial || b.rol != null) { if (WF_ROLES.indexOf(b.rol) < 0) e("Elige un rol."); o.rol = b.rol; }
+  if (b.permiso != null) {
+    if (["admin", "manager", "supervisor", "empleado"].indexOf(b.permiso) < 0) e("Permiso no válido.");
+    if (WF_RANK[b.permiso] >= WF_RANK[actor.permiso]) throw wfErr(403, "sin_permiso", "No puedes dar un permiso igual o mayor al tuyo.");
+    o.permiso = b.permiso;
+  }
+  if (b.telefono != null) { var t = wfTel(b.telefono); if (t && (t.length < 7 || t.length > 15)) e("Teléfono no válido."); o.telefono = t || null; }
+  if (b.tarifa_hora != null) { if (b.tarifa_hora === "" ) o.tarifa_hora = null; else { var v = Number(b.tarifa_hora); if (!isFinite(v) || v < 0 || v > 10000000) e("Tarifa no válida."); o.tarifa_hora = v; } }
+  if (b.activo != null) o.activo = !!b.activo;
+  if (b.metodo_verificacion != null) { if (["pin", "face"].indexOf(b.metodo_verificacion) < 0) e("Método no válido."); o.metodo_verificacion = b.metodo_verificacion; }
+  ["domiciliario_id", "mesero_id"].forEach(function (k) { if (b[k] !== undefined) o[k] = b[k] ? wfUuid(b[k]) : null; });
+  return o;
+}
+async function wfCodigo(rid, emp) {
+  var abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", code = ""; for (var i = 0; i < 8; i++) code += abc[crypto.randomInt(0, abc.length)];
+  var exp = new Date(Date.now() + 72 * 3600e3).toISOString();
+  await wfPatch("wf_empleados", "id=eq." + emp.id + "&restaurante_id=eq." + rid, { activacion_hash: wfSha(code + ":" + emp.id), activacion_expira: exp, pin_hash: null, pin_fallos: 0, pin_bloqueado_hasta: null, updated_at: wfNowISO() });
+  wfEmpInvalidar(rid, emp.id); return { codigo: code, expira_at: exp };
+}
+app.get("/api/equipo/empleados", wfAuth("ver"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, r = await Promise.all([
+    wfGet("wf_empleados?restaurante_id=eq." + rid + "&order=activo.desc,nombre.asc&limit=500"),
+    wfGet("wf_sesiones?restaurante_id=eq." + rid + "&estado=in.(ACTIVE,ON_BREAK)&select=empleado_id,estado,entrada_at&limit=500"),
+    wfGet("wf_identidades?restaurante_id=eq." + rid + "&estado=eq.activa&select=empleado_id,proveedor,enrolado_at&limit=500"),
+    wfGet("wf_documentos?restaurante_id=eq." + rid + "&tipo=eq.autorizacion_biometrica&select=empleado_id,estado,version,decision_at,created_at&order=created_at.desc&limit=1000")
+  ]);
+  var ses = {}, idn = {}, doc = {}; r[1].forEach(function (s) { ses[s.empleado_id] = s; }); r[2].forEach(function (x) { idn[x.empleado_id] = x; }); r[3].forEach(function (d) { if (!doc[d.empleado_id]) doc[d.empleado_id] = d; });
+  var puedeTarifa = wfPuede(req.wf, "nomina_ver");
+  res.json({ ok: true, empleados: r[0].map(function (e) { var o = wfEmpSafe(e); if (!puedeTarifa) delete o.tarifa_hora; o.sesion = ses[e.id] || null; o.luz_id = idn[e.id] || null; o.autorizacion_biometrica = doc[e.id] || null; return o; }) });
+}));
+app.post("/api/equipo/empleados", wfAuth("personal"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, o = wfValidarEmp(req.body || {}, req.wf, false);
+  if (!wfPuede(req.wf, "nomina_ver")) delete o.tarifa_hora;
+  var e = (await wfPost("wf_empleados", Object.assign({ restaurante_id: rid }, o)))[0], c = await wfCodigo(rid, e);
+  await wfEvento(rid, { empleado_id: e.id, accion: "empleado_creado", fuente: "panel", metadata: { actor: req.wf.nombre, rol: e.rol, permiso: e.permiso } });
+  res.json({ ok: true, empleado: wfEmpSafe(Object.assign(e, { activacion_hash: "x" })), activacion: Object.assign(c, { enlace: "/equipo?r=" + rid }) });
+}));
+app.patch("/api/equipo/empleados/:id", wfAuth("personal"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), prev = id && await wfEmpleado(rid, id, true); if (!prev) throw wfErr(404, "empleado", "Persona no encontrada.");
+  if (WF_RANK[prev.permiso] >= WF_RANK[req.wf.permiso]) throw wfErr(403, "sin_permiso", "No puedes editar a alguien con permiso igual o mayor al tuyo.");
+  var o = wfValidarEmp(req.body || {}, req.wf, true); if (!wfPuede(req.wf, "nomina_ver")) delete o.tarifa_hora;
+  if (o.metodo_verificacion === "face") { var idn = (await wfGet("wf_identidades?empleado_id=eq." + id + "&estado=eq.activa&limit=1"))[0]; if (!idn) throw wfErr(409, "sin_luz_id", "Primero registra LUZ ID (con autorización de la persona)."); }
+  var cambios = {}; Object.keys(o).forEach(function (k) { if (String(prev[k]) !== String(o[k])) cambios[k] = { antes: prev[k], despues: o[k] }; });
+  if (!Object.keys(cambios).length) return res.json({ ok: true, empleado: wfEmpSafe(prev), sin_cambios: true });
+  o.updated_at = wfNowISO(); var e = (await wfPatch("wf_empleados", "id=eq." + id + "&restaurante_id=eq." + rid, o))[0]; wfEmpInvalidar(rid, id);
+  if (cambios.tarifa_hora) await wfAjuste(rid, { empleado_id: id, tipo: "correccion", campo: "tarifa_hora", valor_anterior: String(prev.tarifa_hora), valor_nuevo: String(o.tarifa_hora), razon: wfClean(req.body.razon, 400).length >= 4 ? wfClean(req.body.razon, 400) : "Cambio de tarifa en PERSONAL", cambiado_por: req.wf.nombre });
+  await wfEvento(rid, { empleado_id: id, accion: "empleado_editado", fuente: "panel", metadata: { actor: req.wf.nombre, cambios: Object.keys(cambios).reduce(function (m, k) { m[k] = k === "tarifa_hora" ? "cambiada" : cambios[k]; return m; }, {}) } });
+  res.json({ ok: true, empleado: wfEmpSafe(e) });
+}));
+app.post("/api/equipo/empleados/:id/codigo", wfAuth("personal"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), e = id && await wfEmpleado(rid, id, true); if (!e) throw wfErr(404, "empleado", "Persona no encontrada.");
+  if (!e.telefono) throw wfErr(409, "sin_telefono", "Agrega el teléfono de la persona: lo usará para entrar.");
+  if (WF_RANK[e.permiso] >= WF_RANK[req.wf.permiso]) throw wfErr(403, "sin_permiso", "No puedes restablecer el acceso de alguien con permiso igual o mayor.");
+  var c = await wfCodigo(rid, e);
+  await wfEvento(rid, { empleado_id: id, accion: "codigo_activacion", fuente: "panel", metadata: { actor: req.wf.nombre } });
+  res.json({ ok: true, activacion: Object.assign(c, { enlace: "/equipo?r=" + rid }) });
+}));
+app.get("/api/equipo/importables", wfAuth("personal"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, r = await Promise.all([
+    wfGet("domiciliarios?restaurante_id=eq." + rid + "&select=id,nombre,telefono,habilitado&limit=200"),
+    wfGet("meseros?restaurante_id=eq." + rid + "&activo=eq.true&select=id,nombre&limit=200"),
+    wfGet("wf_empleados?restaurante_id=eq." + rid + "&select=domiciliario_id,mesero_id&limit=500")
+  ]);
+  var usados = {}; r[2].forEach(function (e) { if (e.domiciliario_id) usados[e.domiciliario_id] = 1; if (e.mesero_id) usados[e.mesero_id] = 1; });
+  res.json({ ok: true, domiciliarios: r[0].filter(function (d) { return !usados[d.id] && d.habilitado !== false; }).map(function (d) { return { id: d.id, nombre: d.nombre, telefono: wfTel(d.telefono) }; }), meseros: r[1].filter(function (m) { return !usados[m.id]; }) });
+}));
+
+// ═══ Dispositivos LUZ CHECK ═════════════════════════════════════════════════
+app.get("/api/equipo/dispositivos", wfAuth("dispositivos"), wfRoute(async function (req, res) {
+  res.json({ ok: true, dispositivos: await wfGet("wf_dispositivos?restaurante_id=eq." + req.wf.rid + "&select=id,nombre,activo,ultimo_uso_at,created_at&order=created_at.desc&limit=50") });
+}));
+app.post("/api/equipo/dispositivos/:id/desactivar", wfAuth("dispositivos"), wfRoute(async function (req, res) {
+  var id = wfUuid(req.params.id); if (!id) throw wfErr(400, "datos", "Dispositivo no válido.");
+  var r = await wfPatch("wf_dispositivos", "id=eq." + id + "&restaurante_id=eq." + req.wf.rid, { activo: false }); if (!r.length) throw wfErr(404, "dispositivo", "No encontrado.");
+  WF.devCache.clear(); await wfEvento(req.wf.rid, { accion: "dispositivo_desactivado", dispositivo_id: id, fuente: "panel", metadata: { actor: req.wf.nombre } });
+  res.json({ ok: true });
+}));
+
+// ═══ Verificación alternativa (PIN temporal aprobado) ═══════════════════════
+app.get("/api/equipo/accesos", wfAuth(), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid); if ((cfg.pin_temporal.aprobadores || []).indexOf(req.wf.permiso) < 0) throw wfErr(403, "sin_permiso", "Tu rol no aprueba verificaciones.");
+  var r = await wfGet("wf_accesos_temporales?restaurante_id=eq." + rid + "&created_at=gte." + new Date(Date.now() - 24 * 3600e3).toISOString() + "&select=id,empleado_id,motivo,estado,fallos_biometricos,decidido_por,decidido_at,expira_at,usado_at,created_at&order=created_at.desc&limit=50");
+  var ids = r.map(function (a) { return a.empleado_id; }), emps = ids.length ? await wfGet("wf_empleados?id=" + wfIn(ids.filter(function (v, i, s) { return s.indexOf(v) === i; })) + "&select=id,nombre,rol") : [], m = {}; emps.forEach(function (e) { m[e.id] = e; });
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, servidor_at: wfNowISO(), accesos: r.map(function (a) { if (a.estado === "pendiente" && Date.now() - new Date(a.created_at) > 15 * 60000) a.estado = "expirada"; if (a.estado === "aprobada" && new Date(a.expira_at) <= new Date()) a.estado = "expirada"; a.empleado = m[a.empleado_id] || null; a.propia = req.wf.tipo === "empleado" && a.empleado_id === req.wf.id; return a; }) });
+}));
+app.post("/api/equipo/accesos/:id/decidir", wfAuth(), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), dec = String(req.body && req.body.decision || ""), cfg = await wfConfig(rid);
+  if (!id || ["aprobar", "rechazar"].indexOf(dec) < 0) throw wfErr(400, "datos", "Decisión no válida.");
+  if ((cfg.pin_temporal.aprobadores || []).indexOf(req.wf.permiso) < 0) throw wfErr(403, "sin_permiso", "Tu rol no aprueba verificaciones.");
+  var a = (await wfGet("wf_accesos_temporales?id=eq." + id + "&restaurante_id=eq." + rid + "&limit=1"))[0]; if (!a) throw wfErr(404, "acceso", "Solicitud no encontrada.");
+  if (req.wf.tipo === "empleado" && a.empleado_id === req.wf.id) throw wfErr(403, "auto_aprobacion", "No puedes aprobar tu propia verificación.");
+  if (a.estado !== "pendiente") throw wfErr(409, "ya_decidida", "Esta solicitud ya fue decidida.");
+  if (Date.now() - new Date(a.created_at) > 15 * 60000) { await wfPatch("wf_accesos_temporales", "id=eq." + id + "&estado=eq.pendiente", { estado: "expirada" }); throw wfErr(410, "expirada", "La solicitud venció. Que la persona pida una nueva."); }
+  var emp = await wfEmpleado(rid, a.empleado_id), actorLbl = req.wf.nombre + (req.wf.tipo === "empleado" ? " (" + req.wf.permiso + ")" : "");
+  if (dec === "rechazar") {
+    var rz = wfClean(req.body.razon, 300); if (rz.length < 4) throw wfErr(400, "razon", "Escribe la razón del rechazo.");
+    var u0 = await wfPatch("wf_accesos_temporales", "id=eq." + id + "&estado=eq.pendiente", { estado: "rechazada", decidido_por: actorLbl, decidido_at: wfNowISO() }); if (!u0.length) throw wfErr(409, "ya_decidida", "Esta solicitud ya fue decidida.");
+    await wfEvento(rid, { empleado_id: a.empleado_id, accion: "alternativa_rechazada", fuente: req.wf.tipo === "owner" ? "panel" : "portal", metadata: { acceso_id: id, actor: actorLbl, razon: rz } });
+    WF.ahoraCache.delete(rid); return res.json({ ok: true, estado: "rechazada" });
+  }
+  var len = Number(cfg.pin_temporal.longitud || 6), pin; do { pin = String(crypto.randomInt(0, Math.pow(10, len))).padStart(len, "0"); } while (wfPinDebil(pin));
+  var exp = new Date(Date.now() + Number(cfg.pin_temporal.expira_seg || 300) * 1000).toISOString();
+  var u = await wfPatch("wf_accesos_temporales", "id=eq." + id + "&estado=eq.pendiente", { estado: "aprobada", decidido_por: actorLbl, decidido_at: wfNowISO(), pin_hash: wfHashPin(pin), expira_at: exp, intentos: 0 });
+  if (!u.length) throw wfErr(409, "ya_decidida", "Esta solicitud ya fue decidida.");
+  await wfEvento(rid, { empleado_id: a.empleado_id, accion: "alternativa_aprobada", fuente: req.wf.tipo === "owner" ? "panel" : "portal", metadata: { acceso_id: id, actor: actorLbl, expira_at: exp } });
+  WF.ahoraCache.delete(rid); res.set("Cache-Control", "no-store");
+  // El PIN se entrega UNA sola vez, al aprobador, para decírselo en persona. No se guarda en claro.
+  res.json({ ok: true, estado: "aprobada", pin: pin, expira_at: exp, expira_seg: Number(cfg.pin_temporal.expira_seg), para: emp ? emp.nombre : "", instruccion: "Díselo en persona. No lo envíes por chat. Sirve una sola vez." });
+}));
+
+// ═══ AHORA (estado en vivo del equipo) ══════════════════════════════════════
+async function wfAhora(rid, cfg) {
+  var c = WF.ahoraCache.get(rid); if (c && Date.now() - c.t < 8000) return c.v;
+  var now = Date.now(), tz = cfg.zona_horaria, hoy = wfDay(now, tz), ini = wfLocalToDate(hoy, "00:00", tz).toISOString(), fin = wfLocalToDate(wfAddDays(hoy, 1), "00:00", tz).toISOString();
+  var r = await Promise.all([
+    wfGet("wf_empleados?restaurante_id=eq." + rid + "&activo=eq.true&select=id,nombre,rol,foto_url&order=nombre.asc&limit=500"),
+    wfGet("wf_sesiones?restaurante_id=eq." + rid + "&or=(estado.in.(ACTIVE,ON_BREAK),entrada_at.gte." + ini + ")&select=id,empleado_id,estado,entrada_at,salida_at,descanso_inicio_at,descanso_seg,banderas,turno_id,minutos_trabajados&order=entrada_at.asc&limit=1000"),
+    wfGet("wf_turnos?restaurante_id=eq." + rid + "&estado=eq.publicado&inicio=lt." + fin + "&fin=gt." + ini + "&select=id,empleado_id,inicio,fin,rol&order=inicio.asc&limit=1000"),
+    wfGet("wf_accesos_temporales?restaurante_id=eq." + rid + "&estado=eq.pendiente&created_at=gte." + new Date(now - 15 * 60000).toISOString() + "&select=id&limit=50"),
+    wfGet("wf_incidencias?restaurante_id=eq." + rid + "&estado=in.(abierta,info_solicitada)&select=id&limit=200")
+  ]);
+  var tol = Number(cfg.tolerancia_tarde_min || 0) * 60000, falt = Number(cfg.salida_faltante_horas || 14) * 3600e3, porEmp = {};
+  r[0].forEach(function (e) { porEmp[e.id] = { id: e.id, nombre: e.nombre, rol: e.rol, foto_url: e.foto_url || null, estado: "FUERA", turnos: [], sesiones: [] }; });
+  r[2].forEach(function (t) { if (porEmp[t.empleado_id]) porEmp[t.empleado_id].turnos.push({ id: t.id, inicio: t.inicio, fin: t.fin, rol: t.rol }); });
+  r[1].forEach(function (s) { var p = porEmp[s.empleado_id]; if (!p) return; p.sesiones.push(s); if (s.estado !== "CLOCKED_OUT") p.abierta = s; });
+  var k = { en_turno: 0, en_descanso: 0, programados_hoy: 0, no_llegan: 0, tarde: 0, salida_faltante: 0, terminaron: 0, accesos_pendientes: r[3].length, incidencias_abiertas: r[4].length };
+  var personas = Object.keys(porEmp).map(function (id) {
+    var p = porEmp[id], t = p.turnos.filter(function (x) { return new Date(x.fin) > now - 3600e3; })[0] || p.turnos[p.turnos.length - 1] || null, s = p.abierta;
+    if (p.turnos.length) k.programados_hoy++;
+    var alerta = null;
+    if (s) {
+      p.estado = s.estado; if (s.estado === "ACTIVE") k.en_turno++; else k.en_descanso++;
+      if (now - new Date(s.entrada_at).getTime() > falt) { alerta = "salida_faltante"; k.salida_faltante++; }
+      if ((s.banderas || []).some(function (b) { return b.tipo === "tarde"; })) k.tarde++;
+    } else if (p.sesiones.length) { p.estado = "TERMINO"; k.terminaron++; }
+    else if (t && new Date(t.inicio).getTime() + tol < now && new Date(t.fin).getTime() > now) { p.estado = "NO_LLEGA"; alerta = "no_llega"; k.no_llegan++; }
+    else if (t && new Date(t.inicio).getTime() > now) p.estado = "PROGRAMADO";
+    var hechos = p.sesiones.filter(function (x) { return x.estado === "CLOCKED_OUT"; }).reduce(function (a, x) { return a + Number(x.minutos_trabajados || 0); }, 0);
+    return { id: p.id, nombre: p.nombre, rol: p.rol, foto_url: p.foto_url, estado: p.estado, alerta: alerta, turno: t, sesion: s ? wfSesionPublica(s) : null, minutos_hoy_cerrados: hechos };
+  });
+  var orden = { NO_LLEGA: 0, ACTIVE: 1, ON_BREAK: 2, PROGRAMADO: 3, TERMINO: 4, FUERA: 5 };
+  personas.sort(function (a, b) { return (a.alerta ? -1 : 0) - (b.alerta ? -1 : 0) || orden[a.estado] - orden[b.estado] || a.nombre.localeCompare(b.nombre); });
+  var v = { hoy: hoy, conteos: k, personas: personas, total_activos: r[0].length };
+  WF.ahoraCache.set(rid, { t: Date.now(), v: v }); return v;
+}
+app.get("/api/equipo/ahora", wfAuth("ver"), wfRoute(async function (req, res) {
+  var cfg = await wfConfig(req.wf.rid), v = await wfAhora(req.wf.rid, cfg);
+  res.set("Cache-Control", "no-store"); res.json(Object.assign({ ok: true, servidor_at: wfNowISO(), zona_horaria: cfg.zona_horaria }, v));
+}));
+
+// ═══ ASISTENCIA: sesiones, correcciones con auditoría ═══════════════════════
+async function wfPeriodoBloqueado(rid, day) {
+  var r = await wfGet("wf_nomina_periodos?restaurante_id=eq." + rid + "&inicio=lte." + day + "&fin=gte." + day + "&estado=in.(aprobado,pagado,cerrado)&select=id,estado,inicio,fin&limit=1"); return r[0] || null;
+}
+app.get("/api/equipo/sesiones", wfAuth("ver"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid), tz = cfg.zona_horaria, hoy = wfDay(Date.now(), tz);
+  var desde = wfIsDay(req.query.desde) ? req.query.desde : wfAddDays(hoy, -6), hasta = wfIsDay(req.query.hasta) ? req.query.hasta : hoy;
+  if (wfDiffDays(desde, hasta) > 62 || wfDiffDays(desde, hasta) < 0) throw wfErr(400, "rango", "Elige un rango de hasta 62 días.");
+  var q = "wf_sesiones?restaurante_id=eq." + rid + "&entrada_at=gte." + wfLocalToDate(desde, "00:00", tz).toISOString() + "&entrada_at=lt." + wfLocalToDate(wfAddDays(hasta, 1), "00:00", tz).toISOString() + "&order=entrada_at.desc&limit=2000";
+  var eid = wfUuid(req.query.empleado_id); if (eid) q += "&empleado_id=eq." + eid;
+  var ses = await wfGet(q), ids = ses.map(function (s) { return s.id; });
+  var aj = ids.length ? await wfGet("wf_ajustes?restaurante_id=eq." + rid + "&tipo=eq.correccion&sesion_id=" + wfIn(ids.slice(0, 300)) + "&select=sesion_id,campo,valor_anterior,valor_nuevo,razon,cambiado_por,created_at&order=created_at.asc&limit=2000") : [];
+  var am = {}; aj.forEach(function (a) { (am[a.sesion_id] = am[a.sesion_id] || []).push(a); });
+  res.json({ ok: true, desde: desde, hasta: hasta, servidor_at: wfNowISO(), sesiones: ses.map(function (s) { var o = wfSesionPublica(s); o.empleado_id = s.empleado_id; o.dia = wfDay(s.entrada_at, tz); o.minutos_en_curso = s.estado === "CLOCKED_OUT" ? null : wfMinutos(s); o.correcciones = am[s.id] || []; return o; }) });
+}));
+async function wfCorregir(rid, s, cambios, razon, actorNombre, cfg) {
+  var tz = cfg.zona_horaria, bloq = await wfPeriodoBloqueado(rid, wfDay(s.entrada_at, tz));
+  if (bloq) throw wfErr(409, "periodo_" + bloq.estado, "Ese día pertenece a una nómina " + bloq.estado + ". No se puede corregir.");
+  var nuevo = { entrada_at: s.entrada_at, salida_at: s.salida_at, descanso_seg: Number(s.descanso_seg || 0) }, reg = [];
+  if (cambios.entrada_at) { var d1 = new Date(cambios.entrada_at); if (isNaN(d1)) throw wfErr(400, "hora", "Hora de entrada no válida."); nuevo.entrada_at = d1.toISOString(); }
+  if (cambios.salida_at) { var d2 = new Date(cambios.salida_at); if (isNaN(d2)) throw wfErr(400, "hora", "Hora de salida no válida."); nuevo.salida_at = d2.toISOString(); }
+  if (cambios.descanso_min != null) { var dm = Number(cambios.descanso_min); if (!(dm >= 0 && dm <= 600)) throw wfErr(400, "descanso", "Descanso no válido."); nuevo.descanso_seg = Math.round(dm * 60); }
+  var now = Date.now();
+  if (new Date(nuevo.entrada_at) > now + 60000 || (nuevo.salida_at && new Date(nuevo.salida_at) > now + 60000)) throw wfErr(400, "futuro", "No se pueden registrar horas en el futuro.");
+  if (nuevo.salida_at && new Date(nuevo.salida_at) <= new Date(nuevo.entrada_at)) throw wfErr(400, "orden", "La salida debe ser después de la entrada.");
+  if (nuevo.salida_at && new Date(nuevo.salida_at) - new Date(nuevo.entrada_at) > 24 * 3600e3) throw wfErr(400, "largo", "Un turno no puede superar 24 horas.");
+  var solap = await wfGet("wf_sesiones?restaurante_id=eq." + rid + "&empleado_id=eq." + s.empleado_id + "&id=neq." + s.id + "&entrada_at=lt." + (nuevo.salida_at || new Date(now).toISOString()) + "&or=(salida_at.gt." + nuevo.entrada_at + ",salida_at.is.null)&select=id&limit=1");
+  if (solap.length) throw wfErr(409, "solapa", "Ese horario se cruza con otro turno registrado de la misma persona.");
+  var upd = { updated_at: wfNowISO() };
+  ["entrada_at", "salida_at", "descanso_seg"].forEach(function (k) { if (String(nuevo[k]) !== String(s[k])) { upd[k] = nuevo[k]; reg.push({ campo: k, antes: s[k], despues: nuevo[k] }); } });
+  if (!reg.length) return { sesion: s, sin_cambios: true };
+  if (nuevo.salida_at) { upd.estado = "CLOCKED_OUT"; upd.descanso_inicio_at = null; if (!s.salida_at) upd.salida_metodo = "MANAGER"; upd.minutos_trabajados = wfMinutos({ entrada_at: nuevo.entrada_at, descanso_seg: nuevo.descanso_seg, estado: "CLOCKED_OUT" }, new Date(nuevo.salida_at).getTime()); }
+  upd.banderas = (s.banderas || []).filter(function (b) { return b.tipo !== "corregida"; }).concat([{ tipo: "corregida" }]);
+  var r = await wfPatch("wf_sesiones", "id=eq." + s.id + "&restaurante_id=eq." + rid + "&updated_at=eq." + encodeURIComponent(s.updated_at), upd);
+  if (!r.length) throw wfErr(409, "estado_cambio", "El registro cambió mientras lo editabas. Recarga y vuelve a intentar.");
+  for (var i = 0; i < reg.length; i++) await wfAjuste(rid, { empleado_id: s.empleado_id, sesion_id: s.id, tipo: "correccion", campo: reg[i].campo, valor_anterior: reg[i].antes == null ? null : String(reg[i].antes), valor_nuevo: reg[i].despues == null ? null : String(reg[i].despues), razon: razon, cambiado_por: actorNombre });
+  await wfEvento(rid, { empleado_id: s.empleado_id, sesion_id: s.id, accion: "correccion", metodo: "MANAGER", fuente: "panel", metadata: { actor: actorNombre, campos: reg.map(function (x) { return x.campo; }) } });
+  WF.ahoraCache.delete(rid); return { sesion: r[0], cambios: reg };
+}
+app.post("/api/equipo/sesiones/:id/corregir", wfAuth("corregir"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), b = req.body || {}, razon = wfClean(b.razon, 400);
+  if (!id) throw wfErr(400, "datos", "Registro no válido."); if (razon.length < 4) throw wfErr(400, "razon", "La corrección necesita una razón.");
+  var s = (await wfGet("wf_sesiones?id=eq." + id + "&restaurante_id=eq." + rid + "&limit=1"))[0]; if (!s) throw wfErr(404, "sesion", "Registro no encontrado.");
+  var out = await wfCorregir(rid, s, b, razon, req.wf.nombre, await wfConfig(rid));
+  res.json({ ok: true, sesion: wfSesionPublica(out.sesion), cambios: out.cambios || [], sin_cambios: !!out.sin_cambios });
+}));
+app.post("/api/equipo/sesiones", wfAuth("corregir"), wfRoute(async function (req, res) {
+  // Registro manual (p. ej. olvidó marcar entrada). Siempre con razón y auditoría.
+  var rid = req.wf.rid, b = req.body || {}, eid = wfUuid(b.empleado_id), razon = wfClean(b.razon, 400), cfg = await wfConfig(rid);
+  if (!eid) throw wfErr(400, "datos", "Elige a la persona."); if (razon.length < 4) throw wfErr(400, "razon", "El registro manual necesita una razón.");
+  var emp = await wfEmpleado(rid, eid); if (!emp) throw wfErr(404, "empleado", "Persona no encontrada.");
+  var ent = new Date(b.entrada_at), sal = b.salida_at ? new Date(b.salida_at) : null;
+  if (isNaN(ent) || (sal && isNaN(sal))) throw wfErr(400, "hora", "Horas no válidas.");
+  if (!sal) throw wfErr(400, "hora", "El registro manual necesita entrada y salida. Para turnos en curso la persona marca en LUZ CHECK.");
+  var fake = { id: "00000000-0000-0000-0000-000000000000", empleado_id: eid, entrada_at: ent.toISOString(), salida_at: null, descanso_seg: 0 };
+  var bloq = await wfPeriodoBloqueado(rid, wfDay(ent, cfg.zona_horaria)); if (bloq) throw wfErr(409, "periodo_" + bloq.estado, "Ese día pertenece a una nómina " + bloq.estado + ".");
+  if (sal <= ent || sal - ent > 24 * 3600e3 || sal > Date.now() + 60000) throw wfErr(400, "orden", "Revisa las horas: salida después de la entrada, máximo 24 h, no en el futuro.");
+  var solap = await wfGet("wf_sesiones?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&entrada_at=lt." + sal.toISOString() + "&or=(salida_at.gt." + ent.toISOString() + ",salida_at.is.null)&select=id&limit=1");
+  if (solap.length) throw wfErr(409, "solapa", "Ese horario se cruza con otro turno registrado.");
+  var ds = Math.round(Math.max(0, Number(b.descanso_min || 0)) * 60), min = wfMinutos({ entrada_at: ent.toISOString(), descanso_seg: ds, estado: "CLOCKED_OUT" }, sal.getTime());
+  var s = (await wfPost("wf_sesiones", { restaurante_id: rid, empleado_id: eid, estado: "CLOCKED_OUT", entrada_at: ent.toISOString(), salida_at: sal.toISOString(), descanso_seg: ds, entrada_metodo: "MANAGER", salida_metodo: "MANAGER", minutos_trabajados: min, banderas: [{ tipo: "manual" }] }))[0];
+  await wfAjuste(rid, { empleado_id: eid, sesion_id: s.id, tipo: "correccion", campo: "registro_manual", valor_anterior: null, valor_nuevo: s.entrada_at + " → " + s.salida_at, razon: razon, cambiado_por: req.wf.nombre });
+  await wfEvento(rid, { empleado_id: eid, sesion_id: s.id, accion: "registro_manual", metodo: "MANAGER", fuente: "panel", metadata: { actor: req.wf.nombre } });
+  WF.ahoraCache.delete(rid); void fake;
+  res.json({ ok: true, sesion: wfSesionPublica(s) });
+}));
+
+// ═══ INCIDENCIAS ════════════════════════════════════════════════════════════
+app.get("/api/equipo/incidencias", wfAuth("incidencias"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, est = String(req.query.estado || "pendientes"), f = est === "todas" ? "" : est === "pendientes" ? "&estado=in.(abierta,info_solicitada)" : "&estado=eq." + encodeURIComponent(est);
+  var r = await wfGet("wf_incidencias?restaurante_id=eq." + rid + f + "&order=created_at.desc&limit=200");
+  var sids = r.map(function (i) { return i.sesion_id; }).filter(Boolean), ses = sids.length ? await wfGet("wf_sesiones?id=" + wfIn(sids) + "&select=id,entrada_at,salida_at,estado,minutos_trabajados,descanso_seg") : [], sm = {}; ses.forEach(function (s) { sm[s.id] = s; });
+  res.json({ ok: true, incidencias: r.map(function (i) { i.sesion = sm[i.sesion_id] || null; return i; }) });
+}));
+app.post("/api/equipo/incidencias/:id/resolver", wfAuth("incidencias"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), b = req.body || {}, dec = String(b.decision || ""), razon = wfClean(b.razon, 400);
+  var mapa = { aprobar: "aprobada", parcial: "parcial", rechazar: "rechazada", info: "info_solicitada" };
+  if (!id || !mapa[dec]) throw wfErr(400, "datos", "Decisión no válida."); if (razon.length < 4) throw wfErr(400, "razon", "Toda decisión necesita una razón.");
+  var inc = (await wfGet("wf_incidencias?id=eq." + id + "&restaurante_id=eq." + rid + "&limit=1"))[0]; if (!inc) throw wfErr(404, "incidencia", "Incidencia no encontrada.");
+  if (["abierta", "info_solicitada"].indexOf(inc.estado) < 0) throw wfErr(409, "ya_resuelta", "Esta incidencia ya fue resuelta.");
+  var cor = null;
+  if ((dec === "aprobar" || dec === "parcial") && b.correccion && inc.sesion_id) {
+    var s = (await wfGet("wf_sesiones?id=eq." + inc.sesion_id + "&restaurante_id=eq." + rid + "&limit=1"))[0];
+    if (s) cor = await wfCorregir(rid, s, b.correccion, "Incidencia: " + razon, req.wf.nombre, await wfConfig(rid));
+  }
+  var u = await wfPatch("wf_incidencias", "id=eq." + id + "&estado=in.(abierta,info_solicitada)", { estado: mapa[dec], resolucion: razon, resuelto_por: req.wf.nombre, resuelto_at: wfNowISO(), updated_at: wfNowISO() });
+  if (!u.length) throw wfErr(409, "ya_resuelta", "Esta incidencia cambió mientras la revisabas.");
+  await wfEvento(rid, { empleado_id: inc.empleado_id, sesion_id: inc.sesion_id, accion: "incidencia_" + mapa[dec], fuente: "panel", metadata: { actor: req.wf.nombre, razon: razon, corrigio: !!(cor && cor.cambios && cor.cambios.length) } });
+  WF.ahoraCache.delete(rid); res.json({ ok: true, incidencia: u[0], correccion: cor ? cor.cambios || [] : [] });
+}));
+
+// ═══ TURNOS (planificación) ═════════════════════════════════════════════════
+async function wfTurnoSolapa(rid, eid, ini, fin, exceptId) {
+  var r = await wfGet("wf_turnos?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&estado=neq.cancelado&inicio=lt." + fin + "&fin=gt." + ini + (exceptId ? "&id=neq." + exceptId : "") + "&select=id&limit=1"); return !!r.length;
+}
+async function wfAvisosTurno(rid, eid, ini, fin, cfg) {
+  var av = [], tz = cfg.zona_horaria, day = wfDay(ini, tz), dow = wfDow(day), disp = await wfGet("wf_disponibilidad?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&select=dia_semana,desde,hasta&limit=50");
+  if (disp.length) {
+    var hi = wfHM(ini, tz), hf = wfHM(fin, tz), cubre = disp.some(function (d) { return d.dia_semana === dow && d.desde.slice(0, 5) <= hi && (d.hasta.slice(0, 5) >= hf || hf < hi); });
+    if (!cubre) av.push("Fuera de la disponibilidad que registró la persona.");
+  }
+  if ((new Date(fin) - new Date(ini)) / 3600e3 > Number(cfg.turno_largo_horas || 12)) av.push("Turno de más de " + cfg.turno_largo_horas + " horas.");
+  return av;
+}
+function wfTurnoBody(b, tz) {
+  var eid = wfUuid(b.empleado_id), rol = b.rol, ini, fin;
+  if (!eid) throw wfErr(400, "datos", "Elige a la persona.");
+  if (WF_ROLES.indexOf(rol) < 0) throw wfErr(400, "datos", "Elige el rol del turno.");
+  if (wfIsDay(b.dia) && /^\d{2}:\d{2}$/.test(b.desde || "") && /^\d{2}:\d{2}$/.test(b.hasta || "")) {
+    ini = wfLocalToDate(b.dia, b.desde, tz); fin = wfLocalToDate(b.hasta <= b.desde ? wfAddDays(b.dia, 1) : b.dia, b.hasta, tz);
+  } else { ini = new Date(b.inicio); fin = new Date(b.fin); }
+  if (isNaN(ini) || isNaN(fin) || fin <= ini) throw wfErr(400, "horas", "Revisa el horario del turno.");
+  if (fin - ini > 16 * 3600e3) throw wfErr(400, "horas", "Un turno no puede superar 16 horas.");
+  return { empleado_id: eid, rol: rol, inicio: ini.toISOString(), fin: fin.toISOString(), notas: b.notas ? wfClean(b.notas, 300) : null };
+}
+app.get("/api/equipo/turnos", wfAuth("ver"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(req.wf.rid), tz = cfg.zona_horaria, sem = wfIsDay(req.query.semana) ? wfMonday(req.query.semana) : wfMonday(wfDay(Date.now(), tz));
+  var r = await Promise.all([
+    wfGet("wf_turnos?restaurante_id=eq." + rid + "&estado=neq.cancelado&inicio=gte." + wfLocalToDate(sem, "00:00", tz).toISOString() + "&inicio=lt." + wfLocalToDate(wfAddDays(sem, 7), "00:00", tz).toISOString() + "&order=inicio.asc&limit=2000"),
+    wfGet("wf_disponibilidad?restaurante_id=eq." + rid + "&select=empleado_id,dia_semana,desde,hasta,nota&limit=2000")
+  ]);
+  res.json({ ok: true, semana: sem, zona_horaria: tz, turnos: r[0].map(function (t) { t.dia = wfDay(t.inicio, tz); t.desde = wfHM(t.inicio, tz); t.hasta = wfHM(t.fin, tz); return t; }), disponibilidad: r[1] });
+}));
+app.post("/api/equipo/turnos", wfAuth("turnos"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid), t = wfTurnoBody(req.body || {}, cfg.zona_horaria), e = await wfEmpleado(rid, t.empleado_id);
+  if (!e || !e.activo) throw wfErr(404, "empleado", "Persona no encontrada o inactiva.");
+  if (await wfTurnoSolapa(rid, t.empleado_id, t.inicio, t.fin)) throw wfErr(409, "solapa", e.nombre + " ya tiene un turno que se cruza con ese horario.");
+  var row = (await wfPost("wf_turnos", Object.assign({ restaurante_id: rid, estado: "borrador", origen: "manual", creado_por: req.wf.nombre }, t)))[0];
+  res.json({ ok: true, turno: row, avisos: await wfAvisosTurno(rid, t.empleado_id, t.inicio, t.fin, cfg) });
+}));
+app.patch("/api/equipo/turnos/:id", wfAuth("turnos"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), cfg = await wfConfig(rid), prev = id && (await wfGet("wf_turnos?id=eq." + id + "&restaurante_id=eq." + rid + "&limit=1"))[0];
+  if (!prev) throw wfErr(404, "turno", "Turno no encontrado."); if (prev.estado === "cancelado") throw wfErr(409, "cancelado", "Ese turno está cancelado.");
+  var t = wfTurnoBody(Object.assign({ empleado_id: prev.empleado_id, rol: prev.rol, inicio: prev.inicio, fin: prev.fin }, req.body || {}), cfg.zona_horaria);
+  if (await wfTurnoSolapa(rid, t.empleado_id, t.inicio, t.fin, id)) throw wfErr(409, "solapa", "Se cruza con otro turno de la misma persona.");
+  // Editar un turno publicado lo devuelve a borrador: el equipo solo ve cambios cuando se vuelven a publicar.
+  var row = (await wfPatch("wf_turnos", "id=eq." + id + "&restaurante_id=eq." + rid, Object.assign({ updated_at: wfNowISO(), estado: "borrador" }, t)))[0];
+  res.json({ ok: true, turno: row, era_publicado: prev.estado === "publicado", avisos: await wfAvisosTurno(rid, t.empleado_id, t.inicio, t.fin, cfg) });
+}));
+app.post("/api/equipo/turnos/:id/cancelar", wfAuth("turnos"), wfRoute(async function (req, res) {
+  var id = wfUuid(req.params.id); if (!id) throw wfErr(400, "datos", "Turno no válido.");
+  var r = await wfPatch("wf_turnos", "id=eq." + id + "&restaurante_id=eq." + req.wf.rid + "&estado=neq.cancelado", { estado: "cancelado", updated_at: wfNowISO() }); if (!r.length) throw wfErr(404, "turno", "Turno no encontrado.");
+  if (r[0].publicado_at) await wfEvento(req.wf.rid, { empleado_id: r[0].empleado_id, accion: "turno_cancelado", fuente: "panel", metadata: { actor: req.wf.nombre, inicio: r[0].inicio } });
+  res.json({ ok: true });
+}));
+app.post("/api/equipo/turnos/publicar", wfAuth("turnos"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid), tz = cfg.zona_horaria, sem = wfIsDay(req.body && req.body.semana) ? wfMonday(req.body.semana) : null; if (!sem) throw wfErr(400, "semana", "Elige la semana.");
+  var r = await wfPatch("wf_turnos", "restaurante_id=eq." + rid + "&estado=eq.borrador&inicio=gte." + wfLocalToDate(sem, "00:00", tz).toISOString() + "&inicio=lt." + wfLocalToDate(wfAddDays(sem, 7), "00:00", tz).toISOString(), { estado: "publicado", publicado_at: wfNowISO(), updated_at: wfNowISO() });
+  await wfEvento(rid, { accion: "turnos_publicados", fuente: "panel", metadata: { actor: req.wf.nombre, semana: sem, cantidad: r.length } });
+  WF.ahoraCache.delete(rid); res.json({ ok: true, publicados: r.length });
+}));
+app.post("/api/equipo/turnos/duplicar", wfAuth("turnos"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid), tz = cfg.zona_horaria, b = req.body || {};
+  if (!wfIsDay(b.desde) || !wfIsDay(b.hacia)) throw wfErr(400, "semana", "Elige las semanas.");
+  var de = wfMonday(b.desde), ha = wfMonday(b.hacia), dias = wfDiffDays(de, ha); if (!dias) throw wfErr(400, "semana", "Elige semanas distintas.");
+  var src = await wfGet("wf_turnos?restaurante_id=eq." + rid + "&estado=neq.cancelado&inicio=gte." + wfLocalToDate(de, "00:00", tz).toISOString() + "&inicio=lt." + wfLocalToDate(wfAddDays(de, 7), "00:00", tz).toISOString() + "&limit=2000");
+  var emps = {}; (await wfGet("wf_empleados?restaurante_id=eq." + rid + "&activo=eq.true&select=id&limit=500")).forEach(function (e) { emps[e.id] = 1; });
+  var nuevos = [], omit = 0;
+  for (var i = 0; i < src.length; i++) {
+    var t = src[i]; if (!emps[t.empleado_id]) { omit++; continue; }
+    // mantener la hora local (respeta cambios de horario de verano)
+    var dI = wfAddDays(wfDay(t.inicio, tz), dias), dF = wfAddDays(wfDay(t.fin, tz), dias), ini = wfLocalToDate(dI, wfHM(t.inicio, tz), tz).toISOString(), fin = wfLocalToDate(dF, wfHM(t.fin, tz), tz).toISOString();
+    if (await wfTurnoSolapa(rid, t.empleado_id, ini, fin)) { omit++; continue; }
+    nuevos.push({ restaurante_id: rid, empleado_id: t.empleado_id, rol: t.rol, inicio: ini, fin: fin, notas: t.notas, estado: "borrador", origen: "duplicado", creado_por: req.wf.nombre });
+  }
+  var ins = nuevos.length ? await wfPost("wf_turnos", nuevos) : [];
+  res.json({ ok: true, creados: ins.length, omitidos: omit });
+}));
+// Disponibilidad (la declara la persona; NO es un turno)
+app.get("/api/equipo/mi/disponibilidad", wfAuthEmp, wfRoute(async function (req, res) {
+  res.json({ ok: true, disponibilidad: await wfGet("wf_disponibilidad?restaurante_id=eq." + req.wf.rid + "&empleado_id=eq." + req.wf.id + "&select=dia_semana,desde,hasta,nota&order=dia_semana.asc&limit=50") });
+}));
+app.put("/api/equipo/mi/disponibilidad", wfAuthEmp, wfRoute(async function (req, res) {
+  var rid = req.wf.rid, arr = req.body && req.body.disponibilidad; if (!Array.isArray(arr) || arr.length > 21) throw wfErr(400, "datos", "Disponibilidad no válida.");
+  var rows = arr.map(function (d) {
+    var ds = Number(d.dia_semana); if (!(ds >= 0 && ds <= 6) || !/^\d{2}:\d{2}$/.test(d.desde || "") || !/^\d{2}:\d{2}$/.test(d.hasta || "")) throw wfErr(400, "datos", "Revisa los días y horas.");
+    return { restaurante_id: rid, empleado_id: req.wf.id, dia_semana: ds, desde: d.desde, hasta: d.hasta, nota: d.nota ? wfClean(d.nota, 160) : null };
+  });
+  await wfDelete("wf_disponibilidad", "restaurante_id=eq." + rid + "&empleado_id=eq." + req.wf.id);
+  if (rows.length) await wfPost("wf_disponibilidad", rows);
+  res.json({ ok: true, guardados: rows.length });
+}));
+
+// ═══ LUZ SHIFT PLANNER — propone; nunca publica solo ════════════════════════
+async function wfDemanda(rid, tz) {
+  var desde = new Date(Date.now() - 56 * 864e5).toISOString();
+  var p = await wfGet("pedidos?restaurante_id=eq." + rid + "&created_at=gte." + desde + "&estado=neq.cancelado&select=created_at,total&limit=20000", 20000);
+  var m = {}, dias = {}; p.forEach(function (x) { var d = wfDay(x.created_at, tz), o = wfParts(new Date(x.created_at), tz), k = wfDow(d) + ":" + Number(o.hour); m[k] = (m[k] || 0) + 1; dias[d] = 1; });
+  var semanas = Math.max(1, Math.min(8, Math.round(Object.keys(dias).length / 7) || 1)), out = {};
+  Object.keys(m).forEach(function (k) { out[k] = m[k] / semanas; });
+  return { porHora: out, pedidos: p.length, semanas: semanas };
+}
+app.post("/api/equipo/turnos/propuesta", wfAuth("turnos"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid), tz = cfg.zona_horaria, sem = wfIsDay(req.body && req.body.semana) ? wfMonday(req.body.semana) : null; if (!sem) throw wfErr(400, "semana", "Elige la semana.");
+  var r = await Promise.all([
+    wfGet("restaurantes?id=eq." + rid + "&select=hora_apertura,hora_cierre,dias_activos&limit=1"),
+    wfGet("wf_empleados?restaurante_id=eq." + rid + "&activo=eq.true&select=id,nombre,rol&limit=500"),
+    wfGet("wf_disponibilidad?restaurante_id=eq." + rid + "&select=empleado_id,dia_semana,desde,hasta&limit=3000"),
+    wfGet("wf_turnos?restaurante_id=eq." + rid + "&estado=neq.cancelado&inicio=gte." + wfLocalToDate(sem, "00:00", tz).toISOString() + "&inicio=lt." + wfLocalToDate(wfAddDays(sem, 7), "00:00", tz).toISOString() + "&select=empleado_id,inicio,fin&limit=2000"),
+    wfDemanda(rid, tz)
+  ]);
+  var rest = r[0][0] || {}, emps = r[1], ap = String(rest.hora_apertura || "").slice(0, 5), ci = String(rest.hora_cierre || "").slice(0, 5);
+  if (!emps.length) return res.json({ ok: true, estado: "sin_equipo", mensaje: "Primero registra a tu equipo en PERSONAL.", propuesta: [] });
+  if (!/^\d{2}:\d{2}$/.test(ap) || !/^\d{2}:\d{2}$/.test(ci)) return res.json({ ok: true, estado: "sin_horario", mensaje: "Configura el horario del restaurante para que Luz pueda proponer turnos.", propuesta: [] });
+  var DN = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"], activos = String(rest.dias_activos || DN.join(",")).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  var disp = {}; r[2].forEach(function (d) { (disp[d.empleado_id] = disp[d.empleado_id] || []).push(d); });
+  var horas = {}, ocup = {}; emps.forEach(function (e) { horas[e.id] = 0; ocup[e.id] = []; });
+  r[3].forEach(function (t) { if (horas[t.empleado_id] != null) { horas[t.empleado_id] += (new Date(t.fin) - new Date(t.inicio)) / 3600e3; ocup[t.empleado_id].push([new Date(t.inicio).getTime(), new Date(t.fin).getTime()]); } });
+  var roles = WF_ROLES.filter(function (ro) { return ro !== "manager" && emps.some(function (e) { return e.rol === ro; }); });
+  var dem = r[4], picos = [], bloques = [];
+  for (var d = 0; d < 7; d++) {
+    var day = wfAddDays(sem, d), dow = wfDow(day); if (activos.indexOf(DN[dow]) < 0) continue;
+    var ini = wfLocalToDate(day, ap, tz), fin = wfLocalToDate(ci <= ap ? wfAddDays(day, 1) : day, ci, tz), span = (fin - ini) / 3600e3;
+    var partes = span > 9 ? [[ini.getTime(), ini.getTime() + Math.ceil(span / 2 + 1) * 3600e3], [ini.getTime() + Math.floor(span / 2) * 3600e3, fin.getTime()]] : [[ini.getTime(), fin.getTime()]];
+    partes.forEach(function (p) {
+      var carga = 0; for (var h = p[0]; h < p[1]; h += 3600e3) { var o = wfParts(new Date(h), tz); carga += dem.porHora[wfDow(wfDay(h, tz)) + ":" + Number(o.hour)] || 0; }
+      bloques.push({ dia: day, ini: p[0], fin: p[1], carga: carga }); picos.push(carga);
+    });
+  }
+  var cargas = picos.slice().sort(function (a, b) { return a - b; }), p75 = cargas[Math.floor(cargas.length * 0.75)] || 0;
+  var prop = [], huecos = [];
+  function libre(e, a, b) { return ocup[e.id].every(function (x) { return b <= x[0] || a >= x[1]; }); }
+  function disponible(e, blk) {
+    var ds = disp[e.id]; if (!ds || !ds.length) return "sin_dato";
+    var dw = wfDow(blk.dia), hi = wfHM(blk.ini, tz), hf = wfHM(blk.fin, tz);
+    return ds.some(function (x) { return x.dia_semana === dw && x.desde.slice(0, 5) <= hi && (x.hasta.slice(0, 5) >= hf || hf < hi); }) ? "si" : "no";
+  }
+  bloques.forEach(function (blk) {
+    roles.forEach(function (ro) {
+      var need = 1 + (ro === "cocina" && blk.carga > 0 && blk.carga >= p75 && emps.filter(function (e) { return e.rol === ro; }).length >= 3 ? 1 : 0), dur = (blk.fin - blk.ini) / 3600e3;
+      for (var k = 0; k < need; k++) {
+        var lim = wfRegla(cfg, blk.dia).semanal_horas || 48;
+        var cands = emps.filter(function (e) { return e.rol === ro && libre(e, blk.ini, blk.fin) && disponible(e, blk) !== "no" && horas[e.id] + dur <= lim; });
+        // Equidad: menos horas asignadas primero; quien declaró disponibilidad va antes que quien no la registró
+        cands.sort(function (a, b) { return horas[a.id] - horas[b.id] || (disponible(a, blk) === "si" ? -1 : 0) - (disponible(b, blk) === "si" ? -1 : 0) || a.nombre.localeCompare(b.nombre); });
+        var e = cands[0];
+        if (!e) { huecos.push({ dia: blk.dia, rol: ro, desde: wfHM(blk.ini, tz), hasta: wfHM(blk.fin, tz), razon: "Nadie disponible sin pasar el límite semanal o sin cruce de horario." }); continue; }
+        horas[e.id] += dur; ocup[e.id].push([blk.ini, blk.fin]);
+        prop.push({ empleado_id: e.id, nombre: e.nombre, rol: ro, dia: blk.dia, desde: wfHM(blk.ini, tz), hasta: wfHM(blk.fin, tz), inicio: new Date(blk.ini).toISOString(), fin: new Date(blk.fin).toISOString(),
+          por_que: (k > 0 ? "Refuerzo: bloque de alta demanda (~" + Math.round(blk.carga) + " pedidos). " : "") + (disponible(e, blk) === "sin_dato" ? "No registró disponibilidad. " : "Dentro de su disponibilidad. ") + "Menos horas asignadas en la semana." });
+      }
+    });
+  });
+  res.json({ ok: true, estado: "propuesta", semana: sem, nota: "Es una propuesta: no se publica sola. Revísala y aplícala como borrador si te sirve.",
+    datos: { pedidos_analizados: dem.pedidos, semanas: dem.semanas, confianza: dem.pedidos >= 200 ? "MEDIA" : dem.pedidos > 0 ? "BAJA" : "SIN_DATOS" },
+    propuesta: prop, huecos: huecos, horas_por_persona: emps.map(function (e) { return { id: e.id, nombre: e.nombre, horas: Math.round(horas[e.id] * 10) / 10 }; }) });
+}));
+app.post("/api/equipo/turnos/propuesta/aplicar", wfAuth("turnos"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, arr = req.body && req.body.turnos; if (!Array.isArray(arr) || !arr.length || arr.length > 300) throw wfErr(400, "datos", "Nada que aplicar.");
+  var emps = {}; (await wfGet("wf_empleados?restaurante_id=eq." + rid + "&activo=eq.true&select=id&limit=500")).forEach(function (e) { emps[e.id] = 1; });
+  var ok = [], omit = 0;
+  for (var i = 0; i < arr.length; i++) {
+    var t = wfTurnoBody(arr[i], "UTC"); if (!emps[t.empleado_id] || await wfTurnoSolapa(rid, t.empleado_id, t.inicio, t.fin)) { omit++; continue; }
+    ok.push(Object.assign({ restaurante_id: rid, estado: "borrador", origen: "propuesta_luz", creado_por: req.wf.nombre + " (propuesta de Luz)" }, t));
+  }
+  var ins = ok.length ? await wfPost("wf_turnos", ok) : [];
+  await wfEvento(rid, { accion: "propuesta_aplicada", fuente: "panel", metadata: { actor: req.wf.nombre, creados: ins.length, omitidos: omit } });
+  res.json({ ok: true, creados: ins.length, omitidos: omit, estado: "borrador" });
+}));
+
+// ═══ NÓMINA (horas + ESTIMADO; sin recargos legales ni DIAN) ════════════════
+// ESTIMADO = calculado por el sistema · APROBADO = revisado por un admin · PAGO REGISTRADO = alguien autorizado registró que pagó.
+var WF_PER_TRANS = { abierto: { revision: "manager" }, revision: { abierto: "manager", aprobado: "admin" }, aprobado: { revision: "admin", pagado: "admin" }, pagado: { cerrado: "admin" }, borrador: { abierto: "manager" } };
+async function wfDatosPeriodo(rid, per, cfg) {
+  var tz = cfg.zona_horaria, lun = wfMonday(per.inicio);
+  var r = await Promise.all([
+    wfGet("wf_sesiones?restaurante_id=eq." + rid + "&entrada_at=gte." + wfLocalToDate(lun, "00:00", tz).toISOString() + "&entrada_at=lt." + wfLocalToDate(wfAddDays(per.fin, 1), "00:00", tz).toISOString() + "&select=id,empleado_id,estado,entrada_at,salida_at,descanso_seg,minutos_trabajados,banderas,turno_id,updated_at&order=entrada_at.asc&limit=10000", 20000),
+    wfGet("wf_empleados?restaurante_id=eq." + rid + "&select=id,nombre,rol,tarifa_hora,activo&limit=1000"),
+    wfGet("wf_ajustes?restaurante_id=eq." + rid + "&periodo_id=eq." + per.id + "&tipo=in.(bono,deduccion)&select=id,empleado_id,tipo,monto,razon,cambiado_por,created_at&limit=2000"),
+    wfGet("wf_incidencias?restaurante_id=eq." + rid + "&estado=in.(abierta,info_solicitada)&created_at=gte." + wfLocalToDate(per.inicio, "00:00", tz).toISOString() + "&select=id,empleado_id,sesion_id&limit=500")
+  ]);
+  return { sesiones: r[0], empleados: r[1], ajustes: r[2], incidencias: r[3] };
+}
+function wfFirma(d, per) {
+  return wfSha(JSON.stringify([d.sesiones.filter(function (s) { return s.entrada_at; }).map(function (s) { return [s.id, s.estado, s.minutos_trabajados, s.updated_at]; }), d.ajustes.map(function (a) { return a.id; }), d.empleados.map(function (e) { return [e.id, e.tarifa_hora]; }), per.inicio, per.fin]));
+}
+function wfCalcular(per, d, cfg) {
+  var tz = cfg.zona_horaria, factor = Number((cfg.horas_extra || {}).factor || 1), porE = {}, emps = {}; d.empleados.forEach(function (e) { emps[e.id] = e; });
+  d.sesiones.forEach(function (s) {
+    var day = wfDay(s.entrada_at, tz), x = porE[s.empleado_id] = porE[s.empleado_id] || { dias: {}, abiertas: 0, previas: {} };
+    if (s.estado !== "CLOCKED_OUT") { if (day >= per.inicio) x.abiertas++; return; }
+    var m = Number(s.minutos_trabajados != null ? s.minutos_trabajados : wfMinutos(s));
+    if (day < per.inicio) { var wk = wfMonday(day); x.previas[wk] = (x.previas[wk] || 0) + m; return; } // semana que empezó antes del periodo
+    x.dias[day] = (x.dias[day] || 0) + m;
+  });
+  var ajs = {}; d.ajustes.forEach(function (a) { var o = ajs[a.empleado_id] = ajs[a.empleado_id] || { bonos: 0, deducciones: 0, lista: [] }; if (a.tipo === "bono") o.bonos += Number(a.monto || 0); else o.deducciones += Number(a.monto || 0); o.lista.push(a); });
+  var items = [], tot = { empleados: 0, minutos_normales: 0, minutos_extra: 0, total_estimado: 0, sin_tarifa: 0, sesiones_abiertas: 0 };
+  Object.keys(porE).concat(Object.keys(ajs)).filter(function (v, i, s) { return s.indexOf(v) === i; }).forEach(function (eid) {
+    var x = porE[eid] || { dias: {}, abiertas: 0, previas: {} }, e = emps[eid] || { nombre: "?", tarifa_hora: null }, semanas = {}, norm = 0, extra = 0, det = [];
+    Object.keys(x.dias).sort().forEach(function (day) {
+      var m = x.dias[day], rg = wfRegla(cfg, day), wk = wfMonday(day), ex = 0;
+      if (rg.diaria_horas) ex = Math.max(0, m - rg.diaria_horas * 60);
+      var reg = m - ex, acum = semanas[wk] != null ? semanas[wk] : (x.previas[wk] || 0);
+      if (rg.semanal_horas) { var cab = Math.max(0, rg.semanal_horas * 60 - acum), exS = Math.max(0, reg - cab); reg -= exS; ex += exS; }
+      semanas[wk] = acum + reg; norm += reg; extra += ex; det.push({ dia: day, minutos: m, normales: reg, extra: ex });
+    });
+    var ab = ajs[eid] || { bonos: 0, deducciones: 0, lista: [] }, t = e.tarifa_hora == null ? null : Number(e.tarifa_hora);
+    var bN = t == null ? 0 : Math.round(norm / 60 * t), bE = t == null ? 0 : Math.round(extra / 60 * t * factor), total = t == null ? null : bN + bE + ab.bonos - ab.deducciones;
+    items.push({ empleado_id: eid, nombre: e.nombre, minutos_normales: norm, minutos_extra: extra, tarifa_hora: t, bruto_normal: bN, bruto_extra: bE, bonos: ab.bonos, deducciones: ab.deducciones, total: total, detalle: { dias: det, sesiones_abiertas: x.abiertas, ajustes: ab.lista.map(function (a) { return { tipo: a.tipo, monto: a.monto, razon: a.razon, por: a.cambiado_por }; }), factor_extra: factor } });
+    tot.empleados++; tot.minutos_normales += norm; tot.minutos_extra += extra; tot.sesiones_abiertas += x.abiertas; if (total == null) tot.sin_tarifa++; else tot.total_estimado += total;
+  });
+  return { items: items, totales: tot };
+}
+function wfPayrollCheck(per, d, cfg, firmaActual) {
+  var tz = cfg.zona_horaria, c = [], add = function (id, nivel, titulo, detalle, n) { c.push({ id: id, estado: nivel, titulo: titulo, detalle: detalle || "", cantidad: n || 0 }); };
+  var enP = d.sesiones.filter(function (s) { var day = wfDay(s.entrada_at, tz); return day >= per.inicio && day <= per.fin; });
+  var ab = enP.filter(function (s) { return s.estado !== "CLOCKED_OUT"; }); add("sesiones_abiertas", ab.length ? "BLOCKING" : "READY", ab.length ? ab.length + " turno(s) sin salida" : "Todas las salidas registradas", ab.length ? "Corrige la salida (con razón) antes de aprobar." : "", ab.length);
+  var largo = enP.filter(function (s) { return Number(s.minutos_trabajados || 0) > Number(cfg.turno_largo_horas || 12) * 60; }); add("turnos_largos", largo.length ? "WARNING" : "READY", largo.length ? largo.length + " turno(s) de más de " + cfg.turno_largo_horas + " h" : "Sin turnos anormalmente largos", "Revisa si falta un descanso o una salida.", largo.length);
+  var sinT = {}; d.sesiones.forEach(function (s) { sinT[s.empleado_id] = 1; }); var faltan = d.empleados.filter(function (e) { return sinT[e.id] && e.tarifa_hora == null; });
+  add("tarifas", faltan.length ? "WARNING" : "READY", faltan.length ? faltan.length + " persona(s) sin tarifa por hora" : "Todas las personas con horas tienen tarifa", faltan.map(function (e) { return e.nombre; }).join(", "), faltan.length);
+  add("incidencias", d.incidencias.length ? "BLOCKING" : "READY", d.incidencias.length ? d.incidencias.length + " incidencia(s) sin resolver" : "Sin incidencias pendientes", d.incidencias.length ? "Resuélvelas en INCIDENCIAS." : "", d.incidencias.length);
+  var sinTurno = enP.filter(function (s) { return !s.turno_id; }).length; add("sin_turno", sinTurno ? "WARNING" : "READY", sinTurno ? sinTurno + " registro(s) sin turno programado" : "Todo el tiempo coincide con turnos", "", sinTurno);
+  var dup = 0, porE = {}; enP.forEach(function (s) { (porE[s.empleado_id] = porE[s.empleado_id] || []).push(s); });
+  Object.keys(porE).forEach(function (k) { var a = porE[k].filter(function (s) { return s.salida_at; }).sort(function (x, y) { return x.entrada_at < y.entrada_at ? -1 : 1; }); for (var i = 1; i < a.length; i++) if (new Date(a[i].entrada_at) < new Date(a[i - 1].salida_at)) dup++; });
+  add("solapados", dup ? "BLOCKING" : "READY", dup ? dup + " registro(s) que se cruzan" : "Sin registros cruzados", "", dup);
+  var man = enP.filter(function (s) { return (s.banderas || []).some(function (b) { return b.tipo === "corregida" || b.tipo === "manual"; }); }).length;
+  add("correcciones", man ? "WARNING" : "READY", man ? man + " registro(s) corregidos o manuales" : "Sin correcciones manuales", man ? "Cada una tiene razón y responsable en ASISTENCIA." : "", man);
+  var calc = per.calculado_at ? (per.totales && per.totales.firma === firmaActual ? "READY" : "BLOCKING") : "BLOCKING";
+  add("calculo", calc, !per.calculado_at ? "El periodo aún no se ha calculado" : calc === "READY" ? "Cálculo al día" : "Hubo cambios después del último cálculo", calc === "READY" ? "" : "Vuelve a calcular.", 0);
+  var peor = c.some(function (x) { return x.estado === "BLOCKING"; }) ? "BLOCKING" : c.some(function (x) { return x.estado === "WARNING"; }) ? "WARNING" : "READY";
+  return { estado: peor, checks: c };
+}
+async function wfPeriodo(rid, id) { var p = id && (await wfGet("wf_nomina_periodos?id=eq." + id + "&restaurante_id=eq." + rid + "&limit=1"))[0]; if (!p) throw wfErr(404, "periodo", "Periodo no encontrado."); return p; }
+app.get("/api/equipo/nomina/periodos", wfAuth("nomina_ver"), wfRoute(async function (req, res) {
+  res.json({ ok: true, periodos: await wfGet("wf_nomina_periodos?restaurante_id=eq." + req.wf.rid + "&order=inicio.desc&limit=60") });
+}));
+app.post("/api/equipo/nomina/periodos", wfAuth("nomina_ver"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, b = req.body || {}; if (!wfIsDay(b.inicio) || !wfIsDay(b.fin) || b.fin < b.inicio || wfDiffDays(b.inicio, b.fin) > 31) throw wfErr(400, "fechas", "Elige un periodo de hasta 31 días.");
+  var sol = await wfGet("wf_nomina_periodos?restaurante_id=eq." + rid + "&inicio=lte." + b.fin + "&fin=gte." + b.inicio + "&select=id&limit=1"); if (sol.length) throw wfErr(409, "solapa", "Ese periodo se cruza con otro existente.");
+  var p = (await wfPost("wf_nomina_periodos", { restaurante_id: rid, inicio: b.inicio, fin: b.fin, estado: "abierto" }))[0];
+  await wfEvento(rid, { accion: "nomina_periodo_creado", fuente: "panel", metadata: { actor: req.wf.nombre, inicio: b.inicio, fin: b.fin } });
+  res.json({ ok: true, periodo: p });
+}));
+app.get("/api/equipo/nomina/periodos/:id", wfAuth("nomina_ver"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, p = await wfPeriodo(rid, wfUuid(req.params.id)), cfg = await wfConfig(rid), d = await wfDatosPeriodo(rid, p, cfg);
+  var items = await wfGet("wf_nomina_items?periodo_id=eq." + p.id + "&restaurante_id=eq." + rid + "&limit=1000"), nm = {}; d.empleados.forEach(function (e) { nm[e.id] = e.nombre; });
+  res.json({ ok: true, periodo: p, items: items.map(function (i) { i.nombre = nm[i.empleado_id] || "?"; return i; }), check: wfPayrollCheck(p, d, cfg, wfFirma(d, p)), moneda: cfg.moneda, factor_extra: cfg.horas_extra.factor, regla_nota: cfg.horas_extra.nota });
+}));
+app.post("/api/equipo/nomina/periodos/:id/calcular", wfAuth("nomina_ver"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, p = await wfPeriodo(rid, wfUuid(req.params.id)); if (["borrador", "abierto", "revision"].indexOf(p.estado) < 0) throw wfErr(409, "periodo_" + p.estado, "Un periodo " + p.estado + " ya no se recalcula.");
+  var cfg = await wfConfig(rid), d = await wfDatosPeriodo(rid, p, cfg), c = wfCalcular(p, d, cfg), firma = wfFirma(d, p), now = wfNowISO();
+  if (c.items.length) await wfPost("wf_nomina_items", c.items.map(function (i) { return { periodo_id: p.id, restaurante_id: rid, empleado_id: i.empleado_id, minutos_normales: i.minutos_normales, minutos_extra: i.minutos_extra, tarifa_hora: i.tarifa_hora, bruto_normal: i.bruto_normal, bruto_extra: i.bruto_extra, bonos: i.bonos, deducciones: i.deducciones, total: i.total || 0, detalle: Object.assign({ total_estimado: i.total }, i.detalle), updated_at: now }; }), { upsert: true, qs: "on_conflict=periodo_id,empleado_id" });
+  var keep = c.items.map(function (i) { return i.empleado_id; }); await wfDelete("wf_nomina_items", "periodo_id=eq." + p.id + (keep.length ? "&empleado_id=not." + wfIn(keep) : ""));
+  var u = await wfPatch("wf_nomina_periodos", "id=eq." + p.id + "&estado=eq." + p.estado, { totales: Object.assign({ firma: firma, regla: cfg.horas_extra.reglas, factor_extra: cfg.horas_extra.factor }, c.totales), calculado_at: now, updated_at: now });
+  if (!u.length) throw wfErr(409, "estado_cambio", "El periodo cambió de estado mientras se calculaba.");
+  await wfEvento(rid, { accion: "nomina_calculada", fuente: "panel", metadata: { actor: req.wf.nombre, periodo_id: p.id, totales: c.totales } });
+  res.json({ ok: true, periodo: u[0], items: c.items, check: wfPayrollCheck(u[0], d, cfg, firma) });
+}));
+app.post("/api/equipo/nomina/periodos/:id/estado", wfAuth("nomina_ver"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, p = await wfPeriodo(rid, wfUuid(req.params.id)), b = req.body || {}, a = String(b.estado || ""), razon = wfClean(b.razon, 300);
+  var need = (WF_PER_TRANS[p.estado] || {})[a]; if (!need) throw wfErr(409, "transicion", "No se puede pasar de " + p.estado + " a " + a + ".");
+  if (WF_RANK[req.wf.permiso] < WF_RANK[need]) throw wfErr(403, "sin_permiso", "Solo un " + need + " puede hacer este cambio.");
+  var upd = { estado: a, updated_at: wfNowISO() }, cfg = await wfConfig(rid);
+  if (a === "aprobado") {
+    var d = await wfDatosPeriodo(rid, p, cfg), chk = wfPayrollCheck(p, d, cfg, wfFirma(d, p));
+    if (chk.estado === "BLOCKING") throw wfErr(409, "check_bloquea", "LUZ PAYROLL CHECK encontró bloqueos. Resuélvelos antes de aprobar.", { check: chk });
+    upd.aprobado_por = req.wf.nombre; upd.aprobado_at = wfNowISO();
+  }
+  if (a === "pagado") {
+    // Nunca se marca PAGADO sin una acción explícita y autorizada: exige confirmación escrita y referencia.
+    if (String(b.confirmacion || "").trim().toUpperCase() !== "PAGADO") throw wfErr(400, "confirmacion", "Escribe PAGADO para confirmar que ya hiciste los pagos.");
+    var ref = wfClean(b.referencia, 160); if (ref.length < 3) throw wfErr(400, "referencia", "Escribe una referencia del pago (p. ej. transferencia, fecha).");
+    upd.pago_registrado_por = req.wf.nombre; upd.pago_registrado_at = wfNowISO(); upd.totales = Object.assign({}, p.totales, { referencia_pago: ref });
+  }
+  if ((a === "revision" && p.estado === "aprobado") || (a === "abierto" && p.estado === "revision")) { if (razon.length < 4) throw wfErr(400, "razon", "Para reabrir escribe la razón."); }
+  var u = await wfPatch("wf_nomina_periodos", "id=eq." + p.id + "&estado=eq." + p.estado, upd); if (!u.length) throw wfErr(409, "estado_cambio", "El periodo cambió mientras lo editabas.");
+  await wfEvento(rid, { accion: "nomina_estado", fuente: "panel", metadata: { actor: req.wf.nombre, periodo_id: p.id, de: p.estado, a: a, razon: razon || null } });
+  res.json({ ok: true, periodo: u[0] });
+}));
+app.post("/api/equipo/nomina/ajustes", wfAuth("nomina_ver"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, b = req.body || {}, p = await wfPeriodo(rid, wfUuid(b.periodo_id)), eid = wfUuid(b.empleado_id), tipo = b.tipo, monto = Number(b.monto), razon = wfClean(b.razon, 400);
+  if (["abierto", "revision"].indexOf(p.estado) < 0) throw wfErr(409, "periodo_" + p.estado, "Solo se agregan bonos o deducciones en periodos abiertos o en revisión.");
+  if (!eid || ["bono", "deduccion"].indexOf(tipo) < 0 || !(monto > 0 && monto < 1e9)) throw wfErr(400, "datos", "Revisa persona, tipo y monto.");
+  if (razon.length < 4) throw wfErr(400, "razon", "Todo bono o deducción necesita una razón.");
+  var e = await wfEmpleado(rid, eid); if (!e) throw wfErr(404, "empleado", "Persona no encontrada.");
+  var a = await wfAjuste(rid, { empleado_id: eid, periodo_id: p.id, tipo: tipo, monto: monto, razon: razon, cambiado_por: req.wf.nombre });
+  await wfEvento(rid, { empleado_id: eid, accion: "nomina_" + tipo, fuente: "panel", metadata: { actor: req.wf.nombre, periodo_id: p.id, monto: monto } });
+  res.json({ ok: true, ajuste: a, nota: "Vuelve a calcular el periodo para verlo en el estimado." });
+}));
+
+// ═══ INTELIGENCIA (contexto, nunca castigo) ═════════════════════════════════
+app.get("/api/equipo/inteligencia", wfAuth("ver"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid), tz = cfg.zona_horaria, hoy = wfDay(Date.now(), tz), sem = wfIsDay(req.query.semana) ? wfMonday(req.query.semana) : wfMonday(hoy);
+  var ini = wfLocalToDate(sem, "00:00", tz).toISOString(), fin = wfLocalToDate(wfAddDays(sem, 7), "00:00", tz).toISOString();
+  var r = await Promise.all([
+    wfDemanda(rid, tz),
+    wfGet("wf_turnos?restaurante_id=eq." + rid + "&estado=eq.publicado&inicio=gte." + ini + "&inicio=lt." + fin + "&select=empleado_id,inicio,fin,rol&limit=3000"),
+    wfGet("wf_empleados?restaurante_id=eq." + rid + "&activo=eq.true&select=id,nombre,rol,tarifa_hora&limit=500"),
+    wfGet("wf_sesiones?restaurante_id=eq." + rid + "&entrada_at=gte." + ini + "&entrada_at=lt." + fin + "&select=empleado_id,estado,entrada_at,salida_at,descanso_seg,descanso_inicio_at,minutos_trabajados&limit=5000"),
+    wfGet("pedidos?restaurante_id=eq." + rid + "&created_at=gte." + ini + "&created_at=lt." + fin + "&estado=neq.cancelado&select=total&limit=20000", 20000)
+  ]);
+  var dem = r[0], cov = {}, curva = [];
+  r[1].forEach(function (t) { for (var h = new Date(t.inicio).getTime(); h < new Date(t.fin).getTime(); h += 3600e3) { var d = wfDay(h, tz), k = wfDow(d) + ":" + Number(wfParts(new Date(h), tz).hour); cov[k] = (cov[k] || 0) + 1; } });
+  for (var dw = 0; dw < 7; dw++) for (var hh = 0; hh < 24; hh++) { var k = dw + ":" + hh; if (dem.porHora[k] || cov[k]) curva.push({ dow: dw, hora: hh, pedidos_prom: Math.round((dem.porHora[k] || 0) * 10) / 10, personas: cov[k] || 0 }); }
+  var dmax = Math.max.apply(null, curva.map(function (c) { return c.pedidos_prom; }).concat([0]));
+  var huecos = curva.filter(function (c) { return dmax > 0 && c.pedidos_prom >= dmax * 0.6 && c.personas === 0; }).slice(0, 12);
+  var hp = {}; r[1].forEach(function (t) { hp[t.empleado_id] = (hp[t.empleado_id] || 0) + (new Date(t.fin) - new Date(t.inicio)) / 3600e3; });
+  var trab = {}, costo = 0, costoConocido = true, tmap = {}; r[2].forEach(function (e) { tmap[e.id] = e; });
+  r[3].forEach(function (s) { var m = s.estado === "CLOCKED_OUT" ? Number(s.minutos_trabajados || 0) : wfMinutos(s); trab[s.empleado_id] = (trab[s.empleado_id] || 0) + m; var e = tmap[s.empleado_id]; if (e && e.tarifa_hora != null) costo += m / 60 * Number(e.tarifa_hora); else costoConocido = false; });
+  var lim = wfRegla(cfg, sem).semanal_horas, riesgo = r[2].filter(function (e) { return lim && (hp[e.id] || 0) > lim; }).map(function (e) { return { id: e.id, nombre: e.nombre, horas_programadas: Math.round(hp[e.id] * 10) / 10, limite: lim }; });
+  var vals = r[2].filter(function (e) { return e.rol !== "manager"; }).map(function (e) { return hp[e.id] || 0; }), prom = vals.length ? vals.reduce(function (a, b) { return a + b; }, 0) / vals.length : 0;
+  var ventas = r[4].reduce(function (a, p) { return a + Number(p.total || 0); }, 0), horasT = Object.keys(trab).reduce(function (a, k) { return a + trab[k]; }, 0) / 60;
+  res.json({ ok: true, semana: sem, demanda: { curva: curva, pedidos_analizados: dem.pedidos, semanas: dem.semanas }, huecos_cobertura: huecos, riesgo_horas_extra: riesgo,
+    equidad: { promedio_horas: Math.round(prom * 10) / 10, personas: r[2].filter(function (e) { return e.rol !== "manager"; }).map(function (e) { return { id: e.id, nombre: e.nombre, rol: e.rol, horas_programadas: Math.round((hp[e.id] || 0) * 10) / 10 }; }) },
+    contexto_laboral: { nota: "Solo contexto. No es una meta ni se usa para evaluar a nadie.", ventas_semana: Math.round(ventas), horas_trabajadas: Math.round(horasT * 10) / 10, costo_laboral_estimado: costoConocido ? Math.round(costo) : null, ventas_por_hora_trabajada: horasT ? Math.round(ventas / horasT) : null, porcentaje_estimado: costoConocido && ventas ? Math.round(costo / ventas * 1000) / 10 : null } });
+}));
+
+// ═══ Días y semanas operativas (checks reales; nunca ✓ si la consulta falló) ═
+async function wfChk(id, nombre, fn) {
+  try { var r = await lcTimeoutWf(fn(), 8000); return Object.assign({ id: id, nombre: nombre }, r); }
+  catch (e) { return { id: id, nombre: nombre, estado: "UNAVAILABLE", titulo: "No se pudo revisar", detalle: e && e.wf && e.wf.code === "migracion_pendiente" ? e.message : "La consulta falló o tardó demasiado. No se marca como listo." }; }
+}
+function lcTimeoutWf(p, ms) { return Promise.race([p, new Promise(function (_, rej) { setTimeout(function () { rej(new Error("timeout")); }, ms); })]); }
+function wfPeor(list) { return list.some(function (x) { return x.estado === "BLOCKING"; }) ? "BLOCKING" : list.some(function (x) { return x.estado === "UNAVAILABLE"; }) ? "UNAVAILABLE" : list.some(function (x) { return x.estado === "WARNING"; }) ? "WARNING" : "READY"; }
+async function wfChecksDia(rid, cfg, tipo) {
+  var tz = cfg.zona_horaria, hoy = wfDay(Date.now(), tz), ini = wfLocalToDate(hoy, "00:00", tz).toISOString(), fin = wfLocalToDate(wfAddDays(hoy, 1), "00:00", tz).toISOString(), now = Date.now();
+  var L = [];
+  L.push(wfChk("equipo_turno", "Equipo en turno", async function () {
+    var a = await wfAhora(rid, cfg), k = a.conteos;
+    if (tipo === "cierre") {
+      var abiertos = a.personas.filter(function (p) { return p.sesion; });
+      return abiertos.length ? { estado: "WARNING", titulo: abiertos.length + " persona(s) siguen en turno", detalle: abiertos.map(function (p) { return p.nombre + (p.estado === "ON_BREAK" ? " (en descanso)" : ""); }).join(", ") + ". Cerrar el día no marca salidas: cada quien marca en LUZ CHECK o corriges con razón.", cantidad: abiertos.length } : { estado: "READY", titulo: "Nadie quedó con turno abierto" };
+    }
+    if (!a.total_activos) return { estado: "WARNING", titulo: "Aún no registras a tu equipo", detalle: "Agrégalo en EQUIPO → PERSONAL." };
+    return { estado: k.no_llegan ? "WARNING" : "READY", titulo: k.en_turno + " en turno · " + k.programados_hoy + " programados hoy", detalle: k.no_llegan ? k.no_llegan + " persona(s) con turno iniciado aún no marcan entrada." : "", cantidad: k.no_llegan };
+  }));
+  L.push(wfChk("salidas_faltantes", "Salidas pendientes de días anteriores", async function () {
+    var r = await wfGet("wf_sesiones?restaurante_id=eq." + rid + "&estado=in.(ACTIVE,ON_BREAK)&entrada_at=lt." + ini + "&select=id&limit=50");
+    return r.length ? { estado: "WARNING", titulo: r.length + " turno(s) de días anteriores sin salida", detalle: "Corrígelos en ASISTENCIA con una razón.", cantidad: r.length } : { estado: "READY", titulo: "Sin turnos viejos abiertos" };
+  }));
+  if (tipo === "inicio") L.push(wfChk("turnos_hoy", "Turnos publicados hoy", async function () {
+    var r = await wfGet("wf_turnos?restaurante_id=eq." + rid + "&estado=eq.publicado&inicio=gte." + ini + "&inicio=lt." + fin + "&select=id&limit=500");
+    return r.length ? { estado: "READY", titulo: r.length + " turno(s) publicados para hoy" } : { estado: "WARNING", titulo: "No hay turnos publicados para hoy", detalle: "Puedes operar igual; LUZ CHECK registrará “sin turno”." };
+  }));
+  L.push(wfChk("verificaciones", "Verificaciones y dudas del equipo", async function () {
+    var r = await Promise.all([wfGet("wf_accesos_temporales?restaurante_id=eq." + rid + "&estado=eq.pendiente&created_at=gte." + new Date(now - 15 * 60000).toISOString() + "&select=id&limit=50"), wfGet("wf_incidencias?restaurante_id=eq." + rid + "&estado=in.(abierta,info_solicitada)&select=id&limit=200")]);
+    var n = r[0].length + r[1].length; return n ? { estado: "WARNING", titulo: (r[0].length ? r[0].length + " verificación(es) esperando aprobación" : "") + (r[0].length && r[1].length ? " · " : "") + (r[1].length ? r[1].length + " incidencia(s) abiertas" : ""), cantidad: n } : { estado: "READY", titulo: "Nada pendiente del equipo" };
+  }));
+  L.push(wfChk("pedidos", "Pedidos", async function () {
+    var r = await wfGet("pedidos?restaurante_id=eq." + rid + "&estado=in.(pendiente,confirmado,en_preparacion,listo,en_camino,esperando_pago)&select=id,created_at&limit=300");
+    var viejos = r.filter(function (p) { return p.created_at < ini; });
+    if (tipo === "cierre") return r.length ? { estado: "WARNING", titulo: r.length + " pedido(s) siguen activos", detalle: "Ciérralos o márcalos antes de terminar el día.", cantidad: r.length } : { estado: "READY", titulo: "Todos los pedidos cerrados" };
+    return viejos.length ? { estado: "WARNING", titulo: viejos.length + " pedido(s) de días anteriores siguen abiertos", cantidad: viejos.length } : { estado: "READY", titulo: r.length + " pedido(s) activos ahora" };
+  }));
+  if (tipo === "inicio") L.push(wfChk("luz_check", "LUZ CHECK (tablet)", async function () {
+    var r = await wfGet("wf_dispositivos?restaurante_id=eq." + rid + "&activo=eq.true&select=id&limit=10");
+    return r.length ? { estado: "READY", titulo: r.length + " dispositivo(s) activos" } : { estado: "WARNING", titulo: "No hay tablet LUZ CHECK activada", detalle: "Abre /equipo en la tablet y actívala con el PIN del restaurante." };
+  }));
+  if (tipo === "cierre") L.push(wfChk("domis", "Domiciliarios", async function () {
+    var r = await wfGet("domiciliarios?restaurante_id=eq." + rid + "&turno_activo=eq.true&select=id,nombre&limit=50");
+    return r.length ? { estado: "WARNING", titulo: r.length + " domiciliario(s) siguen en turno", detalle: r.map(function (d) { return d.nombre; }).join(", "), cantidad: r.length } : { estado: "READY", titulo: "Ningún domiciliario en turno" };
+  }));
+  if (tipo === "cierre") L.push(wfChk("cuadres", "Cuadres de domiciliarios", async function () {
+    // Solo lectura: el cuadre se cierra en su propio módulo, nunca desde aquí.
+    var r = await wfGet("driver_shift_settlements?restaurante_id=eq." + rid + "&status=in.(pairing,connected,syncing,awaiting_driver,awaiting_restaurant,difference_review)&select=id,status&limit=50");
+    return r.length ? { estado: "WARNING", titulo: r.length + " cuadre(s) de domiciliario sin cerrar", detalle: "Termínalos en Domiciliarios → Cuadre.", cantidad: r.length } : { estado: "READY", titulo: "Sin cuadres pendientes" };
+  }));
+  var list = await Promise.all(L); return { estado: wfPeor(list), checks: list, dia: hoy };
+}
+app.get("/api/equipo/dia", wfAuth("dia"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid), hoy = wfDay(Date.now(), cfg.zona_horaria);
+  var d = (await wfGet("wf_operacion?restaurante_id=eq." + rid + "&tipo=eq.dia&clave=eq." + hoy + "&limit=1"))[0] || null, a = await wfAhora(rid, cfg);
+  var sem = wfMonday(hoy), w = (await wfGet("wf_operacion?restaurante_id=eq." + rid + "&tipo=eq.semana&clave=eq." + sem + "&select=abierto_at&limit=1"))[0];
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, servidor_at: wfNowISO(), dia: hoy, estado: !d || !d.abierto_at ? "SIN_INICIAR" : d.cerrado_at ? "CERRADO" : "ACTIVO", registro: d, conteos: a.conteos, semana: { clave: sem, sincronizada: !!(w && w.abierto_at) } });
+}));
+app.get("/api/equipo/dia/chequeo", wfAuth("dia"), wfRoute(async function (req, res) {
+  var cfg = await wfConfig(req.wf.rid); res.json(Object.assign({ ok: true, tipo: req.query.tipo === "cierre" ? "cierre" : "inicio" }, await wfChecksDia(req.wf.rid, cfg, req.query.tipo === "cierre" ? "cierre" : "inicio")));
+}));
+function wfDiaAccion(abrir) { return wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid), hoy = wfDay(Date.now(), cfg.zona_horaria);
+  var chk = await wfChecksDia(rid, cfg, abrir ? "inicio" : "cierre"), now = wfNowISO(), avisos = chk.checks.filter(function (c) { return c.estado !== "READY"; });
+  if (avisos.length && !(req.body && req.body.confirmo_avisos)) throw wfErr(409, "avisos", "Hay avisos por revisar antes de continuar.", { chequeo: chk });
+  var prev = (await wfGet("wf_operacion?restaurante_id=eq." + rid + "&tipo=eq.dia&clave=eq." + hoy + "&limit=1"))[0], row;
+  if (abrir) {
+    if (prev && prev.abierto_at && !prev.cerrado_at) return res.json({ ok: true, ya: true, registro: prev });
+    row = prev ? (await wfPatch("wf_operacion", "id=eq." + prev.id, { abierto_at: now, abierto_por: req.wf.nombre, avisos_apertura: avisos, cerrado_at: null, cerrado_por: null }))[0]
+      : (await wfPost("wf_operacion", { restaurante_id: rid, tipo: "dia", clave: hoy, abierto_at: now, abierto_por: req.wf.nombre, avisos_apertura: avisos }, { upsert: true, qs: "on_conflict=restaurante_id,tipo,clave" }))[0];
+  } else {
+    if (!prev || !prev.abierto_at) throw wfErr(409, "sin_iniciar", "El día no se ha iniciado.");
+    if (prev.cerrado_at) return res.json({ ok: true, ya: true, registro: prev });
+    row = (await wfPatch("wf_operacion", "id=eq." + prev.id + "&cerrado_at=is.null", { cerrado_at: now, cerrado_por: req.wf.nombre, avisos_cierre: avisos }))[0];
+    // Cerrar el día NO marca salidas de nadie. Solo vence solicitudes de PIN temporal abandonadas.
+    await wfPatch("wf_accesos_temporales", "restaurante_id=eq." + rid + "&estado=eq.pendiente", { estado: "expirada" });
+  }
+  await wfEvento(rid, { accion: abrir ? "dia_iniciado" : "dia_cerrado", fuente: "panel", metadata: { actor: req.wf.nombre, dia: hoy, avisos: avisos.map(function (a) { return a.id; }) } });
+  res.json({ ok: true, registro: row, chequeo: chk });
+}); }
+app.post("/api/equipo/dia/abrir", wfAuth("dia"), wfDiaAccion(true));
+app.post("/api/equipo/dia/cerrar", wfAuth("dia"), wfDiaAccion(false));
+// WEEK SYNC: cada sistema devuelve READY / WARNING / BLOCKING / UNAVAILABLE desde datos reales
+async function wfWeekSync(rid, cfg, sem) {
+  var tz = cfg.zona_horaria, ini = wfLocalToDate(sem, "00:00", tz).toISOString(), fin = wfLocalToDate(wfAddDays(sem, 7), "00:00", tz).toISOString();
+  var list = await Promise.all([
+    wfChk("equipo", "Equipo y turnos", async function () {
+      var r = await Promise.all([wfGet("wf_empleados?restaurante_id=eq." + rid + "&activo=eq.true&select=id&limit=500"), wfGet("wf_turnos?restaurante_id=eq." + rid + "&estado=neq.cancelado&inicio=gte." + ini + "&inicio=lt." + fin + "&select=estado,inicio&limit=3000")]);
+      if (!r[0].length) return { estado: "WARNING", titulo: "Sin equipo registrado", detalle: "Agrega a tu equipo en PERSONAL." };
+      var pub = r[1].filter(function (t) { return t.estado === "publicado"; }), bor = r[1].length - pub.length, dias = {}; pub.forEach(function (t) { dias[wfDay(t.inicio, tz)] = 1; });
+      if (!pub.length) return { estado: "WARNING", titulo: bor ? bor + " turno(s) en borrador, nada publicado" : "No hay turnos para esta semana", detalle: "Publica los turnos para que el equipo los vea en MI TURNO." };
+      return { estado: bor ? "WARNING" : "READY", titulo: pub.length + " turnos publicados · " + Object.keys(dias).length + " días cubiertos", detalle: bor ? bor + " turno(s) siguen en borrador." : "" };
+    }),
+    wfChk("asistencia", "Asistencia", async function () {
+      var r = await Promise.all([wfGet("wf_sesiones?restaurante_id=eq." + rid + "&estado=in.(ACTIVE,ON_BREAK)&entrada_at=lt." + new Date(Date.now() - Number(cfg.salida_faltante_horas || 14) * 3600e3).toISOString() + "&select=id&limit=50"), wfGet("wf_incidencias?restaurante_id=eq." + rid + "&estado=in.(abierta,info_solicitada)&select=id&limit=200")]);
+      var n = r[0].length + r[1].length; return n ? { estado: "WARNING", titulo: (r[0].length ? r[0].length + " salida(s) faltantes" : "") + (r[0].length && r[1].length ? " · " : "") + (r[1].length ? r[1].length + " incidencia(s) abiertas" : "") } : { estado: "READY", titulo: "Asistencia al día" };
+    }),
+    wfChk("nomina", "Nómina", async function () {
+      var hoy = wfDay(Date.now(), tz), r = await wfGet("wf_nomina_periodos?restaurante_id=eq." + rid + "&select=id,inicio,fin,estado&order=inicio.desc&limit=6");
+      var actual = r.filter(function (p) { return p.inicio <= hoy && p.fin >= hoy; })[0], atras = r.filter(function (p) { return p.fin < hoy && ["abierto", "revision", "borrador"].indexOf(p.estado) >= 0; });
+      if (atras.length) return { estado: "WARNING", titulo: atras.length + " periodo(s) terminados sin aprobar", detalle: "Revísalos en NÓMINA." };
+      return actual ? { estado: "READY", titulo: "Periodo " + actual.inicio + " → " + actual.fin + " (" + actual.estado + ")" } : { estado: "WARNING", titulo: "No hay periodo de nómina para hoy", detalle: "Crea el periodo en NÓMINA." };
+    }),
+    wfChk("menu", "Menú", async function () {
+      var r = await wfGet("menu_items?restaurante_id=eq." + rid + "&select=disponible,agotado&limit=2000"), disp = r.filter(function (m) { return m.disponible !== false && !m.agotado; }).length, ag = r.filter(function (m) { return m.agotado; }).length;
+      if (!r.length) return { estado: "BLOCKING", titulo: "No hay productos en el menú" };
+      return { estado: ag ? "WARNING" : "READY", titulo: disp + " productos disponibles" + (ag ? " · " + ag + " agotados" : "") };
+    }),
+    wfChk("pedidos", "Pedidos", async function () {
+      var r = await wfGet("pedidos?restaurante_id=eq." + rid + "&estado=in.(pendiente,confirmado,en_preparacion,listo,en_camino,esperando_pago)&created_at=lt." + new Date(Date.now() - 24 * 3600e3).toISOString() + "&select=id&limit=100");
+      return r.length ? { estado: "WARNING", titulo: r.length + " pedido(s) de hace más de 24 h siguen abiertos" } : { estado: "READY", titulo: "Sin pedidos atascados" };
+    }),
+    wfChk("domicilios", "Domiciliarios", async function () {
+      var r = await wfGet("domiciliarios?restaurante_id=eq." + rid + "&habilitado=eq.true&select=id,onboarding_completo&limit=100"), listos = r.filter(function (d) { return d.onboarding_completo; }).length;
+      return !r.length ? { estado: "WARNING", titulo: "Sin domiciliarios habilitados" } : { estado: listos ? "READY" : "WARNING", titulo: listos + " de " + r.length + " con cuenta lista" };
+    }),
+    wfChk("luz_check", "LUZ CHECK", async function () {
+      var r = await wfGet("wf_dispositivos?restaurante_id=eq." + rid + "&activo=eq.true&select=id&limit=10"), bio = wfBio(cfg);
+      return r.length ? { estado: "READY", titulo: r.length + " tablet(s) activas · " + (bio.id === "none" ? "marcación con PIN" : "reconocimiento facial") } : { estado: "WARNING", titulo: "Ninguna tablet activada" };
+    }),
+    wfChk("luz_core", "Luz Core (agentes)", async function () {
+      if (typeof lcPersistencia !== "function") return { estado: "UNAVAILABLE", titulo: "Luz Core no está cargado" };
+      var p = await lcPersistencia(); return p.activa ? { estado: "READY", titulo: "Memoria y propuestas activas" } : { estado: "WARNING", titulo: "Falta la migración de Luz Core", detalle: "Los agentes funcionan pero no guardan memoria." };
+    })
+  ]);
+  return { estado: wfPeor(list), sistemas: list, semana: sem };
+}
+app.get("/api/equipo/semana/sync", wfAuth("dia"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid), sem = wfIsDay(req.query.semana) ? wfMonday(req.query.semana) : wfMonday(wfDay(Date.now(), cfg.zona_horaria));
+  var r = await wfWeekSync(rid, cfg, sem), w = (await wfGet("wf_operacion?restaurante_id=eq." + rid + "&tipo=eq.semana&clave=eq." + sem + "&limit=1"))[0] || null;
+  res.set("Cache-Control", "no-store"); res.json(Object.assign({ ok: true, servidor_at: wfNowISO(), registro: w }, r));
+}));
+app.post("/api/equipo/semana/confirmar", wfAuth("dia"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid), sem = wfIsDay(req.body && req.body.semana) ? wfMonday(req.body.semana) : wfMonday(wfDay(Date.now(), cfg.zona_horaria));
+  var r = await wfWeekSync(rid, cfg, sem), av = r.sistemas.filter(function (s) { return s.estado !== "READY"; });
+  if (r.estado === "BLOCKING") throw wfErr(409, "bloqueos", "Hay sistemas bloqueados. Resuélvelos antes de confirmar la semana.", { sync: r });
+  if (av.length && !(req.body && req.body.confirmo_avisos)) throw wfErr(409, "avisos", "Revisa los avisos antes de confirmar.", { sync: r });
+  var row = (await wfPost("wf_operacion", { restaurante_id: rid, tipo: "semana", clave: sem, abierto_at: wfNowISO(), abierto_por: req.wf.nombre, avisos_apertura: av }, { upsert: true, qs: "on_conflict=restaurante_id,tipo,clave" }))[0];
+  await wfEvento(rid, { accion: "semana_sincronizada", fuente: "panel", metadata: { actor: req.wf.nombre, semana: sem, avisos: av.map(function (a) { return a.id; }) } });
+  res.json({ ok: true, registro: row, sync: r });
+}));
+// HORAS: horas normales/extra de una semana, calculadas en el servidor con la misma regla de nómina (no guarda nada)
+app.get("/api/equipo/horas", wfAuth("ver"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid), tz = cfg.zona_horaria, sem = wfIsDay(req.query.semana) ? wfMonday(req.query.semana) : wfMonday(wfDay(Date.now(), tz));
+  var per = { id: "00000000-0000-0000-0000-000000000000", inicio: sem, fin: wfAddDays(sem, 6) }, d = await wfDatosPeriodo(rid, per, cfg); d.ajustes = [];
+  var c = wfCalcular(per, d, cfg), verTarifa = wfPuede(req.wf, "nomina_ver");
+  var abiertos = {}; d.sesiones.forEach(function (s) { if (s.estado !== "CLOCKED_OUT") abiertos[s.empleado_id] = (abiertos[s.empleado_id] || 0) + wfMinutos(s); });
+  res.json({ ok: true, semana: sem, regla: wfRegla(cfg, sem), factor_extra: cfg.horas_extra.factor, nota: cfg.horas_extra.nota, servidor_at: wfNowISO(),
+    personas: c.items.map(function (i) { return { empleado_id: i.empleado_id, nombre: i.nombre, minutos_normales: i.minutos_normales, minutos_extra: i.minutos_extra, minutos_en_curso: abiertos[i.empleado_id] || 0, dias: i.detalle.dias, total_estimado: verTarifa ? i.total : undefined }; }),
+    totales: { minutos_normales: c.totales.minutos_normales, minutos_extra: c.totales.minutos_extra } });
+}));
+
+// ═══ DOCUMENTOS DEL EMPLEADO + LUZ ID ═══════════════════════════════════════
+app.get("/api/equipo/empleados/:id/documentos", wfAuth("identidad"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id); if (!id || !(await wfEmpleado(rid, id))) throw wfErr(404, "empleado", "Persona no encontrada.");
+  var r = await Promise.all([wfGet("wf_documentos?restaurante_id=eq." + rid + "&empleado_id=eq." + id + "&select=id,tipo,titulo,version,contenido_hash,estado,decision_at,evidencia,created_at&order=created_at.desc&limit=100"), wfGet("wf_identidades?restaurante_id=eq." + rid + "&empleado_id=eq." + id + "&select=id,proveedor,estado,enrolado_at,revocado_at,revocado_por&order=enrolado_at.desc&limit=20")]);
+  var cfg = await wfConfig(rid), prov = wfBio(cfg);
+  res.json({ ok: true, documentos: r[0], identidades: r[1], plantilla_biometrica: { version: WF_DOC_BIO.version, titulo: WF_DOC_BIO.titulo }, biometria: Object.assign({ proveedor: prov.id }, prov.estado()) });
+}));
+app.post("/api/equipo/empleados/:id/documentos", wfAuth("identidad"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), b = req.body || {}, e = id && await wfEmpleado(rid, id); if (!e) throw wfErr(404, "empleado", "Persona no encontrada.");
+  var doc;
+  if (b.tipo === "autorizacion_biometrica") {
+    var ya = (await wfGet("wf_documentos?restaurante_id=eq." + rid + "&empleado_id=eq." + id + "&tipo=eq.autorizacion_biometrica&version=eq." + WF_DOC_BIO.version + "&estado=in.(pendiente,aceptado)&limit=1"))[0];
+    if (ya) return res.json({ ok: true, documento: ya, existente: true });
+    doc = { tipo: WF_DOC_BIO.tipo, titulo: WF_DOC_BIO.titulo, version: WF_DOC_BIO.version, contenido_texto: WF_DOC_BIO.texto, contenido_hash: WF_DOC_BIO.hash };
+  } else {
+    if (["contrato", "politica", "otro"].indexOf(b.tipo) < 0) throw wfErr(400, "tipo", "Tipo de documento no válido.");
+    var titulo = wfClean(b.titulo, 120), texto = String(b.texto || "").replace(/\u0000/g, "").slice(0, 20000), ver = wfClean(b.version || "v1", 30);
+    if (titulo.length < 3 || texto.trim().length < 20) throw wfErr(400, "datos", "El documento necesita título y texto.");
+    doc = { tipo: b.tipo, titulo: titulo, version: ver, contenido_texto: texto, contenido_hash: wfSha(ver + "\n" + texto) };
+  }
+  var row = (await wfPost("wf_documentos", Object.assign({ restaurante_id: rid, empleado_id: id, estado: "pendiente" }, doc)))[0];
+  await wfEvento(rid, { empleado_id: id, accion: "documento_enviado", fuente: "panel", metadata: { actor: req.wf.nombre, tipo: doc.tipo, version: doc.version } });
+  res.json({ ok: true, documento: row, nota: "La persona lo verá en MI TURNO y decide ella misma. Negarse a la biometría no tiene consecuencias." });
+}));
+async function wfConsentimientoVigente(rid, eid) { return (await wfGet("wf_documentos?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&tipo=eq.autorizacion_biometrica&version=eq." + WF_DOC_BIO.version + "&estado=eq.aceptado&limit=1"))[0] || null; }
+app.post("/api/equipo/empleados/:id/luz-id/iniciar", wfAuth("identidad"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), e = id && await wfEmpleado(rid, id); if (!e) throw wfErr(404, "empleado", "Persona no encontrada.");
+  var cfg = await wfConfig(rid), prov = wfBio(cfg);
+  if (prov.id === "none") throw wfErr(409, "biometria_no_configurada", "Reconocimiento facial no configurado", { paso: "proveedor" });
+  var c = await wfConsentimientoVigente(rid, id); if (!c) throw wfErr(409, "sin_autorizacion", "La persona aún no ha aceptado la autorización biométrica en MI TURNO.", { paso: "autorizacion" });
+  var s = await prov.crearSesionLiveness({ rid: rid, empleado_id: id, proposito: "enrolamiento" });
+  res.json({ ok: true, liveness: s });
+}));
+app.post("/api/equipo/empleados/:id/luz-id/completar", wfAuth("identidad"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), e = id && await wfEmpleado(rid, id); if (!e) throw wfErr(404, "empleado", "Persona no encontrada.");
+  var cfg = await wfConfig(rid), prov = wfBio(cfg); if (prov.id === "none") throw wfErr(409, "biometria_no_configurada", "Reconocimiento facial no configurado");
+  var c = await wfConsentimientoVigente(rid, id); if (!c) throw wfErr(409, "sin_autorizacion", "Falta la autorización biométrica vigente.");
+  var r = await prov.enrolar({ rid: rid, empleado_id: id, liveness_session_id: String(req.body && req.body.liveness_session_id || "") });
+  if (!r || !r.referencia || r.live !== true) throw wfErr(422, "enrolamiento_fallido", "El proveedor no confirmó una captura real. No se registró nada.");
+  await wfPatch("wf_identidades", "empleado_id=eq." + id + "&restaurante_id=eq." + rid + "&estado=eq.activa", { estado: "revocada", revocado_at: wfNowISO(), revocado_por: "reemplazada" });
+  var idn = (await wfPost("wf_identidades", { restaurante_id: rid, empleado_id: id, proveedor: prov.id, referencia: r.referencia, documento_id: c.id }))[0];
+  await wfEvento(rid, { empleado_id: id, accion: "luz_id_registrado", metodo: "FACE", fuente: "panel", metadata: { actor: req.wf.nombre, proveedor: prov.id } });
+  res.json({ ok: true, identidad: { id: idn.id, proveedor: idn.proveedor, estado: idn.estado, enrolado_at: idn.enrolado_at } });
+}));
+async function wfRevocarIdentidad(rid, eid, por) {
+  var cfg = await wfConfig(rid), ids = await wfGet("wf_identidades?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&estado=eq.activa&limit=5");
+  for (var i = 0; i < ids.length; i++) { var p = WF_BIO[ids[i].proveedor]; if (p && p.id !== "none") { try { await p.eliminar({ rid: rid, referencia: ids[i].referencia }); } catch (e) { console.warn("[equipo] no se pudo borrar en proveedor:", e.message); } } }
+  if (ids.length) await wfPatch("wf_identidades", "restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&estado=eq.activa", { estado: "revocada", revocado_at: wfNowISO(), revocado_por: por });
+  await wfPatch("wf_empleados", "id=eq." + eid + "&restaurante_id=eq." + rid, { metodo_verificacion: "pin", updated_at: wfNowISO() }); wfEmpInvalidar(rid, eid);
+  void cfg; return ids.length;
+}
+app.post("/api/equipo/empleados/:id/luz-id/revocar", wfAuth("identidad"), wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), razon = wfClean(req.body && req.body.razon, 300); if (!id) throw wfErr(400, "datos", "Persona no válida."); if (razon.length < 4) throw wfErr(400, "razon", "Escribe la razón.");
+  var n = await wfRevocarIdentidad(rid, id, req.wf.nombre);
+  await wfEvento(rid, { empleado_id: id, accion: "luz_id_revocado", fuente: "panel", metadata: { actor: req.wf.nombre, razon: razon, identidades: n } });
+  res.json({ ok: true, revocadas: n });
+}));
+
+// ═══ MI TURNO (solo los datos de la propia persona) ═════════════════════════
+app.get("/api/equipo/mi/resumen", wfAuthEmp, wfRoute(async function (req, res) {
+  var rid = req.wf.rid, eid = req.wf.id, cfg = await wfConfig(rid), tz = cfg.zona_horaria, hoy = wfDay(Date.now(), tz), lun = wfMonday(hoy), desde = wfAddDays(hoy, -20);
+  var r = await Promise.all([
+    wfGet("wf_sesiones?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&or=(estado.in.(ACTIVE,ON_BREAK),entrada_at.gte." + wfLocalToDate(desde, "00:00", tz).toISOString() + ")&order=entrada_at.desc&limit=200"),
+    wfGet("wf_turnos?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&estado=eq.publicado&fin=gte." + new Date().toISOString() + "&inicio=lt." + wfLocalToDate(wfAddDays(hoy, 15), "00:00", tz).toISOString() + "&select=id,inicio,fin,rol,notas&order=inicio.asc&limit=60"),
+    wfGet("wf_incidencias?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&order=created_at.desc&limit=30"),
+    wfGet("wf_documentos?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&select=id,tipo,titulo,version,estado,decision_at,created_at&order=created_at.desc&limit=30"),
+    wfGet("wf_nomina_periodos?restaurante_id=eq." + rid + "&inicio=lte." + hoy + "&order=inicio.desc&limit=2"),
+    wfGet("restaurantes?id=eq." + rid + "&select=nombre&limit=1"),
+    wfGet("wf_identidades?restaurante_id=eq." + rid + "&empleado_id=eq." + eid + "&estado=eq.activa&select=proveedor,enrolado_at&limit=1")
+  ]);
+  var ses = r[0], abierta = ses.filter(function (s) { return s.estado !== "CLOCKED_OUT"; })[0] || null, semMin = 0;
+  ses.forEach(function (s) { if (wfDay(s.entrada_at, tz) >= lun) semMin += s.estado === "CLOCKED_OUT" ? Number(s.minutos_trabajados || 0) : 0; });
+  var pago = null;
+  if (cfg.mostrar_estimado_empleado && r[4][0]) {
+    var p = r[4][0], it = (await wfGet("wf_nomina_items?periodo_id=eq." + p.id + "&empleado_id=eq." + eid + "&limit=1"))[0];
+    pago = { periodo: { inicio: p.inicio, fin: p.fin, estado: p.estado }, etiqueta: p.estado === "pagado" || p.estado === "cerrado" ? "PAGO REGISTRADO" : p.estado === "aprobado" ? "APROBADO" : "ESTIMADO",
+      calculado_at: p.calculado_at, item: it ? { minutos_normales: it.minutos_normales, minutos_extra: it.minutos_extra, bonos: it.bonos, deducciones: it.deducciones, total: it.detalle && it.detalle.total_estimado === null ? null : it.total, ajustes: (it.detalle && it.detalle.ajustes) || [] } : null, moneda: cfg.moneda };
+  }
+  var e = req.wf.emp;
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, servidor_at: wfNowISO(), zona_horaria: tz, restaurante: { id: rid, nombre: (r[5][0] || {}).nombre },
+    yo: { id: e.id, nombre: e.nombre, rol: e.rol, permiso: e.permiso, metodo_verificacion: e.metodo_verificacion, luz_id: r[6][0] || null },
+    sesion_abierta: wfSesionPublica(abierta), semana: { desde: lun, minutos_cerrados: semMin }, proximos_turnos: r[1],
+    sesiones: ses.filter(function (s) { return s.estado === "CLOCKED_OUT"; }).slice(0, 40).map(function (s) { var o = wfSesionPublica(s); o.dia = wfDay(s.entrada_at, tz); return o; }),
+    incidencias: r[2], documentos: r[3], pago: pago, marcar_desde_celular: !!cfg.marcar_desde_celular, supervisa: WF_RANK[e.permiso] >= WF_RANK.supervisor, aprueba_pin: (cfg.pin_temporal.aprobadores || []).indexOf(e.permiso) >= 0 });
+}));
+app.post("/api/equipo/mi/incidencias", wfAuthEmp, wfRoute(async function (req, res) {
+  var rid = req.wf.rid, b = req.body || {}, desc = wfClean(b.descripcion, 600), tipo = ["diferencia_horas", "salida_faltante", "otro"].indexOf(b.tipo) >= 0 ? b.tipo : "otro", sid = wfUuid(b.sesion_id);
+  if (desc.length < 6) throw wfErr(400, "datos", "Cuéntanos qué pasó (mínimo unas palabras).");
+  var rt = wfRate("inc:" + req.wf.id, 10, 24 * 3600e3); if (rt.bloqueado) throw wfErr(429, "intentos", "Ya enviaste varias incidencias hoy. Habla con tu supervisor."); rt.fallo();
+  if (sid && !(await wfGet("wf_sesiones?id=eq." + sid + "&empleado_id=eq." + req.wf.id + "&restaurante_id=eq." + rid + "&select=id&limit=1")).length) throw wfErr(404, "sesion", "Ese registro no es tuyo.");
+  var hp = b.hora_propuesta ? new Date(b.hora_propuesta) : null; if (hp && isNaN(hp)) hp = null;
+  var row = (await wfPost("wf_incidencias", { restaurante_id: rid, empleado_id: req.wf.id, sesion_id: sid, tipo: tipo, descripcion: desc, hora_propuesta: hp ? hp.toISOString() : null, creado_por: "empleado" }))[0];
+  await wfEvento(rid, { empleado_id: req.wf.id, sesion_id: sid, accion: "incidencia_creada", fuente: "portal" }); WF.ahoraCache.delete(rid);
+  res.json({ ok: true, incidencia: row, nota: "Tu supervisor la revisará. Tus horas no cambian hasta que la aprueben." });
+}));
+app.post("/api/equipo/mi/incidencias/:id/responder", wfAuthEmp, wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), txt = wfClean(req.body && req.body.texto, 600); if (!id || txt.length < 3) throw wfErr(400, "datos", "Escribe tu respuesta.");
+  var inc = (await wfGet("wf_incidencias?id=eq." + id + "&empleado_id=eq." + req.wf.id + "&restaurante_id=eq." + rid + "&limit=1"))[0]; if (!inc) throw wfErr(404, "incidencia", "No encontrada.");
+  if (inc.estado !== "info_solicitada") throw wfErr(409, "estado", "Esta incidencia no está esperando información.");
+  var u = await wfPatch("wf_incidencias", "id=eq." + id + "&estado=eq.info_solicitada", { estado: "abierta", descripcion: (inc.descripcion + "\n— Respuesta: " + txt).slice(0, 600), updated_at: wfNowISO() });
+  await wfEvento(rid, { empleado_id: req.wf.id, accion: "incidencia_respondida", fuente: "portal" }); res.json({ ok: true, incidencia: u[0] });
+}));
+app.get("/api/equipo/mi/documentos/:id", wfAuthEmp, wfRoute(async function (req, res) {
+  var id = wfUuid(req.params.id), d = id && (await wfGet("wf_documentos?id=eq." + id + "&empleado_id=eq." + req.wf.id + "&restaurante_id=eq." + req.wf.rid + "&limit=1"))[0]; if (!d) throw wfErr(404, "documento", "No encontrado.");
+  delete d.evidencia; res.json({ ok: true, documento: d });
+}));
+app.post("/api/equipo/mi/documentos/:id/decidir", wfAuthEmp, wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), b = req.body || {}, dec = b.decision;
+  var d = id && (await wfGet("wf_documentos?id=eq." + id + "&empleado_id=eq." + req.wf.id + "&restaurante_id=eq." + rid + "&limit=1"))[0]; if (!d) throw wfErr(404, "documento", "No encontrado.");
+  if (["aceptar", "rechazar"].indexOf(dec) < 0) throw wfErr(400, "datos", "Decisión no válida.");
+  if (d.estado !== "pendiente") throw wfErr(409, "ya_decidido", "Ya decidiste sobre este documento.");
+  if (dec === "aceptar" && (b.leido !== true || b.hash !== d.contenido_hash)) throw wfErr(400, "lectura", "Abre y lee el documento completo antes de aceptarlo.");
+  var ev = { at: wfNowISO(), canal: "MI TURNO", empleado_id: req.wf.id, contenido_hash: d.contenido_hash, version: d.version, ip_hash: wfSha(wfIp(req)).slice(0, 16), agente: wfClean(req.headers["user-agent"], 160), sesion: "PIN personal" };
+  var u = await wfPatch("wf_documentos", "id=eq." + id + "&estado=eq.pendiente", { estado: dec === "aceptar" ? "aceptado" : "rechazado", decision_at: ev.at, evidencia: ev, updated_at: ev.at });
+  if (!u.length) throw wfErr(409, "ya_decidido", "Ya decidiste sobre este documento.");
+  await wfEvento(rid, { empleado_id: req.wf.id, accion: "documento_" + (dec === "aceptar" ? "aceptado" : "rechazado"), fuente: "portal", metadata: { documento_id: id, tipo: d.tipo, version: d.version } });
+  res.json({ ok: true, estado: u[0].estado });
+}));
+app.post("/api/equipo/mi/documentos/:id/revocar", wfAuthEmp, wfRoute(async function (req, res) {
+  var rid = req.wf.rid, id = wfUuid(req.params.id), d = id && (await wfGet("wf_documentos?id=eq." + id + "&empleado_id=eq." + req.wf.id + "&restaurante_id=eq." + rid + "&limit=1"))[0]; if (!d) throw wfErr(404, "documento", "No encontrado.");
+  if (d.tipo !== "autorizacion_biometrica" || d.estado !== "aceptado") throw wfErr(409, "estado", "Solo puedes revocar una autorización biométrica aceptada.");
+  var at = wfNowISO(); await wfPatch("wf_documentos", "id=eq." + id + "&estado=eq.aceptado", { estado: "revocado", evidencia: Object.assign({}, d.evidencia, { revocado_at: at, revocado_por: "la persona, desde MI TURNO" }), updated_at: at });
+  var n = await wfRevocarIdentidad(rid, req.wf.id, "la persona (revocó su autorización)");
+  await wfEvento(rid, { empleado_id: req.wf.id, accion: "autorizacion_revocada", fuente: "portal", metadata: { documento_id: id, identidades: n } });
+  res.json({ ok: true, nota: "Listo. Tu LUZ ID se eliminó y vuelves a marcar con tu PIN." });
+}));
+app.post("/api/equipo/mi/pin", wfAuthEmp, wfRoute(async function (req, res) {
+  var b = req.body || {}, e = await wfEmpleado(req.wf.rid, req.wf.id, true);
+  if (!wfVerifyPin(String(b.actual || ""), e.pin_hash)) throw wfErr(401, "pin_incorrecto", "Tu PIN actual no es correcto.");
+  var deb = wfPinDebil(String(b.nuevo || "")); if (deb) throw wfErr(400, "pin_debil", deb);
+  if ((await wfRestPin(req.wf.rid, b.nuevo)).ok) throw wfErr(400, "pin_debil", "Tu PIN personal no puede ser el PIN del restaurante.");
+  var u = (await wfPatch("wf_empleados", "id=eq." + e.id + "&restaurante_id=eq." + req.wf.rid, { pin_hash: wfHashPin(b.nuevo), pin_fallos: 0, updated_at: wfNowISO() }))[0]; wfEmpInvalidar(req.wf.rid, e.id);
+  await wfEvento(req.wf.rid, { empleado_id: e.id, accion: "pin_cambiado", fuente: "portal" });
+  res.json(Object.assign({ ok: true }, wfTokEmp(u)));
+}));
+app.post("/api/equipo/mi/fichar", wfAuthEmp, wfRoute(async function (req, res) {
+  var rid = req.wf.rid, cfg = await wfConfig(rid), b = req.body || {};
+  if (!cfg.marcar_desde_celular) throw wfErr(403, "solo_luz_check", "En tu restaurante se marca en la tablet LUZ CHECK.");
+  var e = await wfEmpleado(rid, req.wf.id, true); await wfVerificarPinEmpleado(rid, e, b.pin, { fuente: "celular" });
+  res.json(await wfFichar(rid, e, String(b.accion || ""), { metodo: "EMPLOYEE_PIN", client_key: b.client_key, fuente: "celular", cfg: cfg }));
+}));
+
+// ═══ Página LUZ CHECK / MI TURNO ════════════════════════════════════════════
+app.get("/equipo", function (req, res) { res.set("Cache-Control", "no-store, no-cache, must-revalidate"); res.sendFile(path.join(__dirname, "equipo.html")); });
+
+// ═══ Agente WORKFORCE en Luz Core (región OPERACIÓN) ════════════════════════
+// Observa y avisa. Nunca despide, suspende, sanciona, recorta pago ni marca horas por nadie.
+WF.tieneEquipo = new Map();
+if (typeof LC_AGENTS !== "undefined" && typeof LC_AGENT_BY_ID !== "undefined" && !LC_AGENT_BY_ID.workforce) {
+  var WF_AGENT = { id: "workforce", n: 14, nombre: "Workforce", region: "operacion", ciclo: "rapido", risk_level: "medium", version: WF_VER,
+    capabilities: ["quién está en turno", "no llegó / salida faltante", "verificaciones pendientes", "incidencias del equipo"], accepted_events: [], required_context: ["sesiones abiertas", "turnos publicados de hoy", "solicitudes de verificación"], always: true,
+    nivel: "REAL", nivel_razon: "Lee la asistencia real registrada en LUZ CHECK y los turnos publicados. Solo avisa: nunca decide horas, pagos ni sanciones.",
+    trabajo: "Vigila la asistencia del equipo",
+    run: async function (ctx) {
+      var rid = ctx.rid;
+      if (WF.migracion && !WF.migracion.ok && Date.now() - WF.migracion.t < 10 * 60000) return lcOut({ status: "insufficient_data", confidence: "DATOS_INSUFICIENTES", reasoning_summary: "Falta aplicar la migración de Equipo.", corto: "Equipo sin configurar" });
+      var te = WF.tieneEquipo.get(rid);
+      if (!te || Date.now() - te.t > 10 * 60000) { var x = await wfGet("wf_empleados?restaurante_id=eq." + rid + "&activo=eq.true&select=id&limit=1"); WF.migracion = { ok: true, t: Date.now() }; te = { t: Date.now(), si: x.length > 0 }; WF.tieneEquipo.set(rid, te); }
+      if (!te.si) return lcOut({ status: "no_action", confidence: "HIGH", reasoning_summary: "NO_ACTION: aún no hay equipo registrado en EQUIPO.", corto: "Sin equipo registrado" });
+      var cfg = await wfConfig(rid), a = await wfAhora(rid, cfg), k = a.conteos, f = [];
+      var noL = a.personas.filter(function (p) { return p.alerta === "no_llega"; }), falt = a.personas.filter(function (p) { return p.alerta === "salida_faltante"; });
+      if (k.accesos_pendientes) f.push(lcFinding("wf_verif", k.accesos_pendientes + (k.accesos_pendientes === 1 ? " persona espera" : " personas esperan") + " verificación alternativa", "Apruébala o recházala en EQUIPO → AHORA.", "HIGH", "HIGH", []));
+      if (noL.length) f.push(lcFinding("wf_nollega", noL.length + (noL.length === 1 ? " persona con turno iniciado no ha marcado" : " personas con turno iniciado no han marcado"), noL.map(function (p) { return p.nombre; }).join(", ") + ". Puede ser un olvido: confirma antes de concluir nada.", "MEDIUM", "HIGH", noL.map(function (p) { return { empleado_id: p.id }; })));
+      if (falt.length) f.push(lcFinding("wf_salida", falt.length + " turno(s) llevan más de " + cfg.salida_faltante_horas + " h abiertos", "Probable salida sin marcar. Corrige con razón en ASISTENCIA.", "MEDIUM", "HIGH", falt.map(function (p) { return { empleado_id: p.id }; })));
+      if (k.incidencias_abiertas) f.push(lcFinding("wf_inc", k.incidencias_abiertas + " incidencia(s) del equipo por revisar", "Están en EQUIPO → INCIDENCIAS.", "LOW", "HIGH", []));
+      return lcOut({ status: f.length ? "ok" : "no_action", confidence: "HIGH", findings: f, reasoning_summary: k.en_turno + " en turno, " + k.en_descanso + " en descanso, " + k.programados_hoy + " programados hoy.", corto: k.en_turno + " en turno · " + k.en_descanso + " en descanso" + (noL.length ? " · " + noL.length + " sin llegar" : ""), equipo_wf: k });
+    } };
+  LC_AGENTS.push(WF_AGENT); LC_AGENT_BY_ID.workforce = WF_AGENT;
+}
+console.log("[equipo] ✅ Workforce " + WF_VER + " cargado (biometría: proveedor por defecto 'none')");
+
+// ═══ BiometricProvider: AWS Rekognition (Face Liveness + Face Search) ═══════
+// Solo se activa si existen AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY en el servidor Y el restaurante
+// eligió proveedor "aws_rekognition". Sin eso, LUZ CHECK sigue diciendo "Reconocimiento facial no configurado".
+// · No guardamos fotos: la imagen de referencia de liveness pasa en memoria a Rekognition y se descarta.
+// · En Rekognition queda solo la plantilla del rostro (FaceId) en una colección por restaurante.
+// · "IDENTIDAD VERIFICADA" solo cuando AWS confirma liveness (≥ umbral) Y el FaceId coincide con el de la persona.
+var WF_AWS_REGION = process.env.AWS_REKOGNITION_REGION || process.env.AWS_REGION || "us-east-1";
+var WF_AWS_LIVENESS_REGIONS = ["us-east-1", "us-west-2", "eu-west-1", "ap-northeast-1", "ap-south-1"];
+function wfAwsCreds() { var k = process.env.AWS_ACCESS_KEY_ID, s = process.env.AWS_SECRET_ACCESS_KEY; return k && s ? { k: k, s: s } : null; }
+function wfHmac(key, str, enc) { return crypto.createHmac("sha256", key).update(str, "utf8").digest(enc); }
+// Firma AWS Signature Version 4 (genérica). Verificada con los vectores oficiales get-vanilla / post-vanilla.
+function wfSigV4(o) {
+  var amzDate = o.amzDate || new Date().toISOString().replace(/[:-]|\.\d{3}/g, ""), dateStamp = amzDate.slice(0, 8);
+  var headers = Object.assign({}, o.headers || {}, { host: o.host, "x-amz-date": amzDate });
+  if (o.sessionToken) headers["x-amz-security-token"] = o.sessionToken;
+  var names = Object.keys(headers).map(function (h) { return h.toLowerCase(); }).sort(), lower = {};
+  Object.keys(headers).forEach(function (h) { lower[h.toLowerCase()] = String(headers[h]).trim().replace(/\s+/g, " "); });
+  var canonHeaders = names.map(function (h) { return h + ":" + lower[h] + "\n"; }).join(""), signed = names.join(";");
+  var payloadHash = crypto.createHash("sha256").update(o.body || "", "utf8").digest("hex");
+  var canon = [o.method || "POST", o.path || "/", o.query || "", canonHeaders, signed, payloadHash].join("\n");
+  var scope = dateStamp + "/" + o.region + "/" + o.service + "/aws4_request";
+  var sts = ["AWS4-HMAC-SHA256", amzDate, scope, crypto.createHash("sha256").update(canon, "utf8").digest("hex")].join("\n");
+  var kDate = wfHmac("AWS4" + o.secret, dateStamp), kReg = wfHmac(kDate, o.region), kSvc = wfHmac(kReg, o.service), kSig = wfHmac(kSvc, "aws4_request");
+  var signature = wfHmac(kSig, sts, "hex");
+  var out = {}; Object.keys(headers).forEach(function (h) { if (h !== "host") out[h] = headers[h]; });
+  out.Authorization = "AWS4-HMAC-SHA256 Credential=" + o.key + "/" + scope + ", SignedHeaders=" + signed + ", Signature=" + signature;
+  return { headers: out, signature: signature };
+}
+async function wfRekognition(op, payload) {
+  var c = wfAwsCreds(); if (!c) throw wfErr(409, "biometria_no_configurada", "Reconocimiento facial no configurado");
+  var host = "rekognition." + WF_AWS_REGION + ".amazonaws.com", body = JSON.stringify(payload || {});
+  var sg = wfSigV4({ method: "POST", host: host, path: "/", region: WF_AWS_REGION, service: "rekognition", key: c.k, secret: c.s, body: body, headers: { "content-type": "application/x-amz-json-1.1", "x-amz-target": "RekognitionService." + op } });
+  try { var r = await axios.post("https://" + host + "/", body, { headers: sg.headers, timeout: 15000, transformRequest: [function (d) { return d; }] }); return r.data || {}; }
+  catch (e) { var d = (e.response && e.response.data) || {}, t = String(d.__type || d.code || "").split("#").pop(); var er = wfErr(e.response && e.response.status < 500 ? 422 : 502, "aws_" + (t || "error"), "El proveedor biométrico respondió: " + (t || e.message)); er.awsType = t; throw er; }
+}
+async function wfAwsFederation(nombre) {
+  // Credenciales temporales (15 min) que SOLO permiten iniciar el streaming de liveness desde el navegador.
+  var c = wfAwsCreds(); if (!c) throw wfErr(409, "biometria_no_configurada", "Reconocimiento facial no configurado");
+  var policy = JSON.stringify({ Version: "2012-10-17", Statement: [{ Effect: "Allow", Action: "rekognition:StartFaceLivenessSession", Resource: "*" }] });
+  var body = "Action=GetFederationToken&Version=2011-06-15&DurationSeconds=900&Name=" + encodeURIComponent(nombre.slice(0, 32)) + "&Policy=" + encodeURIComponent(policy);
+  var sg = wfSigV4({ method: "POST", host: "sts.amazonaws.com", path: "/", region: "us-east-1", service: "sts", key: c.k, secret: c.s, body: body, headers: { "content-type": "application/x-www-form-urlencoded; charset=utf-8" } });
+  try {
+    var r = await axios.post("https://sts.amazonaws.com/", body, { headers: sg.headers, timeout: 15000, responseType: "text", transformRequest: [function (d) { return d; }] }), x = String(r.data || "");
+    var g = function (t) { var m = x.match(new RegExp("<" + t + ">([^<]+)</" + t + ">")); return m ? m[1] : null; };
+    if (!g("AccessKeyId")) throw new Error("respuesta STS inválida");
+    return { accessKeyId: g("AccessKeyId"), secretAccessKey: g("SecretAccessKey"), sessionToken: g("SessionToken"), expiration: g("Expiration") };
+  } catch (e) { if (e.wf) throw e; throw wfErr(502, "aws_sts", "No se pudieron emitir credenciales temporales para la cámara."); }
+}
+WF.liveSess = new Map(); // SessionId → { rid, eid, proposito, t, usada }
+setInterval(function () { var n = Date.now(); WF.liveSess.forEach(function (v, k) { if (n - v.t > 20 * 60000) WF.liveSess.delete(k); }); }, 5 * 60000).unref();
+function wfColeccion(rid) { return "holaluz-" + String(rid).replace(/[^a-z0-9-]/gi, ""); }
+async function wfAwsResultado(sid, rid, eid, proposito, cfg) {
+  var s = WF.liveSess.get(sid);
+  if (!s || s.rid !== rid || s.eid !== eid || s.proposito !== proposito) throw wfErr(403, "liveness_ajena", "Esa verificación no corresponde a esta persona.");
+  if (s.usada) throw wfErr(409, "liveness_usada", "Esa verificación ya se usó.");
+  if (Date.now() - s.t > 10 * 60000) throw wfErr(410, "liveness_vencida", "La verificación venció. Intenta de nuevo.");
+  s.usada = true;
+  var r = await wfRekognition("GetFaceLivenessSessionResults", { SessionId: sid });
+  var umbral = Number((cfg.biometria || {}).umbral_liveness || 90), conf = Number(r.Confidence || 0);
+  var bytes = r.ReferenceImage && r.ReferenceImage.Bytes;
+  return { live: r.Status === "SUCCEEDED" && conf >= umbral, confianza: conf, estado: r.Status, bytes: bytes || null };
+}
+WF_BIO.aws_rekognition = {
+  id: "aws_rekognition", nombre: "AWS Rekognition (Face Liveness)",
+  estado: function () {
+    var ok = !!wfAwsCreds();
+    return { configurado: ok, liveness: ok, match: ok, region: WF_AWS_REGION, region_liveness_valida: WF_AWS_LIVENESS_REGIONS.indexOf(WF_AWS_REGION) >= 0,
+      mensaje: ok ? "Reconocimiento facial con AWS Rekognition (" + WF_AWS_REGION + ")" : "Reconocimiento facial no configurado",
+      detalle: ok ? "Liveness real + comparación con la plantilla de la persona. No se guardan fotos." : "Faltan AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY en el servidor." };
+  },
+  crearSesionLiveness: async function (ctx) {
+    var r = await wfRekognition("CreateFaceLivenessSession", { ClientRequestToken: crypto.randomUUID(), Settings: { AuditImagesLimit: 0 } });
+    if (!r.SessionId) throw wfErr(502, "aws_sesion", "El proveedor no creó la sesión de verificación.");
+    WF.liveSess.set(r.SessionId, { rid: ctx.rid, eid: ctx.empleado_id, proposito: ctx.proposito, t: Date.now(), usada: false });
+    var cred = await wfAwsFederation("hl-" + String(ctx.rid).slice(0, 8) + "-" + Date.now().toString(36));
+    return { session_id: r.SessionId, region: WF_AWS_REGION, credenciales: cred, proveedor: "aws_rekognition" };
+  },
+  resultadoLiveness: async function (ctx) { return wfAwsResultado(ctx.liveness_session_id, ctx.rid, ctx.empleado_id, ctx.proposito, ctx.cfg || {}); },
+  enrolar: async function (ctx) {
+    var cfg = ctx.cfg || await wfConfig(ctx.rid), res = await wfAwsResultado(String(ctx.liveness_session_id || ""), ctx.rid, ctx.empleado_id, "enrolamiento", cfg);
+    if (!res.live) throw wfErr(422, "liveness_fallida", "No se confirmó que sea una persona real frente a la cámara (" + (res.estado || "sin resultado") + "). No se registró nada.");
+    if (!res.bytes) throw wfErr(422, "sin_imagen", "El proveedor no entregó la imagen de referencia. No se registró nada.");
+    var col = wfColeccion(ctx.rid);
+    try { await wfRekognition("CreateCollection", { CollectionId: col }); } catch (e) { if (e.awsType !== "ResourceAlreadyExistsException") throw e; }
+    // Antifraude: el mismo rostro no puede quedar registrado para dos personas.
+    try {
+      var dup = await wfRekognition("SearchFacesByImage", { CollectionId: col, Image: { Bytes: res.bytes }, MaxFaces: 1, FaceMatchThreshold: 95 });
+      var m = dup.FaceMatches && dup.FaceMatches[0];
+      if (m && m.Face && m.Face.ExternalImageId && m.Face.ExternalImageId !== ctx.empleado_id) {
+        var otra = (await wfGet("wf_identidades?restaurante_id=eq." + ctx.rid + "&referencia=eq." + encodeURIComponent(m.Face.FaceId) + "&estado=eq.activa&select=id&limit=1"))[0];
+        if (otra) throw wfErr(409, "rostro_duplicado", "Este rostro ya está registrado para otra persona del equipo.");
+      }
+    } catch (e) { if (e.wf && e.wf.code === "rostro_duplicado") throw e; if (e.awsType && e.awsType !== "InvalidParameterException") throw e; }
+    var ix = await wfRekognition("IndexFaces", { CollectionId: col, Image: { Bytes: res.bytes }, ExternalImageId: ctx.empleado_id, MaxFaces: 1, QualityFilter: "AUTO", DetectionAttributes: [] });
+    var fr = ix.FaceRecords && ix.FaceRecords[0];
+    if (!fr || !fr.Face || !fr.Face.FaceId) throw wfErr(422, "rostro_calidad", "No se detectó un rostro con calidad suficiente (luz o encuadre). No se registró nada.");
+    return { referencia: fr.Face.FaceId, live: true, confianza: res.confianza };
+  },
+  verificar: async function (ctx) {
+    var cfg = ctx.cfg || await wfConfig(ctx.rid), res = await wfAwsResultado(String(ctx.liveness_session_id || ""), ctx.rid, ctx.empleado_id, "verificacion", cfg);
+    if (!res.live) return { live: false, match: false, motivo: "liveness", estado: res.estado };
+    if (!res.bytes) return { live: true, match: false, motivo: "sin_imagen" };
+    var umbral = Number((cfg.biometria || {}).umbral_similitud || 95);
+    var r;
+    try { r = await wfRekognition("SearchFacesByImage", { CollectionId: wfColeccion(ctx.rid), Image: { Bytes: res.bytes }, MaxFaces: 1, FaceMatchThreshold: umbral }); }
+    catch (e) { if (e.awsType === "InvalidParameterException") return { live: true, match: false, motivo: "sin_rostro" }; throw e; }
+    var m = r.FaceMatches && r.FaceMatches[0], ok = !!(m && m.Face && m.Face.FaceId === ctx.referencia);
+    return { live: true, match: ok, similitud: m ? m.Similarity : null, motivo: ok ? null : (m ? "otra_persona" : "desconocido") };
+  },
+  eliminar: async function (ctx) { await wfRekognition("DeleteFaces", { CollectionId: wfColeccion(ctx.rid), FaceIds: [ctx.referencia] }); return { ok: true }; }
+};
+// LUZ CHECK: la tablet pide una sesión de liveness para verificar a una persona con LUZ ID
+app.post("/api/equipo/kiosko/liveness", wfKiosk, wfRoute(async function (req, res) {
+  var rid = req.wfRid, eid = wfUuid(req.body && req.body.empleado_id); if (!eid) throw wfErr(400, "datos", "Selecciona tu nombre.");
+  var rt = wfRate("kl:" + req.dev.id + ":" + eid, 10, 15 * 60000); if (rt.bloqueado) throw wfErr(429, "intentos", "Demasiados intentos. Usa tu PIN o pide verificación alternativa."); rt.fallo();
+  var cfg = await wfConfig(rid), prov = wfBio(cfg); if (prov.id === "none") throw wfErr(409, "biometria_no_configurada", "Reconocimiento facial no configurado");
+  var idn = (await wfGet("wf_identidades?empleado_id=eq." + eid + "&restaurante_id=eq." + rid + "&estado=eq.activa&select=id&limit=1"))[0];
+  if (!idn) throw wfErr(409, "sin_luz_id", "Esta persona no tiene LUZ ID. Marca con PIN.");
+  res.set("Cache-Control", "no-store");
+  res.json(Object.assign({ ok: true }, await prov.crearSesionLiveness({ rid: rid, empleado_id: eid, proposito: "verificacion" })));
+}));
+app.get("/equipo-liveness.js", function (req, res) { res.set("Cache-Control", "public, max-age=86400"); res.sendFile(path.join(__dirname, "equipo-liveness.js"), function (e) { if (e && !res.headersSent) res.status(404).type("js").send("/* componente de liveness no instalado */"); }); });
 
 
 // ═══════════════════════════════════════════════════════════
@@ -8594,7 +10230,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
         orderState[from].comprobanteMediaId = mediaId;
         orderState[from].comprobanteUrl = orderState[from].comprobanteUrl || ("/api/comprobante/" + mediaId);
         sideEffect = "pago_confirmado";
-        cleanReply = "Comprobante validado. Estoy registrando tu pedido…";
+        cleanReply = "Listo! Recibimos tu comprobante, tu pedido entra a preparación ahora mismo. Te avisamos cuando esté listo y cuando salga el domiciliario.";
       } else {
         // Bloqueo duro: aunque el modelo haya escrito PAGO_CONFIRMADO por error,
         // el backend NO crea el pedido hasta recibir una evidencia validada.
@@ -8654,12 +10290,26 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       if (mod) {
       try {
         var svcKey = SUPABASE_SERVICE_KEY_VAL;
-        var pedResp = await axios.get(
-          SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id + "&numero_pedido=eq." + mod.numero + "&select=id,items,total,subtotal,desechables,domicilio,notas_especiales,estado,direccion,metodo_pago",
-          { headers: { "apikey": svcKey, "Authorization": "Bearer " + svcKey } }
-        );
+        // HOTFIX 13: solo se modifican pedidos ACTIVOS de este mismo cliente (nunca uno entregado ni de otra persona).
+        var activosMod = await hlPedidosActivosCliente(restaurante.id, from, 24);
+        var numMod = String(mod.numero || "").replace(/[^0-9]/g, "");
+        var pedSel = activosMod.filter(function (p) { return String(p.numero_pedido) === numMod; })[0] || activosMod[0] || null;
+        var stPend = orderState[from];
+        if (!pedSel && stPend && Array.isArray(stPend.items) && stPend.items.length && stPend.status !== "confirmado") {
+          // El pedido todavía no está guardado (esperando pago/dirección): se modifica el borrador en memoria.
+          var accP = String(mod.accion || "");
+          if (/^AGREGAR:/.test(accP)) { var itP = accP.replace(/^AGREGAR:/, "").trim(), prP = itP.match(/\$([0-9.,]+)/); stPend.items.push(itP); if (prP) stPend.total = Number(stPend.total || 0) + Number(prP[1].replace(/[.,]/g, "")); }
+          else if (/^(ELIMINAR|QUITAR):/.test(accP)) { var qP = accP.replace(/^(ELIMINAR|QUITAR):/, "").trim().toLowerCase(), ixP = stPend.items.findIndex(function (it) { return String(typeof it === "string" ? it : (it && it.nombre) || "").toLowerCase().indexOf(qP) !== -1; }); if (ixP !== -1) { var rmP = String(stPend.items.splice(ixP, 1)[0]).match(/\$([0-9.,]+)/); if (rmP) stPend.total = Math.max(0, Number(stPend.total || 0) - Number(rmP[1].replace(/[.,]/g, ""))); } }
+          else if (/^DIRECCION:/.test(accP)) stPend.address = accP.replace(/^DIRECCION:/, "").trim();
+          else if (/^NOTA:/.test(accP)) stPend.notasEspeciales = (stPend.notasEspeciales ? stPend.notasEspeciales + " | " : "") + accP.replace(/^NOTA:/, "").trim();
+          await setOrderState(from, stPend).catch(function () {});
+          console.log("[modificar] aplicado al pedido en curso (aún sin guardar) de", from);
+        } else if (!pedSel) {
+          guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "⚠️ El cliente pidió modificar su pedido (" + mod.accion + ") pero no encontré un pedido activo suyo. Revísalo.", "alerta_pregunta", null).catch(function(){});
+        }
+        var pedResp = { data: pedSel ? [pedSel] : [] };
         if (pedResp.data && pedResp.data.length > 0) {
-          var ped = pedResp.data[0];
+          var ped = pedResp.data[0]; mod.numero = String(ped.numero_pedido);
           var patch = {};
           var notaAnterior = ped.notas_especiales || "";
           if (mod.accion.startsWith("AGREGAR:")) {
@@ -8691,7 +10341,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
           } else if (mod.accion.startsWith("ELIMINAR:") || mod.accion.startsWith("QUITAR:")) {
             var itemQuitar = mod.accion.replace(/^(ELIMINAR|QUITAR):/, "").trim().toLowerCase();
             var itemsAct2 = Array.isArray(ped.items) ? [...ped.items] : [];
-            var idx = itemsAct2.findIndex(function(it) { return it.toLowerCase().indexOf(itemQuitar) !== -1; });
+            var idx = itemsAct2.findIndex(function(it) { return String(typeof it === "string" ? it : (it && it.nombre) || "").toLowerCase().indexOf(itemQuitar) !== -1; });
             if (idx !== -1) {
               var removido = itemsAct2.splice(idx, 1)[0];
               patch.items = itemsAct2;
@@ -8726,6 +10376,21 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       console.log("Solicitud cancelacion pedido #" + numCancel + " de:", from);
     }
 
+    // HOTFIX 13 · Guardián de confirmación: Luz no puede decir que un pedido está confirmado/en preparación
+    // si el sistema no lo confirmó en este mensaje y ese cliente no tiene ningún pedido activo registrado.
+    try {
+      var stG = orderState[from];
+      if (restaurante && sideEffect !== "pago_confirmado" && stG && Array.isArray(stG.items) && stG.items.length &&
+          /(entr[aoó]\s+(a|en)\s+preparaci|(ya )?est[aá] en preparaci|pedido (ya )?(est[aá] )?confirmado|confirm(amos|é) tu pedido|pedido (ya )?entr[oó] a cocina|(va|est[aá]) en camino)/i.test(cleanReply)) {
+        var actG = await hlPedidosActivosCliente(restaurante.id, from, 6).catch(function () { return null; });
+        if (actG && !actG.length) {
+          console.warn("[guardian-confirmacion] bloqueado: Luz iba a confirmar sin pedido registrado para", from, "| texto:", cleanReply.slice(0, 120));
+          cleanReply = "Estoy validando tu pago con el restaurante 🙏 En cuanto quede confirmado te aviso por aquí.";
+          rawReply = cleanReply;
+          guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "⚠️ REVISAR PAGO: Luz iba a confirmar el pedido de este cliente pero el pago no quedó validado y el pedido NO está registrado. Total esperado $" + Number(stG.total || 0).toLocaleString("es-CO") + ". Valida el pago y crea el pedido.", "alerta_pregunta", null).catch(function () {});
+        }
+      }
+    } catch (eG) { console.warn("[guardian-confirmacion]", eG.message); }
     conversations[from].push({ role: "assistant", content: rawReply });
     await sendWhatsAppMessage(from, cleanReply, phoneNumberId);
 
@@ -8781,10 +10446,9 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       var state = orderState[from];
       var timestamp = new Date().toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
 
-      // Asignar número de pedido por restaurante (secuencial, sin huecos)
-      if (!state.orderNumber || state.orderNumber === 0) {
-        state.orderNumber = await getNextOrderNumber(restaurante ? restaurante.id : "global");
-      }
+      // HOTFIX 13: el número definitivo siempre sale de la base, por restaurante (antes podía ser #101 repetido).
+      try { state.orderNumber = await getNextOrderNumber(restaurante ? restaurante.id : "global"); }
+      catch (eNumPed) { state.orderNumber = 0; }
 
       await printTicket({
         orderNumber: state.orderNumber, items: state.items,
@@ -8814,7 +10478,6 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
         } catch (e) {}
       }
 
-      var pedidoPersistido = null;
       if (restId) {
         // Recuperar únicamente desde el tag de UN mensaje. Nunca concatenar toda
       // la conversación: eso mezclaba dirección, método de pago y respuestas.
@@ -8823,7 +10486,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
         if (recoveredAddress) state.address = recoveredAddress;
       }
       state.address = hlCleanOrderAddress(state.address) || "Por confirmar";
-      pedidoPersistido = await guardarPedidoSupabase(restId, {
+      await guardarPedidoSupabase(restId, {
           orderNumber: state.orderNumber, phone: from, items: state.items,
           subtotal: Number(state.total) - Number(state.desechables||0) - Number(state.domicilio||0),
           desechables: Number(state.desechables||0), domicilio: Number(state.domicilio||0),
@@ -8834,21 +10497,6 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
           notasEspeciales: state.notasEspeciales || null,
           pedidoAdicionalDe: state.pedidoAdicionalDe || null
         });
-      }
-
-      if (!pedidoPersistido) {
-        // No mentir al cliente ni perder el pedido si Supabase no confirmó el INSERT.
-        state.status = "confirmacion_pendiente_backend";
-        await setOrderState(from, state);
-        console.error("[pedido] INSERT no confirmado; se conserva orderState para reintento", state.orderNumber);
-        throw new Error("PEDIDO_NO_PERSISTIDO");
-      }
-
-      // Confirmación definitiva únicamente DESPUÉS de que Supabase devolvió la fila creada.
-      if (esImagen && state.comprobanteMediaId) {
-        var finalConfirmMsg = "Listo! Tu comprobante pasó la validación y tu pedido #" + state.orderNumber + " ya quedó registrado. Entra a preparación ahora mismo. Te avisamos cuando esté listo y cuando salga el domiciliario.";
-        await sendWhatsAppMessage(from, finalConfirmMsg, phoneNumberId).catch(function(){});
-        if (restaurante) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), finalConfirmMsg, "restaurante", null).catch(function(){});
       }
 
       // ── NOTIFICAR AL DUEÑO: nuevo pedido por WhatsApp ──────────────────
