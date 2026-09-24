@@ -8633,17 +8633,17 @@ window.renderOrdersV5=function(){
   function detectProofV83(rows){(rows||[]).forEach(function(p){if(!p||!p.id)return;var key=String(p.id),has=!!proofUrlV83(p),old=proofSnapshotV83[key];proofSnapshotV83[key]=has;if(proofSnapshotReadyV83&&old===false&&has){noticeV83('success','Comprobante recibido · #'+(p.numero_pedido||''),'El pago adjunto ya está disponible en la tarjeta del pedido.');try{if(typeof playSound==='function')playSound('pago_recibido')}catch(e){}}});proofSnapshotReadyV83=true;}
 
   var prevRenderOrdersV83=window.renderOrdersV2;
-  window.renderOrdersV2=function(rows){rows=Array.isArray(rows)?rows:[];detectProofV83(rows);var admitted=rows.filter(orderReadyV83);return prevRenderOrdersV83?prevRenderOrdersV83(admitted):undefined;};
+  window.renderOrdersV2=function(rows){rows=Array.isArray(rows)?rows:[];detectProofV83(rows);return prevRenderOrdersV83?prevRenderOrdersV83(rows):undefined;};
 
-  if(typeof window.renderDashboardActivity==='function'){var prevActV83=window.renderDashboardActivity;window.renderDashboardActivity=function(rows){return prevActV83((rows||[]).filter(orderReadyV83));};}
-  if(typeof window.renderDashboardLiveOrders==='function'){var prevLiveV83=window.renderDashboardLiveOrders;window.renderDashboardLiveOrders=function(rows){return prevLiveV83((rows||[]).filter(orderReadyV83));};}
+  if(typeof window.renderDashboardActivity==='function'){var prevActV83=window.renderDashboardActivity;window.renderDashboardActivity=function(rows){return prevActV83(rows||[]);};}
+  if(typeof window.renderDashboardLiveOrders==='function'){var prevLiveV83=window.renderDashboardLiveOrders;window.renderDashboardLiveOrders=function(rows){return prevLiveV83(rows||[]);};}
 
   var prevCardV83=window.orderCardHtmlV5;
-  window.orderCardHtmlV5=function(p){if(!orderReadyV83(p))return '';var html=prevCardV83?prevCardV83(p):'';var proof=proofUrlV83(p),method=String(p.metodo_pago||'Pago');var pay='<div class="ov83-payline '+(proof?'proof':'')+'"><div class="left"><i class="ov83-paydot"></i><div><b>'+escHtml(method)+'</b><small> · pedido confirmado</small></div></div><span class="ov83-confirmed-mark"><i></i>'+(proof?'Comprobante':'Pago listo')+'</span></div>';return html.replace('<div class="ov5-actions">',pay+'<div class="ov5-actions">');};
+  window.orderCardHtmlV5=function(p){if(!p)return '';var html=prevCardV83?prevCardV83(p):'';var proof=proofUrlV83(p),method=String(p.metodo_pago||'Pago');var pay='<div class="ov83-payline '+(proof?'proof':'')+'"><div class="left"><i class="ov83-paydot"></i><div><b>'+escHtml(method)+'</b><small> · pedido confirmado</small></div></div><span class="ov83-confirmed-mark"><i></i>'+(proof?'Comprobante':'Pago listo')+'</span></div>';return html.replace('<div class="ov5-actions">',pay+'<div class="ov5-actions">');};
 
   var prevDetailV83=window.renderOrderDetailV5;
   window.renderOrderDetailV5=function(p){
-    if(p&&!orderReadyV83(p)){return prevDetailV83?prevDetailV83(null):undefined;}
+    
     var r=prevDetailV83?prevDetailV83(p):undefined;if(!p)return r;
     setTimeout(async function(){try{
       var root=document.getElementById('ordersV5Detail');if(!root||root.querySelector('.ov83-proof'))return;
@@ -8674,7 +8674,6 @@ window.renderOrdersV5=function(){
   };
 
   /* Keep already-loaded arrays clean if this build hot-replaces over V8.2 */
-  setTimeout(function(){try{if(Array.isArray(window.ordersV2Data))window.ordersV2Data=window.ordersV2Data.filter(orderReadyV83);if(Array.isArray(window.ordersV5ActiveRows))window.ordersV5ActiveRows=window.ordersV5ActiveRows.filter(orderReadyV83);if(typeof filterOrdersV5==='function')filterOrdersV5();}catch(e){}},600);
 })();
 </script>
 <style>
