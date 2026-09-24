@@ -8774,7 +8774,7 @@ async function wfRekognition(op, payload) {
   var host = "rekognition." + WF_AWS_REGION + ".amazonaws.com", body = JSON.stringify(payload || {});
   var sg = wfSigV4({ method: "POST", host: host, path: "/", region: WF_AWS_REGION, service: "rekognition", key: c.k, secret: c.s, body: body, headers: { "content-type": "application/x-amz-json-1.1", "x-amz-target": "RekognitionService." + op } });
   try { var r = await axios.post("https://" + host + "/", body, { headers: sg.headers, timeout: 15000, transformRequest: [function (d) { return d; }] }); return r.data || {}; }
-  catch (e) { var d = (e.response && e.response.data) || {}, t = String(d.__type || d.code || "").split("#").pop(); var er = wfErr(e.response && e.response.status < 500 ? 422 : 502, "aws_" + (t || "error"), "El proveedor biométrico respondió: " + (t || e.message)); er.awsType = t; throw er; }
+  catch (e) { var d = (e.response && e.response.data) || {}, t = String(d.__type || d.code || "").split("#").pop(); console.error("[wf-aws] Rekognition " + op + " falló:", t || e.message, "-", String(d.message || d.Message || "").slice(0, 300)); var er = wfErr(e.response && e.response.status < 500 ? 422 : 502, "aws_" + (t || "error"), "El proveedor biométrico respondió: " + (t || e.message)); er.awsType = t; throw er; }
 }
 async function wfAwsFederation(nombre) {
   // Credenciales temporales (15 min) que SOLO permiten iniciar el streaming de liveness desde el navegador.
@@ -8787,7 +8787,13 @@ async function wfAwsFederation(nombre) {
     var g = function (t) { var m = x.match(new RegExp("<" + t + ">([^<]+)</" + t + ">")); return m ? m[1] : null; };
     if (!g("AccessKeyId")) throw new Error("respuesta STS inválida");
     return { accessKeyId: g("AccessKeyId"), secretAccessKey: g("SecretAccessKey"), sessionToken: g("SessionToken"), expiration: g("Expiration") };
-  } catch (e) { if (e.wf) throw e; throw wfErr(502, "aws_sts", "No se pudieron emitir credenciales temporales para la cámara."); }
+  } catch (e) {
+    if (e.wf) throw e;
+    // Registrar la respuesta real de AWS (código y mensaje; nunca llaves) para poder diagnosticar.
+    var raw = String((e.response && e.response.data) || e.message || ""), code = (raw.match(/<Code>([^<]+)<\/Code>/) || [])[1] || (e.response ? "HTTP " + e.response.status : "red"), msg = (raw.match(/<Message>([^<]+)<\/Message>/) || [])[1] || e.message || "";
+    console.error("[wf-aws] STS GetFederationToken falló:", code, "-", String(msg).slice(0, 300));
+    var er = wfErr(502, "aws_sts", "No se pudieron emitir credenciales temporales para la cámara (" + code + (code === "AccessDenied" ? ": al usuario de AWS le falta el permiso sts:GetFederationToken" : "") + ")."); er.awsType = code; throw er;
+  }
 }
 WF.liveSess = new Map(); // SessionId → { rid, eid, proposito, t, usada }
 setInterval(function () { var n = Date.now(); WF.liveSess.forEach(function (v, k) { if (n - v.t > 20 * 60000) WF.liveSess.delete(k); }); }, 5 * 60000).unref();
