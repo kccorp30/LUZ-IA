@@ -8783,10 +8783,18 @@ async function wfAwsFederation(nombre) {
   var body = "Action=GetFederationToken&Version=2011-06-15&DurationSeconds=900&Name=" + encodeURIComponent(nombre.slice(0, 32)) + "&Policy=" + encodeURIComponent(policy);
   var sg = wfSigV4({ method: "POST", host: "sts.amazonaws.com", path: "/", region: "us-east-1", service: "sts", key: c.k, secret: c.s, body: body, headers: { "content-type": "application/x-www-form-urlencoded; charset=utf-8" } });
   try {
-    var r = await axios.post("https://sts.amazonaws.com/", body, { headers: sg.headers, timeout: 15000, responseType: "text", transformRequest: [function (d) { return d; }] }), x = String(r.data || "");
-    var g = function (t) { var m = x.match(new RegExp("<" + t + ">([^<]+)</" + t + ">")); return m ? m[1] : null; };
-    if (!g("AccessKeyId")) throw new Error("respuesta STS inválida");
-    return { accessKeyId: g("AccessKeyId"), secretAccessKey: g("SecretAccessKey"), sessionToken: g("SessionToken"), expiration: g("Expiration") };
+    var r = await axios.post("https://sts.amazonaws.com/", body, { headers: Object.assign({ Accept: "text/xml" }, sg.headers), timeout: 15000, responseType: "text", transformRequest: [function (d) { return d; }] }), x = String(r.data || "");
+    // STS puede responder en XML (clásico) o en JSON (según la cabecera Accept). Se aceptan ambos.
+    var cr = null, t0 = x.trim();
+    if (t0.charAt(0) === "{") {
+      try { var j = JSON.parse(t0), rr = (j.GetFederationTokenResponse && j.GetFederationTokenResponse.GetFederationTokenResult) || j.GetFederationTokenResult || j; cr = rr.Credentials || null; } catch (pe) { cr = null; }
+      if (cr && cr.Expiration != null && typeof cr.Expiration === "number") cr.Expiration = new Date(cr.Expiration < 1e12 ? cr.Expiration * 1000 : cr.Expiration).toISOString();
+    } else {
+      var g = function (t) { var m = x.match(new RegExp("<" + t + ">([^<]+)</" + t + ">")); return m ? m[1] : null; };
+      if (g("AccessKeyId")) cr = { AccessKeyId: g("AccessKeyId"), SecretAccessKey: g("SecretAccessKey"), SessionToken: g("SessionToken"), Expiration: g("Expiration") };
+    }
+    if (!cr || !cr.AccessKeyId || !cr.SecretAccessKey || !cr.SessionToken) { console.error("[wf-aws] STS respuesta sin credenciales. Formato:", t0.slice(0, 1) === "{" ? "JSON claves=" + Object.keys(JSON.parse(t0) || {}).join(",") : "XML/texto", "largo=" + t0.length); throw new Error("respuesta STS inválida"); }
+    return { accessKeyId: cr.AccessKeyId, secretAccessKey: cr.SecretAccessKey, sessionToken: cr.SessionToken, expiration: cr.Expiration };
   } catch (e) {
     if (e.wf) throw e;
     // Registrar la respuesta real de AWS (código y mensaje; nunca llaves) para poder diagnosticar.
