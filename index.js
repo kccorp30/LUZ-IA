@@ -653,12 +653,12 @@ FLUJO:
 5. Confirma -> si el cliente NO indico metodo de pago desde el menu, pregunta como quiere pagar y da datos
 6. Pago:
    - Nequi o Bancolombia: da los datos.
-     * Si el cliente dice que paga AHORA: pide comprobante, cuando lo mande escribe PAGO_CONFIRMADO
+     * Si el cliente dice que paga AHORA: pide comprobante. El BACKEND decide después de analizar la imagen si la evidencia puede avanzar; tú NO autorices el pago por tu cuenta.
      * Si el cliente dice "cuando llegue el pedido", "al recibirlo", "a la entrega":
        Responde confirmando y escribe PAGO_DATAFONO
    - Efectivo: pregunta valor -> escribe PAGO_EFECTIVO:[valor del billete]
    - Datafono: confirma que el domiciliario lo lleva -> escribe PAGO_DATAFONO
-7. Comprobante recibido -> di EXACTAMENTE: "Listo! Recibimos tu comprobante, tu pedido entra a preparacion ahora mismo. Te avisamos cuando este listo y cuando salga el domiciliario." -> escribe PAGO_CONFIRMADO
+7. Comprobante recibido -> NO confirmes por el simple hecho de recibir una imagen. Solo cuando el BACKEND inyecte explícitamente [COMPROBANTE DE PAGO VALIDADO...] puedes responder que el pedido entra a preparación y emitir PAGO_CONFIRMADO. Si el backend indica revisión, diferencia de monto, destinatario incorrecto, duplicado o baja confianza, NO emitas PAGO_CONFIRMADO.
 8. NUNCA digas "el domiciliario ya va en camino" al confirmar. El pedido va a PREPARACION primero, luego LISTO, luego EN CAMINO.
 9. NUNCA inventes tiempos. Si el cliente pregunta cuanto demora ANTES de confirmar: "Normalmente entre 30 y 50 minutos desde que confirmamos." Si ya confirmo: "Tu pedido esta en preparacion, te avisamos cada paso."
 POST-CONFIRMACION:
@@ -686,12 +686,12 @@ Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
 Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
 Cancelar pedido: CANCELAR_PEDIDO:[numero_pedido]
 PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
-- Cliente MANDA UNA IMAGEN (comprobante de transferencia): PAGO_CONFIRMADO
+- PAGO_CONFIRMADO: SOLO si el BACKEND indicó explícitamente en ESTE turno que el comprobante actual fue VALIDADO. Una imagen por sí sola NUNCA autoriza este tag.
 - Cliente dice que va a pagar en EFECTIVO y da el valor del billete: PAGO_EFECTIVO:[valor]
 - Cliente dice que va a pagar con DATAFONO o paga al recibir: PAGO_DATAFONO
 MUY IMPORTANTE:
 - Si el cliente solo dice "Nequi" o "Bancolombia" = NO escribas ningun tag. Solo dale los datos y pide el comprobante.
-- PAGO_CONFIRMADO solo va cuando el cliente MANDA LA IMAGEN del comprobante, nunca antes.
+- PAGO_CONFIRMADO solo va cuando el BACKEND haya validado el mediaId actual y te lo indique explícitamente. Recibir una imagen NO equivale a validar pago.
 - Aplica promos del dia. Si no existe el producto, ofrece alternativas.
 - NO seas insistente ni repitas preguntas que el cliente ya respondio. Si dio una respuesta (aunque sea parcial), acéptala y avanza. Ser fastidioso espanta clientes.
 - Si el cliente dice "porteria", "conjunto", "casa", "el mismo de siempre" o cualquier referencia de entrega: acepta y confirma, no sigas preguntando detalles innecesarios.
@@ -832,8 +832,11 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
         global.clienteNiveles[pedidoData.phone] = { total: totalPedidos, nivel };
       }
     } catch(e) { console.error("updateClienteNivel:", e.message); }
+    return savedOrder;
   } catch (err) {
     console.error("Error guardando pedido:", err.response ? JSON.stringify(err.response.data) : err.message);
+    // CRÍTICO: el caller NO puede borrar orderState ni decir que el pedido entró si Supabase falló.
+    throw err;
   }
 }
 
@@ -869,7 +872,7 @@ async function guardarMensajeSupabase(restauranteId, telefono, mensaje, tipo, co
 app.get("/api/chat-stream/:telefono",function(req,res){
   var rid=String(req.query.restaurante_id||"");if(!rid)return res.status(400).end();
   var tel=chatTelKey(req.params.telefono),key=chatLiveKey(rid,tel);
-  res.setHeader("Content-Type","text/event-stream");res.setHeader("Cache-Control","no-cache, no-transform");res.setHeader("Connection","keep-alive");
+  res.setHeader("Content-Type","text/event-stream; charset=utf-8");res.setHeader("Cache-Control","no-cache, no-transform");res.setHeader("X-Accel-Buffering","no");
   if(res.flushHeaders)res.flushHeaders();
   var set=chatLiveStreams.get(key);if(!set){set=new Set();chatLiveStreams.set(key,set)}set.add(res);
   res.write("event: ready\ndata: {\"ok\":true}\n\n");
@@ -880,7 +883,7 @@ app.get("/api/chat-stream/:telefono",function(req,res){
 app.get("/api/chat-stream",function(req,res){
   var rid=String(req.query.restaurante_id||"");if(!rid)return res.status(400).end();
   var key=rid+":*";
-  res.setHeader("Content-Type","text/event-stream");res.setHeader("Cache-Control","no-cache, no-transform");res.setHeader("Connection","keep-alive");
+  res.setHeader("Content-Type","text/event-stream; charset=utf-8");res.setHeader("Cache-Control","no-cache, no-transform");res.setHeader("X-Accel-Buffering","no");
   if(res.flushHeaders)res.flushHeaders();
   var set=chatLiveStreams.get(key);if(!set){set=new Set();chatLiveStreams.set(key,set)}set.add(res);
   res.write("event: ready\ndata: {\"ok\":true,\"scope\":\"restaurant\"}\n\n");
@@ -4976,7 +4979,7 @@ Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
 Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
 Cancelar pedido: CANCELAR_PEDIDO:[numero_pedido]
 PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
-- Cliente MANDA UNA IMAGEN (comprobante de transferencia): PAGO_CONFIRMADO
+- PAGO_CONFIRMADO: SOLO si el BACKEND indicó explícitamente en ESTE turno que el comprobante actual fue VALIDADO. Una imagen por sí sola NUNCA autoriza este tag.
 - Cliente dice que va a pagar en EFECTIVO y da el valor del billete: PAGO_EFECTIVO:[valor]
 - Cliente dice que va a pagar con DATAFONO o paga al recibir: PAGO_DATAFONO\nMUY IMPORTANTE:
 - Si el cliente da su barrio y está en una zona: cobra el precio de esa zona.
@@ -5214,7 +5217,7 @@ app.post("/api/domi-turno", async function(req,res){
   // HOLA LUZ — PREMIUM SHIFT SETTLEMENT
   // ====================================================
   if(!req.body.activo)return res.status(409).json({ok:false,error:"Completa el cierre bilateral con el restaurante. El turno sigue abierto."});
-  try{var activo=!!req.body.activo,now=new Date().toISOString(),svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};var patch={turno_activo:activo,ultimo_acceso_at:now};if(activo)patch.turno_inicio_at=now;else patch.turno_fin_at=now;var sr=await axios.post(SUPABASE_URL+"/rest/v1/rpc/hl_premium_start_shift",{p_rid:t.rid,p_did:t.did},{headers:sbPrivilegedHeaders()});now=sr.data.turno_inicio_at;if(!sr.data.started)return res.json({ok:true,turno_activo:true,turno_inicio_at:now,auto_asignacion:null});var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did+"&select=nombre",{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}}).catch(function(){return{data:[]};});var nombre=dr.data&&dr.data[0]&&dr.data[0].nombre||"Domiciliario";var auto=null;if(activo){try{auto=await autoAsignarPendienteParaDomi(t.rid,t.did);}catch(e){}}await registrarEventoDomi(t.rid,t.did,null,activo?"turno_iniciado":"turno_finalizado",{});await registrarEventoLuz(t.rid,null,"restaurante",null,activo?"domi_turno_iniciado":"domi_turno_finalizado",activo?nombre+" inició turno":nombre+" finalizó turno",activo?"Luz lo tendrá en cuenta para nuevas asignaciones cuando el GPS esté sincronizado.":"Dejó de recibir nuevas misiones.",{domiciliario_id:t.did},"domiciliario",t.did);res.json({ok:true,turno_activo:activo,turno_inicio_at:now,auto_asignacion:auto});}catch(e){res.status(500).json({ok:false,error:e.message});}
+  try{var activo=!!req.body.activo,now=new Date().toISOString(),svcKey=SUPABASE_SERVICE_KEY_VAL,h={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=minimal"};var patch={turno_activo:activo,ultimo_acceso_at:now};if(activo)patch.turno_inicio_at=now;else patch.turno_fin_at=now;var sr=null;try{sr=await axios.post(SUPABASE_URL+"/rest/v1/rpc/hl_premium_start_shift",{p_rid:t.rid,p_did:t.did},{headers:sbPrivilegedHeaders()});}catch(rpcErr){var rpcStatus=rpcErr&&rpcErr.response&&rpcErr.response.status;var rpcData=rpcErr&&rpcErr.response&&rpcErr.response.data;var rpcText=String((rpcData&&rpcData.message)||rpcData||rpcErr.message||"");var rpcMissing=rpcStatus===404||/hl_premium_start_shift|function.*does not exist|schema cache|PGRST202/i.test(rpcText);if(!rpcMissing)throw rpcErr;console.warn("[domi-turno] hl_premium_start_shift no disponible; usando fallback seguro",rpcStatus,rpcText);var fallbackHeaders={"apikey":svcKey,"Authorization":"Bearer "+svcKey,"Content-Type":"application/json","Prefer":"return=representation"};var fallbackPatch={turno_activo:true,turno_inicio_at:now,ultimo_acceso_at:now};var fallbackResp=await axios.patch(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+encodeURIComponent(t.did)+"&restaurante_id=eq."+encodeURIComponent(t.rid),fallbackPatch,{headers:fallbackHeaders});if(!fallbackResp.data||!fallbackResp.data[0])return res.status(404).json({ok:false,error:"No se encontró el domiciliario para este restaurante"});sr={data:{started:true,turno_inicio_at:fallbackResp.data[0].turno_inicio_at||now,fallback:true}};}now=sr.data&&sr.data.turno_inicio_at||now;if(sr.data&&sr.data.started===false)return res.json({ok:true,turno_activo:true,turno_inicio_at:now,auto_asignacion:null});var dr=await axios.get(SUPABASE_URL+"/rest/v1/domiciliarios?id=eq."+t.did+"&select=nombre",{headers:{"apikey":svcKey,"Authorization":"Bearer "+svcKey}}).catch(function(){return{data:[]};});var nombre=dr.data&&dr.data[0]&&dr.data[0].nombre||"Domiciliario";var auto=null;if(activo){try{auto=await autoAsignarPendienteParaDomi(t.rid,t.did);}catch(e){}}await registrarEventoDomi(t.rid,t.did,null,activo?"turno_iniciado":"turno_finalizado",{});await registrarEventoLuz(t.rid,null,"restaurante",null,activo?"domi_turno_iniciado":"domi_turno_finalizado",activo?nombre+" inició turno":nombre+" finalizó turno",activo?"Luz lo tendrá en cuenta para nuevas asignaciones cuando el GPS esté sincronizado.":"Dejó de recibir nuevas misiones.",{domiciliario_id:t.did},"domiciliario",t.did);res.json({ok:true,turno_activo:activo,turno_inicio_at:now,auto_asignacion:auto});}catch(e){res.status(500).json({ok:false,error:e.message});}
 });
 
 app.post("/api/domi-perfil", async function(req,res){
@@ -8591,7 +8594,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
         orderState[from].comprobanteMediaId = mediaId;
         orderState[from].comprobanteUrl = orderState[from].comprobanteUrl || ("/api/comprobante/" + mediaId);
         sideEffect = "pago_confirmado";
-        cleanReply = "Listo! Recibimos tu comprobante, tu pedido entra a preparación ahora mismo. Te avisamos cuando esté listo y cuando salga el domiciliario.";
+        cleanReply = "Comprobante validado. Estoy registrando tu pedido…";
       } else {
         // Bloqueo duro: aunque el modelo haya escrito PAGO_CONFIRMADO por error,
         // el backend NO crea el pedido hasta recibir una evidencia validada.
@@ -8811,6 +8814,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
         } catch (e) {}
       }
 
+      var pedidoPersistido = null;
       if (restId) {
         // Recuperar únicamente desde el tag de UN mensaje. Nunca concatenar toda
       // la conversación: eso mezclaba dirección, método de pago y respuestas.
@@ -8819,7 +8823,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
         if (recoveredAddress) state.address = recoveredAddress;
       }
       state.address = hlCleanOrderAddress(state.address) || "Por confirmar";
-      await guardarPedidoSupabase(restId, {
+      pedidoPersistido = await guardarPedidoSupabase(restId, {
           orderNumber: state.orderNumber, phone: from, items: state.items,
           subtotal: Number(state.total) - Number(state.desechables||0) - Number(state.domicilio||0),
           desechables: Number(state.desechables||0), domicilio: Number(state.domicilio||0),
@@ -8830,6 +8834,21 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
           notasEspeciales: state.notasEspeciales || null,
           pedidoAdicionalDe: state.pedidoAdicionalDe || null
         });
+      }
+
+      if (!pedidoPersistido) {
+        // No mentir al cliente ni perder el pedido si Supabase no confirmó el INSERT.
+        state.status = "confirmacion_pendiente_backend";
+        await setOrderState(from, state);
+        console.error("[pedido] INSERT no confirmado; se conserva orderState para reintento", state.orderNumber);
+        throw new Error("PEDIDO_NO_PERSISTIDO");
+      }
+
+      // Confirmación definitiva únicamente DESPUÉS de que Supabase devolvió la fila creada.
+      if (esImagen && state.comprobanteMediaId) {
+        var finalConfirmMsg = "Listo! Tu comprobante pasó la validación y tu pedido #" + state.orderNumber + " ya quedó registrado. Entra a preparación ahora mismo. Te avisamos cuando esté listo y cuando salga el domiciliario.";
+        await sendWhatsAppMessage(from, finalConfirmMsg, phoneNumberId).catch(function(){});
+        if (restaurante) guardarMensajeSupabase(restaurante.id, stripCountryCode(from), finalConfirmMsg, "restaurante", null).catch(function(){});
       }
 
       // ── NOTIFICAR AL DUEÑO: nuevo pedido por WhatsApp ──────────────────
