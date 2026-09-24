@@ -342,10 +342,10 @@ async function kFace(){
   var ses;
   try{await loadLiveness();ses=await call('POST','/api/equipo/kiosko/liveness',{empleado_id:p.id},{'x-wf-device':devTok()})}
   catch(e){return kFallback(e.message)}
-  K.live=W.LuzLiveness.mount($('kLive'),{sessionId:ses.session_id,region:ses.region,credenciales:ses.credenciales,
+  K.live=W.LuzLiveness.mount($('kLive'),{sessionId:ses.session_id,region:ses.region,credenciales:ses.credenciales,sinPantallaInicio:true,
     onComplete:function(){kUnmount();kFaceEnviar(ses.session_id)},
     onCancel:function(){kUnmount();kReset()},
-    onError:function(er){kUnmount();kFallback(er&&er.estado==='CAMERA_ACCESS_ERROR'?'No hay permiso para la cámara.':'La verificación facial no se pudo completar'+(er&&er.estado?' ('+er.estado+')':'')+'.')}});
+    onError:function(er){kUnmount();kFallback(er&&er.estado==='CAMERA_ACCESS_ERROR'?'No hay permiso para la cámara.':'La verificación facial no se pudo completar'+(er&&er.estado?' ('+er.estado+')':'')+'.'+(er&&er.mensaje?' Detalle: '+String(er.mensaje).slice(0,160):''))}});
 }
 function kUnmount(){try{K.live&&K.live.unmount()}catch(e){}K.live=null}
 function kFallback(msg){K.key=uuid();kPin(msg+' Marca con tu PIN personal.');var st=$('kState');if(st){st.dataset.s='failed';st.innerHTML='<b>USA TU PIN</b><small>'+E(msg)+'</small>'}}
@@ -559,11 +559,11 @@ async function luzCamara(){
   fsSet(fsTop(4)+'<h2 style="margin-top:10px">Mira la <em>cámara</em></h2><p class="lead">Mantén tu rostro dentro del óvalo hasta que termine.</p><div id="mLive"></div><div class="err" id="lzE" role="alert"></div><button class="btn ghost block" type="button" id="lzCancel" style="margin-top:12px">Cancelar</button>');
   $('lzCancel').onclick=fsClose;
   var lv;try{await loadLiveness();lv=(await api('POST','/api/equipo/mi/luz-id/iniciar')).liveness}catch(e){$('mLive').remove();$('lzE').textContent=e.message;return}
-  M.liv=W.LuzLiveness.mount($('mLive'),{sessionId:lv.session_id,region:lv.region,credenciales:lv.credenciales,
+  M.liv=W.LuzLiveness.mount($('mLive'),{sessionId:lv.session_id,region:lv.region,credenciales:lv.credenciales,sinPantallaInicio:true,
     onComplete:async function(){try{M.liv&&M.liv.unmount()}catch(e){}M.liv=null;fsSet(fsTop(4)+'<div class="grow"></div>'+heroHTML()+'<h2>Registrando tu <em>LUZ ID…</em></h2><p class="lead">No cierres esta pantalla.</p><div class="grow"></div>');
       try{await api('POST','/api/equipo/mi/luz-id/completar',{liveness_session_id:lv.session_id});luzListo()}catch(e){fsSet(fsTop(4)+heroHTML()+'<h2>No se <em>registró</em></h2><p class="lead">'+E(e.message)+'</p><div class="grow"></div><button class="btn pri block" type="button" id="lzRe">Intentar de nuevo</button><button class="btn ghost block" type="button" id="lzOut" style="margin-top:10px">Salir</button>');$('lzRe').onclick=luzPreparar;$('lzOut').onclick=fsClose}},
     onCancel:fsClose,
-    onError:function(er){try{M.liv&&M.liv.unmount()}catch(e){}M.liv=null;var ml=$('mLive');if(ml)ml.remove();$('lzE').textContent=er&&er.estado==='CAMERA_ACCESS_ERROR'?'Necesitamos permiso para usar la cámara. Actívalo en tu navegador e intenta de nuevo.':'No se pudo completar'+(er&&er.estado?' ('+er.estado+')':'')+'. No se registró nada.'}});
+    onError:function(er){try{M.liv&&M.liv.unmount()}catch(e){}M.liv=null;var ml=$('mLive');if(ml)ml.remove();$('lzE').textContent=er&&er.estado==='CAMERA_ACCESS_ERROR'?'Necesitamos permiso para usar la cámara. Actívalo en tu navegador e intenta de nuevo.':'No se pudo completar'+(er&&er.estado?' ('+er.estado+')':'')+'. No se registró nada.'+(er&&er.mensaje?' Detalle: '+String(er.mensaje).slice(0,220):'')}});
 }
 function luzListo(){fsSet(fsTop(4)+'<div class="grow"></div>'+heroHTML(true)+'<h2>LUZ ID <em>registrado ✦</em></h2><p class="lead">Desde tu próximo turno, en LUZ CHECK toca tu nombre y mira la cámara. Tu PIN sigue funcionando por si acaso.</p><div class="grow"></div><button class="btn pri block" type="button" id="lzFin">Listo</button>');$('lzFin').onclick=fsClose}
 function luzActivo(){var I=M.luz.identidad,A=M.luz.autorizacion;fsSet(fsTop(4)+heroHTML(true)+'<h2>Tu LUZ ID está <em>activo ✦</em></h2><p class="lead">Registrado el '+E(dia(I.enrolado_at))+'. Úsalo en LUZ CHECK para iniciar tu día.</p><div class="grow"></div>'+(M.luz.biometria&&M.luz.biometria.configurado?'<button class="btn block" type="button" id="lzRedo">Volver a registrar mi rostro</button>':'')+(A&&A.estado==='aceptado'?'<button class="btn bad block" type="button" id="lzRev" style="margin-top:10px">Revocar mi autorización</button>':'')+'<button class="btn pri block" type="button" id="lzOk" style="margin-top:10px">Listo</button><div class="err" id="lzE" role="alert"></div>');
