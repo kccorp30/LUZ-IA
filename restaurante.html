@@ -1457,6 +1457,37 @@ body:before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;back
 }
 </style>
 
+
+<style id="lz-logistics-v3-style">
+/* HOLA LUZ · LOGISTICS V3 — isolated to page-mapa */
+#page-mapa{--lz-bg:#050914;--lz-panel:rgba(9,18,42,.74);--lz-line:rgba(111,151,255,.16);--lz-cyan:#43d9ff;--lz-blue:#287cff;--lz-violet:#8b5cf6;--lz-green:#33e6a1;--lz-orange:#ff9b54;background:radial-gradient(circle at 78% 12%,rgba(92,43,255,.16),transparent 28%),radial-gradient(circle at 18% 25%,rgba(0,153,255,.10),transparent 30%),#050914!important;min-height:100%}
+#page-mapa .lz-logistics-shell{max-width:1500px;padding:20px 24px 54px}
+#page-mapa .lz-logistics-hero{min-height:116px;padding:22px 24px;border-radius:30px;background:linear-gradient(110deg,rgba(7,20,48,.92),rgba(14,25,62,.80) 55%,rgba(74,26,135,.58));border:1px solid rgba(94,159,255,.25);box-shadow:0 25px 80px rgba(0,0,0,.42),0 0 55px rgba(69,78,255,.12),inset 0 1px rgba(255,255,255,.08)}
+#page-mapa .lz-logistics-orb{width:64px;height:64px;border-radius:22px;font-size:34px;box-shadow:0 0 45px rgba(44,130,255,.48),0 0 90px rgba(118,61,255,.18),inset 0 0 24px rgba(255,255,255,.10)}
+#page-mapa .lz-logistics-hero h1{font-size:30px}#page-mapa .lz-logistics-hero p{font-size:13px;color:#9fb0cf}
+#page-mapa .lz-logistics-metrics{gap:12px;margin:14px 0}#page-mapa .lz-metric{min-height:82px;padding:17px 15px 14px 52px;border-radius:22px;background:linear-gradient(145deg,rgba(17,31,67,.82),rgba(11,19,43,.66));border:1px solid rgba(106,145,255,.17);box-shadow:inset 0 1px rgba(255,255,255,.06),0 12px 35px rgba(0,0,0,.18)}#page-mapa .lz-metric-icon{left:18px;top:23px;font-size:19px}#page-mapa .lz-metric strong{font-size:24px}
+#page-mapa .lz-logistics-grid{grid-template-columns:minmax(0,1.7fr) minmax(330px,.72fr);gap:14px}
+#page-mapa .lz-map-panel,#page-mapa .lz-simulator,#page-mapa .lz-create-card,#page-mapa .lz-zones-section{background:linear-gradient(150deg,rgba(8,18,42,.90),rgba(8,13,31,.82));border:1px solid rgba(96,145,255,.18);box-shadow:0 22px 65px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.05)}
+#page-mapa .lz-map-panel{padding:17px;border-radius:26px}#page-mapa .lz-map-wrap{height:520px;border-radius:22px;border-color:rgba(76,142,255,.22);box-shadow:inset 0 0 50px rgba(0,0,0,.25),0 0 45px rgba(42,89,255,.08)}
+#page-mapa #mapaContainer{background:#061020}.lz-logistics-v3-map .leaflet-tile-pane{filter:brightness(.48) saturate(.78) hue-rotate(6deg)!important}.lz-logistics-v3-map .leaflet-control-zoom a{background:rgba(5,12,29,.9)!important;color:#dbeafe!important;border-color:rgba(255,255,255,.12)!important}.lz-logistics-v3-map .leaflet-control-attribution{background:rgba(3,8,20,.72)!important;color:#60708f!important}.lz-logistics-v3-map .leaflet-control-attribution a{color:#8da6d4!important}
+#page-mapa .lz-map-hud span{padding:8px 11px;border-radius:12px;background:rgba(4,10,25,.82);border-color:rgba(107,153,255,.16);box-shadow:0 8px 24px rgba(0,0,0,.25)}
+#page-mapa .lz-zone-poly-label{background:transparent;border:0;box-shadow:none;color:#fff;font:800 11px Satoshi,sans-serif;text-shadow:0 2px 8px #000,0 0 10px #000}.lz-zone-poly-label:before{display:none}
+#page-mapa .lz-side-stack{gap:14px}#page-mapa .lz-simulator{padding:18px;border-radius:24px;position:relative;overflow:hidden}#page-mapa .lz-simulator:before{content:"";position:absolute;width:180px;height:180px;right:-70px;top:-80px;background:radial-gradient(circle,rgba(45,132,255,.18),transparent 68%)}#page-mapa .lz-sim-search{height:50px;border-radius:16px;background:rgba(3,11,29,.76)}#page-mapa .lz-sim-result{min-height:88px;border-radius:18px}
+#page-mapa .lz-create-card{border-radius:24px}#page-mapa .lz-create-toggle{padding:17px}#page-mapa .lz-create-toggle b{width:40px;height:40px;border-radius:14px;box-shadow:0 0 24px rgba(73,78,255,.38)}#page-mapa .lz-primary-btn{height:50px;border-radius:16px;box-shadow:0 10px 30px rgba(68,58,255,.34),0 0 24px rgba(39,125,255,.16)}
+#page-mapa .lz-zones-section{border-radius:26px;padding:18px;margin-top:14px}#page-mapa .lz-zones-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}#page-mapa .lz-zones-grid .mapa-zona-card{min-height:86px;border-radius:20px!important;background:linear-gradient(135deg,rgba(16,30,66,.80),rgba(9,17,38,.78))!important;border:1px solid rgba(103,144,255,.15)!important;box-shadow:inset 0 1px rgba(255,255,255,.04)}#page-mapa .lz-zones-grid .mapa-zona-card:hover{transform:translateY(-3px);border-color:rgba(81,167,255,.42)!important;box-shadow:0 15px 36px rgba(0,0,0,.28),0 0 28px rgba(46,116,255,.10)}
+#page-mapa .lz-zone-search{width:290px;background:rgba(3,11,29,.72)}
+#page-mapa .lz-map-legend>div{background:rgba(7,16,37,.84)!important;border-color:rgba(109,148,255,.16)!important;border-radius:12px!important;padding:7px 11px!important}
+#page-mapa .lz-live-chip{box-shadow:0 0 25px rgba(51,230,161,.12)}
+@media(max-width:980px){#page-mapa .lz-logistics-grid{grid-template-columns:1fr}#page-mapa .lz-map-wrap{height:440px}#page-mapa .lz-zones-grid{grid-template-columns:1fr}}
+</style>
+
+<style id="zxPremiumStyles">
+#page-mapa{--zx:#050914;--panel:rgba(5,14,32,.92);--line:rgba(82,135,232,.22);--muted:#7f93b7;--orange:#ff7a1a;--blue:#168bff;--green:#18e6a0;min-height:100%;background:radial-gradient(circle at 83% 5%,rgba(255,92,18,.07),transparent 18%),radial-gradient(circle at 8% 28%,rgba(21,111,255,.11),transparent 24%),#040813!important;color:#f5f8ff;overflow-x:hidden}.zx-shell{max-width:1600px;margin:auto;padding:18px 22px 42px}.zx-topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:14px}.zx-title{display:flex;align-items:center;gap:12px}.zx-title-icon{width:48px;height:48px;border:1px solid rgba(53,148,255,.42);border-radius:16px;display:grid;place-items:center;font-size:27px;color:#6ec6ff;background:radial-gradient(circle,rgba(22,126,255,.22),rgba(5,15,36,.9));box-shadow:0 0 30px rgba(26,119,255,.18),inset 0 0 22px rgba(31,125,255,.12)}.zx-title h1{font-size:26px;letter-spacing:-.04em;margin:0}.zx-title p{font-size:11px;color:#8ea1c3;margin-top:2px}.zx-live-metrics{display:flex;gap:9px}.zx-status,.zx-mini{height:54px;min-width:128px;padding:8px 13px;border-radius:12px;border:1px solid rgba(72,117,198,.20);background:linear-gradient(180deg,rgba(9,20,45,.86),rgba(5,12,28,.92));display:flex;align-items:center;gap:10px;box-shadow:inset 0 1px rgba(255,255,255,.035)}.zx-status i{width:9px;height:9px;border-radius:50%;background:#18e6a0;box-shadow:0 0 13px #18e6a0}.zx-status b{color:#36e7ae}.zx-status b,.zx-mini b{font-size:14px;display:block}.zx-status small,.zx-mini small{display:block;color:#8496b5;font-size:8px;margin-bottom:2px}.zx-mini span{font-size:20px;color:#a878ff}.zx-mini.hot{border-color:rgba(255,111,28,.55);box-shadow:0 0 28px rgba(255,93,15,.12),inset 0 0 20px rgba(255,98,15,.07)}.zx-mini.hot span,.zx-mini.hot b{color:#ff9b43}.zx-tabs{display:grid;grid-template-columns:1.25fr repeat(5,1fr);gap:9px;margin-bottom:10px}.zx-tabs button{height:45px;border-radius:11px;border:1px solid rgba(58,102,177,.20);background:linear-gradient(180deg,rgba(8,20,45,.92),rgba(5,13,30,.92));color:#93a6ca;font:600 11px inherit;cursor:pointer;transition:.25s}.zx-tabs button span{margin-left:8px}.zx-tabs button:hover{border-color:rgba(58,143,255,.45);color:#d9e7ff}.zx-tabs button.active{color:#fff;border-color:#ff772d;background:linear-gradient(110deg,rgba(255,98,16,.34),rgba(119,34,14,.25));box-shadow:0 0 22px rgba(255,84,14,.27),inset 0 0 24px rgba(255,111,24,.11)}
+.zx-stage{display:grid;grid-template-columns:minmax(0,1.82fr) minmax(350px,.86fr);gap:10px}.zx-map-card,.zx-zone-panel,.zx-card,.zx-zone-manager{border:1px solid rgba(65,112,190,.24);background:linear-gradient(150deg,rgba(7,17,39,.94),rgba(4,10,25,.96));border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.035)}.zx-map-card{height:590px;position:relative;overflow:hidden}.zx-map-wrap{position:absolute;inset:0}.zx-map-wrap #mapaContainer{width:100%;height:100%;background:#030813}.zx-map-wrap:after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 85px #020611,inset 0 0 140px rgba(0,0,0,.28)}.zx-map-search{position:absolute;z-index:550;top:12px;left:14px;width:315px;height:46px;border-radius:12px;background:rgba(4,12,30,.88);border:1px solid rgba(79,139,236,.34);backdrop-filter:blur(16px);display:flex;align-items:center;box-shadow:0 12px 30px rgba(0,0,0,.28)}.zx-map-search>span{padding-left:14px;color:#7d91b4}.zx-map-search input{flex:1;min-width:0;height:100%;border:0;background:transparent;color:#fff;outline:0;padding:0 10px;font:500 11px inherit}.zx-map-search button{width:46px;height:46px;border:0;border-left:1px solid rgba(79,139,236,.22);background:rgba(16,57,117,.22);color:#d9e8ff;font-size:20px;cursor:pointer}.zx-map-loading{position:absolute;z-index:500;inset:0;background:#040a17;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#d9e8ff}.zx-map-loading small{color:#7386a7;margin-top:5px}.zx-radar{width:56px;height:56px;border:1px solid #158cff;border-radius:50%;display:grid;place-items:center;margin-bottom:12px;box-shadow:0 0 30px rgba(21,140,255,.28)}.zx-radar i{width:10px;height:10px;background:#36d9ff;border-radius:50%;box-shadow:0 0 18px #36d9ff;animation:zxPulse 1.5s infinite}.zx-map-footer{position:absolute;z-index:550;bottom:13px;left:16px;display:flex;gap:6px;padding:5px;border-radius:12px;background:rgba(4,12,29,.86);border:1px solid rgba(67,120,205,.25);backdrop-filter:blur(16px)}.zx-map-footer button{height:34px;padding:0 16px;border:0;border-radius:8px;background:transparent;color:#89a0c7;font:600 10px inherit;cursor:pointer}.zx-map-footer button.active{background:linear-gradient(110deg,rgba(255,109,19,.45),rgba(134,45,11,.36));color:#fff;border:1px solid rgba(255,130,48,.7);box-shadow:0 0 17px rgba(255,92,15,.22)}.zx-map-footer button.layers{font-size:20px;padding:0 12px;color:#9ed3ff}.zx-search-result{position:absolute;z-index:560;left:14px;top:64px;width:315px;display:none;padding:10px 12px;border:1px solid rgba(80,139,235,.28);border-radius:11px;background:rgba(4,12,30,.93);backdrop-filter:blur(18px);font-size:10px}.zx-search-result.found,.zx-search-result.miss{display:block}
+.zx-zone-panel{min-height:590px;padding:14px;position:relative;overflow:hidden}.zx-zone-panel:after{content:"";position:absolute;width:180px;height:180px;right:-80px;bottom:-70px;background:radial-gradient(circle,rgba(255,63,27,.23),transparent 68%);pointer-events:none}.zx-zone-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.zx-zone-head>div{display:flex;align-items:center;gap:8px}.zx-zone-head b{font-size:14px}.zx-zone-head em{font-style:normal;color:#35e6a5;background:rgba(24,230,160,.08);padding:4px 7px;border-radius:8px;font-size:8px}.zx-home{color:#30e9a8;font-size:18px}.zx-zone-head>button{border:0;background:transparent;color:#8fa2c3;font-size:22px;cursor:pointer}.zx-subtabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:14px}.zx-subtabs button{height:38px;border:1px solid rgba(64,106,180,.18);background:rgba(7,17,38,.76);border-radius:8px;color:#7791be;font:600 9px inherit}.zx-subtabs button.active{color:#fff;border-color:#ff7b31;background:rgba(255,94,16,.16);box-shadow:0 0 18px rgba(255,92,15,.18)}.zx-zone-identity{display:grid;grid-template-columns:82px 1fr auto;align-items:center;gap:10px}.zx-city-thumb{height:58px;border-radius:10px;display:grid;place-items:center;font-size:28px;background:linear-gradient(145deg,#12345f,#0c1429 55%,#ff7a1a);border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 0 25px rgba(46,139,255,.2)}.zx-zone-identity h2{font-size:17px;margin:0}.zx-zone-identity p{font-size:9px;color:#2de5a3;margin-top:3px}.zx-order-pill{display:flex;align-items:center;gap:7px;font-size:8px;color:#9fb0ca}.zx-order-pill b{background:#1fd29a;color:#fff;padding:4px 6px;border-radius:6px}.zx-zone-facts{margin-top:13px;border-top:1px solid rgba(77,118,186,.18);padding-top:8px}.zx-zone-facts>div{display:flex;justify-content:space-between;padding:5px 0;font-size:9px}.zx-zone-facts span{color:#8093b5}.zx-zone-facts b{font-size:10px}.zx-zone-facts b.green{color:#35e6a5}.zx-mini-map{height:108px;margin-top:7px;border:1px solid rgba(59,114,204,.2);border-radius:11px;position:relative;overflow:hidden;background:radial-gradient(circle at 65% 45%,rgba(20,233,160,.12),transparent 30%),linear-gradient(145deg,#071326,#040a17)}.zx-wire{position:absolute;inset:0;opacity:.25;background-image:linear-gradient(rgba(56,118,196,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(56,118,196,.18) 1px,transparent 1px);background-size:18px 18px;transform:rotate(-7deg) scale(1.3)}.zx-poly{position:absolute;width:96px;height:68px;right:48px;top:14px;background:rgba(21,230,157,.19);clip-path:polygon(18% 0,80% 8%,100% 46%,79% 95%,22% 86%,0 50%);border:1px solid #20e39f;filter:drop-shadow(0 0 10px #18c98d)}.zx-mini-map small{position:absolute;left:10px;bottom:9px;color:#41dca8;font-size:8px}.zx-mini-map button{position:absolute;right:8px;bottom:7px;border:1px solid rgba(60,124,220,.3);background:rgba(8,24,55,.8);color:#99bfff;border-radius:7px;padding:5px 9px;font:600 8px inherit}.zx-rule-title{font-size:10px;font-weight:800;margin:13px 0 7px;color:#e8effc}.zx-rule-title::first-letter{color:#ff8a2a}.zx-methods{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.zx-methods button{min-height:67px;text-align:left;display:flex;gap:7px;padding:9px;border:1px solid rgba(62,105,177,.22);border-radius:9px;background:rgba(7,17,38,.72);color:#d7e2f4}.zx-methods button>b{font-size:12px}.zx-methods button span{font-size:8px;font-weight:700}.zx-methods button small{display:block;color:#7387aa;font-size:7px;line-height:1.35;margin-top:4px}.zx-methods button.active{border-color:#ff7528;background:rgba(255,90,13,.11);box-shadow:0 0 17px rgba(255,90,13,.13)}.zx-methods button.active>b{color:#ff982e}.zx-surcharges{border:1px solid rgba(61,105,178,.19);border-radius:9px;padding:5px 9px}.zx-surcharges div{display:flex;justify-content:space-between;padding:5px 0;font-size:8px}.zx-surcharges div+div{border-top:1px solid rgba(61,105,178,.12)}.zx-surcharges span{color:#8ea0bd}.zx-config{float:right;margin-top:7px;border:1px solid rgba(44,128,240,.34);background:rgba(14,54,111,.22);color:#69adff;border-radius:8px;padding:6px 10px;font:600 8px inherit}
+.zx-bottom-grid{display:grid;grid-template-columns:1.05fr 1.1fr .92fr;gap:10px;margin-top:10px}.zx-card{min-height:252px;padding:14px}.zx-card header{display:flex;justify-content:space-between;align-items:flex-start}.zx-card h2{font-size:14px;margin:0}.zx-card header p{font-size:8px;color:#8395b4;margin-top:3px}.zx-summary select{border:1px solid rgba(55,101,177,.2);background:#071329;color:#8fa5c9;border-radius:8px;padding:6px 9px;font-size:8px}.zx-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:13px}.zx-kpis div{min-height:66px;padding:9px;border:1px solid rgba(56,102,178,.18);background:linear-gradient(145deg,rgba(10,26,57,.8),rgba(5,14,31,.8));border-radius:9px}.zx-kpis small{display:block;color:#7d91b2;font-size:7px}.zx-kpis b{display:block;font-size:21px;margin-top:5px}.zx-kpis b i{font-size:9px;font-style:normal}.zx-kpis em{font-size:7px;color:#23d99b;font-style:normal}.zx-kpis.second b{font-size:14px}.zx-drivers header p{color:#42dea8}.zx-drivers header p i{display:inline-block;width:5px;height:5px;background:#25dda0;border-radius:50%;margin-right:5px}.zx-drivers header button{height:39px;border:1px solid #ff7927;background:rgba(255,89,10,.18);box-shadow:0 0 22px rgba(255,85,8,.25);border-radius:9px;color:#fff;padding:0 16px;font:700 9px inherit}.zx-driver-list{margin-top:10px;display:flex;flex-direction:column;gap:6px}.zx-driver{height:54px;border:1px solid rgba(66,108,180,.17);background:rgba(8,18,39,.78);border-radius:9px;display:grid;grid-template-columns:38px 1fr auto;gap:9px;align-items:center;padding:6px}.zx-driver-avatar{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:linear-gradient(145deg,#18345f,#ff7a1a);border:1px solid rgba(255,255,255,.15)}.zx-driver-avatar img{width:100%;height:100%;object-fit:cover}.zx-driver b{font-size:9px}.zx-driver small{display:block;color:#ffca55;font-size:7px;margin-top:3px}.zx-driver-status{font-size:7px;padding:4px 7px;border-radius:7px;color:#43e4aa;background:rgba(26,213,153,.1);border:1px solid rgba(26,213,153,.22)}.zx-driver-status.busy{color:#ff9b4c;background:rgba(255,125,31,.1);border-color:rgba(255,125,31,.25)}.zx-luz{border-color:rgba(54,121,255,.48);box-shadow:0 0 30px rgba(39,91,255,.09),inset 0 1px rgba(255,255,255,.04)}.zx-luz header>div{display:flex;align-items:center;gap:7px}.zx-luz-icon{color:#c978ff;font-size:18px}.zx-luz header em{font-style:normal;color:#34e2a5;background:rgba(25,220,157,.08);border:1px solid rgba(25,220,157,.17);padding:4px 7px;border-radius:8px;font-size:7px}.zx-luz-body{display:grid;grid-template-columns:78px 1fr;gap:11px;align-items:center;margin:12px 0}.zx-luz-orb{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 45%,#0d4a78 0 18%,#082143 36%,#2b0f64 58%,transparent 66%);border:1px solid #8a46ff;box-shadow:0 0 12px #19bfff,0 0 27px #7a34ff,0 0 48px rgba(111,38,255,.35);animation:zxFloat 3s ease-in-out infinite}.zx-face{width:44px;height:44px;border-radius:50%;border:1px solid #3ce7ff;display:grid;place-items:center;color:#58f0ff;font-size:22px;box-shadow:inset 0 0 17px rgba(45,227,255,.25)}.zx-luz-body h3{font-size:11px}.zx-luz-body p{font-size:8px;color:#91a3c0;line-height:1.45;margin-top:5px}.zx-ai-actions{display:flex;flex-wrap:wrap;gap:5px}.zx-ai-actions button{border:1px solid rgba(76,119,200,.23);background:rgba(10,27,59,.76);color:#9bb4dd;border-radius:7px;padding:6px 8px;font:600 7px inherit}.zx-ai-actions button:nth-child(2),.zx-ai-actions button:nth-child(3){border-color:rgba(143,62,255,.3);color:#c695ff;background:rgba(91,25,160,.12)}.zx-ai-input{height:37px;margin-top:9px;border:1px solid rgba(50,122,245,.43);border-radius:9px;display:flex;align-items:center;padding-left:10px}.zx-ai-input span{color:#6f84a8}.zx-ai-input input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#fff;padding:0 8px;font:500 9px inherit}.zx-ai-input button{width:31px;height:31px;margin-right:3px;border:0;border-radius:7px;background:#156cf5;color:#fff}.zx-zone-manager{margin-top:10px;padding:14px}.zx-zone-manager>header{display:flex;align-items:center;gap:10px}.zx-zone-manager>header>div:first-child{flex:1}.zx-zone-manager header small{font-size:7px;color:#43a7ff;font-weight:800;letter-spacing:.12em}.zx-zone-manager h2{font-size:14px;margin-top:2px}.zx-zone-search{height:38px;width:260px;border:1px solid rgba(61,112,196,.24);border-radius:9px;background:#061126;display:flex;align-items:center;padding:0 10px}.zx-zone-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#fff;padding-left:7px;font-size:9px}.zx-new{height:38px;border:1px solid #ff7b28;background:rgba(255,94,14,.13);color:#fff;border-radius:9px;padding:0 13px;font:700 9px inherit}.zx-create{margin-top:10px}.lz-zones-grid{margin-top:11px}.lz-zones-grid .mapa-zona-card{background:linear-gradient(145deg,rgba(9,25,54,.82),rgba(5,14,31,.86))!important;border:1px solid rgba(65,113,194,.2)!important}.lz-logistics-v3-map .leaflet-tile-pane{filter:brightness(.34) saturate(1.35) contrast(1.18) hue-rotate(8deg)!important}.lz-logistics-v3-map .leaflet-control-zoom{margin-top:320px!important;margin-left:14px!important}.lz-logistics-v3-map .leaflet-control-zoom a{background:rgba(4,12,29,.88)!important;color:#d7e8ff!important;border-color:rgba(75,128,215,.28)!important}.lz-logistics-v3-map .leaflet-control-attribution{opacity:.28}.lz-zone-poly-label{background:rgba(4,11,26,.88)!important;border:1px solid currentColor!important;border-radius:10px!important;color:#fff!important;padding:7px 10px!important;font:800 10px inherit!important;box-shadow:0 8px 22px rgba(0,0,0,.4)!important}.lz-zone-poly-label:before{display:none!important}.zx-empty{font-size:9px;color:#7083a4;padding:16px;text-align:center}@keyframes zxPulse{50%{transform:scale(1.8);opacity:.25}}@keyframes zxFloat{50%{transform:translateY(-4px);filter:brightness(1.15)}}
+@media(max-width:1180px){.zx-live-metrics .zx-mini:nth-child(2),.zx-live-metrics .zx-mini:nth-child(3){display:none}.zx-stage{grid-template-columns:1.5fr .9fr}.zx-bottom-grid{grid-template-columns:1fr 1fr}.zx-luz{grid-column:1/-1}}@media(max-width:900px){.zx-shell{padding:12px}.zx-topbar{align-items:flex-start}.zx-live-metrics{display:none}.zx-tabs{display:flex;overflow-x:auto}.zx-tabs button{min-width:120px}.zx-stage{grid-template-columns:1fr}.zx-map-card{height:500px}.zx-zone-panel{min-height:auto}.zx-bottom-grid{grid-template-columns:1fr}.zx-luz{grid-column:auto}.zx-zone-manager>header{flex-wrap:wrap}.zx-zone-search{width:100%;order:3}.zx-map-footer{max-width:calc(100% - 30px);overflow-x:auto}}@media(max-width:560px){.zx-title h1{font-size:21px}.zx-title p{font-size:9px}.zx-map-card{height:430px}.zx-map-search{width:calc(100% - 28px)}.zx-map-footer button{padding:0 10px}.zx-zone-identity{grid-template-columns:64px 1fr}.zx-order-pill{display:none}.zx-methods{grid-template-columns:1fr}.zx-kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
 </head>
 <script>
 // ── EARLY INIT — show pinScreen immediately, don't wait for scripts ──────────
@@ -2588,71 +2619,63 @@ document.addEventListener("DOMContentLoaded", function(){
     </div>
 
     <!-- MAPA -->
-    <!-- MAPA/ZONAS - MEJORADO -->
+    <!-- ZONAS & LOGÍSTICA · RECONSTRUCCIÓN PREMIUM -->
     <div class="page" id="page-mapa">
-      <section class="lz-logistics-shell">
-        <div class="lz-logistics-hero">
-          <div class="lz-logistics-orb"><span>⌁</span></div>
-          <div class="lz-logistics-hero-copy">
-            <div class="lz-kicker">LUZ · DELIVERY INTELLIGENCE</div>
-            <h1>Centro de logística</h1>
-            <p>Controla cobertura, tarifas y barrios desde un solo mapa operativo.</p>
+      <div class="zx-shell">
+        <header class="zx-topbar">
+          <div class="zx-title"><div class="zx-title-icon">⌾</div><div><h1>Zonas &amp; Logística</h1><p>Gestión de cobertura, tarifas, domiciliarios y operaciones en tiempo real.</p></div></div>
+          <div class="zx-live-metrics">
+            <div class="zx-status"><i></i><div><b>Abierto</b><small>Operación en vivo</small></div></div>
+            <div class="zx-mini hot"><span>⏱</span><div><small>Pedidos activos</small><b id="zxActiveOrders">0</b></div></div>
+            <div class="zx-mini"><span>♨</span><div><small>En preparación</small><b id="zxPreparing">0</b></div></div>
+            <div class="zx-mini"><span>➤</span><div><small>En ruta</small><b id="zxRoute">0</b></div></div>
+            <div class="zx-mini"><span>♟</span><div><small>Domiciliarios</small><b id="zxDrivers">0/0</b></div></div>
           </div>
-          <div class="lz-live-chip"><i></i> EN VIVO</div>
-        </div>
+        </header>
 
-        <div class="lz-logistics-metrics">
-          <div class="lz-metric"><span class="lz-metric-icon">◉</span><strong id="lzZoneCount">0</strong><small>Zonas activas</small></div>
-          <div class="lz-metric"><span class="lz-metric-icon">⌖</span><strong id="lzHoodCount">0</strong><small>Barrios cubiertos</small></div>
-          <div class="lz-metric"><span class="lz-metric-icon">$</span><strong id="lzAvgFee">$0</strong><small>Tarifa promedio</small></div>
-        </div>
+        <nav class="zx-tabs">
+          <button class="active" onclick="zxTab(this,'map')">⌂ <span>Mapa en vivo</span></button>
+          <button onclick="zxTab(this,'zones')">▦ <span>Zonas</span></button>
+          <button onclick="zxTab(this,'rates')">▤ <span>Tarifas</span></button>
+          <button onclick="zxTab(this,'rules')">♙ <span>Reglas</span></button>
+          <button onclick="zxTab(this,'drivers')">♟ <span>Domiciliarios</span></button>
+          <button onclick="zxTab(this,'history')">▣ <span>Historial</span></button>
+        </nav>
 
-        <div class="lz-logistics-grid">
-          <div class="lz-map-panel">
-            <div class="lz-panel-head">
-              <div><span class="lz-panel-kicker">COBERTURA OPERATIVA</span><h2>Mapa de zonas</h2></div>
-              <button class="lz-icon-btn" onclick="if(mapaObj){mapaObj.setView([3.4516,-76.5320],12);mapaObj.invalidateSize()}" title="Centrar mapa">⌖</button>
-            </div>
-            <div id="mapaWrapper" class="lz-map-wrap">
-              <div id="mapaContainer"></div>
-              <div id="mapaLoading" class="lz-map-loading"><div class="lz-loader-orb">⌁</div><b>Sincronizando mapa</b><span>Preparando cobertura de domicilios…</span></div>
-              <div class="lz-map-hud"><span><i class="pulse"></i> Cobertura activa</span><span id="lzMapZones">0 zonas</span></div>
-            </div>
-            <div id="mapaLeyenda" class="lz-map-legend"></div>
+        <section class="zx-stage">
+          <div class="zx-map-card">
+            <div class="zx-map-search"><span>⌕</span><input id="lzBarrioSim" placeholder="Buscar dirección o barrio…" autocomplete="off" oninput="simularTarifaZona(this.value)"><button onclick="if(mapaObj){mapaObj.setView([3.4516,-76.5320],12);mapaObj.invalidateSize()}">⌾</button></div>
+            <div id="mapaWrapper" class="zx-map-wrap"><div id="mapaContainer"></div><div id="mapaLoading" class="zx-map-loading"><div class="zx-radar"><i></i></div><b>Sincronizando cobertura</b><small>Luz está preparando el mapa operativo…</small></div></div>
+            <div class="zx-map-footer"><button class="active">◈ Zonas</button><button onclick="zxFocusDrivers()">♧ Domiciliarios</button><button>▤ Pedidos</button><button>⌁ Tráfico</button><button class="layers">▱</button></div>
+            <div id="lzSimResult" class="zx-search-result"></div>
           </div>
 
-          <div class="lz-side-stack">
-            <div class="lz-simulator">
-              <div class="lz-panel-head compact"><div><span class="lz-panel-kicker">CALCULADORA INTELIGENTE</span><h2>Simular domicilio</h2></div><span class="lz-ai-badge">LUZ IA</span></div>
-              <p class="lz-help">Escribe un barrio y Luz identifica la zona y la tarifa configurada.</p>
-              <div class="lz-sim-search"><span>⌕</span><input id="lzBarrioSim" placeholder="Ej. Granada, Pance, San Fernando…" autocomplete="off" oninput="simularTarifaZona(this.value)"></div>
-              <div id="lzSimResult" class="lz-sim-result idle"><div class="lz-sim-radar"><i></i></div><div><b>Listo para calcular</b><span>Busca un barrio para ver su cobertura.</span></div></div>
-            </div>
+          <aside class="zx-zone-panel" id="zxZonePanel">
+            <div class="zx-zone-head"><div><span class="zx-home">⌂</span><b id="zxZoneHead">Selecciona una zona</b><em id="zxZoneState">● Activa</em></div><button onclick="zxCollapsePanel()">×</button></div>
+            <div class="zx-subtabs"><button class="active">Información</button><button>Tarifas</button><button>Horarios</button><button>Estadísticas</button></div>
+            <div class="zx-zone-identity"><div class="zx-city-thumb">✦</div><div><h2 id="zxZoneName">Zona</h2><p id="zxZoneSubtitle">Cobertura configurada</p></div><div class="zx-order-pill"><b id="zxZoneOrders">0</b><span>pedidos activos</span></div></div>
+            <div class="zx-zone-facts"><div><span>Tarifa base</span><b id="zxZoneFee">$0</b></div><div><span>Barrios cubiertos</span><b id="zxZoneHoods">0</b></div><div><span>Tiempo estimado</span><b id="zxZoneEta">15 – 25 min</b></div><div><span>Estado</span><b class="green">Activa</b></div></div>
+            <div class="zx-mini-map"><div class="zx-wire"></div><div class="zx-poly"></div><small id="zxZoneArea">Cobertura inteligente</small><button onclick="toggleNuevaZona()">✎ Editar zona</button></div>
+            <div class="zx-rule-title">✦ Método de cálculo</div>
+            <div class="zx-methods"><button class="active"><b>✓</b><span>Zona fija<small>Tarifa única dentro del área</small></span></button><button><b>◷</b><span>Por distancia<small>Base + por km adicional</small></span></button><button><b>—</b><span>Híbrido<small>Zona + distancia + reglas</small></span></button></div>
+            <div class="zx-rule-title">✦ Recargos</div>
+            <div class="zx-surcharges"><div><span>⌖ Distancia adicional (por km)</span><b>$1.000</b></div><div><span>◉ Zona de alta demanda</span><b>+ $1.000</b></div><div><span>◷ Fuera de horario</span><b>+ $2.000</b></div></div>
+            <button class="zx-config" onclick="zxOpenRules()">⚙ Configurar reglas</button>
+          </aside>
+        </section>
 
-            <div class="lz-create-card">
-              <button class="lz-create-toggle" onclick="toggleNuevaZona()"><span><b>＋</b><span><strong>Nueva zona</strong><small>Crear cobertura y tarifa</small></span></span><em id="lzCreateChevron">⌄</em></button>
-              <div id="lzNewZoneForm" class="lz-create-body">
-                <div class="frow">
-                  <div class="ffield"><label class="flabel">Nombre de zona</label><input class="finput" id="zona-nombre" placeholder="Ej: Zona Norte"></div>
-                  <div class="ffield"><label class="flabel">Tarifa domicilio</label><input class="finput" id="zona-precio" type="number" placeholder="4000"></div>
-                </div>
-                <div class="ffield"><label class="flabel">Barrios <span class="lz-label-note">Enter o coma para agregar</span></label>
-                  <div id="zona-chips-wrap" class="lz-chip-input" onclick="document.getElementById('zona-barrio-inp').focus()">
-                    <div id="zona-chips"></div><input id="zona-barrio-inp" placeholder="Agregar barrio…" autocomplete="off" onkeydown="zonaChipKey(event)" oninput="zonaChipInput(this)">
-                  </div><input type="hidden" id="zona-barrios">
-                </div>
-                <button class="lz-primary-btn" id="btnAgregarZona"><span>Guardar zona</span><b>→</b></button>
-                <button class="lz-ghost-btn" onclick="cargarZonasPredefinidas()">⚡ Cargar zonas predefinidas de Cali</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <section class="zx-bottom-grid">
+          <article class="zx-card zx-summary"><header><div><h2>Resumen operativo</h2><p id="zxToday">Hoy</p></div><select><option>Todas las zonas</option></select></header><div class="zx-kpis"><div><small>Pedidos totales</small><b id="zxTotalOrders">0</b><em>↑ en vivo</em></div><div><small>En preparación</small><b id="zxPrep2">0</b></div><div><small>En ruta</small><b id="zxRoute2">0</b></div><div><small>Entregados</small><b id="zxDelivered">0</b></div></div><div class="zx-kpis second"><div><small>Tiempo promedio</small><b>28 <i>min</i></b><em>↓ operación</em></div><div><small>Ingresos domicilio</small><b id="zxDeliveryIncome">$0</b></div><div><small>Tarifa promedio</small><b id="lzAvgFee">$0</b></div><div><small>Pedidos en cola</small><b id="zxQueue">0</b></div></div></article>
+          <article class="zx-card zx-drivers"><header><div><h2>Domiciliarios en vivo</h2><p><i></i><span id="zxDriverAvailable">0 disponibles</span></p></div><button onclick="zxFocusDrivers()">＋ Asignar pedido</button></header><div id="zxDriverList" class="zx-driver-list"><div class="zx-empty">Sincronizando equipo…</div></div></article>
+          <article class="zx-card zx-luz"><header><div><span class="zx-luz-icon">✺</span><h2>Luz IA — Asistente Logístico</h2></div><em>● En vivo</em></header><div class="zx-luz-body"><div class="zx-luz-orb"><div class="zx-face">⌣</div></div><div><h3 id="zxLuzTitle">Analizando tu operación…</h3><p id="zxLuzCopy">Estoy cruzando zonas, pedidos y disponibilidad del equipo.</p></div></div><div class="zx-ai-actions"><button onclick="zxAiAction('times')">Analizar tiempos</button><button onclick="zxAiAction('zones')">♨ Optimizar zonas</button><button onclick="zxAiAction('rates')">✧ Sugerir tarifas</button><button onclick="toggleNuevaZona()">⌂ Crear nueva zona</button></div><div class="zx-ai-input"><span>⌕</span><input placeholder="Pregúntale a Luz…"><button>➜</button></div></article>
+        </section>
 
-        <div class="lz-zones-section">
-          <div class="lz-section-title"><div><span class="lz-panel-kicker">TARIFAS Y COBERTURA</span><h2>Zonas configuradas</h2></div><div class="lz-zone-search"><span>⌕</span><input id="lzZoneSearch" placeholder="Buscar zona o barrio" oninput="filtrarZonasLogistica(this.value)"></div></div>
+        <section class="zx-zone-manager" id="zxZoneManager">
+          <header><div><small>COBERTURA Y TARIFAS</small><h2>Zonas configuradas</h2></div><div class="zx-zone-search"><span>⌕</span><input id="lzZoneSearch" placeholder="Buscar zona o barrio" oninput="filtrarZonasLogistica(this.value)"></div><button class="zx-new" onclick="toggleNuevaZona()">＋ Nueva zona</button></header>
           <div id="zonasTabla" class="lz-zones-grid"></div>
-        </div>
-      </section>
+          <div class="lz-create-card zx-create"><div id="lzNewZoneForm" class="lz-create-body closed"><div class="frow"><div class="ffield"><label class="flabel">Nombre de zona</label><input class="finput" id="zona-nombre" placeholder="Ej: Zona Norte"></div><div class="ffield"><label class="flabel">Tarifa domicilio</label><input class="finput" id="zona-precio" type="number" placeholder="4000"></div></div><div class="ffield"><label class="flabel">Barrios</label><div id="zona-chips-wrap" class="lz-chip-input" onclick="document.getElementById('zona-barrio-inp').focus()"><div id="zona-chips"></div><input id="zona-barrio-inp" placeholder="Agregar barrio…" autocomplete="off" onkeydown="zonaChipKey(event)" oninput="zonaChipInput(this)"></div><input type="hidden" id="zona-barrios"></div><button class="lz-primary-btn" id="btnAgregarZona"><span>Guardar zona</span><b>→</b></button><button class="lz-ghost-btn" onclick="cargarZonasPredefinidas()">⚡ Cargar zonas predefinidas de Cali</button></div></div>
+        </section>
+      </div>
     </div>
     <!-- CEREBRO DE LUZ -->
     <div class="page" id="page-equipo"></div>
@@ -5833,8 +5856,8 @@ function initMapa(reintentos){
     mapaIniciado=true;
     document.getElementById("mapaLoading").style.display="none";
     mapaObj=L.map("mapaContainer",{center:[3.4516,-76.5320],zoom:13,zoomControl:true});
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{attribution:"© OpenStreetMap © CartoDB",maxZoom:19,subdomains:"abcd"}).addTo(mapaObj);
-    document.getElementById("mapaContainer").classList.add("mapa-leaflet-dark");
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap contributors",maxZoom:19,subdomains:"abc"}).addTo(mapaObj);
+    document.getElementById("mapaContainer").classList.remove("mapa-leaflet-dark");document.getElementById("mapaContainer").classList.add("lz-logistics-v3-map");
     // Invalidar tamaño del mapa por si el contenedor cambió (bug común de Leaflet al estar dentro de un tab oculto)
     setTimeout(function(){if(mapaObj)mapaObj.invalidateSize();},200);
     if(rest)cargarZonas();
@@ -6033,32 +6056,40 @@ function eliminarZona(id){
   fetch("/api/supabase/zonas_domicilio?id=eq."+id,{method:"DELETE"})
   .then(function(){cargarZonas();notif("Zona eliminada");}).catch(function(){notif("Error");});
 }
+function lzConvexHull(points){
+  if(points.length<3)return points;
+  var p=points.slice().sort(function(a,b){return a[1]===b[1]?a[0]-b[0]:a[1]-b[1];});
+  function cross(o,a,b){return(a[1]-o[1])*(b[0]-o[0])-(a[0]-o[0])*(b[1]-o[1]);}
+  var lo=[],up=[],i;
+  for(i=0;i<p.length;i++){while(lo.length>=2&&cross(lo[lo.length-2],lo[lo.length-1],p[i])<=0)lo.pop();lo.push(p[i]);}
+  for(i=p.length-1;i>=0;i--){while(up.length>=2&&cross(up[up.length-2],up[up.length-1],p[i])<=0)up.pop();up.push(p[i]);}
+  lo.pop();up.pop();return lo.concat(up);
+}
+function lzZoneCenter(points){var a=points.reduce(function(x,p){x[0]+=+p[0];x[1]+=+p[1];return x;},[0,0]);return[a[0]/points.length,a[1]/points.length];}
 function dibujarTodasZonas(zonas){
   if(!mapaObj)return;
-  zonasLayers.forEach(function(l){mapaObj.removeLayer(l);});zonasLayers=[];
+  zonasLayers.forEach(function(l){try{mapaObj.removeLayer(l)}catch(e){}});zonasLayers=[];
   var leg=document.getElementById("mapaLeyenda");if(leg)leg.innerHTML="";
-  var bounds=[];
+  var allBounds=[];
   zonas.forEach(function(z,idx){
-    var color=z.color||ZONA_COLORES[idx%ZONA_COLORES.length];
-    var precio=z.precio_domicilio||z.precio||0;
-    var barrios=Array.isArray(z.barrios)?z.barrios:(typeof z.barrios==="string"?z.barrios.split(",").map(function(b){return b.trim();}):[]);
-    // Agregar chip de leyenda una sola vez por zona
-    if(leg){
-      var chip='<div style="display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600"><div style="width:8px;height:8px;border-radius:50%;background:'+color+';box-shadow:0 0 6px '+color+'"></div>'+z.nombre+' · '+fmt(precio)+'</div>';
-      leg.innerHTML+=chip;
-    }
-    barrios.forEach(function(barrio,bi){
-      if(!barrio.trim())return;
-      setTimeout(function(){
-      geocodificarBarrio(barrio.trim()+", Cali, Colombia").then(function(coords){
-        if(!coords||!mapaObj)return;
-        var circle=L.circle(coords,{color:color,fillColor:color,fillOpacity:0.25,radius:600,weight:2}).addTo(mapaObj);
-        circle.bindPopup('<b>'+barrio+'</b><br>'+z.nombre+' · '+fmt(precio));
-        zonasLayers.push(circle);
-        bounds.push(coords);
-        if(bounds.length===1)mapaObj.setView(coords,13);
-      }).catch(function(){});
-      },bi*350);
+    var color=z.color||ZONA_COLORES[idx%ZONA_COLORES.length],precio=z.precio_domicilio||z.precio||0;
+    var barrios=limpiarBarrios(z.barrios);
+    if(leg)leg.innerHTML+='<div data-zone="'+escHtml(z.id||idx)+'"><div style="width:9px;height:9px;border-radius:50%;background:'+color+';box-shadow:0 0 9px '+color+'"></div><span>'+escHtml(z.nombre)+' · '+fmt(precio)+'</span></div>';
+    Promise.all(barrios.map(function(b){return geocodificarBarrio(b+", Cali, Colombia").then(function(c){return c?{name:b,c:c}:null;});})).then(function(found){
+      found=found.filter(Boolean);if(!found.length||!mapaObj)return;
+      var pts=found.map(function(x){return[+x.c[0],+x.c[1]];});pts.forEach(function(p){allBounds.push(p)});
+      var layer;
+      if(pts.length>=3){
+        var hull=lzConvexHull(pts),center=lzZoneCenter(hull);
+        layer=L.polygon(hull,{color:color,weight:2.2,opacity:.95,fillColor:color,fillOpacity:.16,dashArray:null,lineJoin:"round"}).addTo(mapaObj);
+        layer.bindPopup('<div style="min-width:180px"><b style="font-size:14px">'+escHtml(z.nombre)+'</b><br><span style="color:#94a3b8">'+found.length+' barrios cubiertos</span><br><strong style="color:#34d399">'+fmt(precio)+'</strong></div>');
+        var lab=L.tooltip({permanent:true,direction:"center",className:"lz-zone-poly-label",interactive:false}).setContent(escHtml(z.nombre)+' · '+fmt(precio)).setLatLng(center).addTo(mapaObj);zonasLayers.push(lab);
+      }else{
+        var center=lzZoneCenter(pts);layer=L.circle(center,{color:color,fillColor:color,fillOpacity:.16,radius:pts.length===1?850:1100,weight:2}).addTo(mapaObj);layer.bindPopup('<b>'+escHtml(z.nombre)+'</b><br>'+fmt(precio));
+      }
+      zonasLayers.push(layer);
+      found.forEach(function(x){var dot=L.circleMarker(x.c,{radius:4,color:"#dbeafe",weight:1,fillColor:color,fillOpacity:1,opacity:.9}).addTo(mapaObj);dot.bindTooltip(escHtml(x.name),{direction:"top"});zonasLayers.push(dot);});
+      if(allBounds.length>1){try{mapaObj.fitBounds(allBounds,{padding:[34,34],maxZoom:13});}catch(e){}}
     });
   });
 }
@@ -17466,6 +17497,22 @@ body.pv-sheet #hlGlobalMenuToggle{display:none!important}
    var tries=0,t=setInterval(function(){tries++;if(install()||tries>40)clearInterval(t)},100);
  }
  document.addEventListener('DOMContentLoaded',install,{once:true});
+})();
+</script>
+<script id="zxPremiumLogic">
+(function(){
+ window.zxTab=function(btn,target){document.querySelectorAll('.zx-tabs button').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');if(target==='zones'||target==='rates'||target==='rules'){document.getElementById('zxZoneManager').scrollIntoView({behavior:'smooth',block:'start'});}else if(target==='drivers'){document.querySelector('.zx-drivers').scrollIntoView({behavior:'smooth',block:'center'});}else if(target==='map'){document.querySelector('.zx-stage').scrollIntoView({behavior:'smooth',block:'start'});setTimeout(function(){if(mapaObj)mapaObj.invalidateSize()},350)}else{notif('Historial logístico: próximamente en esta vista');}};
+ window.zxSelectZone=function(z){if(!z)return;var fee=Number(z.precio_domicilio||z.precio||0),hoods=limpiarBarrios(z.barrios);var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v};set('zxZoneHead',z.nombre);set('zxZoneName',z.nombre);set('zxZoneSubtitle',hoods.slice(0,3).join(' · ')||'Cobertura configurada');set('zxZoneFee',fmt(fee));set('zxZoneHoods',hoods.length);set('zxZoneArea',hoods.length+' barrios dentro de cobertura');set('zxZoneEta',fee>=6000?'35 – 50 min':fee>=5000?'25 – 40 min':'15 – 25 min');};
+ window.zxCollapsePanel=function(){var p=document.getElementById('zxZonePanel');if(p)p.classList.toggle('zx-collapsed')};
+ window.zxFocusDrivers=function(){document.querySelector('.zx-drivers').scrollIntoView({behavior:'smooth',block:'center'})};
+ window.zxOpenRules=function(){document.getElementById('zxZoneManager').scrollIntoView({behavior:'smooth'});notif('Selecciona una zona para editar sus reglas y tarifa')};
+ window.zxAiAction=function(type){var t=document.getElementById('zxLuzTitle'),c=document.getElementById('zxLuzCopy');if(type==='times'){t.textContent='Tiempos bajo análisis';c.textContent='Estoy comparando pedidos activos, rutas y disponibilidad para detectar cuellos de botella.'}if(type==='zones'){t.textContent='Cobertura analizada';c.textContent='Reviso barrios, tarifas y zonas para encontrar solapamientos o áreas sin cobertura.'}if(type==='rates'){t.textContent='Tarifas bajo análisis';c.textContent='Comparo tus tarifas por zona con carga operativa y distancia estimada.'}};
+ function zxMoney(n){try{return '$'+Number(n||0).toLocaleString('es-CO')}catch(e){return '$0'}}
+ window.zxRefreshOps=async function(){if(!window.rest)return;var rid=rest.id;try{var rs=await Promise.all([fetch('/api/supabase/pedidos?restaurante_id=eq.'+encodeURIComponent(rid)+'&order=created_at.desc&limit=250'),fetch('/api/domi-admin/list?restaurante_id='+encodeURIComponent(rid))]);var orders=rs[0].ok?await rs[0].json():[],dd=rs[1].ok?await rs[1].json():{};var team=(dd&&dd.domiciliarios)||[];var norm=function(x){return String(x||'').toLowerCase()};var active=orders.filter(function(p){return !/entreg|cancel|finaliz/.test(norm(p.estado))});var prep=active.filter(function(p){return /prepar|cocina|listo/.test(norm(p.estado))});var route=active.filter(function(p){return /ruta|camino|asign|recog/.test(norm(p.estado))});var delivered=orders.filter(function(p){return /entreg|finaliz/.test(norm(p.estado))});var avail=team.filter(function(x){return x.presence==='online'||x.estado==='disponible'});var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v};set('zxActiveOrders',active.length);set('zxPreparing',prep.length);set('zxPrep2',prep.length);set('zxRoute',route.length);set('zxRoute2',route.length);set('zxTotalOrders',orders.length);set('zxDelivered',delivered.length);set('zxQueue',Math.max(0,active.length-avail.length));set('zxDrivers',avail.length+'/'+team.length);set('zxDriverAvailable',avail.length+' disponibles');var income=orders.reduce(function(a,p){return a+Number(p.domicilio||p.valor_domicilio||0)},0);set('zxDeliveryIncome',zxMoney(income));var list=document.getElementById('zxDriverList');if(list){list.innerHTML=team.slice(0,4).map(function(x){var busy=x.presence==='busy'||!!x.pedido_activo;var pic=x.foto_url?'<img src="'+escHtml(x.foto_url)+'">':escHtml(String(x.nombre||'D').charAt(0));return '<div class="zx-driver"><div class="zx-driver-avatar">'+pic+'</div><div><b>'+escHtml(x.nombre||'Domiciliario')+'</b><small>★ '+(x.rating||'4.8')+' · '+escHtml(x.vehiculo||'Equipo de entrega')+'</small></div><span class="zx-driver-status '+(busy?'busy':'')+'">'+(busy?'En entrega':'Disponible')+'</span></div>'}).join('')||'<div class="zx-empty">No hay domiciliarios registrados.</div>'}var lt=document.getElementById('zxLuzTitle'),lc=document.getElementById('zxLuzCopy');if(lt&&lc){if(active.length>avail.length&&active.length){lt.textContent='Atención operativa';lc.textContent='Hay '+active.length+' pedidos activos y '+avail.length+' domiciliarios disponibles. Considera redistribuir la cobertura o preparar la cola.'}else{lt.textContent='Todo en orden.';lc.textContent='Actualmente hay '+active.length+' pedidos activos y '+avail.length+' domiciliarios disponibles. La operación está equilibrada.'}}}catch(e){console.warn('zxRefreshOps',e)}};
+ var oldSummary=window.actualizarResumenLogistica;window.actualizarResumenLogistica=function(z){if(oldSummary)oldSummary(z);if(z&&z.length)zxSelectZone(z[0]);zxRefreshOps()};
+ var oldDraw=window.dibujarTodasZonas;window.dibujarTodasZonas=function(zonas){oldDraw(zonas);setTimeout(function(){try{zonasLayers.forEach(function(layer){if(layer&&layer.on&&!layer._zxBound){layer._zxBound=true;layer.on('click',function(){var c=this.getBounds?this.getBounds().getCenter():(this.getLatLng?this.getLatLng():null);if(c&&mapaObj)mapaObj.flyTo(c,Math.max(mapaObj.getZoom(),13),{duration:.65})})}})}catch(e){}},300)};
+ var oldSim=window.simularTarifaZona;window.simularTarifaZona=function(q){oldSim(q);var old=document.getElementById('lzSimResult');if(!old)return;var n=normalizarLz(q),match=null,b='';(_lzZonasCache||[]).some(function(z){return limpiarBarrios(z.barrios).some(function(x){if(normalizarLz(x).indexOf(n)!==-1&&n.length>1){match=z;b=x;return true}return false})});if(match){old.className='zx-search-result found';old.innerHTML='<b>'+escHtml(b)+' · '+escHtml(match.nombre)+'</b><br><span style="color:#31dda3">Cobertura disponible · '+fmt(match.precio_domicilio||match.precio||0)+'</span>';zxSelectZone(match)}else if(n.length>1){old.className='zx-search-result miss';old.innerHTML='<b>Sin coincidencia exacta</b><br><span style="color:#8799b8">Prueba con otro barrio o crea una nueva zona.</span>'}else{old.className='zx-search-result';old.innerHTML=''}};
+ var d=new Date();var td=document.getElementById('zxToday');if(td)td.textContent='Hoy · '+d.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'});setTimeout(zxRefreshOps,900);
 })();
 </script>
 </body>
