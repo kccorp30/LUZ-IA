@@ -16915,7 +16915,8 @@ body.pv-sheet #hlGlobalMenuToggle{display:none!important}
     cls = K[0]; icn = K[1]; title = K[2]; sub = K[3];
     var when = g.confirmado_at || (a && a.at) || null;
     h += '<div class="pv-paycard ' + cls + '"><span class="ic">' + ic(icn) + '</span><div><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></div><div class="amt"><b class="pv-num">' + money(g.total != null ? g.total : p.total) + '</b>' + (when ? '<small style="color:#aebbe0">' + esc(new Date(when).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }) + ', ' + hhmm(when)) + '</small>' : '<small style="color:#aebbe0">' + esc(metodo(g.metodo)) + '</small>') + '</div>' + (K[4] ? '<div class="pv-paynote">' + esc(K[4]) + '</div>' : '') + '</div>';
-    if (g.cubierto > 0 && g.saldo > 0) h += '<div class="pv-split"><div><span>Total</span><b>' + money(g.total) + '</b></div><div><span>Cubierto</span><b>' + money(g.cubierto) + '</b></div><div class="saldo"><span>Saldo</span><b>' + money(g.saldo) + '</b></div></div>';
+    if (g.cubierto > 0 || g.comprometido > 0) h += '<div class="pv-split"><div><span>Total</span><b>' + money(g.total) + '</b></div><div><span>Pagado / validado</span><b>' + money(g.cubierto || 0) + '</b></div>' + (g.comprometido > 0 ? '<div><span>Por cobrar acordado</span><b>' + money(g.comprometido) + '</b></div>' : '') + '<div class="saldo"><span>Sin definir</span><b>' + money(g.saldo || 0) + '</b></div></div>';
+    (g.compromisos || []).slice(-3).forEach(function(c){ h += '<div class="pv-note" style="margin-top:8px"><b>' + esc(metodo(c.metodo)) + ' · ' + money(c.monto) + '</b><br><span>' + esc(c.estado === 'por_cobrar' ? 'Acordado con el cliente · pendiente de cobro/confirmación' : 'Pendiente de confirmación') + (c.nota ? ' · ' + esc(c.nota) : '') + '</span></div>'; });
     // acciones de pago (siempre las hace una persona)
     var falta = Math.max(0, Number(g.total || 0) - Number(g.cubierto_manual || 0)), btns = '';
     if (p.estado === 'esperando_pago') btns = '<div class="pv-btnrow"><button class="pv-bigbtn green" data-act="paycheck">' + (busy(p.id, 'paycheck') ? 'Confirmando…' : 'Confirmar pago') + '</button><button class="pv-bigbtn red" data-act="payreject">Rechazar</button></div>';
@@ -16932,9 +16933,10 @@ body.pv-sheet #hlGlobalMenuToggle{display:none!important}
     if (a) {
       var hard = a.hard_failures || [], chk = [];
       function flag(v, fallCode) { if (v === true) return true; if (v === false) return false; if (fallCode && hard.indexOf(fallCode) !== -1) return false; return a.valido ? true : null; }
-      var montoOk = flag(a.monto_coincide, 'monto_no_coincide');
+      var esParcialValido = a.decision === 'evidencia_parcial_consistente';
+      var montoOk = esParcialValido ? true : flag(a.monto_coincide, 'monto_no_coincide');
       function lab(v, si, no) { return v === false ? no : si; }
-      chk.push([lab(montoOk, 'Monto coincide', 'Monto no coincide'), montoOk, montoOk === false && a.monto != null ? 'Esperado ' + money(a.monto_esperado) + ' · detectado ' + money(a.monto) : '']);
+      chk.push([esParcialValido ? 'Pago parcial válido' : lab(montoOk, 'Monto coincide', 'Monto no coincide'), montoOk, esParcialValido ? ('Recibido ' + money(a.monto) + ' de ' + money(a.monto_esperado)) : (montoOk === false && a.monto != null ? 'Esperado ' + money(a.monto_esperado) + ' · detectado ' + money(a.monto) : '')]);
       var dOk = flag(a.destino_coincide, 'destinatario_no_coincide'); chk.push([lab(dOk, 'Destinatario correcto', 'Destinatario no coincide'), dOk, a.destinatario && dOk === false ? 'Leído: ' + a.destinatario : '']);
       var rOk = flag(a.referencia_valida, 'referencia_ausente'); chk.push([lab(rOk, 'Referencia válida', 'Referencia no válida'), rOk, '']);
       var fOk = flag(a.fecha_valida, 'fecha_no_verificada'); chk.push([lab(fOk, 'Fecha y hora válida', 'Fecha no verificada'), fOk, '']);
