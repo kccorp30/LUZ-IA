@@ -389,21 +389,37 @@ body.focus-open .board,body.focus-open .topbar,body.focus-open .voice-dock{opaci
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
-
-/* ══ KITCHEN COMMAND V5.1 · LIVING INTERFACE POLISH ══ */
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(560px 150px at 50% 0,rgba(123,77,255,.09),transparent 72%);transition:opacity .5s ease}
-.coord-orb{filter:drop-shadow(0 10px 28px rgba(75,91,255,.16))}.coord-orb::before{animation:coordBreath 5.5s ease-in-out infinite}@keyframes coordBreath{50%{opacity:.72;transform:scale(1.035)}}
-.lane{border-color:rgba(98,150,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 24px 70px rgba(0,0,0,.24)}
-.order:not(.modified){border-color:color-mix(in srgb,var(--lc) 25%,transparent)}
-.order.modified{transform:translateZ(0);box-shadow:0 18px 50px rgba(0,0,0,.34),0 0 34px rgba(255,69,103,.12)}
-.order.modified .mod-box{box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 10px 30px rgba(255,69,103,.10)}
-.rail{box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 26px 80px rgba(0,0,0,.30),0 0 50px rgba(123,77,255,.055)}
-.voice-dock{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
-.voice-dock.listening .micbtn{transform:scale(1.025)}
-.voice-dock.listening::before{content:"";position:absolute;left:50%;top:0;width:260px;height:70px;transform:translate(-50%,-35%);background:radial-gradient(ellipse,rgba(0,217,255,.12),transparent 70%);pointer-events:none}
-.backdrop.on{backdrop-filter:blur(8px) saturate(.82)}
-.backdrop.on .drawer{box-shadow:0 0 0 1px rgba(0,217,255,.14),0 45px 140px rgba(0,0,0,.68),0 0 75px rgba(0,217,255,.11)}
-@media (prefers-reduced-motion:no-preference){.order.enter{animation-duration:.48s}.ev{animation-duration:.36s}}
+</style>
+<style id="hlKitchenPremiumVisual">
+/* ====================================================
+   HOLA LUZ — KITCHEN PREMIUM VISUAL
+   Presentation only; existing operational controls retained.
+   ==================================================== */
+.ambient{background:radial-gradient(ellipse at 42% -8%,#123b8b 0,transparent 52%),radial-gradient(ellipse at 100% 40%,#221453 0,transparent 58%),radial-gradient(ellipse at 0 90%,#063449 0,transparent 55%),linear-gradient(140deg,#06152f,#040b20 70%)}
+.ambient::after{opacity:.65;background-size:64px 64px}
+.topbar{padding:10px 18px;border:1px solid #315aa955;border-radius:22px;background:linear-gradient(115deg,#101c42dd,#0a204c88 48%,#10152ddd);box-shadow:inset 0 1px #a6c8ff18,0 8px 35px #02091f50;gap:18px;height:104px}
+.brand{display:grid;grid-template-columns:auto auto;gap:8px 14px}.brand h1{font-size:30px}.brand .kc{grid-column:1;font-size:10px;letter-spacing:.2em;color:#abc7ec}.brand .live{grid-column:2;grid-row:1/3}
+.coord-orb{width:106px}.coord-title{font-family:inherit;font-size:22px;letter-spacing:-.025em}.coord-stats{color:#adc5ed}
+.load{border-radius:30px;background:#07152d99;box-shadow:inset 0 1px #b0d5ff14}.clock b{font-size:25px}
+.board{gap:14px;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(250px,.79fr)}
+.lane{border-radius:23px;background:linear-gradient(165deg,#0e2544c9,#06142cbf);box-shadow:inset 0 1px #bad7ff15,0 16px 32px #000b202b}
+.lane.new{border-color:#198eff66}.lane.prep{border-color:#ffbf3c55;background:linear-gradient(170deg,#47381855,#0a182ccc 28%)}.lane.ready{border-color:#00dcb255;background:linear-gradient(170deg,#06545155,#081a2ecc 28%)}
+.lane-head{padding:17px 14px 13px;gap:10px;flex-wrap:wrap;border-bottom:1px solid #90c3ff12}.lane-title{font-family:inherit;font-size:22px;font-weight:900;letter-spacing:-.035em}.lane-title .n{font-family:inherit;font-size:24px}.lane-sub{font-size:11px;color:#b4c6e0;margin-top:4px}.lane-ico{width:38px;height:38px;border-radius:12px;background:#ffffff08}.sortbtn{font-size:10px;height:30px;margin-left:auto}
+.lane-scroll{padding:12px;gap:14px}.order{padding:14px;border-radius:19px;background:linear-gradient(145deg,#173359d9,#091a34ed 75%);border-color:#4476be66;box-shadow:inset 0 1px #c2ddff14,0 8px 18px #000c202e;overflow:hidden}
+.order:hover{border-color:#609cdd99}.prep .order{border-color:#d3a55166}.ready .order{border-color:#24b9b366;background:linear-gradient(145deg,#103d4be0,#091b35ed)}
+.order.warn{border-color:#ffc36b}.order.late{border-color:#ff6e85}.order.modified{border-color:#ff4567;background:linear-gradient(140deg,#441f3f,#181932)}
+.o-top{gap:7px;flex-wrap:wrap}.o-num{font-size:23px;letter-spacing:-.03em}.o-timer{font-size:18px}.o-badge{font-size:9px;letter-spacing:.04em;padding:0 7px;height:24px}.o-sub{margin-top:6px}.o-cli{color:#b6cce7;font-size:12px}
+.o-body{display:block;margin-top:12px}.o-items{gap:0}.o-it{grid-template-columns:30px minmax(0,1fr) 88px;grid-template-rows:auto;gap:5px 7px;align-items:center;min-height:96px;border-top:1px solid #94c5ff15;padding:10px 0}.o-it .q{font-size:21px;font-weight:800;color:#e6f0ff;align-self:start;padding-top:9px}.o-it .nm{font-size:16px;line-height:1.4;font-weight:750;align-self:start;padding-top:8px}.o-it .o-img{grid-column:3;grid-row:1/3;width:88px;height:88px;border-radius:16px;border-color:#c3dcff22;box-shadow:0 5px 20px #000a2044}.o-it .o-img img{object-fit:cover}.o-it .md{grid-column:1/3;grid-row:2;font-size:12px;font-weight:700;color:#ffdb97;background:#8c5c1929;border:1px solid #e7b35640;padding:6px 8px;border-radius:8px;margin:0;line-height:1.4}.o-it .md::before{content:'↳ '}.o-it .xt{font-size:9px}
+.o-note{font-size:13px;color:#ffe1a7;background:#9b661e26;border:1px solid #e9b75355;border-left:3px solid #ffc868;padding:10px;line-height:1.5}
+.o-foot{margin-top:11px;flex-wrap:wrap;row-gap:12px}.o-type{font-size:11px;letter-spacing:.03em;color:#c3d6ee}.o-type svg{color:#74c7ff}.o-foot .act.pill{flex-basis:100%;border-radius:13px;min-height:50px}.act.pill .lg{display:inline}.act.pill .sm{display:none}
+.act{min-height:52px;font-size:13px;font-weight:850;letter-spacing:.03em;border-radius:13px}.act.full{font-size:13px;min-height:52px}.act.start{background:linear-gradient(180deg,#17b8ff 0,#087aff 45%,#1752e7);border:1px solid #56cfff;box-shadow:inset 0 1px 2px #ffffff66,0 5px 18px #117bff40}.act.readyb{color:#fff4d1;background:linear-gradient(180deg,#b97b10,#80500a);border:1px solid #ffcb59;box-shadow:inset 0 1px 2px #ffedb966,0 5px 18px #da960e22}.act.deliver{border-radius:14px;padding:10px;min-height:64px;background:linear-gradient(145deg,#0b655d77,#073e4b44);font-size:14px}.act.deliver .ck{width:36px;height:36px;flex:none}.act.deliver small{line-height:1.4;margin-top:5px;font-size:10px;color:#a8e9d9}.act:active{transform:scale(.97)}
+.rail{border-color:#6963c66b;background:radial-gradient(ellipse at 5% 0,#5931a449,transparent 55%),linear-gradient(150deg,#111d3eef,#0b1733ed)}.rail-head{padding:18px 14px;gap:10px}.rail-head b{font-size:25px}.rail-head small{font-size:10px;letter-spacing:.07em;line-height:1.5}.rail-scroll{padding:0 12px 15px;gap:12px}.rcard{border-color:#5078af55;background:linear-gradient(135deg,#15305277,#0a1731aa);padding:15px}.rcard .lbl{font-size:10px;letter-spacing:.06em;color:#c3d5f2}.ev{padding:16px;border-radius:17px;box-shadow:inset 0 1px #bbddff14}.ev p,.sugg p{font-size:13px;line-height:1.6}.ev .lbl{font-size:11px;line-height:1.5}.prod-row{padding:8px 0;border-bottom:1px solid #a6caff10;font-size:12px;line-height:1.4}.prod-row b{color:#64dcff;font-size:18px}.prod-list{gap:0}.rcard.open .prod-list{overflow-y:auto}
+.voice-dock{background:linear-gradient(110deg,#123263d9,#111b43ee 50%,#0c1b37ed);border-color:#447fce77;box-shadow:inset 0 1px #a8d2ff20,0 -6px 28px #2557c414;border-radius:22px}.fbtn{border-radius:24px}.fbtn[aria-pressed=true]{background:linear-gradient(150deg,#078fff,#244cc5);border-color:#5ae1ff;box-shadow:0 0 18px #15afff33}.micbtn{box-shadow:0 0 0 6px #246ef424,0 0 0 11px #226aea14,0 0 30px #176eff55}.vcopy b{color:#fff}.lane-empty{margin:10px 0;padding:20px 13px;line-height:1.6;background:#18416d25;border-color:#6399cb40}
+@media(min-width:1500px){.o-it{grid-template-columns:34px minmax(0,1fr) 106px;min-height:114px}.o-it .o-img{width:106px;height:100px}.o-it .nm{font-size:18px}.act,.act.full{font-size:15px}.lane-title{font-size:25px}}
+@media(min-width:861px) and (max-width:1180px){.board{grid-template-columns:repeat(3,minmax(0,1fr))}.topbar{padding:8px 12px;height:86px;gap:12px}.brand h1{font-size:25px}.brand .live{grid-column:1;grid-row:2;height:22px;font-size:9px;justify-self:start}.coord-orb{width:76px}.coord-title{font-size:16px}.coord-title .l,.coord-title .s{display:none}.coord-stats{font-size:11px}.lane-head{padding:12px 10px}.lane-title{font-size:19px}.lane-scroll{padding:9px}.order{padding:11px}.o-it{grid-template-columns:26px minmax(0,1fr) 68px;min-height:80px}.o-it .o-img{width:68px;height:72px}.o-it .nm{font-size:14px}.o-it .q{font-size:18px}.o-timer{font-size:16px}.o-num{font-size:20px}.o-badge{font-size:8px}.sortbtn{height:32px}.voice-dock{height:72px}.rail{background:linear-gradient(150deg,#132443,#0b1733)}}
+@media(max-width:860px){.board{display:block}.topbar{height:auto;padding:12px;gap:9px;border-radius:17px}.brand{display:flex;flex-wrap:wrap;gap:6px}.brand h1{font-size:23px}.brand .live{font-size:9px;height:23px}.clock b{font-size:17px}.lane-head{padding:15px}.lane-title{font-size:22px}.lane-scroll{padding:12px}.o-it{grid-template-columns:30px minmax(0,1fr) 94px}.o-it .o-img{width:94px;height:90px}.o-it .nm{font-size:17px}.voice-dock{border-radius:18px}.rail{background:linear-gradient(150deg,#132443,#0b1733)}.mobile-tab{font-size:11px}.act,.act.full{min-height:54px;font-size:14px}}
+@media(prefers-reduced-motion:reduce){.order,.act,.ev,.hl-orb,.hl-orb:before,.hl-orb:after{animation:none!important;transition:none!important}}
+/* END HOLA LUZ — KITCHEN PREMIUM VISUAL */
 
 </style>
 </head>
@@ -705,7 +721,7 @@ function pauseRecognitionForSpeech(){voicePausedForSpeech=true;if(recognition){t
 function resumeRecognition(){voicePausedForSpeech=false;if(voiceActive)setTimeout(startRecognition,450)}
 function toggleMute(){muted=!muted;try{localStorage.setItem("hl_kitchen_muted",muted?"1":"0")}catch(e){}let b=q("muteBtn");if(b){b.textContent=muted?"🔇":"🔊";b.setAttribute("aria-pressed",muted?"true":"false")}if(muted){try{if(luzAudio)luzAudio.pause();if(window.speechSynthesis)window.speechSynthesis.cancel()}catch(e){}}toast(muted?"Luz silenciada: responderá solo por escrito":"Voz de Luz activada")}
 try{if(localStorage.getItem("hl_kitchen_muted")==="1")muted=true}catch(e){}
-function toggleVoice(){unlockAudio();let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toggleTextCommand(true);q("voiceTitle").textContent="Control por voz no disponible en este dispositivo.";q("voiceSubtitle").textContent="Puedes escribirle a Luz o usar los botones. Cocina funciona igual.";toast("Control por voz no disponible en este dispositivo.");return}voiceActive=!voiceActive;try{localStorage.setItem("hl_kitchen_voice",voiceActive?"1":"0")}catch(e){}q("voiceButton").classList.toggle("on",voiceActive);q("topMic").classList.toggle("active",voiceActive);if(voiceActive){q("voiceTitle").textContent="Luz está atenta ✦";q("voiceSubtitle").textContent="Di “Luz” para hablar conmigo. Ej.: “Luz, entendido el cambio del 559”.";setLuzState("listening","Luz está atenta ✦");voicePausedForSpeech=false;startRecognition();speakLuz("Estoy atenta. Di Luz para hablar conmigo.",false)}else{if(recognition){try{recognition.stop()}catch(e){}}q("voiceTitle").textContent="Luz está coordinando";q("voiceSubtitle").textContent="Toca para volver a hablar.";setLuzState("idle","Coordinando operación")}}
+function toggleVoice(){unlockAudio();let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toggleTextCommand(true);q("voiceTitle").textContent="Control por voz no disponible en este dispositivo.";q("voiceSubtitle").textContent="Puedes escribirle a Luz o usar los botones. Cocina funciona igual.";toast("Control por voz no disponible en este dispositivo.");return}voiceActive=!voiceActive;q("voiceButton").classList.toggle("on",voiceActive);q("topMic").classList.toggle("active",voiceActive);if(voiceActive){q("voiceTitle").textContent="Luz está atenta ✦";q("voiceSubtitle").textContent="Di “Luz” para hablar conmigo. Ej.: “Luz, entendido el cambio del 559”.";setLuzState("listening","Luz está atenta ✦");voicePausedForSpeech=false;startRecognition();speakLuz("Estoy atenta. Di Luz para hablar conmigo.",false)}else{if(recognition){try{recognition.stop()}catch(e){}}q("voiceTitle").textContent="Luz está coordinando";q("voiceSubtitle").textContent="Toca para volver a hablar.";setLuzState("idle","Coordinando operación")}}
 
 function kitchenFingerprint(peds){return (peds||[]).map(p=>[p.id,p.estado,Math.floor(nowMins(p)/3),String(p.notas_especiales||"").slice(0,40)].join(":" )).sort().join("|")}
 function scheduleSmartCoordinator(peds){let fp=kitchenFingerprint(peds),now=Date.now();if(!peds.length){lastCoordinatorFingerprint=fp;return}if(fp===lastCoordinatorFingerprint&&now-lastCoordinatorAt<90000)return;lastCoordinatorFingerprint=fp;if(coordinatorBusy)return;clearTimeout(scheduleSmartCoordinator.t);scheduleSmartCoordinator.t=setTimeout(()=>runSmartCoordinator(),1100)}
@@ -823,14 +839,14 @@ function actionFor(p,prio){
   if(p.estado==="confirmado")return prio?'<button class="act start full" data-act="state" data-target="en_preparacion">'+ICO.play+'Iniciar preparación</button>':null;
   if(p.estado==="en_preparacion")return'<button class="act readyb" data-act="state" data-target="listo">'+ICO.check+'Marcar listo</button>';
   let t=orderType(p);return'<button class="act deliver" data-act="state" data-target="listo_entrega"><span class="ck">'+ICO.check+'</span><span class="lb">'+(t==="recoger"?"Listo para recoger":t==="mesa"?"Listo para servir":"Listo para despacho")+'<small>Toca cuando salga de cocina</small></span></button>'}
+// HOLA LUZ — KITCHEN PREMIUM VISUAL: presentation only
 function renderOrder(p,prio){
   let items=itemsOf(p),n=items.reduce((s,i)=>s+i.qty,0),mod=modPending(p),badge=mod?'<span class="o-badge mod">MODIFICADO</span>':p.estado==="confirmado"?'<span class="o-badge new">NUEVO</span>':p.estado==="en_preparacion"?'<span class="o-badge prep">EN PROCESO</span>':'<span class="o-badge ready">LISTO</span>';
   let seen={},imgs=[];items.forEach(i=>{let k=kNorm(i.name);if(!seen[k]&&imgs.length<4){seen[k]=1;imgs.push(i.name)}});
   let cli=customerName(p),t=orderType(p),notes=String(p.notas_especiales||"").trim();
   let h='<div class="o-top"><span class="o-num">#'+esc(orderDisplay(p))+'</span>'+badge+'<span></span><span class="o-timer"><span data-since="'+esc(p.created_at)+'">'+fmtT(ageMs(p))+'</span></span></div>'+
     '<div class="o-sub"><span class="o-cli">'+esc(cli)+'</span><span class="tl">'+(tState(p)==="late"?"⚠ ATRASADO":tState(p)==="warn"?"ATENCIÓN":"")+'</span></div>'+
-    '<div class="o-body"><div class="o-items">'+items.map(i=>'<div class="o-it'+(itemDim(i)?' dim':'')+'"><span class="q">'+i.qty+'×</span><span class="nm">'+esc(i.name)+(i.extra?'<span class="xt">EXTRA</span>':'')+'</span>'+(i.note?'<span class="md">'+esc(i.note)+'</span>':'')+'</div>').join("")+'</div>'+
-    (imgs.length?'<div class="o-imgs'+(imgs.length===1?' one':'')+'">'+imgs.map(imgTile).join("")+'</div>':'')+'</div>'+
+    '<div class="o-body"><div class="o-items">'+items.map(i=>'<div class="o-it'+(itemDim(i)?' dim':'')+'"><span class="q">'+i.qty+'×</span><span class="nm">'+esc(i.name)+(i.extra?'<span class="xt">EXTRA</span>':'')+'</span>'+imgTile(i.name)+(i.note?'<span class="md">'+esc(i.note)+'</span>':'')+'</div>').join("")+'</div></div>'+
     (notes&&!/^[✏️📍]/u.test(notes)?'<div class="o-note">⚠ '+esc(notes.slice(0,140))+'</div>':'')+
     modBoxHtml(p)+
     '<div class="o-foot"><span class="o-type">'+ICO[t]+esc(typeText(p))+' · '+n+' producto'+(n===1?'':'s')+'</span>'+
@@ -1058,22 +1074,6 @@ async function pinSubmit(){if(pinBusy)return;pinBusy=true;q("linkErr").textConte
   catch(e){q("linkErr").textContent="No pude verificar el PIN. Revisa la conexión e intenta de nuevo.";pinBuf="";paintPin()}finally{pinBusy=false}}
 (function initPinPad(){let pad=q("pinPad");pad.innerHTML=[1,2,3,4,5,6,7,8,9,"←",0,"✓"].map(k=>'<button type="button" data-k="'+k+'" aria-label="'+(k==="←"?"Borrar":k==="✓"?"Confirmar":k)+'">'+k+'</button>').join("");
   pad.addEventListener("click",e=>{let b=e.target.closest("[data-k]");if(!b||pinBusy)return;let k=b.dataset.k;if(k==="←")pinBuf=pinBuf.slice(0,-1);else if(k==="✓"){if(pinBuf.length===4)pinSubmit()}else if(pinBuf.length<4){pinBuf+=k;if(pinBuf.length===4)setTimeout(pinSubmit,120)}paintPin()})})();
-/* Wake word “Luz”: el navegador exige al menos una interacción del usuario para abrir micrófono/audio.
-   Después de ese primer gesto, Kitchen Command queda en escucha continua y “Luz” activa el comando. */
-function enableHandsFreeLuz(){
-  let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
-  if(voiceActive)return;unlockAudio();voiceActive=true;
-  try{localStorage.setItem("hl_kitchen_voice","1")}catch(e){}
-  let vb=q("voiceButton");if(vb)vb.classList.add("on");let tm=q("topMic");if(tm)tm.classList.add("active");
-  q("voiceTitle").textContent="Luz está atenta ✦";q("voiceSubtitle").textContent='Di “Luz” para hablar conmigo.';
-  setLuzState("listening","Luz está atenta ✦");voicePausedForSpeech=false;startRecognition();
-}
-(function armHandsFree(){
-  let wanted=true;try{wanted=localStorage.getItem("hl_kitchen_voice")!=="0"}catch(e){}
-  if(!wanted)return;
-  const arm=()=>{enableHandsFreeLuz();document.removeEventListener("pointerdown",arm,true);document.removeEventListener("keydown",arm,true)};
-  document.addEventListener("pointerdown",arm,true);document.addEventListener("keydown",arm,true);
-})();
 (function start(){setClock();paintMute();let rid=resolveTenant();if(rid)kitchenBoot(rid);else{q("linkScreen").classList.add("on");q("liveText").textContent="SIN VINCULAR"}})();
 
 </script>
