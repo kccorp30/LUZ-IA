@@ -888,8 +888,21 @@ async function guardarPedidoSupabase(restauranteId, pedidoData) {
 var HL_ESTADOS_ACTIVOS = ["confirmado", "en_preparacion", "listo", "en_camino"];
 async function hlPedidosActivosCliente(restauranteId, tel, horas) {
   var t = stripCountryCode(String(tel || "")), full = "57" + t;
-  var r = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId + "&or=(cliente_tel.eq." + encodeURIComponent(t) + ",cliente_tel.eq." + encodeURIComponent(full) + ")&estado=in.(" + HL_ESTADOS_ACTIVOS.join(",") + ")&created_at=gte." + new Date(Date.now() - (horas || 24) * 3600e3).toISOString() + "&select=id,numero_pedido,estado,items,total,subtotal,desechables,domicilio,notas_especiales,direccion,metodo_pago,created_at&order=created_at.desc&limit=5", { headers: sbH(true), timeout: 8000 });
+  if (!restauranteId || !t) return [];
+  var r = await axios.get(SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restauranteId + "&or=(cliente_tel.eq." + encodeURIComponent(t) + ",cliente_tel.eq." + encodeURIComponent(full) + ")&estado=in.(" + HL_ESTADOS_ACTIVOS.join(",") + ")&created_at=gte." + new Date(Date.now() - (horas || 24) * 3600e3).toISOString() + "&select=id,numero_pedido,estado,items,total,subtotal,desechables,domicilio,notas_especiales,direccion,metodo_pago,created_at,updated_at,tipo_pedido,canal,cliente_nombre&order=created_at.desc&limit=5", { headers: sbH(true), timeout: 8000 });
   return r.data || [];
+}
+
+// Fuente única de verdad para el contexto conversacional. No depende de orderState:
+// encuentra pedidos creados por WhatsApp, menú web, panel u otro canal usando el teléfono normalizado.
+async function hlContextoPedidoCliente(restauranteId, tel) {
+  try {
+    var activos = await hlPedidosActivosCliente(restauranteId, tel, 24);
+    return activos && activos.length ? activos[0] : null;
+  } catch (e) {
+    console.warn("[contexto-pedido]", e.message);
+    return null;
+  }
 }
 // El pedido "padre" de un adicional debe ser un pedido ACTIVO del mismo cliente. Nunca uno entregado ni él mismo.
 async function hlResolverPedidoPadre(restauranteId, tel, reclamado, propioNumero, autoVincular) {
@@ -1466,6 +1479,9 @@ async function verificarComprobante(mediaId, totalEsperado, phoneNumberId, resta
     var esperado=Math.round(Number(totalEsperado||0));
     // Para COP el valor debe coincidir exactamente. Solo toleramos 1 peso por normalización.
     var montoCoincide=esperado>0&&monto!=null&&Math.abs(monto-esperado)<=1;
+    // Pago parcial legítimo: un comprobante menor al saldo esperado puede ser evidencia válida
+    // siempre que todos los demás controles estrictos pasen. Nunca se considera pago total.
+    var montoParcial=esperado>0&&monto!=null&&monto>0&&monto<esperado;
     var estado=String(v.estado_pago||'desconocido').toLowerCase();
     var estadoOk=['exitoso','completado','aprobado','realizado','enviado'].indexOf(estado)!==-1;
     var referencia=String(v.referencia||'').trim();
@@ -1510,7 +1526,7 @@ async function verificarComprobante(mediaId, totalEsperado, phoneNumberId, resta
     var hard=[];
     if(v.es_comprobante!==true)hard.push('no_es_comprobante');
     if(monto==null)hard.push('monto_no_legible');
-    else if(!montoCoincide)hard.push('monto_no_coincide');
+    else if(!montoCoincide&&!montoParcial)hard.push('monto_no_coincide');
     if(!estadoOk)hard.push('estado_no_confirmado');
     if(!refOk)hard.push('referencia_ausente');
     if(expectedName && !recipientVisible)hard.push('destinatario_no_visible');
@@ -1522,9 +1538,11 @@ async function verificarComprobante(mediaId, totalEsperado, phoneNumberId, resta
     if(duplicate)hard.push('comprobante_duplicado');
 
     var strictPass=hard.length===0;
+    var partialPass=strictPass&&montoParcial;
+    var fullPass=strictPass&&montoCoincide;
     var result={
-      valido:strictPass,
-      decision:strictPass?'evidencia_consistente':(v.es_comprobante===true?'revision_manual':'rechazado'),
+      valido:fullPass, parcial_valido:partialPass,
+      decision:partialPass?'evidencia_parcial_consistente':(fullPass?'evidencia_consistente':(v.es_comprobante===true?'revision_manual':'rechazado')),
       monto:monto,monto_esperado:esperado,monto_coincide:montoCoincide,
       entidad:v.entidad||null,referencia:referencia||null,
       fecha_hora:v.fecha_iso||v.fecha_texto||null,fecha_valida:fechaOk,
@@ -5076,6 +5094,20 @@ app.post("/api/luz-menu-chat", async function(req, res) {
     var promos = promosR.data || [];
     var aprendizajes = (aprendR.data || []).map(function(a){ return "["+a.tipo+"] "+a.contenido; }).join("\n");
     var cliente = (cliR.data || [])[0] || null;
+
+    // El menú web y WhatsApp comparten la misma verdad operacional. Aunque el frontend
+    // no envíe pedido_activo (o esté desactualizado), Luz consulta el pedido real por teléfono.
+    var pedidoActivoDB = null;
+    if (telefono) pedidoActivoDB = await hlContextoPedidoCliente(restaurante_id, telefono);
+    if (pedidoActivoDB) {
+      var resumenItemsActivo = Array.isArray(pedidoActivoDB.items) ? pedidoActivoDB.items.slice(0,4).join(", ") : String(pedidoActivoDB.items || "");
+      pedido_activo = "Pedido #" + pedidoActivoDB.numero_pedido
+        + " · estado " + pedidoActivoDB.estado
+        + " · total $" + Number(pedidoActivoDB.total || 0).toLocaleString("es-CO")
+        + (resumenItemsActivo ? " · " + resumenItemsActivo : "")
+        + (pedidoActivoDB.direccion ? " · entrega: " + pedidoActivoDB.direccion : "")
+        + (pedidoActivoDB.canal ? " · origen: " + pedidoActivoDB.canal : "");
+    }
     var diaHoy = getDiaColombiaStr();
     // Para acciones estructuradas (chips de agregar)
     var menuItems = menuItemsEstructurado;
@@ -5123,9 +5155,13 @@ ${cliente ? `- Nombre: ${cliente.nombre_cliente || ""}
 - Puntos: ${cliente.puntos || 0} puntos (nivel ${cliente.nivel_fidelidad || "bronce"})
 - Pedidos totales: ${cliente.total_pedidos || 0}` : "- Cliente nuevo o sin historial"}
 
-${pedido_activo ? `⚠️ IMPORTANTE — ${pedido_activo}
-El cliente YA tiene un pedido activo. NO le pidas datos de nuevo (dirección, teléfono, nombre). 
-Si quiere agregar algo, dile que puede usar el campo de notas o que se lo comunique al restaurante.` : ""}
+${pedido_activo ? `⚠️ PEDIDO ACTIVO — FUENTE OPERACIONAL DEL SISTEMA
+${pedido_activo}
+El cliente YA tiene un pedido activo, aunque se haya creado desde el MENÚ WEB y no desde este chat.
+NO lo trates como cliente nuevo. NO vuelvas a preguntarle qué quiere pedir después de un "gracias", "ok", "listo", "perfecto" o mensaje corto de cortesía.
+Responde según el estado real del pedido. Si está en preparación, por ejemplo: "Con gusto. Tu pedido sigue en preparación y te avisamos apenas esté listo."
+NO le pidas nuevamente dirección, teléfono, nombre ni método de pago salvo que el flujo realmente lo requiera.
+Si quiere agregar o modificar algo, conserva el mismo pedido y deriva la acción al flujo de modificación; NO abras una venta nueva por defecto.` : ""}
 
 PROMOS DE HOY (${diaHoy}):
 ${promosHoy.length ? promosHoy.map(function(p){ return "🔥 "+p.titulo+": "+p.descripcion+(p.descuento?" ("+p.descuento+"% off)":""); }).join("\n") : "Sin promos especiales hoy"}
@@ -5157,7 +5193,8 @@ Usa esto para: alergias, quejas, pedidos especiales, cliente frustrado. NO para 
 - Habla como una persona real, no como un bot
 - Si el cliente ya tiene puntos suficientes dile que puede canjear
 - Si hay promo hoy, menciónala de forma natural en la conversación
-- Termina siempre con una pregunta o acción concreta`;
+- Si NO hay pedido activo, termina con una pregunta o acción concreta.
+- Si YA hay pedido activo y el cliente solo agradece/confirma, NO abras una nueva venta ni hagas una pregunta comercial: responde brevemente según el estado del pedido.`;
 
     // Construir historial
     var messages = [];
@@ -9000,7 +9037,7 @@ app.post("/api/equipo/liveness/diagnostico", wfRoute(async function (req, res) {
 // ════════════════════════════════════════════════════════════════════════════
 var HLV_ACTIVOS = ["esperando_pago", "confirmado", "en_preparacion", "listo", "en_camino"];
 var HLV_EVT_MOD = "pedido_modificado", HLV_EVT_ACKS = ["pedido_modificacion_revisada", "cocina_modificacion_revisada"];
-var HLV_EVT_PAGO = ["comprobante_verificado", "pago_confirmado_manual", "pago_rechazado_manual", "pago_revision_requerida"];
+var HLV_EVT_PAGO = ["comprobante_verificado", "pago_confirmado_manual", "pago_rechazado_manual", "pago_revision_requerida", "pago_comprometido"];
 var HLV_EVT_VIVO = [HLV_EVT_MOD].concat(HLV_EVT_ACKS, HLV_EVT_PAGO, ["pedido_cancelado", "pedido_en_preparacion", "pedido_listo", "pedido_recoger_listo", "pedido_en_ruta", "pedido_entregado", "domi_asignado", "mision_asignada", "pedido_actualizado", "pedido_reenviado"]);
 function hlvUuid(x) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(x || "")); }
 function hlvH(extra) { var k = SUPABASE_SERVICE_KEY_VAL; return Object.assign({ "apikey": k, "Authorization": "Bearer " + k, "Content-Type": "application/json" }, extra || {}); }
@@ -9074,11 +9111,13 @@ function hlvPago(p, eventos, evidencias) {
   (evidencias || []).forEach(function (e) { if (e.media_id) media[e.media_id] = 1; });
   if (p.comprobante_media_id) media[p.comprobante_media_id] = 1;
   var ev = eventos.filter(function (e) { var m = e.metadata || {}; return HLV_EVT_PAGO.indexOf(e.tipo) !== -1 && (e.pedido_id === p.id || (m.media_id && media[m.media_id])); });
-  var analisis = ev.filter(function (e) { return e.tipo === "comprobante_verificado"; }).map(function (e) { var m = e.metadata || {}; return { at: e.created_at, valido: m.decision === "evidencia_consistente", decision: m.decision, monto: m.monto, monto_esperado: m.monto_esperado, monto_coincide: m.monto_coincide, destinatario: m.destinatario, destinatario_esperado: m.destinatario_esperado, destino_coincide: m.destino_coincide, referencia: m.referencia, referencia_valida: m.referencia_valida, fecha_hora: m.fecha_hora, fecha_valida: m.fecha_valida, entidad: m.entidad, estado_pago: m.estado_pago, confianza: m.confianza, duplicado: m.duplicado, hard_failures: m.hard_failures || [], razon: e.mensaje, media_id: m.media_id || null }; });
+  var analisis = ev.filter(function (e) { return e.tipo === "comprobante_verificado"; }).map(function (e) { var m = e.metadata || {}; return { at: e.created_at, valido: m.decision === "evidencia_consistente" || m.decision === "evidencia_parcial_consistente", decision: m.decision, monto: m.monto, monto_esperado: m.monto_esperado, monto_coincide: m.monto_coincide, destinatario: m.destinatario, destinatario_esperado: m.destinatario_esperado, destino_coincide: m.destino_coincide, referencia: m.referencia, referencia_valida: m.referencia_valida, fecha_hora: m.fecha_hora, fecha_valida: m.fecha_valida, entidad: m.entidad, estado_pago: m.estado_pago, confianza: m.confianza, duplicado: m.duplicado, hard_failures: m.hard_failures || [], razon: e.mensaje, media_id: m.media_id || null }; });
   var manual = ev.filter(function (e) { return e.tipo === "pago_confirmado_manual" || e.tipo === "pago_rechazado_manual"; });
   var ultManual = manual[manual.length - 1] || null;
   var cubiertoVisual = analisis.filter(function (a) { return a.valido; }).reduce(function (s, a) { return s + Number(a.monto || 0); }, 0);
   var cubiertoManual = manual.filter(function (e) { return e.tipo === "pago_confirmado_manual"; }).reduce(function (s, e) { return s + Number((e.metadata || {}).monto || 0); }, 0);
+  var compromisos = ev.filter(function(e){ return e.tipo === "pago_comprometido"; }).map(function(e){ var m=e.metadata||{}; return {metodo:m.metodo||"efectivo",monto:Number(m.monto||0),estado:m.estado||"pendiente",at:e.created_at,nota:m.nota||null}; });
+  var comprometido = compromisos.filter(function(c){return c.estado!=="cancelado";}).reduce(function(s,c){return s+Number(c.monto||0);},0);
   var estado, etiqueta, cubierto = Math.max(cubiertoVisual, cubiertoManual);
   if (ultManual && ultManual.tipo === "pago_rechazado_manual") { estado = "rechazado"; etiqueta = "Pago rechazado"; }
   else if (cubiertoManual > 0 && cubiertoManual >= total) { estado = "confirmado"; etiqueta = "Pago confirmado"; }
@@ -9091,7 +9130,7 @@ function hlvPago(p, eventos, evidencias) {
   else { estado = "pendiente"; etiqueta = "Pago pendiente"; }
   var comprobantes = (evidencias || []).filter(function (e) { return e.tipo === "comprobante_pago"; }).map(function (e) { return { url: e.url, media_id: e.media_id, at: e.created_at }; });
   if (!comprobantes.length && (p.comprobante_url || p.comprobante_media_id)) comprobantes.push({ url: p.comprobante_url || ("/api/comprobante/" + p.comprobante_media_id), media_id: p.comprobante_media_id || null, at: p.created_at });
-  return { estado: estado, etiqueta: etiqueta, total: total, cubierto: cubierto, saldo: Math.max(0, total - cubierto), cubierto_manual: cubiertoManual, cubierto_visual: cubiertoVisual, metodo: metodo || null, dinero_confirmado: cubiertoManual > 0, confirmado_por: ultManual && ultManual.tipo === "pago_confirmado_manual" ? ((ultManual.metadata || {}).actor || "restaurante") : null, confirmado_at: ultManual && ultManual.tipo === "pago_confirmado_manual" ? ultManual.created_at : null, razon_rechazo: ultManual && ultManual.tipo === "pago_rechazado_manual" ? ((ultManual.metadata || {}).razon || null) : null, analisis: analisis[analisis.length - 1] || null, analisis_historial: analisis, comprobantes: comprobantes };
+  return { estado: estado, etiqueta: etiqueta, total: total, cubierto: cubierto, saldo: Math.max(0, total - cubierto - comprometido), saldo_sin_compromisos: Math.max(0,total-cubierto), comprometido: comprometido, compromisos: compromisos, cubierto_manual: cubiertoManual, cubierto_visual: cubiertoVisual, metodo: metodo || null, dinero_confirmado: cubiertoManual > 0, confirmado_por: ultManual && ultManual.tipo === "pago_confirmado_manual" ? ((ultManual.metadata || {}).actor || "restaurante") : null, confirmado_at: ultManual && ultManual.tipo === "pago_confirmado_manual" ? ultManual.created_at : null, razon_rechazo: ultManual && ultManual.tipo === "pago_rechazado_manual" ? ((ultManual.metadata || {}).razon || null) : null, analisis: analisis[analisis.length - 1] || null, analisis_historial: analisis, comprobantes: comprobantes };
 }
 function hlvTimeline(p, eventos) {
   function primero(tipos) { var e = eventos.filter(function (x) { return x.pedido_id === p.id && tipos.indexOf(x.tipo) !== -1; })[0]; return e ? e.created_at : null; }
@@ -9324,11 +9363,36 @@ async function hlCrearPedidoPorVerificar(restaurante, from, state, mediaId, vr) 
     if (!saved) return null;
     state.status = "pago_por_verificar"; state.pedidoPorVerificarId = saved.id; state.orderNumber = saved.numero_pedido;
     await setOrderState(from, state).catch(function () {});
+    // La evidencia se persiste ANTES de avisar a nadie: una revisión manual jamás puede
+    // dejar un comprobante "flotando" solamente dentro del chat de WhatsApp.
+    var stableReviewUrl = await persistirComprobanteStorage(mediaId, restaurante.whatsapp_phone_id, restaurante.id).catch(function(){ return null; });
+    if (stableReviewUrl) {
+      await axios.patch(SUPABASE_URL + "/rest/v1/pedidos?id=eq." + saved.id, { comprobante_url: stableReviewUrl, comprobante_media_id: String(mediaId), updated_at: new Date().toISOString() }, { headers: hlvH({ "Prefer": "return=minimal" }), timeout: 8000 }).catch(function(){});
+      saved.comprobante_url = stableReviewUrl; saved.comprobante_media_id = String(mediaId);
+    }
     await hlVincularEvidencia(restaurante.id, saved.id, mediaId);
     var razones = (vr && vr.hard_failures || []).join(", ") || (vr && vr.razon) || "no se pudo validar automáticamente";
-    await hlvEvento(restaurante.id, saved.id, "pago_revision_requerida", "Pago por verificar · pedido #" + saved.numero_pedido, "Luz no pudo validar el comprobante: " + razones, { numero_pedido: saved.numero_pedido, hard_failures: vr && vr.hard_failures || [], monto_detectado: vr && vr.monto, monto_esperado: vr && vr.monto_esperado, media_id: mediaId }, "luz");
-    var det = vr && vr.monto != null && vr.monto_coincide === false ? "\nMonto esperado: $" + Number(vr.monto_esperado || state.total).toLocaleString("es-CO") + " · detectado: $" + Number(vr.monto).toLocaleString("es-CO") : "";
-    hlAvisoDueno(restaurante.id, "🧾 *PAGO POR VERIFICAR · PEDIDO #" + saved.numero_pedido + "*\n📱 " + stripCountryCode(from) + " · $" + Number(state.total).toLocaleString("es-CO") + det + "\nMotivo: " + razones + "\nEl pedido NO entra a cocina hasta que confirmes el pago en Pedidos → Pago.");
+    var reviewMeta = {
+      numero_pedido: saved.numero_pedido, hard_failures: vr && vr.hard_failures || [],
+      decision: vr && vr.decision || "revision_manual", monto_detectado: vr && vr.monto,
+      monto_esperado: vr && vr.monto_esperado != null ? vr.monto_esperado : Number(state.total),
+      monto_coincide: vr && vr.monto_coincide, entidad: vr && vr.entidad || null,
+      referencia: vr && vr.referencia || null, destinatario: vr && vr.destinatario || null,
+      destinatario_esperado: vr && vr.destinatario_esperado || null, destino_coincide: vr && vr.destino_coincide,
+      fecha_hora: vr && vr.fecha_hora || null, fecha_valida: vr && vr.fecha_valida,
+      confianza: vr && vr.confianza, duplicado: !!(vr && vr.duplicado), media_id: String(mediaId),
+      comprobante_url: stableReviewUrl || ("/api/comprobante/" + mediaId), resuelto: false
+    };
+    await hlvEvento(restaurante.id, saved.id, "pago_revision_requerida", "Pago por verificar · pedido #" + saved.numero_pedido, "Luz no pudo validar el comprobante: " + razones, reviewMeta, "luz");
+
+    // ALERTA OPERATIVA: además del evento financiero, se crea una alerta visible para
+    // que Inicio/Chats/Cerebro no puedan mostrar cero incidencias mientras hay dinero esperando decisión.
+    var alertTxt = "🚨 PAGO POR VALIDAR · Pedido #" + saved.numero_pedido + " · $" + Number(state.total).toLocaleString("es-CO") + " · " + razones;
+    await guardarMensajeSupabase(restaurante.id, stripCountryCode(from), alertTxt, "alerta_pregunta", mediaId).catch(function(){});
+    hlLiveTouch(restaurante.id);
+
+    var det = vr && vr.monto != null ? "\nMonto esperado: $" + Number(vr.monto_esperado || state.total).toLocaleString("es-CO") + " · detectado: $" + Number(vr.monto).toLocaleString("es-CO") : "";
+    await hlAvisoDueno(restaurante.id, "🚨 *LUZ · PAGO POR VALIDAR · PEDIDO #" + saved.numero_pedido + "*\n📱 Cliente: " + stripCountryCode(from) + "\n💰 Total: $" + Number(state.total).toLocaleString("es-CO") + det + "\n🧾 Comprobante archivado y disponible en el pedido.\nMotivo: " + razones + "\n\nAbre Pedidos → Pago para VER COMPROBANTE y APROBAR o RECHAZAR.");
     return saved;
   } catch (e) { console.warn("[pago-por-verificar]", e.message); return null; }
 }
@@ -10435,7 +10499,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       if (pareceFlujoPago) {
         // CRÍTICO: validar ANTES de pedir una respuesta a Luz.
         imagenPagoEvaluada = true;
-        var totalPedidoPre = Number(orderState[from].total || 0);
+        var totalPedidoPre = Number(orderState[from].modificacionPagoPendiente && orderState[from].modificacionPagoPendiente.saldo || orderState[from].total || 0);
         comprobanteVerificacion = await verificarComprobante(mediaId, totalPedidoPre, phoneNumberId, restaurante&&restaurante.id, from);
         if (comprobanteVerificacion && comprobanteVerificacion.valido === true && restaurante && orderState[from].pedidoPorVerificarId) {
           var promovido = await hlPromoverPedidoPorVerificar(restaurante.id, orderState[from], mediaId);
@@ -10449,7 +10513,20 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
             return;
           }
         }
-        if (comprobanteVerificacion && comprobanteVerificacion.valido === true) {
+        if (comprobanteVerificacion && comprobanteVerificacion.parcial_valido === true) {
+          esComprobante = true;
+          orderState[from].pagoParcial = orderState[from].pagoParcial || {pagadoDigital:0,evidencias:[]};
+          orderState[from].pagoParcial.pagadoDigital += Number(comprobanteVerificacion.monto||0);
+          orderState[from].pagoParcial.evidencias.push({mediaId:mediaId,monto:Number(comprobanteVerificacion.monto||0),entidad:comprobanteVerificacion.entidad||"digital"});
+          orderState[from].comprobanteMediaId = mediaId;
+          orderState[from].comprobanteUrl = "/api/comprobante/" + mediaId;
+          var stablePartialUrl = await persistirComprobanteStorage(mediaId, phoneNumberId, restaurante&&restaurante.id);
+          if (stablePartialUrl) orderState[from].comprobanteUrl = stablePartialUrl;
+          orderState[from].status = "esperando_pago";
+          var saldoParcial=Math.max(0,Number(totalPedidoPre||0)-Number(comprobanteVerificacion.monto||0));
+          orderState[from].pagoParcial.saldo=saldoParcial;
+          userText = "[PAGO PARCIAL VALIDADO por el sistema: $"+Number(comprobanteVerificacion.monto||0).toLocaleString("es-CO")+". Saldo pendiente: $"+saldoParcial.toLocaleString("es-CO")+". NO confirmes pago total. Pregunta cómo pagará exactamente el saldo restante.]";
+        } else if (comprobanteVerificacion && comprobanteVerificacion.valido === true) {
           esComprobante = true;
           orderState[from].comprobanteValidado = true;
           orderState[from].comprobanteValidadoMediaId = mediaId;
@@ -10470,7 +10547,7 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
           if (restaurante && vr.decision === "revision_manual" && !orderState[from].pedidoPorVerificarId && orderState[from].status !== "pago_por_verificar") {
             var porVerificar = await hlCrearPedidoPorVerificar(restaurante, from, orderState[from], mediaId, vr);
             if (porVerificar) {
-              var msgPv = "Recibimos tu comprobante 🙏 El restaurante lo está verificando. Apenas lo confirme, tu pedido #" + porVerificar.numero_pedido + " entra a preparación y te aviso por aquí.";
+              var msgPv = "Recibí tu comprobante 🙏 Ya lo anexé al pedido #" + porVerificar.numero_pedido + " y lo envié al restaurante para validación. Tu pedido todavía no entra a preparación; apenas confirmen el pago te aviso por aquí.";
               if (!conversations[from]) conversations[from] = [];
               conversations[from].push({ role: "user", content: "[El cliente envió un comprobante que requiere verificación del restaurante]" }, { role: "assistant", content: msgPv });
               await sendWhatsAppMessage(from, msgPv, phoneNumberId).catch(function(){});
@@ -10666,16 +10743,8 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     // Si no hay orderState, consultar Supabase
     if (!pedidoActivoTexto && restaurante) {
       try {
-        var telBuscar = stripCountryCode(from);
-        var svcPA = SUPABASE_SERVICE_KEY_VAL;
-        var pedActResp = await axios.get(
-          SUPABASE_URL + "/rest/v1/pedidos?restaurante_id=eq." + restaurante.id +
-          "&cliente_tel=eq." + encodeURIComponent(telBuscar) +
-          "&estado=in.(confirmado,en_preparacion,listo,en_camino,entregado)&order=created_at.desc&limit=1&select=numero_pedido,estado,total,items,direccion,tipo_pedido,updated_at",
-          { headers: { "apikey": svcPA, "Authorization": "Bearer " + svcPA } }
-        );
-        if (pedActResp.data && pedActResp.data.length > 0) {
-          var pa = pedActResp.data[0];
+        var pa = await hlContextoPedidoCliente(restaurante.id, from);
+        if (pa) {
           var ctxDB = ESTADO_CONTEXTO[pa.estado] || { label: pa.estado, instruccion: "Atiende al cliente con normalidad." };
           var itemsDB = Array.isArray(pa.items) ? pa.items.slice(0,3).join(", ") : (pa.items || "");
           // Check if recent (last 3 hours) to determine if still relevant
@@ -10781,7 +10850,12 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
     // una respuesta del modelo contradiga el resultado del validador.
     if (imagenPagoEvaluada && orderState[from]) {
       var comprobanteActualAutorizado = !!(esComprobante && orderState[from].comprobanteValidado === true && String(orderState[from].comprobanteValidadoMediaId||"") === String(mediaId||""));
-      if (comprobanteActualAutorizado) {
+      if (comprobanteVerificacion && comprobanteVerificacion.parcial_valido === true) {
+        orderState[from].status = "esperando_pago";
+        sideEffect = null;
+        var pp=orderState[from].pagoParcial||{};
+        cleanReply = "Recibí y validé $"+Number(comprobanteVerificacion.monto||0).toLocaleString("es-CO")+" como pago parcial. Quedan $"+Number(pp.saldo||0).toLocaleString("es-CO")+" por cubrir. ¿Ese saldo lo pagas en efectivo, Nequi/Bancolombia o datáfono?";
+      } else if (comprobanteActualAutorizado) {
         orderState[from].status = "confirmado";
         orderState[from].paymentMethod = orderState[from].paymentMethod || "digital";
         orderState[from].comprobanteMediaId = mediaId;
@@ -10923,6 +10997,15 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
             hlRegistrarRevision(restaurante.id, ped, Object.assign({}, ped, patch), "cliente", { accion: mod.accion, telefono: stripCountryCode(from) }).catch(function(){});
             // Save as modification alert so panel sees it immediately
             guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "✏️ PEDIDO #" + mod.numero + " MODIFICADO POR CLIENTE: " + mod.accion, "alerta_pregunta", null).catch(function(){});
+            // Si la modificación aumentó el total, NO damos por pagado el extra.
+            // Abrimos un subflujo de pago ligado al mismo pedido.
+            var deltaPago = Math.max(0, Number(patch.total || ped.total || 0) - Number(ped.total || 0));
+            if (deltaPago > 0) {
+              orderState[from] = orderState[from] || {};
+              orderState[from].modificacionPagoPendiente = { pedidoId: ped.id, numero: ped.numero_pedido, saldo: deltaPago, totalNuevo: Number(patch.total), creadoAt: new Date().toISOString() };
+              await setOrderState(from, orderState[from]).catch(function(){});
+              cleanReply = "Listo, agregué el cambio al pedido #"+ped.numero_pedido+" y Cocina ya fue avisada. El nuevo total es $"+Number(patch.total).toLocaleString("es-CO")+". Quedan $"+deltaPago.toLocaleString("es-CO")+" adicionales por definir. ¿Los pagas por Nequi/Bancolombia, en efectivo o con datáfono?";
+            }
           }
         }
       } catch(e) { console.error("modificar_pedido error:", e.message); }
@@ -10933,6 +11016,35 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
       var numCancel = orderState[from].cancelarPedido;
       guardarMensajeSupabase(restaurante.id, stripCountryCode(from), "⚠️ CLIENTE SOLICITA CANCELAR PEDIDO #" + numCancel, "alerta_pregunta", null).catch(function(){});
       console.log("Solicitud cancelacion pedido #" + numCancel + " de:", from);
+    }
+
+    // PAYMENT LEDGER V1 · resolver pagos parciales y extras sin crear pedidos fantasma.
+    if (restaurante && orderState[from] && orderState[from].modificacionPagoPendiente && sideEffect === "pago_confirmado") {
+      try {
+        var mp=orderState[from].modificacionPagoPendiente, metodoMod=orderState[from].paymentMethod||"efectivo";
+        var pagoExtraDigitalValidado=!!(imagenPagoEvaluada && comprobanteVerificacion && comprobanteVerificacion.valido===true && mediaId);
+        if(pagoExtraDigitalValidado){
+          await hlVincularEvidencia(restaurante.id,mp.pedidoId,mediaId);
+          cleanReply="Perfecto. Validé el comprobante por $"+Number(mp.saldo||0).toLocaleString("es-CO")+" y quedó vinculado a la modificación del pedido #"+mp.numero+". El restaurante ya ve el comprobante y el desglose actualizado.";
+        } else {
+          await hlvEvento(restaurante.id, mp.pedidoId, "pago_comprometido", "Pago adicional acordado · pedido #"+mp.numero, "El cliente definió cómo cubrir el adicional de la modificación.", {numero_pedido:mp.numero,monto:Number(mp.saldo||0),metodo:metodoMod,estado:/efectivo|datafono/i.test(metodoMod)?"por_cobrar":"pendiente",nota:"Pago de modificación"}, "cliente");
+          cleanReply="Perfecto. Dejé registrados los $"+Number(mp.saldo||0).toLocaleString("es-CO")+" adicionales del pedido #"+mp.numero+" como "+metodoMod+". El restaurante verá el desglose actualizado.";
+        }
+        delete orderState[from].modificacionPagoPendiente; delete orderState[from].modificarPedido;
+        orderState[from].status="pedido_activo"; sideEffect=null;
+        await setOrderState(from,orderState[from]).catch(function(){});
+      } catch(ePayMod){ console.error("[pago-modificacion]",ePayMod.message); sideEffect=null; }
+    }
+
+    // Un comprobante parcial + saldo en efectivo/datáfono sí puede confirmar el pedido inicial,
+    // pero conservando el desglose: lo transferido no desaparece y el resto queda por cobrar.
+    if (orderState[from] && orderState[from].pagoParcial && sideEffect === "pago_confirmado" && !orderState[from].modificacionPagoPendiente) {
+      var pp0=orderState[from].pagoParcial, cubierto0=Number(pp0.pagadoDigital||0), restante0=Math.max(0,Number(orderState[from].total||0)-cubierto0);
+      if (restante0>0 && /efectivo|datafono/i.test(String(orderState[from].paymentMethod||""))) {
+        orderState[from].pagoParcial.comprometido={metodo:orderState[from].paymentMethod,monto:restante0};
+        orderState[from].paymentMethod="mixto: digital + "+orderState[from].paymentMethod;
+        orderState[from].status="confirmado";
+      }
     }
 
     // HOTFIX 13 · Guardián de confirmación: Luz no puede decir que un pedido está confirmado/en preparación
@@ -11065,6 +11177,17 @@ async function procesarMensaje(msg, from, phoneNumberId, channelId) {
         await setOrderState(from, state);
         console.error("[pedido] INSERT no confirmado; se conserva orderState para reintento", state.orderNumber);
         throw new Error("PEDIDO_NO_PERSISTIDO");
+      }
+
+      // Persistir el desglose financiero del pago parcial/mixto como eventos del mismo pedido.
+      if (pedidoPersistido && state.pagoParcial) {
+        try {
+          var ppSave=state.pagoParcial;
+          if (ppSave.comprometido && Number(ppSave.comprometido.monto||0)>0) {
+            await hlvEvento(restId, pedidoPersistido.id, "pago_comprometido", "Saldo acordado · pedido #"+pedidoPersistido.numero_pedido, "Saldo restante acordado con el cliente.", {numero_pedido:pedidoPersistido.numero_pedido,monto:Number(ppSave.comprometido.monto),metodo:ppSave.comprometido.metodo,estado:"por_cobrar",nota:"Complemento de pago parcial"}, "cliente");
+          }
+          (ppSave.evidencias||[]).forEach(function(ev){ hlVincularEvidencia(restId,pedidoPersistido.id,ev.mediaId).catch(function(){}); });
+        } catch(eLedger){ console.warn("[payment-ledger]",eLedger.message); }
       }
 
       if (pedidoPersistido && pedidoPersistido._fusionado) {
