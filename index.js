@@ -680,6 +680,10 @@ POST-CONFIRMACION:
 - NUNCA inventes tiempos exactos. Si insisten: "Dependera del trafico y la preparacion, pero te avisamos cada paso."
 - Si el cliente ya tiene un pedido activo, conserva ese contexto. Solo inicia un pedido nuevo cuando el cliente diga explícitamente que quiere OTRO pedido/APARTE; en ese caso vincúlalo con PEDIDO_ADICIONAL_DE.
 - Si el cliente quiere AGREGAR productos a su pedido activo: di "Claro, que quieres agregar?" y cuando lo diga escribe MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[producto y precio]
+- MUY IMPORTANTE — MODIFICACIONES CON AUMENTO DE TOTAL: primero ejecuta MODIFICAR_PEDIDO. Después informa el NUEVO TOTAL y la DIFERENCIA. NO digas que la diferencia está pagada y NO cierres el flujo hasta preguntar explícitamente cómo pagará SOLO ESA DIFERENCIA.
+- Si el cliente elige Nequi/Bancolombia para la diferencia, pide un NUEVO comprobante por el saldo adicional y espera la validación del backend. El comprobante anterior sigue ligado al dinero ya pagado; nunca lo reemplaces ni lo vuelvas a contar.
+- Si elige efectivo o datáfono para la diferencia, registra ese método para el adicional; no conviertas el total completo del pedido a ese método.
+- Si ya existía dinero confirmado antes de modificar, dilo claramente como: "Ya pagado/confirmado: $X · Nuevo saldo: $Y".
 - Si el cliente quiere CANCELAR su pedido: di "Entendido, voy a avisar al equipo para cancelar tu pedido #[numero]. Ten en cuenta que si ya esta en preparacion puede que no sea posible." y escribe CANCELAR_PEDIDO:[numero_pedido]
 - Si el cliente quiere cambiar la direccion de entrega: toma la nueva direccion y escribe MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
 OBLIGATORIO - escribe estos tags al final de tu respuesta (el cliente NO los ve):
@@ -696,6 +700,7 @@ Nombre del cliente cuando lo conozcas: NOMBRE_CLIENTE:[nombre]
 Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
 Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
 Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
+Después de una modificación que aumente el total, el flujo NO termina con la modificación: informa total anterior, nuevo total y diferencia; pregunta cómo pagará SOLO el adicional. Para Nequi/Bancolombia exige comprobante nuevo del adicional y espera validación backend. Conserva pagos anteriores.
 Cancelar pedido: CANCELAR_PEDIDO:[numero_pedido]
 PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
 - PAGO_CONFIRMADO: SOLO si el BACKEND indicó explícitamente en ESTE turno que el comprobante actual fue VALIDADO. Una imagen por sí sola NUNCA autoriza este tag.
@@ -4715,6 +4720,37 @@ app.get("/api/mis-pedidos/:telefono", async function(req, res) {
   } catch (e) { res.json({ ok: true, pedidos: [] }); }
 });
 
+
+// HOLA LUZ · Estado financiero del pedido para el propio cliente.
+// Reutiliza hlPedidosVivo()/hlvPago(): una sola verdad para Restaurante, Cocina, Luz y Cliente.
+app.get("/api/customer-order-finance/:pedido_id", async function(req,res){
+  var rid=String(req.query.restaurante_id||""), tel=String(req.query.telefono||"").replace(/\D/g,"");
+  if(!rid||!tel)return res.status(400).json({ok:false,error:"Faltan datos"});
+  if(tel.startsWith("57")&&tel.length===12)tel=tel.slice(2);var full="57"+tel;
+  try{
+    var rows=await hlvGet("pedidos?id=eq."+encodeURIComponent(req.params.pedido_id)+"&restaurante_id=eq."+encodeURIComponent(rid)+"&or=(cliente_tel.eq."+encodeURIComponent(tel)+",cliente_tel.eq."+encodeURIComponent(full)+")&select=id,numero_pedido,total,estado,metodo_pago,cliente_tel,comprobante_url,comprobante_media_id,created_at,updated_at");
+    var p=rows[0];if(!p)return res.status(404).json({ok:false,error:"Pedido no encontrado"});
+    var vivo=(await hlPedidosVivo(rid,{ids:[p.id]}))[0];
+    if(!vivo)return res.status(404).json({ok:false,error:"Pedido no disponible"});
+    var pg=vivo.pago||{},safeProofs=(pg.comprobantes||[]).map(function(x){return {url:x.url||null,media_id:x.media_id||null,at:x.at||null};});
+    res.set("Cache-Control","no-store");
+    res.json({ok:true,pedido_id:p.id,numero_pedido:p.numero_pedido,estado_pedido:p.estado,updated_at:p.updated_at,pago:{
+      estado:pg.estado,etiqueta:pg.etiqueta,total:Number(pg.total||p.total||0),pagado_confirmado:Number(pg.cubierto_manual||0),
+      evidencia_visual:Number(pg.cubierto_visual||0),saldo_confirmado:Math.max(0,Number(pg.total||p.total||0)-Number(pg.cubierto_manual||0)),
+      saldo_operativo:Number(pg.saldo||0),comprometido:Number(pg.comprometido||0),compromisos:pg.compromisos||[],
+      metodo:pg.metodo||p.metodo_pago||null,dinero_confirmado:!!pg.dinero_confirmado,confirmado_at:pg.confirmado_at||null,
+      razon_rechazo:pg.razon_rechazo||null,analisis:pg.analisis?{decision:pg.analisis.decision,monto:pg.analisis.monto,entidad:pg.analisis.entidad,estado_pago:pg.analisis.estado_pago,confianza:pg.analisis.confianza,razon:pg.analisis.razon}:null,
+      comprobantes:safeProofs
+    },modificacion:(function(){
+      var m=vivo.modificacion||{},u=m.ultima||null;
+      if(!u)return {existe:false,pendiente:false,revision:m.revision||1};
+      var totalAntes=Number(u.total_antes||0),totalDespues=Number(u.total_despues||pg.total||p.total||0),dif=Number(u.diferencia!=null?u.diferencia:(totalDespues-totalAntes));
+      return {existe:true,pendiente:!!m.pendiente,revision:m.revision||u.revision||1,at:u.at||null,resumen:u.resumen||null,accion:u.accion||null,
+        total_antes:totalAntes,total_despues:totalDespues,diferencia:dif,agregados:u.agregados||[],quitados:u.quitados||[],cambios:u.cambios||{},ack:m.ack||null};
+    })()});
+  }catch(e){console.error("[customer-finance]",e.message);res.status(500).json({ok:false,error:"Estado de pago temporalmente no disponible"});}
+});
+
 app.get("/api/cliente/:telefono", async function(req, res) {
   if (!req.query.restaurante_id) return res.json({ ok: true, cliente: null });
   try {
@@ -5140,6 +5176,7 @@ Nombre del cliente cuando lo conozcas: NOMBRE_CLIENTE:[nombre]
 Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
 Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
 Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
+Después de una modificación que aumente el total, el flujo NO termina con la modificación: informa total anterior, nuevo total y diferencia; pregunta cómo pagará SOLO el adicional. Para Nequi/Bancolombia exige comprobante nuevo del adicional y espera validación backend. Conserva pagos anteriores.
 Cancelar pedido: CANCELAR_PEDIDO:[numero_pedido]
 PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
 - PAGO_CONFIRMADO: SOLO si el BACKEND indicó explícitamente en ESTE turno que el comprobante actual fue VALIDADO. Una imagen por sí sola NUNCA autoriza este tag.
