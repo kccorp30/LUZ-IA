@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0A0710">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020714">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -4069,27 +4069,15 @@ async function aplicarCupon() {
 // TOTALES CHECKOUT
 // ═══════════════════════════════════════════════════════════
 function actualizarTotalesCheckout() {
-  var items = Object.values(carrito);
-  var subtotal = items.reduce(function(s, x) { return s + (x.precio * x.qty); }, 0);
-  var domi = (tipoPedido === "domicilio") ? (domCalculado || 0) : 0;
-  var desech = 0;
-  items.forEach(function(ci) {
-    var item = getItemById(ci.id);
-    if (item && !item.es_bebida && !item.es_arepa && !String(item.categoria||"").toLowerCase().includes("bebida") && !String(item.categoria||"").toLowerCase().includes("arepa")) {
-      desech += 500 * ci.qty;
-    }
-  });
-  var desc = 0;
-  if (descTipo === "porcentaje") desc = Math.round(subtotal * descVal / 100);
-  else if (descTipo === "fijo") desc = descVal;
-  var total = subtotal + desech + domi - desc;
+  var totals = window.HLVNext.checkoutTotals();
+  var subtotal=totals.subtotal, domi=totals.delivery, desech=totals.packaging, desc=totals.coupon, total=totals.total;
 
   var h = '<div class="cart-total-row"><span>Subtotal</span><span class="val">' + fmt(subtotal) + '</span></div>';
   if (desech > 0) {
     h += '<div class="cart-total-row"><span>Desechables</span><span class="val">' + fmt(desech) + '</span></div>';
   }
   if (tipoPedido === "domicilio") {
-    if (domi > 0) {
+    if (domCalculado != null) {
       h += '<div class="cart-total-row"><span>Domicilio</span><span class="val">' + fmt(domi) + '</span></div>';
     } else {
       h += '<div class="cart-total-row"><span>Domicilio</span><span style="color:var(--t3);font-size:11px">Ingresa barrio</span></div>';
@@ -4138,25 +4126,12 @@ async function enviarPedido() {
       return line;
     });
 
-    var subtotal = items.reduce(function(s, x) { return s + (x.precio * x.qty); }, 0);
-    // Desechables: $500 por cada COMIDA (no bebidas ni arepas)
-    var desechTotal = 0;
-    items.forEach(function(ci) {
-      var item = getItemById(ci.id);
-      if (item && !item.es_bebida && !item.es_arepa && !String(item.categoria||"").toLowerCase().includes("bebida") && !String(item.categoria||"").toLowerCase().includes("arepa")) {
-        desechTotal += 500 * ci.qty;
-      }
-    });
-    var domi = (tipoPedido === "domicilio") ? (domCalculado || 0) : 0;
-    var desc = 0;
-    if (descTipo === "porcentaje") desc = Math.round(subtotal * descVal / 100);
-    else if (descTipo === "fijo") desc = descVal;
-    var total = subtotal + desechTotal + domi - desc;
+    var totals = window.HLVNext.checkoutTotals();
+    var subtotal=totals.subtotal, desechTotal=totals.packaging, domi=totals.delivery, desc=totals.coupon, total=totals.total;
 
     // Subir comprobante primero si aplica
     var compUrl = null;
-    var paymentCheckId = null;
-    if (compB64) {
+    if (compB64 && (pagoSel === "nequi" || pagoSel === "bancolombia")) {
       console.log("[comp] Subiendo comprobante... (" + (compB64.length/1024).toFixed(0) + "KB)");
       try {
         var compResp = await fetch("/api/subir-comprobante", {
@@ -4183,21 +4158,6 @@ async function enviarPedido() {
       }
     }
 
-    // PAYMENT INTELLIGENCE — la IA extrae lo visible y el backend compara de forma determinista.
-    // Un comprobante digital NO crea el pedido si monto/destino/referencia/estado no superan validación.
-    if (compB64 && (pagoSel === "nequi" || pagoSel === "bancolombia" || pagoSel === "transferencia")) {
-      var pv = await fetch("/api/payment-intelligence/verify", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ restaurante_id: rest.id, telefono: tel, metodo: pagoSel, total: total, comprobante_url: compUrl, imagen_base64: "data:image/jpeg;base64," + compB64 })
-      });
-      var pd = await pv.json();
-      if (!pd.ok || !pd.verified) {
-        var reasons = (pd.hard_failures || []).map(function(x){ return String(x).replace(/_/g," "); }).join(", ");
-        throw new Error("No pudimos verificar el comprobante" + (reasons ? ": " + reasons : ". Requiere revisión."));
-      }
-      paymentCheckId = pd.id || null;
-    }
-
     // Payload con nombres EXACTOS del backend
     var payload = {
       restaurante_id: rest.id,
@@ -4207,7 +4167,7 @@ async function enviarPedido() {
       barrio: tipoPedido === "domicilio" ? document.getElementById("cliBarrio").value.trim() : "",
       tipo_pedido: tipoPedido,
       metodo_pago: pagoSel,
-      notas_especiales: document.getElementById("cliNotas").value.trim() || null,
+      notas_especiales: window.HLVNext.orderNotes(),
       items: itemsStr,                  // ← Array de strings, NO objetos
       subtotal: subtotal,
       domicilio: domi,
@@ -4215,7 +4175,6 @@ async function enviarPedido() {
       descuento: desc,
       total: total,
       comprobante_url: compUrl,
-      payment_check_id: paymentCheckId,
       cupon: descVal > 0 ? document.getElementById("cupCode").value.trim().toUpperCase() : null
     };
 
@@ -4226,12 +4185,9 @@ async function enviarPedido() {
     });
     var d = await r.json();
     if (!d.ok) throw new Error(d.error || "Error al enviar");
-    if(window.HLMenuIntel&&HLMenuIntel.track){
-      Object.values(carrito).forEach(function(ci){HLMenuIntel.track('order_completed',{producto_id:ci.id,value:Number(ci.precio||0)*Number(ci.qty||1),metadata:{qty:ci.qty,numero_pedido:d.numero||null,total_pedido:total}})});
-    }
 
     cerrarCheckout();
-    var ptsGanados = Math.floor(total / 1000);
+    var ptsGanados = Number(d.puntos_ganados) || 0;
     mostrarExito(d.numero || "?", nom, ptsGanados);
   } catch(e) {
     showToast("❌ " + (e.message || "Error de conexión"));
@@ -4865,39 +4821,22 @@ window.addEventListener("load", async function() {
   console.log("%c[LUZ IA v3.0] Ready — Fase 3 pendiente: carrito + checkout", "color:#22C55E;font-weight:bold");
 });
 </script>
-<style>
-#menuPwaBtn{display:none;position:fixed;right:14px;bottom:calc(82px + env(safe-area-inset-bottom));z-index:890;align-items:center;gap:7px;padding:9px 12px;border-radius:999px;border:1px solid rgba(130,170,255,.34);background:rgba(5,15,37,.86);backdrop-filter:blur(18px) saturate(145%);-webkit-backdrop-filter:blur(18px) saturate(145%);color:#dce9ff;font:700 11px/1 Inter,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.30),0 0 20px rgba(82,118,255,.12);cursor:pointer;opacity:0;transform:translateY(8px);transition:opacity .22s ease,transform .22s ease}
-#menuPwaBtn.show{display:flex;opacity:1;transform:none}
-#menuPwaBtn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#menuPwaTip{display:none;position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));z-index:891;width:min(330px,calc(100vw - 28px));transform:translate(-50%,8px);padding:13px 14px;border:1px solid rgba(130,170,255,.28);border-radius:18px;background:rgba(5,15,37,.94);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);color:#dce9ff;box-shadow:0 18px 50px rgba(0,0,0,.45);font:500 12px/1.45 Inter,sans-serif;opacity:0;transition:.22s ease}
-#menuPwaTip.show{display:block;opacity:1;transform:translate(-50%,0)}
-#menuPwaTip b{color:#fff}.pwa-x{float:right;border:0;background:transparent;color:#9fb2d3;font-size:18px;line-height:1;cursor:pointer}
-@media(max-width:520px){#menuPwaBtn{right:12px;bottom:calc(78px + env(safe-area-inset-bottom))}}
-</style>
-<button id="menuPwaBtn" type="button" onclick="instalarMenuPWA()" aria-label="Agregar menú a la pantalla de inicio"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span>Agregar a inicio</span></button>
-<div id="menuPwaTip" role="status"><button class="pwa-x" onclick="cerrarPwaTip()" aria-label="Cerrar">×</button><b>Ten el menú a un toque.</b><br>En iPhone toca <b>Compartir</b> y luego <b>Agregar a pantalla de inicio</b>.</div>
+<button id="menuPwaBtn" onclick="instalarMenuPWA()" style="display:none;position:fixed;bottom:80px;right:14px;z-index:900;padding:10px 16px;border-radius:50px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:white;font-size:11px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 4px 16px rgba(124,58,237,.5)">📲 Instalar app</button>
 <script>
-var _deferredPWA=null,_pwaTimer=null;
-function pwaStandalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true}
-function pwaDismissed(){try{return Number(localStorage.getItem('hlPwaDismissedAt')||0)>Date.now()-7*86400000}catch(e){return false}}
-function showPwaBtn(){if(pwaStandalone()||pwaDismissed()||window.HL_MENU_PREVIEW_Q)return;var b=document.getElementById('menuPwaBtn');if(!b)return;b.classList.add('show');clearTimeout(_pwaTimer);_pwaTimer=setTimeout(function(){b.classList.remove('show')},9000)}
-if(!window.HL_MENU_PREVIEW_Q&&'serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){})}
-window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();_deferredPWA=e;setTimeout(showPwaBtn,2400)});
-window.addEventListener('appinstalled',function(){_deferredPWA=null;var b=document.getElementById('menuPwaBtn');if(b)b.classList.remove('show')});
-function cerrarPwaTip(){var t=document.getElementById('menuPwaTip');if(t)t.classList.remove('show');try{localStorage.setItem('hlPwaDismissedAt',Date.now())}catch(e){}}
+var _deferredPWA=null;
+if(!window.HL_MENU_PREVIEW_Q&&'serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js').catch(function(){}); }
+window.addEventListener('beforeinstallprompt',function(e){
+  e.preventDefault();if(window.HL_MENU_PREVIEW_Q)return;_deferredPWA=e;
+  var btn=document.getElementById('menuPwaBtn');if(btn)btn.style.display='block';
+});
 function instalarMenuPWA(){
-  var b=document.getElementById('menuPwaBtn');if(b)b.classList.remove('show');
-  if(_deferredPWA){_deferredPWA.prompt();_deferredPWA.userChoice.then(function(){_deferredPWA=null;try{localStorage.setItem('hlPwaDismissedAt',Date.now())}catch(e){}});return}
-  var ios=/iphone|ipad|ipod/i.test(navigator.userAgent);if(ios){var t=document.getElementById('menuPwaTip');if(t){t.classList.add('show');setTimeout(function(){t.classList.remove('show')},8500)}return}
-  showToast('Abre el menú del navegador y elige “Agregar a pantalla de inicio”');
+  if(!_deferredPWA)return;
+  _deferredPWA.prompt();
+  _deferredPWA.userChoice.then(function(){_deferredPWA=null;var btn=document.getElementById('menuPwaBtn');if(btn)btn.style.display='none';});
 }
-window.addEventListener('load',function(){if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!pwaStandalone())setTimeout(showPwaBtn,4500)});
 </script>
 
 
-
-</body>
-</html>
 
 <!-- ═══════════════════════════════════════════════════════
      LUZ ASISTENTE — Sistema completo integrado al menú
@@ -5150,7 +5089,7 @@ function luzAgregarMsgChat(quien, texto, hablar){
   div.className = "lc-msg " + quien;
 
   // Renderizar markdown básico
-  var html = texto
+  var html = escHtml(texto)
     .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
     .replace(/\n/g, "<br>");
 
@@ -6269,7 +6208,7 @@ W.renderPromos=function(){
   host.classList.toggle('multi',slides.length>1);host.scrollLeft=0;heroAuto(slides.length);
 };
 var heroT=null,heroHold=false;
-function heroAuto(n){clearInterval(heroT);if(n<2||reduce||PREVIEW)return;heroT=setInterval(function(){if(heroHold||D.hidden)return;var h=$('mwHero');if(!h)return;var w=h.clientWidth,i=Math.round(h.scrollLeft/w),nx=(i+1)%n;h.scrollTo({left:nx*w,behavior:'smooth'})},5500)}
+function heroAuto(n){clearInterval(heroT);if(n<2||reduce||PREVIEW)return;heroT=setInterval(function(){if(heroHold||D.hidden)return;var h=$('mwHero');if(!h||!h.children.length)return;var sl=h.children,step=sl[1]?sl[1].offsetLeft-sl[0].offsetLeft:h.clientWidth,i=Math.round(h.scrollLeft/step),nx=(i+1)%sl.length;h.scrollTo({left:sl[nx].offsetLeft-sl[0].offsetLeft,behavior:'smooth'})},5500)}
 function heroDots(){var h=$('mwHero'),d=$('mwHeroDots');if(!h||!d||!d.children.length)return;var sl=h.children[0];var w=sl?sl.getBoundingClientRect().width+10:h.clientWidth;var i=Math.round(h.scrollLeft/w);[].forEach.call(d.children,function(x,j){x.classList.toggle('on',j===i)})}
 
 function renderToday(){
@@ -6695,7 +6634,234 @@ function init(){
   /* horario (abierto/cerrado, happy hour) sin sondeos agresivos: revisa cada minuto sin tocar la red */
   setInterval(function(){if(D.hidden||!rest||!CFG)return;var now=new Date(),act=CFG.promociones.filter(function(p){return promoActive(p,now)}).map(function(p){return p.id}).join(',');if(act!==PROMOS.map(function(p){return p.id}).join(','))build();else renderMeta()},60000);
 }
-if(D.readyState==='loading')D.addEventListener('DOMContentLoaded',init);else init();
+
+/* VNEXT: product components and orchestrators */
+/* HOLA LUZ CONSUMER VNEXT / Concepto 02
+   The v4 catalogue engine remains the source for availability, variants and promotions.
+   All network writes use the existing routes. UI-only preferences are device-local. */
+var VN={step:0,rewards:[],reward:null,orders:[],fav:[],recent:[],addresses:[],busy:false,chatBusy:false,screen:'inicio',customerRequest:0,cartVersion:0,context:null,returnFocus:null};
+P.heart='<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/>';
+P.arrow='<path d="M4 12h16m-6-6 6 6-6 6"/>';
+P.crown='<path d="m3 6 4 5 5-8 5 8 4-5-2 14H5L3 6Z"/>';
+P.mic='<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/>';
+function orb(cls){return '<span class="vn-orb '+(cls||'')+'" aria-hidden="true"><i></i><i></i><i></i><b>✦</b></span>'}
+function stored(key,fallback){try{return JSON.parse(localStorage.getItem('hlvn_'+(rest?rest.id:'')+'_'+key))||fallback}catch(e){return fallback}}
+function persist(key,value){try{localStorage.setItem('hlvn_'+(rest?rest.id:'')+'_'+key,JSON.stringify(value))}catch(e){showToast('No se pudo guardar en este dispositivo')}}
+function phone(){try{return localStorage.getItem('luzCli_'+(rest?rest.id:''))||''}catch(e){return ''}}
+function firstName(){return String(clienteData&&(clienteData.nombre_cliente||clienteData.nombre)||'').trim().split(' ')[0]}
+function loyalty(){
+  var c=clienteData||{},tier=norm(c.nivel_fidelidad||''),pct=DESCUENTOS_RANGO[tier]||0;
+  return {tier:tier,label:tier?tier.charAt(0).toUpperCase()+tier.slice(1):'Miembro',points:Math.max(0,Nn(c.puntos)),discount:pct,orders:c.total_pedidos==null?null:Nn(c.total_pedidos),name:c.nombre_cliente||c.nombre||'',color:({bronce:'#dba16b',plata:'#d3e4f7',oro:'#f8d889',platino:'#b7f5ff',diamante:'#bbb4ff'})[tier]||'#9cc7ff'};
+}
+W.getDescuento=function(){return loyalty().discount};
+function checkoutTotals(){
+  var t=totals(),packaging=0;
+  Object.values(carrito).forEach(function(ci){var it=getItemById(ci.id);if(it&&!it.es_bebida&&!it.es_arepa&&!/bebida|arepa/i.test(it.categoria||''))packaging+=500*Nn(ci.qty)});
+  var coupon=descTipo==='porcentaje'?Math.round(t.sub*Nn(descVal)/100):descTipo==='fijo'?Nn(descVal):0;
+  coupon=Math.min(t.sub,Math.max(0,coupon));
+  var delivery=tipoPedido==='domicilio'?Math.max(0,Nn(domCalculado)):0;
+  return {subtotal:t.sub,list:t.lista,savings:t.ahorro,coupon:coupon,packaging:packaging,delivery:delivery,total:Math.max(0,t.sub+packaging+delivery-coupon),qty:t.q};
+}
+function orderNotes(){var text=$('cliNotas').value.trim(),cash=Nn(($('vnCash')||{}).value);if(pagoSel==='efectivo'&&cash>0)text+=(text?' | ':'')+'Paga con '+fmt(cash)+'; cambio '+fmt(cash-checkoutTotals().total);return text||null}
+function photo(it,cls){return '<div class="vn-photo '+(cls||'')+'">'+(it&&it.imagen_url?'<img src="'+E(it.imagen_url)+'" alt="'+E(it.nombre||'')+'" loading="lazy" decoding="async" onerror="this.remove()">':'<span class="vn-placeholder"><b>'+E((rest&&rest.nombre||'LUZ').slice(0,20))+'</b><small>'+E(it&&it.categoria||'Hecho al momento')+'</small></span>')+'</div>'}
+function title(k,t,sub){return '<div class="vn-title"><span class="vn-kicker">'+E(k)+'</span><h2>'+E(t)+'</h2>'+(sub?'<p>'+E(sub)+'</p>':'')+'</div>'}
+function button(label,action,cls){return '<button type="button" class="vn-button '+(cls||'')+'" data-vn="'+action+'">'+label+'</button>'}
+function row(label,action,icon,sub){return '<button type="button" class="vn-row" data-vn="'+action+'">'+I(icon||'chev')+'<span><b>'+E(label)+'</b>'+(sub?'<small>'+E(sub)+'</small>':'')+'</span>'+I('chev','s')+'</button>'}
+function setText(id,t){var el=$(id);if(el)el.textContent=t}
+function animateNumber(el,to,format){if(!el)return;var from=Nn(el.dataset.number);el.dataset.number=to;if(reduce||!el.animate){el.textContent=format(to);return}var start=performance.now();cancelAnimationFrame(el._frame);function tick(now){var p=Math.min(1,(now-start)/380);el.textContent=format(Math.round(from+(to-from)*(1-Math.pow(1-p,3))));if(p<1)el._frame=requestAnimationFrame(tick)}el._frame=requestAnimationFrame(tick)}
+function sheet(id,label){var el=D.createElement('div');el.id=id;el.className='sheet-bg vn-panel';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label',label);el.innerHTML='<div class="sheet"><div class="sheet-head"><span class="vn-kicker">'+label+'</span><button class="sheet-close" aria-label="Cerrar" data-vn="close" data-target="'+id+'">×</button></div><div class="sheet-body" id="'+id+'Body"></div></div>';D.body.appendChild(el);return el}
+function syncLock(){D.body.style.overflow=D.querySelector('.sheet-bg.open,#luzChat.open,#exito.show')?'hidden':''}
+function openPanel(id){VN.returnFocus=D.activeElement;$(id).classList.add('open');syncLock();setTimeout(function(){var b=$(id).querySelector('button,input');if(b)b.focus({preventScroll:true})},80)}
+function closePanel(id){$(id).classList.remove('open');syncLock();if(VN.returnFocus&&VN.returnFocus.isConnected)VN.returnFocus.focus({preventScroll:true})}
+function repriceCart(){Object.values(carrito).forEach(function(ci){var it=getItemById(ci.id);if(!it)return;var ex=extrasOf(it,ci.sel||{}).sum;ci.precio=clientPrice(it)+(ci.pack?ex*2:ex)});actualizarCarrito();actualizarTotalesCheckout();if($('cartOv').classList.contains('open'))renderCarritoUI()}
+var originalBadge=W.actualizarBadgeRango;
+W.actualizarBadgeRango=function(){
+  var l=loyalty(),b=$('rangoBadge');
+  b.style.cssText=l.tier?'display:flex;--tier:'+l.color:'display:none';
+  b.innerHTML=I('crown','s')+E(l.label)+(l.discount?'<small>−'+l.discount+'%</small>':'');b.setAttribute('role','button');b.tabIndex=0;
+  var rb=D.querySelector('.hdr-btn-rewards');if(rb)rb.style.display=l.tier?'none':'';
+  _luzPresentado=true;
+  setText('vnGreeting',firstName()?firstName()+', hoy se come bien.':'Hoy se come bien.');
+  setText('rewTitle',l.points+' puntos · '+l.label);setText('rewSub','Tu club. Tus beneficios.');
+  if($('vnProfile').classList.contains('open'))renderProfile();
+  repriceCart();
+};
+W.luzPresentarRango=function(){};W.luzToastRango=function(){};W.luzBienvenida=function(){luzWelcomeDone=true};W.luzCheckoutHelper=function(){};
+W.checkCliente=function(){
+  clearTimeout(chkTimer);var tel=$('cliTel').value.trim(),request=++VN.customerRequest;if(clienteData&&tel!==phone()){clienteData=null;actualizarBadgeRango();renderProductos()}
+  if(tel.length!==10||!/^[0-9]+$/.test(tel)){if(clienteData){clienteData=null;actualizarBadgeRango();renderProductos()}$('cliCard').classList.add('hide');return}
+  chkTimer=setTimeout(async function(){try{var r=await fetch('/api/cliente/'+encodeURIComponent(tel)+'?restaurante_id='+encodeURIComponent(rest.id));if(!r.ok)throw Error('No se pudo consultar el cliente');var d=await r.json();if(request!==VN.customerRequest)return;var c=d.cliente||d;
+    clienteData=c&&(c.nombre_cliente||c.nombre)?c:null;
+    if(clienteData){$('cliNom').value=clienteData.nombre_cliente||clienteData.nombre;var l=loyalty();$('cliCard').className='cli-card';$('cliCard').innerHTML='<span class="vn-member-pill">'+I('crown')+E(l.label)+'</span><span>'+l.points+' puntos · '+l.discount+'% de beneficio</span>'}else $('cliCard').classList.add('hide');
+    try{localStorage.setItem('luzCli_'+rest.id,tel)}catch(e){}actualizarBadgeRango();renderProductos();
+  }catch(e){if(request===VN.customerRequest)showToast('No pudimos verificar tus beneficios. Intenta nuevamente.')}},400);
+};
+/* CinematicHero and CategoryRail, connected to the existing promotion rules. */
+var originalPromos=W.renderPromos;
+W.renderPromos=function(){
+  originalPromos();var host=$('mwHero');if(!host||!rest)return;
+  if(!PROMOS.some(function(p){return p.hero})&&!parseBanners().length){
+    var it=TOP_VENDIDOS[0]||MANUALES[0]||menuItems.find(function(x){return x.imagen_url&&availability(x).ok});
+    if(it)host.innerHTML='<article class="mw-hero-slide vn-editorial" data-pid="'+E(it.id)+'" tabindex="0" aria-label="Ver '+E(it.nombre)+'">'+photo(it,'vn-hero-food')+'<div class="mw-hero-copy"><span class="vn-kicker">'+E(rest.nombre||'HECHO AL MOMENTO')+'</span><h2 class="mw-hero-t">Tu próximo<br>antojo.</h2><p class="mw-hero-d">'+E(it.nombre)+'</p><span class="vn-hero-link">Descúbrelo '+I('arrow')+'</span></div></article>';
+  }
+  host.querySelectorAll('.noimg').forEach(function(slide){var it=TOP_VENDIDOS[0]||MANUALES[0]||menuItems.find(function(x){return x.imagen_url&&availability(x).ok});if(it&&it.imagen_url){var img=D.createElement('img');img.src=it.imagen_url;img.alt='';img.decoding='async';slide.prepend(img);slide.classList.remove('noimg')}});
+  host.querySelectorAll('[data-act]').forEach(function(x){x.tabIndex=0;x.setAttribute('role','button')});
+  setText('vnGreeting',firstName()?firstName()+', hoy se come bien.':'Hoy se come bien.');
+};
+W.renderCategorias=function(){var h='';SECS.forEach(function(s,i){var im=catThumb(s);h+='<button class="mw-cat '+(catActiva===s.slug?'on':'')+'" data-cat="'+E(s.slug)+'" style="--i:'+i+'"><span class="vn-cat-image">'+(im?'<img src="'+E(im)+'" alt="" loading="lazy">':'<span>'+E(s.nombre.slice(0,2).toUpperCase())+'</span>')+'</span><span>'+E(s.nombre)+'</span></button>'});$('catsRow').innerHTML=h};
+W.renderProductCard=function(it,idx,legacy,tipo){var av=availability(it);return '<article class="mw-card vn-product-row '+(av.ok?'':'is-out')+'" data-pid="'+E(it.id)+'" tabindex="0" aria-label="Ver '+E(it.nombre)+'" style="--i:'+Math.min(idx,6)+'"><div class="mw-card-txt"><div class="mw-badges">'+badgesOf(it,tipo)+'</div><h3>'+E(it.nombre)+'</h3><p>'+E(it.descripcion||it.categoria||'')+'</p>'+priceHTML(it)+'</div><div class="mw-card-media">'+photo(it)+'<div class="mw-ctl">'+ctlHTML(it)+'</div></div></article>'};
+vcard=function(it,rank){return '<article class="mw-vcard vn-feature" data-pid="'+E(it.id)+'" tabindex="0" aria-label="Ver '+E(it.nombre)+'"><div class="mw-card-media">'+photo(it)+(rank?'<span class="vn-rank">'+I('flame','s')+' #'+rank+'</span>':'')+'<button class="vn-heart" data-fav="'+E(it.id)+'" aria-label="Guardar '+E(it.nombre)+'" aria-pressed="'+VN.fav.includes(it.id)+'">'+I('heart')+'</button><div class="mw-ctl">'+ctlHTML(it)+'</div></div><div class="vn-feature-copy"><h3>'+E(it.nombre)+'</h3>'+priceHTML(it)+'</div></article>'};
+var originalProducts=W.renderProductos;
+W.renderProductos=function(){originalProducts();if(busquedaActual)return;var cheap=menuItems.filter(function(it){return availability(it).ok&&clientPrice(it)>0&&clientPrice(it)<25000}).slice(0,5);var fav=VN.fav.map(getItemById).filter(Boolean);var h='';if(fav.length)h+='<section class="mw-sec"><div class="mw-sec-h"><h2>Tus favoritos</h2><small>En este dispositivo</small></div><div class="mw-hscroll">'+fav.map(function(it){return vcard(it,0)}).join('')+'</div></section>';if(cheap.length>1)h+='<section class="mw-sec"><div class="mw-sec-h"><h2>Antojos por menos</h2><small>Menos de $25.000</small></div><div class="mw-hscroll">'+cheap.map(function(it){return vcard(it,0)}).join('')+'</div></section>';if(h)$('prodsArea').insertAdjacentHTML('beforeend',h)};
+/* ProductStage reuses DET, required modifiers, pack prices and signatures. */
+var originalDetail=W.abrirDetalleProducto;
+W.abrirDetalleProducto=function(id,key){originalDetail(id,key);if(!DET||DET.id!==id)return;VN.context={type:'producto',id:id};var it=getItemById(id),media=$('detBody').querySelector('.mw-det-media');if(media){media.insertAdjacentHTML('beforeend','<div class="vn-product-tools"><button aria-label="Favorito" data-fav="'+E(id)+'" aria-pressed="'+VN.fav.includes(id)+'">'+I('heart')+'</button><button aria-label="Compartir producto" data-vn="share" data-id="'+E(id)+'">'+I('arrow')+'</button></div>')}$('mwGroups').insertAdjacentHTML('beforebegin','<div class="vn-section-label">Hazlo a tu gusto</div>');$('detBody').insertAdjacentHTML('beforeend',button(orb('tiny')+' Pregúntale a Luz','context-luz','vn-ai-link'));};
+function flyToCart(id){if(reduce)return;var it=getItemById(id),source=D.querySelector('#detOv.open .mw-det-media img')||D.querySelector('[data-pid="'+CSS.escape(id)+'"] img');var target=$('cartFab');if(!source||!target||!source.src)return;var a=source.getBoundingClientRect(),b=target.getBoundingClientRect();var fly=D.createElement('img');fly.src=source.src;fly.className='vn-fly';fly.style.left=a.left+a.width/2-25+'px';fly.style.top=a.top+a.height/2-25+'px';D.body.appendChild(fly);var dx=b.left+35-a.left-a.width/2,dy=b.top+25-a.top-a.height/2;var anim=fly.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:'translate('+dx*.5+'px,'+(dy*.4-50)+'px) scale(.8)',opacity:1,offset:.45},{transform:'translate('+dx+'px,'+dy+'px) scale(.2)',opacity:0}],{duration:780,easing:'cubic-bezier(.2,.7,.3,1)'});anim.onfinish=function(){fly.remove();target.animate([{filter:'brightness(1)'},{filter:'brightness(1.3)'},{filter:'brightness(1)'}],{duration:250})}}
+var originalAdd=W.agregarProducto,originalDetAdd=W.detAgregar;
+W.agregarProducto=function(id){var q=totals().q;originalAdd(id);if(totals().q>q)flyToCart(id)};
+W.detAgregar=function(){var id=DET&&DET.id,q=totals().q;originalDetAdd();if(totals().q>q)flyToCart(id)};
+/* SmartCart and honest upsell: API suggestions are presented as complements, not claimed as AI. */
+W.cargarUpsell=async function(){if(!rest)return [];var ids=Object.values(carrito).map(function(c){return c.id}).sort().join(',');if(UPSELL_CACHE&&VN.upsellKey===ids&&Date.now()-UPSELL_CACHE_TIME<300000)return UPSELL_CACHE;try{var r=await fetch('/api/upsell?restaurante_id='+rest.id+'&in_cart='+encodeURIComponent(ids));if(!r.ok)throw Error();var d=await r.json();if(!Array.isArray(d))return [];UPSELL_CACHE=d;VN.upsellKey=ids;UPSELL_CACHE_TIME=Date.now();return d}catch(e){return []}};
+W.renderCarritoUI=async function(){var body=$('cartBody'),foot=$('cartFoot'),t=totals(),version=++VN.cartVersion;
+  if(!t.q){body.innerHTML=title('TU PEDIDO','Algo rico te espera.','Explora el menú y encuentra tu próximo antojo.')+orb('large');foot.innerHTML=button('Explorar menú '+I('arrow'),'cart-close','primary');return}
+  body.innerHTML=title('TU PEDIDO','Buena elección.',t.q+' productos')+'<div class="vn-cart-list">'+Object.keys(carrito).map(function(k){var c=carrito[k],it=getItemById(c.id)||c;return '<article class="vn-cart-line" data-line="'+E(k)+'">'+photo(it)+'<div><h3>'+E(c.nombre)+'</h3><p>'+E([c.notas,c.gaseosa].filter(Boolean).join(' · ')||it.descripcion||'')+'</p><button class="vn-text-link" data-cart="edit" data-k="'+E(k)+'">Personalizar</button><div class="vn-cart-price"><strong>'+fmt(c.precio*c.qty)+'</strong><div class="mw-step"><button data-cart="dec" data-k="'+E(k)+'" aria-label="Quitar uno">'+I(c.qty>1?'minus':'trash','s')+'</button><span>'+c.qty+'</span><button data-cart="inc" data-k="'+E(k)+'" aria-label="Agregar uno">'+I('plus','s')+'</button></div></div></div></article>'}).join('')+'</div><div id="upsellSlot"></div>'+(t.ahorro?'<div class="vn-savings">'+I('crown')+'<span><b>Tu ahorro en productos</b><small>Beneficios y promociones aplicados</small></span><strong>−'+fmt(t.ahorro)+'</strong></div>':'')+'<div class="vn-receipt"><div><span>Productos</span><b>'+fmt(t.lista)+'</b></div>'+(t.ahorro?'<div class="saving"><span>Beneficios y promociones</span><b>−'+fmt(t.ahorro)+'</b></div>':'')+'<div class="grand"><span>Subtotal</span><strong>'+fmt(t.sub)+'</strong></div><p>Entrega, empaques y cupones se detallan en el siguiente paso.</p></div>'+button(orb('tiny')+' ¿Me falta algo? Pregúntale a Luz','context-luz','vn-ai-link');
+  foot.innerHTML=button('Elegir entrega '+I('arrow'),'checkout','primary');var up=await cargarUpsell();if(version===VN.cartVersion)renderUpsellInCart(up);
+};
+W.renderUpsellInCart=function(prods){var slot=$('upsellSlot');if(!slot)return;var ids=Object.values(carrito).map(function(c){return c.id});var list=(Array.isArray(prods)?prods:[]).filter(function(p){var it=getItemById(p.id);return !ids.includes(p.id)&&it&&availability(it).ok}).slice(0,3);slot.innerHTML=list.length?'<section class="vn-upsell"><span class="vn-kicker">COMPLETA TU PEDIDO</span><h3>¿Algo para acompañar?</h3>'+list.map(function(p){var it=getItemById(p.id);return '<div class="vn-up-row">'+photo(it)+'<div><b>'+E(it.nombre)+'</b><span>+ '+fmt(clientPrice(it))+'</span></div><button class="mw-add" data-up="'+E(it.id)+'" data-o="'+E(p.origen||'fijo')+'" aria-label="Agregar '+E(it.nombre)+'">'+I('plus')+'</button></div>'}).join('')+'</section>':''};
+/* Stage checkout: original inputs are moved, never cloned. IDs and submission route stay intact. */
+function prepareCheckout(){var body=D.querySelector('#checkoutOv .sheet-body'),children=Array.from(body.children);body.innerHTML='<div class="vn-progress" id="vnProgress"></div><section id="vnDelivery"></section><section id="vnPayment" hidden></section><section id="vnReview" hidden></section>';
+  var delivery=$('vnDelivery'),payment=$('vnPayment'),review=$('vnReview');delivery.innerHTML=title('ENTREGA','¿Dónde lo disfrutamos?','Domicilio, para recoger o directamente en tu mesa.')+'<div id="vnSavedAddresses"></div>';payment.innerHTML=title('PAYMENT WALLET','Elige cómo pagar.','Tu pedido, a tu manera.')+'<div class="vn-wallet" id="vnWallet"></div>';
+  children.forEach(function(el){if(el.querySelector('.pagos')||['flDatosPago','flComp'].includes(el.id))payment.appendChild(el);else if(el.id==='checkoutTotales')review.appendChild(el);else if(el.querySelector('#cupCode')||el.querySelector('#cliNotas')){var d=D.createElement('details');d.className='vn-disclosure';d.innerHTML='<summary>'+ (el.querySelector('#cupCode')?'¿Tienes un cupón?':'Indicaciones para el pedido')+'</summary>';d.appendChild(el);delivery.appendChild(d)}else delivery.appendChild(el)});
+  delivery.insertAdjacentHTML('beforeend','<div class="vn-delivery-cost" id="vnDeliveryCost"></div><label class="vn-check"><input type="checkbox" id="vnRememberAddress"> Guardar dirección en este dispositivo</label>');
+  payment.insertAdjacentHTML('beforeend','<div id="vnCashBox" hidden><label class="fld-label" for="vnCash">¿Con cuánto pagas? (opcional)</label><input id="vnCash" class="fld-input" type="number" inputmode="numeric" min="0" placeholder="Valor en pesos"><p class="vn-change" id="vnChange"></p></div><p class="vn-payment-note" id="vnPaymentNote"></p>');
+  review.insertAdjacentHTML('afterbegin',title('CONFIRMACIÓN','Tu pedido está listo.','Revisa los detalles antes de confirmar.')+'<div id="vnReviewDetails"></div>');
+  var footer=D.querySelector('#checkoutOv .sheet-foot');footer.insertAdjacentHTML('afterbegin','<button id="vnNext" class="vn-button primary" data-vn="checkout-next"></button>');$('btnEnviar').innerHTML='Confirmar pedido '+I('arrow');
+  var back=D.createElement('button');back.className='vn-back';back.setAttribute('aria-label','Volver al paso anterior');back.setAttribute('data-vn','checkout-back');back.innerHTML='‹';D.querySelector('#checkoutOv .sheet-head').prepend(back);
+  $('vnCash').addEventListener('input',cashChange);
+  ['cliNom','cliDir','cliBarrio','cliTel'].forEach(function(id){$(id).autocomplete=({cliNom:'name',cliDir:'street-address',cliTel:'tel-national'})[id]||'off'});
+}
+function savedAddresses(){VN.addresses=stored('addresses_'+phone(),[]);$('vnSavedAddresses').innerHTML=tipoPedido==='domicilio'&&VN.addresses.length?'<span class="vn-section-label">Tus direcciones · en este dispositivo</span>'+VN.addresses.map(function(a,i){return '<button class="vn-address" data-vn="address-use" data-index="'+i+'">'+I('pin')+'<span><b>'+E(a.address)+'</b><small>'+E(a.neighborhood)+'</small></span>'+I('chev')+'</button>'}).join(''):''}
+var originalCheckout=W.abrirCheckout;
+W.abrirCheckout=async function(){VN.context={type:'checkout'};checkoutStep(0);savedAddresses();await originalCheckout();checkoutStep(0);savedAddresses()};
+var originalType=W.setTipoCheckout;
+W.setTipoCheckout=function(t){originalType(t);setTipo(t);savedAddresses();$('vnRememberAddress').closest('label').hidden=t!=='domicilio';};
+function validateDelivery(){var tel=$('cliTel').value.trim();if(!/^\d{10}$/.test(tel)){showToast('Escribe tu WhatsApp de 10 dígitos');$('cliTel').focus();return false}if(!$('cliNom').value.trim()){showToast('Cuéntanos tu nombre');$('cliNom').focus();return false}if(tipoPedido==='domicilio'&&(!$('cliDir').value.trim()||!$('cliBarrio').value.trim())){showToast('Completa la dirección y el barrio');(!$('cliDir').value.trim()?$('cliDir'):$('cliBarrio')).focus();return false}if(tipoPedido==='domicilio'&&domCalculado==null){showToast('Selecciona un barrio con tarifa disponible');$('cliBarrio').focus();return false}if(tipoPedido==='mesa'&&!($('cliMesa').value||W._mesaQR)){showToast('Selecciona tu mesa');return false}return true}
+function validatePayment(){if(!pagoSel){showToast('Elige cómo quieres pagar');return false}if((pagoSel==='nequi'||pagoSel==='bancolombia')&&!paymentAccount(pagoSel)){showToast('Este método todavía no tiene datos de pago');return false}if((pagoSel==='nequi'||pagoSel==='bancolombia')&&!compB64){showToast('Adjunta el comprobante de tu transferencia');$('flComp').scrollIntoView({behavior:'smooth'});return false}if(pagoSel==='efectivo'&&Nn($('vnCash').value)>0&&Nn($('vnCash').value)<checkoutTotals().total){showToast('El efectivo debe cubrir el total');$('vnCash').focus();return false}return true}
+function checkoutStep(n){VN.step=n;['vnDelivery','vnPayment','vnReview'].forEach(function(id,i){$(id).hidden=n!==i});$('vnProgress').innerHTML=['Entrega','Pago','Confirmar'].map(function(t,i){return '<button type="button" data-vn="checkout-step" data-step="'+i+'" '+(i>n?'disabled':'')+' aria-current="'+(i===n?'step':'false')+'"><span class="'+(i===n?'current':i<n?'done':'')+'">'+(i<n?'✓':i+1)+'</span><b>'+t+'</b></button>'}).join('');$('vnNext').hidden=n===2;$('btnEnviar').hidden=n!==2;setText('vnNext',n===0?'Elegir pago →':'Revisar pedido →');D.querySelector('#checkoutOv .sheet-title').textContent=['Entrega','Pago','Confirmación'][n];if(n===1)renderWallet();if(n===2)renderReview();D.querySelector('#checkoutOv .sheet-body').scrollTop=0;}
+function nextCheckout(){if(VN.step===0&&!validateDelivery())return;if(VN.step===1&&!validatePayment())return;if(VN.step===0){try{localStorage.setItem('luzCli_'+rest.id,$('cliTel').value.trim());localStorage.setItem('luzNombre_'+rest.id,$('cliNom').value.trim())}catch(e){}if(tipoPedido==='domicilio'&&$('vnRememberAddress').checked){var a={address:$('cliDir').value.trim(),neighborhood:$('cliBarrio').value.trim()};VN.addresses=stored('addresses_'+phone(),[]).filter(function(x){return x.address!==a.address});VN.addresses.unshift(a);persist('addresses_'+phone(),VN.addresses.slice(0,6))}}checkoutStep(Math.min(2,VN.step+1));buzz(8)}
+var originalTotals=W.actualizarTotalesCheckout;
+W.actualizarTotalesCheckout=function(){originalTotals();var t=checkoutTotals();setText('vnDeliveryCost',tipoPedido==='domicilio'?(domCalculado==null?'Selecciona tu barrio para conocer el domicilio.':'Domicilio '+fmt(t.delivery)):(tipoPedido==='mesa'?'Servicio en tu mesa':'Recoge tu pedido en el restaurante'));if($('vnWallet'))renderWallet();cashChange();};
+W.cargarZonas=async function(){if(zonasData.length||!rest)return;try{var r=await fetch('/api/zonas?restaurante_id='+rest.id);if(!r.ok)throw Error();var d=await r.json();zonasData=Array.isArray(d)?d:[]}catch(e){showToast('No pudimos consultar las zonas de entrega. Intenta de nuevo.')}};
+W.buscarBarrio=function(q){domCalculado=null;setText('barrioInfo','');actualizarTotalesCheckout();var drp=$('barrioDrp');drp.classList.toggle('open',q.length>0);var matches=[];zonasData.forEach(function(z){var p=z.precio_domicilio!=null?Number(z.precio_domicilio):Number(z.precio);if(!isFinite(p)||p<0)return;String(z.barrios||'').split(',').forEach(function(b){b=b.trim();if(norm(b).includes(norm(q)))matches.push({b:b,z:z.nombre,p:p})})});VN.neighborhoods=matches.slice(0,10);drp.innerHTML=VN.neighborhoods.length?VN.neighborhoods.map(function(a,i){return '<button class="brr-item" type="button" data-vn="neighborhood" data-index="'+i+'"><span>'+E(a.b)+'<small>'+E(a.z||'')+'</small></span><b>'+fmt(a.p)+'</b></button>'}).join(''):'<p class="vn-hint">No hay una tarifa disponible para este barrio. Consulta al restaurante con Luz.</p>'};
+W.seleccionarBarrioManual=function(){domCalculado=null;showToast('Consulta al restaurante la cobertura de tu barrio')};
+/* PaymentWallet: brand identities rendered as independent layered cards. */
+var METHODS=[{id:'nequi',name:'Nequi',sub:'Transferencia al comercio',icon:'phone'},{id:'efectivo',name:'Efectivo',sub:'Paga al recibir',icon:'cash'},{id:'bancolombia',name:'Bancolombia',sub:'Transferencia al comercio',icon:'bank'},{id:'datafono',name:'Datáfono',sub:'Tarjeta al recibir',icon:'card'}];
+function paymentMark(id){if(id==='nequi')return '<span class="vn-nequi-mark" aria-hidden="true"><i></i><b></b></span>';if(id==='bancolombia')return '<span class="vn-banco-mark" aria-hidden="true"><i></i><i></i><i></i></span>';return I(id==='efectivo'?'cash':'card','l')}
+function paymentAccount(p){return rest&&(p==='nequi'?(rest.metodo_pago_nequi||rest.nequi):p==='bancolombia'?(rest.metodo_pago_banco||rest.cuenta_bancolombia):true)}
+function renderWallet(){var wallet=$('vnWallet');if(!wallet)return;var selected=METHODS.find(function(m){return m.id===pagoSel})||METHODS[0],t=checkoutTotals();var next=METHODS[(METHODS.indexOf(selected)+1)%METHODS.length];wallet.innerHTML='<button type="button" class="vn-pay-card back '+next.id+'" data-vn="payment" data-method="'+next.id+'" aria-label="Elegir '+next.name+'">'+paymentMark(next.id)+'<b>'+next.name+'</b></button><div class="vn-pay-card front '+selected.id+'">'+paymentMark(selected.id)+'<span class="vn-pay-check">'+(pagoSel?'✓':'')+'</span><div><h3>'+selected.name+'</h3><p>'+selected.sub+'</p><strong>'+fmt(t.total)+'</strong></div></div>';D.querySelectorAll('.pago-opt').forEach(function(el){var id=el.dataset.pago;el.innerHTML=paymentMark(id)+'<span>'+METHODS.find(function(m){return m.id===id}).name+'</span>';el.setAttribute('aria-pressed',String(pagoSel===id));});}
+W.setPago=function(p){if(!METHODS.some(function(m){return m.id===p}))return;if(pagoSel!==p){compB64=null;var proof=$('flComp').querySelector('input[type=file]');if(proof)proof.value='';$('uzPrev').removeAttribute('src');$('uzPrev').style.display='none'}pagoSel=p;D.querySelectorAll('.pago-opt').forEach(function(b){b.classList.toggle('on',b.dataset.pago===p)});var transfer=p==='nequi'||p==='bancolombia';$('flComp').classList.toggle('hide',!transfer);$('flDatosPago').classList.toggle('hide',!transfer);$('vnCashBox').hidden=p!=='efectivo';var account=paymentAccount(p);if(transfer){setText('datosPagoTitulo','Transferencia manual');var holder=rest.metodo_pago_nombre||rest.nombre_titular||rest.nombre||'';$('datosPagoContenido').innerHTML=account?'<p class="vn-hint">Transfiere exactamente '+fmt(checkoutTotals().total)+' al comercio y adjunta el comprobante.</p><div class="vn-account"><span>'+E(String(account))+'</span><button type="button" data-vn="copy-account" aria-label="Copiar datos">'+I('copy')+'</button></div><p class="vn-hint">Titular: '+E(holder)+(p==='bancolombia'&&rest.tipo_cuenta?' · '+E(rest.tipo_cuenta):'')+'</p>':'<p class="vn-hint">El restaurante todavía no ha configurado los datos de este método. Elige otra opción.</p>';}setText('vnPaymentNote',transfer?'El pago requiere verificación del comercio.':p==='datafono'?'Pagarás con tarjeta al recibir tu pedido.':'Pagarás en efectivo al recibir tu pedido.');renderWallet();cashChange();buzz(8)};
+function cashChange(){var el=$('vnChange');if(!el)return;var cash=Nn(($('vnCash')||{}).value),t=checkoutTotals().total;el.textContent=cash?cash>=t?'Tu cambio será '+fmt(cash-t):'Faltan '+fmt(t-cash)+' para cubrir el total.':'';el.classList.toggle('invalid',cash>0&&cash<t)}
+function renderReview(){var t=checkoutTotals();$('vnReviewDetails').innerHTML='<div class="vn-review-address"><span class="vn-kicker">'+(tipoPedido==='domicilio'?'ENTREGA':tipoPedido==='mesa'?'MESA':'RECOGER')+'</span><b>'+E(tipoPedido==='domicilio'?$('cliDir').value:tipoPedido==='mesa'?'Mesa '+($('cliMesa').value||W._mesaQR):rest.nombre)+'</b><p>'+E(tipoPedido==='domicilio'?$('cliBarrio').value:$('cliNom').value)+'</p>'+button('Editar','review-delivery','vn-text-link')+'</div><div class="vn-review-payment">'+paymentMark(pagoSel)+'<b>'+E((METHODS.find(function(m){return m.id===pagoSel})||{}).name)+'</b>'+button('Cambiar','review-payment','vn-text-link')+'</div><div class="vn-review-items">'+Object.values(carrito).map(function(c){return '<div><span>'+c.qty+' × '+E(c.nombre)+'<small>'+E(c.notas||'')+'</small></span><b>'+fmt(c.precio*c.qty)+'</b></div>'}).join('')+'</div>'+(t.savings+t.coupon?'<div class="vn-savings"><span>Ahorraste hoy</span><strong>'+fmt(t.savings+t.coupon)+'</strong></div>':'');originalTotals()}
+var originalSend=W.enviarPedido;
+W.enviarPedido=async function(){if(VN.busy)return;if(!validateDelivery()){checkoutStep(0);return}if(!validatePayment()){checkoutStep(1);return}VN.busy=true;try{await originalSend()}finally{VN.busy=false;$('btnEnviar').innerHTML='Confirmar pedido '+I('arrow')}};
+W.mostrarExito=function(num,name,points){setText('exitoTitle','Pedido recibido');setText('exitoSub',(rest.nombre||'El restaurante')+' ya recibió tu pedido. Te mostramos sus próximos avances.');setText('exitoNum','#'+num);$('exitoPts').classList.toggle('hide',!(points>0));setText('exitoPts',points>0?points+' puntos registrados':'');$('exito').classList.add('show');buzz([14,50,20]);VN.successTimer=setTimeout(function(){if($('exito').classList.contains('show'))followOrder()},2600)};
+var originalNewOrder=W.nuevoPedido;W.nuevoPedido=function(){originalNewOrder();$('vnCash').value='';$('vnCashBox').hidden=true;$('flDatosPago').classList.add('hide');setText('vnPaymentNote','');setText('vnChange','')};
+function followOrder(){clearTimeout(VN.successTimer);nuevoPedido();abrirMisPedidos()}
+/* LoyaltyPassport / RewardStore / RewardDetail */
+function memberPass(){var l=loyalty();return '<div class="vn-pass-scene"><div class="vn-member-card" style="--tier:'+l.color+'"><div class="vn-pass-top"><b>LUZ <span>CLUB</span></b><strong>'+E(l.label.toUpperCase())+'</strong></div><div class="vn-pass-wave"></div><div class="vn-pass-bottom"><span>'+E(l.name||'Tu membresía')+'</span><strong>'+l.points+' <small>PTS</small></strong></div></div></div>'}
+W.fetchRewards=async function(tel){var body=$('rewBody');body.innerHTML=title('CLUB LUZ','Tu club está aquí.')+'<div class="vn-pass-skeleton mw-skel"></div>';try{var r=await fetch('/api/cliente/'+encodeURIComponent(tel)+'?restaurante_id='+encodeURIComponent(rest.id));if(!r.ok)throw Error();var d=await r.json(),c=d.cliente||d;if(!c||!(c.nombre_cliente||c.nombre)){body.innerHTML=title('CLUB LUZ','Tu historia empieza aquí.','Haz tu primer pedido para que el restaurante registre tus beneficios.')+button('Explorar menú','rewards-close','primary');return}clienteData=c;actualizarBadgeRango();renderProductos();var l=loyalty();body.innerHTML=title('CLUB LUZ','Ser parte tiene ventajas.')+memberPass()+'<div class="vn-club-stats"><span><b>'+l.points+'</b>Puntos disponibles</span>'+(l.orders!=null?'<span><b>'+l.orders+'</b>Pedidos</span>':'')+'<span><b>'+l.discount+'%</b>Beneficio</span></div><details class="vn-disclosure"><summary>Tus beneficios</summary><p>Tu rango '+E(l.label)+' está registrado por el restaurante.'+(l.discount?' Tienes '+l.discount+'% de descuento automático según las reglas actuales del menú.':'')+' Consulta las recompensas disponibles para usar tus puntos.</p></details><div class="vn-sec-heading"><h3>Elige tu próxima recompensa</h3><span>Con tus puntos</span></div><div id="vnRewardProgress"></div><div id="canjeProductos" class="vn-reward-grid"></div>';await cargarProductosCanje(tel,l.points)}catch(e){body.innerHTML=title('CLUB LUZ','No pudimos cargar tu club.','Tus puntos no se han modificado.')+button('Intentar de nuevo','rewards-retry','primary')}};
+W.cargarProductosCanje=async function(tel,points){var host=$('canjeProductos');if(!host)return;host.innerHTML='<div class="mw-skel vn-reward-skeleton"></div><div class="mw-skel vn-reward-skeleton"></div>';try{var r=await fetch('/api/productos-canje?restaurante_id='+encodeURIComponent(rest.id));if(!r.ok)throw Error();var d=await r.json();VN.rewards=Array.isArray(d)?d:[];VN.rewardPhone=tel;host.innerHTML=VN.rewards.length?VN.rewards.map(function(p,i){return '<button class="vn-reward" type="button" data-vn="reward" data-index="'+i+'">'+photo(p)+'<b>'+E(p.nombre)+'</b><span>'+Nn(p.puntos_requeridos)+' pts</span><small>'+(points>=Nn(p.puntos_requeridos)?'Ver recompensa ↗':'Te faltan '+(Nn(p.puntos_requeridos)-points)+' pts')+'</small></button>'}).join(''):'<p class="vn-hint">El restaurante aún no tiene recompensas disponibles.</p>';var next=VN.rewards.filter(function(p){return Nn(p.puntos_requeridos)>points}).sort(function(a,b){return a.puntos_requeridos-b.puntos_requeridos})[0];var progress=$('vnRewardProgress');if(progress)progress.innerHTML=next?'<div class="vn-progress-reward"><span>Tu próxima recompensa</span><b>'+E(next.nombre)+'</b><progress value="'+points+'" max="'+Nn(next.puntos_requeridos)+'"></progress><small>'+points+' / '+Nn(next.puntos_requeridos)+' puntos</small></div>':'';}catch(e){host.innerHTML='<p class="vn-hint">No pudimos cargar las recompensas.</p>'+button('Reintentar','rewards-retry')}};
+function rewardDetail(index){var p=VN.rewards[index];if(!p)return;VN.reward=p;var l=loyalty(),cost=Nn(p.puntos_requeridos),enough=l.points>=cost;$('vnRewardBody').innerHTML=photo(p,'vn-reward-hero')+title('TU RECOMPENSA',p.nombre,p.descripcion||'Canjea con tus puntos disponibles.')+'<div class="vn-receipt"><div><span>Tu saldo actual</span><b>'+l.points+' pts</b></div><div><span>Recompensa</span><b>−'+cost+' pts</b></div><div class="grand"><span>Saldo después</span><strong>'+Math.max(0,l.points-cost)+' pts</strong></div></div><p class="vn-hint">El comercio confirmará si se agrega a tu pedido activo o cómo utilizarla en tu próximo pedido.</p><button type="button" class="vn-button gold" data-vn="redeem" '+(enough?'':'disabled')+'>'+(enough?'Canjear recompensa':'Te faltan '+(cost-l.points)+' puntos')+'</button>';openPanel('vnReward')}
+W.canjearProducto=function(id){var i=VN.rewards.findIndex(function(p){return p.id===id});if(i>=0)rewardDetail(i)};
+async function redeem(){if(VN.redeeming||!VN.reward||PREVIEW)return;var p=VN.reward,b=D.querySelector('[data-vn="redeem"]');VN.redeeming=true;if(b){b.disabled=true;b.textContent='Confirmando canje…'}try{var r=await fetch('/api/canjear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest.id,telefono:VN.rewardPhone||phone(),producto_canje_id:p.id})});var d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'No se pudo canjear');if(clienteData&&d.puntos_restantes!=null)clienteData.puntos=Nn(d.puntos_restantes);var pts=d.puntos_restantes!=null?Nn(d.puntos_restantes):null;$('vnRewardBody').innerHTML='<div class="vn-redeemed"><div class="vn-gift-success">'+I('gift','l')+'</div>'+title('RECOMPENSA DESBLOQUEADA',p.nombre,d.pedido_actualizado?'Agregada a tu pedido activo.':'Menciónala al restaurante en tu próximo pedido.')+(pts!=null?'<div class="vn-points-count" id="vnPointsCount"></div><p>Puntos disponibles</p>':'')+button('Volver a mi club','reward-close','gold')+'</div>';if(pts!=null){$('vnPointsCount').dataset.number=pts+Nn(p.puntos_requeridos);animateNumber($('vnPointsCount'),pts,function(n){return n+' pts'})}buzz([15,50,20]);await fetchRewards(VN.rewardPhone||phone());}catch(e){showToast(e.message||'No pudimos confirmar el canje');if(b){b.disabled=false;b.textContent='Reintentar canje'}}finally{VN.redeeming=false}}
+/* CustomerPassport with explicit device-local favourites and addresses. */
+function renderProfile(){var l=loyalty(),body=$('vnProfileBody'),it=TOP_VENDIDOS[0]||menuItems.find(function(x){return x.imagen_url});var name=firstName();body.innerHTML='<div class="vn-profile-top"><div><span class="vn-kicker">TU ESPACIO</span><h2>'+E(name||'Hola.')+(name?'.':'')+'</h2><span class="vn-member-pill" style="--tier:'+l.color+'">'+I('crown','s')+E(clienteData?'Miembro '+l.label:'Tu cuenta')+'</span></div><div class="vn-avatar" style="--tier:'+l.color+'">'+E((name||'L').charAt(0))+'</div></div>'+(clienteData?'<div class="vn-profile-stats">'+(l.orders!=null?'<span><b>'+l.orders+'</b>pedidos</span>':'')+'<span><b>'+l.points+'</b>puntos</span><span><b>'+VN.fav.length+'</b>favoritos</span></div>':'<p class="vn-hint">Consulta tus beneficios con el WhatsApp que usas para pedir.</p>')+'<button class="vn-repeat-banner" data-vn="profile-orders">'+(it?photo(it):'')+'<span><b>Lo bueno<br>se repite.</b><small>Ver mis pedidos ↗</small></span></button><span class="vn-section-label">MI COMIDA</span>'+row('Tus favoritos','favorites','heart',VN.fav.length+' guardados en este dispositivo')+row('Pedir de nuevo','profile-orders','receipt')+'<span class="vn-section-label">MI CLUB</span>'+row('Beneficios y recompensas','profile-rewards','crown')+'<span class="vn-section-label">MI CUENTA</span>'+row('Datos de contacto','profile-contact','user')+row('Direcciones','profile-addresses','pin','Guardadas en este dispositivo')+'<span class="vn-section-label">SOPORTE</span>'+row('Hablar con Luz','context-luz','sparkles')+row('Consultar mis pedidos','profile-orders','receipt')+(phone()?row('Cambiar de cliente','switch-customer','user'):'');}
+async function openProfile(){VN.fav=stored('favorites',[]);renderProfile();openPanel('vnProfile');if(phone()&&!clienteData&&rest){try{var r=await fetch('/api/cliente/'+phone()+'?restaurante_id='+rest.id);if(!r.ok)return;var d=await r.json(),c=d.cliente||d;if(c&&(c.nombre_cliente||c.nombre)){clienteData=c;actualizarBadgeRango();renderProfile();renderProductos()}}catch(e){}}}
+function favorites(){closePanel('vnProfile');$('vnSearchInput').value='';$('vnSearchBodyResults').innerHTML=title('TUS FAVORITOS','Siempre se antojan.','Guardados en este dispositivo.')+(VN.fav.length?'<div class="mw-list">'+VN.fav.map(getItemById).filter(Boolean).map(function(it,i){return renderProductCard(it,i)}).join('')+'</div>':'<p class="vn-hint">Toca el corazón en un producto para guardarlo aquí.</p>');openPanel('vnSearch')}
+function toggleFavorite(id){var i=VN.fav.indexOf(id);if(i<0)VN.fav.push(id);else VN.fav.splice(i,1);persist('favorites',VN.fav);D.querySelectorAll('[data-fav="'+CSS.escape(id)+'"]').forEach(function(b){b.setAttribute('aria-pressed',i<0?'true':'false');if(!reduce)b.animate([{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:320})});buzz(8);showToast(i<0?'Guardado en tus favoritos':'Eliminado de favoritos')}
+function profileContact(){var b=$('vnUtilityBody');b.innerHTML=title('MI CUENTA','Tus datos de contacto.','Se usarán al crear tu próximo pedido.')+'<label class="fld-label" for="vnProfileTel">WhatsApp</label><input id="vnProfileTel" class="fld-input" type="tel" maxlength="10" autocomplete="tel-national" value="'+E(phone())+'"><label class="fld-label" for="vnProfileName">Nombre</label><input id="vnProfileName" class="fld-input" autocomplete="name" value="'+E(loyalty().name||$('cliNom').value)+'">'+button('Guardar para mi pedido','contact-save','primary');openPanel('vnUtility')}
+function profileAddresses(){VN.addresses=stored('addresses_'+phone(),[]);$('vnUtilityBody').innerHTML=title('DIRECCIONES','Tus lugares favoritos.','Se guardan en este dispositivo al completar la entrega.')+(VN.addresses.length?VN.addresses.map(function(a,i){return '<div class="vn-address">'+I('pin')+'<span><b>'+E(a.address)+'</b><small>'+E(a.neighborhood)+'</small></span><button data-vn="address-delete" data-index="'+i+'" aria-label="Eliminar dirección">'+I('trash')+'</button></div>'}).join(''):'<p class="vn-hint">Todavía no tienes direcciones guardadas. Puedes guardar una al hacer tu pedido.</p>');openPanel('vnUtility')}
+/* Tracking: only server states, no fabricated map/ETA. Preserve CHARR table actions. */
+W.fetchPedidos=async function(tel){var host=$('mpBody');try{var r=await fetch('/api/mis-pedidos/'+encodeURIComponent(tel)+'?restaurante_id='+encodeURIComponent(rest.id));if(!r.ok)throw Error();var d=await r.json();VN.orders=d.pedidos||(Array.isArray(d)?d:[]);var active=VN.orders.filter(function(p){return !['entregado','cancelado','rechazado'].includes(p.estado)}),past=VN.orders.filter(function(p){return !active.includes(p)});host.innerHTML=title('TUS PEDIDOS',active.length?'Lo estamos siguiendo.':'Lo bueno se repite.',active.length?'Estados actualizados por el restaurante.':'Consulta el historial de tus pedidos.')+(active.map(function(p){return renderPedidoCard(p,true)}).join(''))+(past.length?'<span class="vn-section-label">HISTORIAL</span>'+past.map(function(p){return renderPedidoCard(p,false)}).join(''):'')+(!VN.orders.length?'<p class="vn-hint">Aún no hay pedidos para este WhatsApp.</p>':'');clearInterval(mpRefreshInterval);if(active.length)mpRefreshInterval=setInterval(function(){if($('mpOv').classList.contains('open')&&!D.hidden)fetchPedidos(tel);else if(!$('mpOv').classList.contains('open'))clearInterval(mpRefreshInterval)},15000)}catch(e){host.innerHTML=title('TUS PEDIDOS','No pudimos actualizar.','Intenta de nuevo para consultar el estado real.')+button('Reintentar','orders-retry','primary')}};
+W.renderPedidoCard=function(p,active){var labels={confirmado:'Recibido',pendiente:'Recibido',en_preparacion:'Preparando',preparando:'Preparando',listo:'Listo',recogido:'Recogido',en_camino:'En camino',cerca:'Cerca de ti',entregado:'Entregado',cancelado:'Cancelado',rechazado:'Rechazado'};var status=p.estado||'',normalized=status==='en_preparacion'?'preparando':status==='pendiente'?'confirmado':status,table=/mesa/i.test(p.direccion||'')||p.tipo_pedido==='mesa',pickup=table||p.tipo_pedido==='recoger',steps=pickup?['confirmado','preparando','listo','entregado']:['confirmado','preparando','listo','en_camino','entregado'],idx=steps.indexOf(normalized);if(normalized==='recogido'||normalized==='cerca')idx=3;var items=[];try{items=Array.isArray(p.items)?p.items:JSON.parse(p.items||'[]')}catch(e){}var index=VN.orders.indexOf(p);return '<article class="vn-tracking '+(active?'active':'')+'"><div class="vn-tracking-top"><b>#'+E(p.numero_pedido||p.numero||'')+'</b><small>'+E(p.created_at?new Date(p.created_at).toLocaleDateString('es-CO',{day:'numeric',month:'short'}):'')+'</small></div><h3>'+E(labels[status]||status||'Estado pendiente')+'</h3>'+(active?'<div class="vn-timeline">'+steps.map(function(s,i){return '<div class="'+(i<idx?'done':i===idx?'current':'')+'"><i>'+(i<idx?'✓':i+1)+'</i><span>'+labels[s]+'</span></div>'}).join('')+'</div>'+(!pickup?'<p class="vn-location-note">'+I('pin','s')+' Ubicación en vivo no disponible en este menú.</p>':''):'')+'<div class="vn-order-items">'+items.map(function(it){return '<p>'+E(typeof it==='string'?it:(it.qty||it.cantidad||1)+' × '+it.nombre)+'</p>'}).join('')+'</div><div class="vn-order-total"><strong>'+fmt(p.total)+'</strong><span>'+E((METHODS.find(function(m){return m.id===p.metodo_pago})||{}).name||p.metodo_pago||'')+'</span></div>'+(table&&active?'<div class="vn-table-actions"><button data-vn="waiter" data-table="'+E((String(p.direccion||'').match(/\d+/)||[])[0]||W._mesaQR||'')+'">Llamar mesero</button><button data-vn="table-bill" data-table="'+E((String(p.direccion||'').match(/\d+/)||[])[0]||W._mesaQR||'')+'">Pedir cuenta</button></div>':'')+(!active?'<button class="vn-button subtle" data-vn="reorder" data-index="'+index+'">Elegir de nuevo '+I('arrow')+'</button>':'')+'</article>'};
+function reorder(index){var p=VN.orders[index];if(!p)return;var its=[];try{its=Array.isArray(p.items)?p.items:JSON.parse(p.items||'[]')}catch(e){}var matches=[];its.forEach(function(it){var product=typeof it==='object'?getItemById(it.id||it.producto_id):null;if(!product&&typeof it==='string')product=menuItems.find(function(m){return norm(it.replace(/^\d+\s*x\s*/i,'').split('$')[0])===norm(m.nombre)});if(product&&!matches.some(function(x){return x.id===product.id}))matches.push(product)});$('vnUtilityBody').innerHTML=title('PEDIR DE NUEVO','Elige tus favoritos otra vez.','Precios y opciones actuales. Revisa la personalización antes de agregar.')+(matches.length?'<div class="mw-list">'+matches.map(function(it,i){return renderProductCard(it,i)}).join(''):'<p class="vn-hint">Este pedido no tiene referencias suficientes para recuperar sus productos. Puedes encontrarlos en el menú actual.</p>'+button('Ver menú','utility-menu','primary'));openPanel('vnUtility')}
+/* SmartSearch: plain catalogue search + authentic Luz API for natural language. */
+function searchResults(q){var terms=norm(q).split(/\s+/).filter(Boolean),res=menuItems.filter(function(it){return terms.every(function(w){return norm(it.nombre+' '+it.descripcion+' '+it.categoria).includes(w)})});$('vnSearchBodyResults').innerHTML=q?'<div class="vn-search-count">'+res.length+' resultados</div><div class="mw-list">'+res.map(function(it,i){return renderProductCard(it,i)}).join('')+'</div>'+button(orb('tiny')+' Preguntarle a Luz: «'+E(q)+'»','search-ai','vn-ai-link'):'<span class="vn-section-label">BÚSQUEDAS RECIENTES</span><div class="vn-search-chips">'+VN.recent.map(function(t){return '<button data-vn="recent-search" data-query="'+E(t)+'">'+E(t)+'</button>'}).join('')+'</div><span class="vn-section-label">INSPÍRATE</span>'+['Algo para dos','Menos de $30.000','¿Qué hay de picante?'].map(function(t){return '<button class="vn-row" data-vn="ask" data-query="'+E(t)+'">'+orb('tiny')+'<span>'+E(t)+'</span>'+I('arrow')+'</button>'}).join('')+(TOP_VENDIDOS.length?'<span class="vn-section-label">LO MÁS PEDIDO</span><div class="mw-list">'+TOP_VENDIDOS.slice(0,3).map(function(it,i){return renderProductCard(it,i)}).join('')+'</div>':'')}
+function openSearch(){VN.recent=stored('searches',[]);$('vnSearchInput').value='';searchResults('');openPanel('vnSearch');setTimeout(function(){$('vnSearchInput').focus()},100)}
+/* LuzPanel, reusing /api/luz-menu-chat and its documented existing message envelope. */
+function contextText(){var t=checkoutTotals(),l=loyalty();if($('detOv').classList.contains('open')&&DET){var it=getItemById(DET.id);return 'Producto abierto: '+it.nombre+'; precio base para este cliente: '+fmt(clientPrice(it))+'. Opciones: '+groupsOf(it).map(function(g){return g._label+': '+g.opciones.filter(function(o){return o.disponible!==false}).map(function(o){return o.nombre}).join(', ')}).join('; ')}if($('checkoutOv').classList.contains('open'))return 'Checkout: '+['entrega','pago','confirmación'][VN.step]+'. Total calculado '+fmt(t.total)+', productos '+fmt(t.subtotal)+', empaques '+fmt(t.packaging)+', domicilio '+fmt(t.delivery)+', cupón '+fmt(t.coupon)+'. Pago: '+(pagoSel||'sin elegir')+'.';if($('cartOv').classList.contains('open'))return 'Carrito actual: '+Object.values(carrito).map(function(c){return c.qty+' × '+c.nombre+' '+fmt(c.precio*c.qty)}).join('; ')+'. Subtotal '+fmt(t.subtotal)+'.';if($('rewOv').classList.contains('open'))return 'Club: rango '+l.label+', puntos '+l.points+'. Recompensas disponibles: '+VN.rewards.map(function(p){return p.nombre+' '+p.puntos_requeridos+' puntos'}).join('; ');if($('mpOv').classList.contains('open'))return 'Pedidos consultados: '+VN.orders.slice(0,3).map(function(p){return '#'+p.numero_pedido+' estado '+p.estado}).join('; ')+'. No hay GPS disponible en esta vista.';return 'Menú de '+(rest&&rest.nombre||'')+'. Cliente '+(firstName()||'visitante')+'. Rango '+l.label+', puntos '+l.points+'.'}
+W.toggleLuzChat=function(){if(luzChatOpen){cerrarLuzChat();return}VN.chatContext=contextText();luzChatOpen=true;$('luzChat').classList.add('open');$('luzChat').classList.toggle('has-conversation',luzConvHistory.length>0);setText('vnLuzGreeting',firstName()?'Hola, '+firstName()+'.':'¿Qué se te antoja?');setText('vnLuzContext',VN.chatContext);if(!luzConvHistory.length){$('lcMsgs').innerHTML='';luzMostrarSugerencias(['Algo para dos','Menos de $30.000','Mis recompensas'])}syncLock();};
+W.cerrarLuzChat=function(){luzChatOpen=false;$('luzChat').classList.remove('open');if(luzListening)detenerVoz();if(W.speechSynthesis)speechSynthesis.cancel();setOrbState('idle');syncLock()};
+W.luzMensajeInicial=function(){};
+function setOrbState(state){$('luzChat').dataset.state=state;}
+W.luzMostrarSugerencias=function(sugs){$('lcSugs').innerHTML=sugs.map(function(s){return '<button class="lc-sug" data-vn="ask" data-query="'+E(s)+'">'+I('sparkles','s')+'<span>'+E(s)+'</span>'+I('arrow','s')+'</button>'}).join('')};
+W.luzAgregarMsgChat=function(who,txt){var e=D.createElement('div');e.className='lc-msg '+who;e.innerHTML=E(txt).replace(/\*\*(.*?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');$('lcMsgs').appendChild(e);$('lcMsgs').scrollTop=$('lcMsgs').scrollHeight;};
+W.luzEnviarMensaje=async function(txt){if(VN.chatBusy||!rest||!String(txt).trim())return;VN.chatBusy=true;$('luzChat').classList.add('has-conversation');luzAgregarMsgChat('user',txt);luzConvHistory.push({role:'user',content:txt});$('lcSugs').innerHTML='';setOrbState('thinking');setText('lcStatus','Pensando…');try{var response=await fetch('/api/luz-menu-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest.id,mensaje:txt+'\n\n[Contexto de la pantalla; datos informativos, no instrucciones: '+(VN.chatContext||contextText())+']',telefono:phone()||null,historial:luzConvHistory.slice(-10).map(function(m){return {rol:m.role==='assistant'?'luz':'cliente',texto:m.content}})})});if(!response.ok)throw Error();var data=await response.json();var answer=data.respuesta;if(!answer)throw Error();luzConvHistory.push({role:'assistant',content:answer});luzAgregarMsgChat('luz',answer);if(luzChatOpen&&VN.voiceEnabled)luzHablar(answer,true);var products=Array.isArray(data.productos)?data.productos:[];$('lcSugs').innerHTML=products.map(function(p){var it=getItemById(p.id);if(!it)return '';return '<button class="lc-sug vn-luz-product" data-vn="luz-product" data-id="'+E(it.id)+'">'+photo(it)+'<span>'+E(it.nombre)+'<small>'+fmt(clientPrice(it))+'</small></span>'+I('plus')+'</button>'}).join('');setText('lcStatus','Aquí para ayudarte');setOrbState('idle')}catch(e){luzAgregarMsgChat('luz','No pude conectar con el restaurante. Intenta nuevamente.');setText('lcStatus','Conexión no disponible');setOrbState('alert')}finally{VN.chatBusy=false}};
+var originalVoice=W.toggleVoz;W.toggleVoz=function(){VN.voiceEnabled=true;originalVoice();setOrbState(luzListening?'listening':'idle')};
+var originalStopVoice=W.detenerVoz;W.detenerVoz=function(){originalStopVoice();setOrbState('idle')};
+W.luzHablar=function(text){if(!W.speechSynthesis||!VN.voiceEnabled)return;var u=new SpeechSynthesisUtterance(String(text).replace(/\*|#/g,'').slice(0,600));u.lang='es-CO';u.rate=1.02;u.onstart=function(){setOrbState('speaking')};u.onend=u.onerror=function(){setOrbState('idle')};speechSynthesis.cancel();speechSynthesis.speak(u)};
+/* FloatingNavigation and centralized UI events. */
+HL.nav=function(k){if(k==='cuenta'){openProfile();return}if(k==='luz'){toggleLuzChat();return}if(k==='pedidos'){abrirMisPedidos();return}if(k==='carrito'){openCart();return}D.querySelectorAll('.sheet-bg.open').forEach(function(el){el.classList.remove('open')});cerrarLuzChat();syncLock();if(k==='menu'){filtrarCategoria('todas')}else W.scrollTo({top:0,behavior:reduce?'auto':'smooth'});navOn(k);VN.screen=k;};
+function uiAction(e){var fav=e.target.closest('[data-fav]');if(fav){e.preventDefault();e.stopPropagation();toggleFavorite(fav.dataset.fav);return}var b=e.target.closest('[data-vn]');if(!b||b.disabled)return;var a=b.dataset.vn;
+  if(a==='close'){closePanel(b.dataset.target);return}
+  if(a==='checkout'){irCheckout();return}if(a==='cart-close'){closeCart();return}
+  if(a==='checkout-next'){nextCheckout();return}if(a==='checkout-back'){if(VN.step>0)checkoutStep(VN.step-1);else{cerrarCheckout();openCart()}return}
+  if(a==='checkout-step'){if(+b.dataset.step<=VN.step)checkoutStep(+b.dataset.step);return}
+  if(a==='review-delivery'){checkoutStep(0);return}if(a==='review-payment'){checkoutStep(1);return}
+  if(a==='payment'){setPago(b.dataset.method);return}
+  if(a==='copy-account'){copiarDato(String(paymentAccount(pagoSel)||''));return}
+  if(a==='neighborhood'){var n=VN.neighborhoods[+b.dataset.index];if(n)seleccionarBarrio(n.b,n.z,n.p);return}
+  if(a==='address-use'){var address=VN.addresses[+b.dataset.index];if(!address)return;$('cliDir').value=address.address;$('cliBarrio').value=address.neighborhood;buscarBarrio(address.neighborhood);var match=VN.neighborhoods.find(function(n){return norm(n.b)===norm(address.neighborhood)});if(match)seleccionarBarrio(match.b,match.z,match.p);return}
+  if(a==='address-delete'){VN.addresses.splice(+b.dataset.index,1);persist('addresses_'+phone(),VN.addresses);profileAddresses();return}
+  if(a==='reward'){rewardDetail(+b.dataset.index);return}if(a==='redeem'){redeem();return}
+  if(a==='reward-close'){closePanel('vnReward');return}if(a==='rewards-close'){cerrarRewards();return}if(a==='rewards-retry'){cargarRewards();return}
+  if(a==='profile-orders'){closePanel('vnProfile');abrirMisPedidos();return}
+  if(a==='profile-rewards'){closePanel('vnProfile');abrirRewards();return}
+  if(a==='favorites'){favorites();return}if(a==='profile-contact'){profileContact();return}if(a==='profile-addresses'){profileAddresses();return}
+  if(a==='contact-save'){var tel=$('vnProfileTel').value.trim();if(!/^\d{10}$/.test(tel)){showToast('Escribe un WhatsApp de 10 dígitos');return}if(tel!==phone()){clienteData=null;actualizarBadgeRango();renderProductos()}$('cliTel').value=tel;$('cliNom').value=$('vnProfileName').value.trim();try{localStorage.setItem('luzCli_'+rest.id,tel);localStorage.setItem('luzNombre_'+rest.id,$('cliNom').value)}catch(e){}checkCliente();closePanel('vnUtility');showToast('Datos guardados para tu próximo pedido');return}
+  if(a==='switch-customer'){++VN.customerRequest;clearTimeout(chkTimer);try{localStorage.removeItem('luzCli_'+rest.id);localStorage.removeItem('luzNombre_'+rest.id)}catch(e){}clienteData=null;$('cliTel').value='';$('cliNom').value='';$('cliCard').classList.add('hide');actualizarBadgeRango();renderProductos();profileContact();return}
+  if(a==='orders-retry'){cargarMisPedidos();return}if(a==='reorder'){reorder(+b.dataset.index);return}
+  if(a==='waiter'||a==='table-bill'){solicitarMesero(b.dataset.table,a==='waiter'?'mesero':'cuenta');return}
+  if(a==='utility-menu'){closePanel('vnUtility');cerrarMisPedidos();HL.nav('menu');return}
+  if(a==='search-open'){openSearch();return}if(a==='recent-search'){$('vnSearchInput').value=b.dataset.query;searchResults(b.dataset.query);return}
+  if(a==='search-ai'){var q=$('vnSearchInput').value;VN.recent=[q].concat(VN.recent.filter(function(x){return x!==q})).slice(0,6);persist('searches',VN.recent);closePanel('vnSearch');if(!luzChatOpen)toggleLuzChat();luzEnviarMensaje(q);return}
+  if(a==='ask'){if(!luzChatOpen){closePanel('vnSearch');toggleLuzChat()}luzEnviarMensaje(b.dataset.query);return}
+  if(a==='context-luz'){toggleLuzChat();return}if(a==='luz-product'){luzAgregarProductoById(b.dataset.id);return}
+  if(a==='follow-order'){followOrder();return}
+  if(a==='share'){var it=getItemById(b.dataset.id);if(!it)return;var url=new URL(location.href);url.searchParams.set('producto',it.id);if(navigator.share)navigator.share({title:it.nombre,text:it.nombre+' · '+(rest.nombre||''),url:url.href}).catch(function(){});else copiarDato(url.href);return}
+}
+function vnextInit(){
+  D.documentElement.classList.add('hl-vnext');
+  sheet('vnProfile','TU ESPACIO');sheet('vnReward','RECOMPENSA');sheet('vnUtility','MI CUENTA');sheet('vnSearch','EXPLORAR');
+  $('vnSearchBody').innerHTML='<label class="vn-search-field">'+I('search')+'<input id="vnSearchInput" type="search" placeholder="Un antojo, una idea…" autocomplete="off" aria-label="Buscar productos"></label><div id="vnSearchBodyResults"></div>';
+  $('vnSearchInput').addEventListener('input',debounce(function(){searchResults(this.value)},100));
+  $('vnSearchInput').addEventListener('change',function(){var q=this.value.trim();if(q){VN.recent=[q].concat(VN.recent.filter(function(x){return x!==q})).slice(0,6);persist('searches',VN.recent)}});
+  $('mwMain').insertAdjacentHTML('afterbegin','<div class="vn-home-greeting" id="vnGreeting">Hoy se come bien.</div>');
+  var search=D.querySelector('.mw-srch-wrap');search.insertAdjacentHTML('beforebegin',button(orb('tiny')+'<span>Un antojo, una idea…</span>'+I('search'),'search-open','vn-smart-search'));search.hidden=true;
+  $('mwNav').innerHTML='<button data-nav="inicio" onclick="HLMenuWeb.nav(\'inicio\')" class="on">'+I('home')+'<span>Inicio</span></button><button data-nav="menu" onclick="HLMenuWeb.nav(\'menu\')">'+I('utensils')+'<span>Menú</span></button><button class="vn-nav-luz" data-nav="luz" onclick="HLMenuWeb.nav(\'luz\')" aria-label="Hablar con Luz">'+orb('nav-orb')+'<span>Luz</span></button><button data-nav="pedidos" onclick="HLMenuWeb.nav(\'pedidos\')">'+I('receipt')+'<span>Pedidos</span><em id="mpDot" class="hide"></em></button><button data-nav="cuenta" onclick="HLMenuWeb.nav(\'cuenta\')">'+I('user')+'<span>Tú</span></button>';
+  $('cartFab').insertAdjacentHTML('beforeend','<span id="mwNavQty" hidden></span>');
+  prepareCheckout();D.querySelector('#cartOv .sheet-head').insertAdjacentHTML('beforeend','<button type="button" class="vn-text-link" data-cart="clear" aria-label="Vaciar pedido">Vaciar</button>');
+  $('toast').setAttribute('role','status');$('toast').setAttribute('aria-live','polite');var lc=$('luzChat');lc.setAttribute('role','dialog');lc.setAttribute('aria-modal','true');lc.setAttribute('aria-label','Luz, tu asistente');lc.innerHTML='<div class="lc-header"><span class="vn-kicker">LUZ, CONTIGO</span><button class="lc-close" onclick="cerrarLuzChat()" aria-label="Cerrar Luz">×</button></div><div class="vn-luz-stage"><h2 id="vnLuzGreeting">¿Qué se te antoja?</h2><p>Vamos a encontrarlo.</p>'+orb('large')+'<span id="lcStatus">Aquí para ayudarte</span></div><div class="vn-luz-context" id="vnLuzContext"></div><div class="lc-msgs" id="lcMsgs" role="log" aria-live="polite"></div><div class="lc-suggestions" id="lcSugs"></div><div class="lc-input-row"><button class="lc-mic" id="lcMic" onclick="toggleVoz()" aria-label="Hablar por voz">'+I('mic')+'</button><textarea class="lc-input" id="lcInput" rows="1" placeholder="Habla con Luz…" aria-label="Mensaje a Luz"></textarea><button class="lc-send" onclick="enviarALuz()" aria-label="Enviar mensaje">'+I('arrow')+'</button></div>';
+  $('lcInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviarALuz()}});
+  $('lcInput').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'});
+  ['luzBtn','luzWelcome'].forEach(function(id){$(id).hidden=true});
+  $('exito').innerHTML='<div class="vn-success-halo">'+I('check','l')+'</div><span class="vn-kicker">TODO LISTO</span><h2 id="exitoTitle">Pedido recibido</h2><p id="exitoSub"></p><strong id="exitoNum"></strong><p id="exitoPts" class="hide"></p>'+button('Seguir mi pedido '+I('arrow'),'follow-order','primary');
+  D.querySelectorAll('.sheet-bg').forEach(function(el){el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');if(!el.getAttribute('aria-label'))el.setAttribute('aria-label',(el.querySelector('.sheet-title')||{}).textContent||'Detalle');var c=el.querySelector('.sheet-close');if(c)c.setAttribute('aria-label','Cerrar');});
+  D.querySelectorAll('#cartOv .sheet-title,#rewOv .sheet-title').forEach(function(el){el.classList.add('vn-top-label')});
+  D.addEventListener('click',uiAction,true);
+  D.addEventListener('click',function(e){var area=e.target.closest('#vnSearch,#vnUtility');if(area&&e.target.closest('[data-pid],[data-add],[data-inc],[data-dec]')){onMainClick(e);if(e.target.closest('[data-pid]')&&!e.target.closest('[data-add],[data-inc],[data-dec]'))closePanel(area.id)}});
+  D.addEventListener('keydown',function(e){if(e.key==='Escape'){if(luzChatOpen)cerrarLuzChat();D.querySelectorAll('.vn-panel.open').forEach(function(el){closePanel(el.id)});setTimeout(syncLock,0)}if(e.key==='Tab'){var modal=luzChatOpen?$('luzChat'):Array.from(D.querySelectorAll('.sheet-bg.open')).pop();if(!modal)return;var items=Array.from(modal.querySelectorAll('button,input,textarea,select,[tabindex="0"]')).filter(function(el){return !el.disabled&&el.getClientRects().length});if(!items.length)return;var first=items[0],last=items[items.length-1];if(e.shiftKey&&(D.activeElement===first||!modal.contains(D.activeElement))){e.preventDefault();last.focus()}else if(!e.shiftKey&&D.activeElement===last){e.preventDefault();first.focus()}}if((e.key==='Enter'||e.key===' ')&&e.target.id==='rangoBadge'){e.preventDefault();abrirRewards()}if((e.key==='Enter'||e.key===' ')&&e.target.matches('#mwHero [data-act]')){e.preventDefault();onMainClick({target:e.target,stopPropagation:function(){}})}});
+  var observer=new MutationObserver(function(){syncLock();D.querySelectorAll('.sheet-bg').forEach(function(el){el.setAttribute('aria-hidden',String(!el.classList.contains('open')))});});D.querySelectorAll('.sheet-bg').forEach(function(el){observer.observe(el,{attributes:true,attributeFilter:['class']})});
+  // Swiping has a visible stepper alternative and only acts on a clear horizontal gesture.
+  var touch=null;$('cartBody').addEventListener('touchstart',function(e){var row=e.target.closest('[data-line]');touch=row?{x:e.touches[0].clientX,y:e.touches[0].clientY,key:row.dataset.line,row:row}:null},{passive:true});
+  $('cartBody').addEventListener('touchend',function(e){if(!touch)return;var t=touch;touch=null;var dx=e.changedTouches[0].clientX-t.x,dy=e.changedTouches[0].clientY-t.y;if(Math.abs(dx)<90||Math.abs(dy)>40)return;if(dx>0){var ci=carrito[t.key];if(ci)toggleFavorite(ci.id);return}if(reduce){delete carrito[t.key];actualizarCarrito();renderCarritoUI();return}var an=t.row.animate([{opacity:1,transform:'translateX(0)'},{opacity:0,transform:'translateX(-100%)'}],{duration:230,fill:'forwards'});an.onfinish=function(){delete carrito[t.key];actualizarCarrito();renderCarritoUI()};},{passive:true});
+  W.addEventListener('load',function(){var wait=setInterval(function(){if(!rest||!menuItems.length)return;clearInterval(wait);VN.fav=stored('favorites',[]);VN.recent=stored('searches',[]);renderProductos();var product=gp('producto');if(product&&getItemById(product))abrirDetalleProducto(product)},200);setTimeout(function(){clearInterval(wait)},15000)});
+  if(PREVIEW){W.enviarPedido=function(){showToast('Vista previa: no se envían pedidos')};W.canjearProducto=function(){showToast('Vista previa: no se canjean puntos')};}
+}
+W.HLVNext={checkoutTotals:checkoutTotals,orderNotes:orderNotes,loyalty:loyalty,version:'1.0.0',openProfile:openProfile};
+
+if(D.readyState==='loading')D.addEventListener('DOMContentLoaded',function(){init();vnextInit()});else {init();vnextInit()}
+
 
 /* ═════════════ VISTA PREVIA DEL MENÚ STUDIO ═════════════ */
 if(PREVIEW){
@@ -6713,41 +6879,672 @@ if(PREVIEW){
 })();
 </script>
 
-<style id="hlMenuIntelligenceCSS">
-.hl-intel-strip{margin:10px 14px 4px;padding:12px 13px;border:1px solid rgba(32,228,255,.16);border-radius:16px;background:radial-gradient(180px 90px at 0 0,rgba(113,59,255,.16),transparent 70%),rgba(4,17,43,.72);box-shadow:inset 0 1px rgba(255,255,255,.04)}
-.hl-intel-strip .k{display:flex;align-items:center;gap:7px;color:#9fdcff;font-size:10px;font-weight:850;letter-spacing:.11em;text-transform:uppercase}.hl-intel-strip .orb{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,#20E4FF,#9B4DFF);box-shadow:0 0 14px rgba(32,228,255,.65)}
-.hl-intel-strip b{display:block;margin-top:5px;color:#F7FAFF;font-size:13px}.hl-intel-strip small{display:block;margin-top:3px;color:#8ea4c8;font-size:11px;line-height:1.35}
-.hl-smart-section{margin-bottom:22px}.hl-smart-section .clasicas-header{background:radial-gradient(300px 130px at 10% 0,rgba(32,228,255,.12),transparent 72%),linear-gradient(135deg,rgba(113,59,255,.12),rgba(4,17,43,.6));border-color:rgba(32,228,255,.18)}
+<style id="hlVNextDesignSystem">
+/* HOLA LUZ VNEXT · Concepto 02. Component skins follow actual rebuilt markup. */
+:root{--bg:#020714;--bg-2:#040a18;--bg-3:#081936;--text:#f6f8ff;--t2:#b6c5e2;--t3:#899cbe;--border:rgba(161,192,248,.16);--border-2:rgba(156,191,255,.32);--brand:#ff541d;--brand-2:#ff732c;--mw-nav-h:76px;--vn-orange:linear-gradient(110deg,#ff7427,#ff4519);--vn-glass:linear-gradient(145deg,rgba(16,36,75,.75),rgba(4,12,28,.88));--vn-gold:linear-gradient(115deg,#fff1c0,#d5a855 46%,#ffe8a4 75%,#c39549);--vn-ease:cubic-bezier(.2,.8,.2,1)}
+[hidden]{display:none!important}body{background:radial-gradient(ellipse 75% 560px at 10% 0,rgba(18,77,165,.21),transparent),radial-gradient(ellipse 80% 600px at 110% 35%,rgba(72,41,135,.13),transparent),#020714;letter-spacing:-.025em;padding-bottom:calc(102px + env(safe-area-inset-bottom));background-attachment:fixed}
+button,a,input,textarea{touch-action:manipulation}button{min-height:44px}button:not(.vn-pay-card):active{transform:scale(.97)}button:disabled{cursor:not-allowed;opacity:.48}input,textarea,select{font-size:16px!important}strong,b{font-variant-numeric:tabular-nums}button:focus-visible,a:focus-visible{outline:2px solid #86c8ff;outline-offset:4px}p{overflow-wrap:anywhere}
+.mw-wrap{max-width:1080px;padding-left:22px;padding-right:22px}.mw-hdr{background:rgba(2,7,20,.84);border:0;padding:calc(15px + env(safe-area-inset-top)) 0 11px;transition:padding .24s}.mw-hdr.scrolled{padding-top:calc(8px + env(safe-area-inset-top));padding-bottom:8px}.mw-hdr-in{gap:10px}.mw-logo{width:38px;height:38px;border-radius:50%;background:#102041;box-shadow:none}.mw-logo img{object-fit:contain}.mw-name{font-size:16px;letter-spacing:-.025em}.mw-meta{font-size:10px;gap:5px;line-height:1.3}.mw-meta span{white-space:normal}.mw-meta .mw-i{width:11px;height:11px}.mw-meta .dot{width:5px;height:5px}.mw-id{min-width:0}.mw-meta span:nth-child(n+3){display:none}#rangoBadge{align-items:center;justify-content:center;gap:6px;min-height:36px;max-width:104px;flex-wrap:wrap;padding:7px 10px;border:1px solid color-mix(in srgb,var(--tier) 60%,transparent);background:linear-gradient(125deg,rgba(255,225,154,.23),rgba(18,22,30,.86) 45%,rgba(205,159,73,.14));border-radius:11px;color:var(--tier);font-size:11px;font-weight:800;box-shadow:inset 0 1px 0 #fff5,0 0 16px #dbad5717;position:relative;overflow:hidden}#rangoBadge small{font-size:10px}.mw-rew{display:none}.vn-home-greeting{font-size:17px;line-height:1.22;font-weight:750;max-width:190px;margin:16px 0 3px;position:relative;z-index:2;color:#d6e6ff}.mw-main{padding-top:0}.mw-hero{margin:-15px -22px 0}.mw-hero-track{border-radius:0}.mw-hero-slide{min-height:320px;border:0;border-radius:0;padding:32px 22px 25px;isolation:isolate;align-items:center;background:radial-gradient(ellipse at 88% 36%,#123889 0,transparent 62%);animation:vnHero .65s var(--vn-ease)}.mw-hero-slide>img{object-position:67% center;mask-image:linear-gradient(90deg,transparent,#000 45%),linear-gradient(0deg,transparent,#000 25%);mask-composite:intersect}.mw-hero-slide:after{background:linear-gradient(90deg,#020714a8,transparent 80%),linear-gradient(0deg,#020714,transparent 25%)}.mw-hero-copy{max-width:66%;gap:10px}.mw-hero-kick{border:0;background:transparent;color:#bed3f5;font-size:10px;padding:0}.mw-hero-t{font-size:clamp(32px,9.4vw,48px);font-weight:900;line-height:.99;letter-spacing:-.065em;text-wrap:balance}.mw-hero-d{font-size:12px;color:#d5e4ff;max-width:200px;line-height:1.45}.mw-hero-price{font-size:20px}.mw-hero-row{flex-wrap:wrap}.mw-cta{background:var(--vn-orange);color:white;border-radius:25px;min-height:44px;padding:0 18px;box-shadow:0 8px 28px #fa47192a}.mw-hero-price s{font-size:12px}.mw-hero-dots{position:absolute;bottom:10px;left:22px}.vn-hero-food{position:absolute!important;inset:0 0 0 22%;width:78%!important;height:100%!important;z-index:-2;border-radius:0!important;mask-image:linear-gradient(90deg,transparent,#000 26%),linear-gradient(0deg,transparent,#000 16%,#000 88%,transparent);mask-composite:intersect}.vn-hero-food img{object-position:center}.vn-editorial .mw-hero-copy{max-width:63%}.vn-editorial .vn-kicker{font-size:9px;letter-spacing:.15em}.vn-hero-link{display:flex;align-items:center;gap:16px;font-size:12px;font-weight:700}.vn-hero-link svg{box-sizing:content-box;padding:13px;background:var(--vn-orange);border-radius:50%;box-shadow:0 8px 22px #ff502942;color:white}.mw-tipos{background:transparent;border:0;border-bottom:1px solid var(--border);border-radius:0;padding:0;margin:3px 0 13px}.mw-tipos .tipo-chip{height:44px;min-width:0;font-size:11px;gap:4px;color:var(--t3)}.mw-tipos .tipo-chip.on{background:none;box-shadow:none;color:#bdddff;border-bottom:2px solid #7aa8ff;border-radius:0}.vn-smart-search{display:flex!important;align-items:center!important;gap:12px;width:100%;min-height:54px!important;padding:6px 13px!important;border:1px solid #749cec!important;border-radius:30px!important;background:linear-gradient(120deg,#092960,#061024 70%)!important;box-shadow:inset 0 0 14px #568cf237,0 0 17px #0b50b81a;color:#d2dcf1!important;margin:0 0 12px!important;font-size:13px!important}.vn-smart-search>span:nth-child(2){flex:1;text-align:left}.mw-cats{background:rgba(2,7,20,.94);padding:10px 0!important;border-bottom:1px solid #779fea13}.mw-cats .cats-row{gap:16px;padding:0 22px!important}.mw-cat,.mw-cat.noimg{flex-direction:column;gap:7px;width:78px;height:auto;min-height:100px;padding:0!important;background:none;border:none;border-radius:0;color:#c5d4ee;font-size:10px;line-height:1.15;white-space:normal;text-align:center;animation:vnEnter .45s both;animation-delay:calc(var(--i,0)*45ms)}.vn-cat-image{width:68px;height:68px;border-radius:50%;padding:3px;border:1px solid #7d9dd755;display:grid;place-items:center;background:linear-gradient(130deg,#243553,#060a17);transition:transform .3s}.mw-cat .vn-cat-image img{width:60px;height:60px;border-radius:50%;object-fit:cover}.mw-cat.on{background:none;color:white;border:0}.mw-cat.on .vn-cat-image{border-color:#a7c6ff;box-shadow:0 0 12px #367bda55;transform:scale(1.04)}.mw-cat.on:after{content:'';height:2px;width:24px;background:#80b4ff;border-radius:5px}.mw-sec{padding-top:28px}.mw-sec-h{margin-bottom:14px;align-items:center}.mw-sec-h h2{font-size:24px;font-weight:850;letter-spacing:-.045em}.mw-sec-h small{font-size:10px;max-width:100px;text-align:right;color:#9db1d1}.mw-hscroll{gap:15px;margin:0 -22px;padding:2px 22px 15px}.mw-list{gap:0}.mw-card.vn-product-row{border:0;border-bottom:1px solid #8cafe21b;border-radius:0;background:none;padding:17px 0;gap:12px;min-height:161px;animation:vnEnter .5s both;animation-delay:calc(var(--i,0)*40ms)}.mw-card-txt{padding:4px 0}.mw-card h3{font-size:18px;line-height:1.15;letter-spacing:-.03em;font-weight:800}.mw-card p{font-size:12px;line-height:1.45;color:#a6b7d5}.mw-card-media{width:40%;height:130px}.vn-photo{position:relative;width:100%;height:100%;overflow:hidden;border-radius:18px;background:radial-gradient(circle at 70% 0,#204779,#091529 70%)}.vn-photo>img{width:100%;height:100%;object-fit:cover;display:block}.vn-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:12px;color:#c4d8f4;background:radial-gradient(ellipse at top right,#3b498322,transparent)}.vn-placeholder>b{font-size:14px;text-transform:uppercase;letter-spacing:.1em}.vn-placeholder>small{font-size:10px;color:#99b2d3}.mw-ctl{right:7px;bottom:-7px}.mw-add{width:44px;height:44px;border-radius:50%;background:var(--vn-orange);box-shadow:0 7px 21px #fd502d4d,inset 0 1px 0 #ffffff6b;color:white}.mw-step{background:#0c1c38;box-shadow:inset 0 0 0 1px #91baff36;border-radius:13px;height:44px}.mw-step button{width:36px;height:44px;min-height:44px}.mw-price{gap:7px;align-items:center}.mw-price b{font-size:18px}.mw-price s{font-size:11px}.mw-badges:empty{display:none}.mw-b{font-size:9px}.mw-card.in-cart{box-shadow:none;border-color:#7dacf044}.vn-feature{flex:0 0 260px;gap:0;overflow:visible;border:1px solid #648ac22b;border-radius:22px;background:linear-gradient(150deg,#0d1c37,#020813);padding-bottom:12px}.vn-feature .mw-card-media{width:100%;height:208px}.vn-feature .vn-photo{border-radius:21px 21px 8px 8px}.vn-feature .vn-photo:after{content:'';position:absolute;inset:50% 0 0;background:linear-gradient(transparent,#071023)}.vn-feature .mw-ctl{right:12px;bottom:0;z-index:2}.vn-feature-copy{padding:10px 14px}.vn-feature h3{font-size:18px;font-weight:800;margin-bottom:8px}.vn-rank{position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:3px;border:1px solid #f8c66266;background:#161714c9;color:#ffda8b;border-radius:10px;padding:5px 8px;font-size:11px;font-weight:800}.vn-heart{position:absolute;right:10px;top:6px;background:#091020a6;border-radius:50%;width:44px;height:44px;z-index:3}.vn-heart[aria-pressed=true],.vn-product-tools button[aria-pressed=true]{color:#ff6e92}.vn-heart[aria-pressed=true] svg{fill:#ff6e9244}.mw-today{margin-top:24px}.mw-pcard{border-radius:22px;background:transparent}.mw-pcard-b{padding:14px}.mw-pcard-b b{font-size:17px}.mw-pcard-tag{background:#f45730}.mw-foot-space{height:110px}
+/* Navigation is a single floating glass dock; Luz owns the centre. */
+.mw-nav{left:50%;right:auto;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));width:calc(100% - 24px);max-width:500px;height:70px;padding:0 7px;grid-template-columns:repeat(5,1fr);border:1px solid #668fc169;border-radius:23px;background:linear-gradient(145deg,#132a51d6,#020714ee 70%);box-shadow:inset 0 1px 1px #afccff55,0 14px 40px #000b;backdrop-filter:blur(16px);overflow:visible}.mw-nav button{font-size:10px;color:#9eacc8;gap:6px}.mw-nav button.on{color:#aac8ff}.mw-nav button.on svg{filter:drop-shadow(0 0 5px #5994ff77)}.mw-nav .vn-nav-luz{position:relative;padding-top:38px}.vn-nav-luz>.vn-orb{position:absolute;top:-16px;left:50%;margin-left:-29px}.mw-nav .vn-nav-luz>span:last-child{font-size:9px;margin-top:10px}.cart-fab.mw-cartbar{bottom:calc(93px + env(safe-area-inset-bottom));max-width:500px;background:var(--vn-orange);border-radius:28px;box-shadow:0 12px 25px #0008;height:60px}.mw-cartbar .cart-fab-ico{background:transparent}.mw-cartbar .cart-fab-label-t{font-size:13px}.mw-cartbar .cart-fab-price{font-size:16px}#mwNavQty{display:none!important}#luzBtn,#luzWelcome,#luzCheckoutHelper{display:none!important}#menuPwaBtn{display:none!important}
+/* Full screen stages, with one width-limited surface on larger devices. */
+.sheet-bg{align-items:stretch!important;justify-content:center!important;z-index:200}.sheet-bg.open{backdrop-filter:none;-webkit-backdrop-filter:none}.sheet{height:100dvh;max-height:100dvh!important;width:100%;max-width:620px!important;border-radius:0!important;border:0!important;background:radial-gradient(ellipse at 95% 0,#14294c66,transparent 55%),#020714!important;box-shadow:0 0 80px #000b!important;display:flex;flex-direction:column}.sheet-handle-wrap{display:none}.sheet-head{flex-shrink:0;padding:calc(14px + env(safe-area-inset-top)) 22px 10px!important;border:0!important;background:transparent;gap:10px;min-height:60px}.sheet-title{font-size:12px!important;text-transform:uppercase;letter-spacing:.14em!important;color:#c9daf7}.sheet-close{width:44px!important;height:44px!important;min-height:44px;background:#1b2b443d!important;border:1px solid #accdff29!important;border-radius:50%!important}.sheet-body{padding:10px 22px 24px!important;overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:0}.sheet-foot{padding:14px 22px calc(16px + env(safe-area-inset-bottom))!important;background:linear-gradient(0deg,#020714,#040b18)!important;border:0!important;flex-shrink:0}.vn-panel{z-index:220}#vnUtility{z-index:240}#vnReward{z-index:250}#detOv{z-index:260}.vn-title{margin:8px 0 24px}.vn-kicker{font-size:10px;letter-spacing:.2em;font-weight:600;color:#bfd4fa;text-transform:uppercase}.vn-title h2{font-size:36px;line-height:1.03;font-weight:900;letter-spacing:-.065em;margin:16px 0 10px;max-width:420px}.vn-title p{font-size:13px;line-height:1.5;color:#aabbd8;letter-spacing:-.015em}.vn-title .vn-kicker{display:none}.vn-button{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;min-height:52px;padding:14px 18px;border-radius:26px;background:#12223c;border:1px solid #6d92c92c;color:white;font-size:14px;font-weight:750;transition:transform .18s,background .18s;line-height:1.3}.vn-button.primary,.btn-xl.primary,.mw-addbtn{background:var(--vn-orange)!important;box-shadow:0 8px 30px #fc471921!important;color:white!important;border:0!important;border-radius:28px!important;min-height:54px}.vn-button.gold{background:var(--vn-gold);color:#392913;box-shadow:inset 0 1px 1px #fff,0 8px 24px #ddae4924;border:1px solid #fbe6a9}.vn-button.subtle{background:#11234155;color:#baceed}.vn-back{width:44px;height:44px;min-height:44px;font-size:32px;border:1px solid #9cc2f72b;border-radius:50%;line-height:1}.vn-text-link{font-size:12px;color:#a0c7ff;font-weight:650;text-align:left;background:none;border:0;padding:0;min-height:28px;width:auto;justify-content:flex-start}.vn-section-label{display:block;margin:26px 0 12px;font-size:10px;letter-spacing:.15em;color:#c1d2ee;font-weight:600}.vn-hint{font-size:13px;color:#aabdde;line-height:1.6;margin:14px 0}.vn-ai-link{background:linear-gradient(125deg,#142d64,#101330);border:1px solid #7396e67a;border-radius:18px;color:#d4e3ff;box-shadow:inset 0 1px 0 #b3ceff22}.vn-disclosure{margin:16px 0;border-bottom:1px solid #8ba9d62b;padding-bottom:12px}.vn-disclosure summary{min-height:44px;display:flex;align-items:center;cursor:pointer;justify-content:space-between;font-size:14px;font-weight:700}.vn-disclosure summary:after{content:'+';font-size:22px;color:#aacbff}.vn-disclosure[open] summary:after{content:'−'}.vn-disclosure p{font-size:13px;line-height:1.6;color:#afc1e0}.vn-disclosure[open]>.fld{animation:vnEnter .25s}.fld{margin-bottom:20px}.fld-label{font-size:11px!important;letter-spacing:.035em!important;margin:8px 0!important;text-transform:none!important}.fld-input,.fld-textarea{padding:14px 16px!important;border-radius:15px!important;background:linear-gradient(145deg,#10213a99,#061022)!important;border:1px solid #7b9cca38!important;min-height:52px}.cli-card{display:flex;align-items:center;gap:12px;background:#19271f5e;border:1px solid #f4d08a33;font-size:12px;padding:12px;border-radius:13px;margin-bottom:20px}.vn-member-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid color-mix(in srgb,var(--tier,#eac471) 45%,transparent);background:linear-gradient(110deg,#b98b4729,#15171c 70%);color:var(--tier,#f8d995);padding:7px 12px;border-radius:25px;font-size:10px;font-weight:800;letter-spacing:.025em}.vn-row{display:flex;align-items:center;width:100%;text-align:left;gap:14px;padding:15px 0;min-height:60px;border-bottom:1px solid #8caee226;font-size:13px;color:#d2dff4;background:none}.vn-row>span{flex:1}.vn-row small{display:block;font-size:11px;color:#9baecb;margin-top:5px}.vn-row b{font-weight:550}.vn-row>svg:first-child{color:#c4d7f5}.vn-row>svg:last-child{color:#6b80a4}
+/* ProductStage */
+#detOv .sheet-head{position:absolute;top:0;left:0;right:0;z-index:4;pointer-events:none}#detOv .sheet-head .sheet-title{display:none}#detOv .sheet-close{pointer-events:auto;margin-right:auto;margin-left:0;background:#030b19af!important;backdrop-filter:blur(8px)}#detBody{padding-top:0!important}.mw-det-media{margin:0 -22px 5px;aspect-ratio:1.06;max-height:none;height:min(46dvh,420px);background:radial-gradient(circle at 50% 20%,#294564,#091427 75%)}.mw-det-media:after{height:35%;background:linear-gradient(transparent,#020714)}.mw-det-media img{animation:vnHero .6s}.mw-det-name{font-size:34px;font-weight:900;letter-spacing:-.055em;line-height:1.05;margin:10px 0}.mw-det-desc{font-size:13px;line-height:1.55}.mw-det-price b{font-size:28px;color:white!important}.mw-det-price{margin:14px 0}.mw-det-price s{font-size:13px}.vn-product-tools{position:absolute;top:calc(14px + env(safe-area-inset-top));right:18px;display:flex;gap:8px;z-index:5}.vn-product-tools button{width:44px;min-height:44px;border-radius:50%;border:1px solid #aecfff55;background:#081125b5;display:grid;place-items:center;backdrop-filter:blur(6px)}.mw-mg{display:flex;flex-wrap:wrap;gap:8px;background:none;border:0;border-radius:0;margin-top:22px;overflow:visible}.mw-mg-h{width:100%;background:none;padding:0 0 10px}.mw-mg-h b{font-size:15px}.mw-opt{flex:1 0 42%;width:auto;padding:13px 10px;border:1px solid #95b4df30;border-radius:14px;background:linear-gradient(145deg,#1122428a,#071023);min-height:64px;gap:8px;flex-wrap:wrap;align-content:center}.mw-opt .nm{font-size:12px}.mw-opt .pr{font-size:10px;margin-left:auto}.mw-opt .mk{width:17px;height:17px}.mw-opt.on{border-color:#819ff2;background:linear-gradient(140deg,#21488c80,#0f1636);box-shadow:inset 0 0 10px #589aff22}.mw-opt.radio.on .mk{box-shadow:inset 0 0 0 4px #97bdff;border-color:#97bdff}.mw-qty{border-radius:24px;height:54px}.mw-qty button{width:38px}.mw-addbtn{font-size:13px!important;line-height:1.2;padding:0 12px}.mw-notes-l{font-size:13px}#detNotas{font-size:16px;min-height:78px}#detBody>.vn-ai-link{margin-top:16px}
+/* Cart */
+.vn-cart-line{display:grid;grid-template-columns:96px 1fr;gap:14px;border-bottom:1px solid #90b2e421;padding:17px 0;touch-action:pan-y}.vn-cart-line>.vn-photo{height:113px;border-radius:16px}.vn-cart-line h3{font-size:16px;font-weight:800;letter-spacing:-.035em;line-height:1.2}.vn-cart-line p{font-size:11px;line-height:1.4;color:#9fb2d2;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.vn-cart-line .vn-text-link{font-size:10px}.vn-cart-price{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:7px}.vn-cart-price strong{font-size:16px}.vn-cart-price .mw-step button{width:32px}.vn-cart-price .mw-step span{font-size:12px;min-width:14px}.vn-upsell{padding:18px 16px;margin:20px 0;border:1px solid #6384cf6e;border-radius:18px;background:linear-gradient(125deg,#1336759c,#090f28);box-shadow:inset 0 1px 0 #c9dcff25}.vn-upsell h3{font-size:18px;margin:8px 0 10px;letter-spacing:-.04em}.vn-upsell .vn-kicker{font-size:8px;letter-spacing:.15em}.vn-up-row{display:flex;align-items:center;gap:12px;margin-top:12px}.vn-up-row>.vn-photo{width:58px;height:58px;border-radius:12px;flex-shrink:0}.vn-up-row>div:nth-child(2){flex:1;min-width:0}.vn-up-row b{font-size:12px;display:block}.vn-up-row span{font-size:12px;color:#c1d2f1}.vn-up-row .mw-add{flex-shrink:0;width:44px;height:44px}.vn-savings{display:flex;align-items:center;gap:10px;padding:15px 13px;border:1px solid #54dcad83;background:linear-gradient(120deg,#06312b,#051a24);box-shadow:inset 0 1px 5px #9df5d124;border-radius:14px;color:#8ffbd1;margin:20px 0;font-size:12px}.vn-savings>span{flex:1}.vn-savings b{font-size:11px}.vn-savings small{display:block;font-size:9px;color:#8cbdb2;margin-top:4px}.vn-savings strong{font-size:14px}.vn-receipt{padding:6px 0 16px}.vn-receipt>div{display:flex;justify-content:space-between;gap:12px;font-size:13px;margin:14px 0;color:#b9c9e4}.vn-receipt b{color:#f3f7ff}.vn-receipt .saving,.vn-receipt .saving b{color:#e9c16d}.vn-receipt .grand{margin-top:22px;padding-top:20px;border-top:1px solid #91b4ee3b;color:white;align-items:center;font-size:16px}.vn-receipt strong{font-size:25px;letter-spacing:-.045em}.vn-receipt p{font-size:11px;color:#8da0bf;line-height:1.5}
+/* Checkout progress and wallet */
+.vn-progress{display:flex;justify-content:space-between;margin:2px 0 32px;position:relative}.vn-progress:before{content:'';position:absolute;top:16px;height:1px;background:linear-gradient(90deg,#809ded,#4d617f55);left:12%;right:12%}.vn-progress button{background:none;position:relative;display:flex;align-items:center;flex-direction:column;gap:8px;color:#a2b5d4;flex:1}.vn-progress button>span{display:grid;place-items:center;border-radius:50%;width:32px;height:32px;background:#071226;border:1px solid #506b96;font-size:13px;font-weight:700}.vn-progress button>b{font-size:10px;font-weight:500}.vn-progress .current{background:radial-gradient(circle at 30% 20%,#b5d4ff,#326acc);border-color:#a4ceff;box-shadow:0 0 0 4px #5688d930,0 0 18px #2d6eea44;color:#061433}.vn-progress .done{background:#2dba92;border-color:#91ffdb;color:#00190f}.vn-progress button:disabled{opacity:1}.vn-progress button[aria-current=step]>b{color:white}.vn-wallet{height:270px;position:relative;perspective:900px;margin:15px 4px 23px}.vn-pay-card{position:absolute;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;padding:24px;border:1px solid #a6c4ffab;border-radius:22px;background:linear-gradient(130deg,#2544a0,#0e1439);box-shadow:inset 0 1px 1px #ecf5ffc2,0 16px 35px #0008;color:white;text-align:left;isolation:isolate}.vn-pay-card.front{width:79%;height:245px;left:0;top:7px;transform:rotate(-5deg) rotateY(-8deg);animation:vnWallet .5s var(--vn-ease);z-index:2;pointer-events:none}.vn-pay-card.back{width:68%;height:217px;right:-1px;top:32px;transform:rotate(10deg) rotateY(-9deg);opacity:.64;z-index:1;justify-content:flex-start;align-items:flex-end;padding:35px 20px;gap:20px}.vn-pay-card.back>b{font-size:12px;text-align:right;max-width:80px}.vn-pay-card.front:after{content:'';position:absolute;inset:-80% -100%;background:linear-gradient(115deg,transparent 42%,#f4eeff26 47%,#fff6 49%,transparent 53%);transform:translateX(-45%);animation:vnFoil 8s ease-in-out infinite;pointer-events:none;z-index:-1}.vn-pay-card.nequi{background:radial-gradient(ellipse at -10% 0,#f338bf 0,transparent 50%),radial-gradient(ellipse at 110% 105%,#ff32b8 0,transparent 45%),radial-gradient(ellipse at 95% 10%,#3068f2 0,transparent 50%),linear-gradient(125deg,#191241,#060c28 65%)}.vn-pay-card.bancolombia{background:radial-gradient(ellipse at 0 0,#f7cd5388,transparent 65%),radial-gradient(ellipse at 110% 100%,#fdd55b99,transparent 40%),linear-gradient(125deg,#252a38,#03060e);border-color:#f4d771}.vn-pay-card.efectivo{background:radial-gradient(ellipse at 0 0,#28b09488,transparent 65%),radial-gradient(ellipse at 100% 100%,#248e77,transparent 55%),linear-gradient(125deg,#092e32,#030c1e);border-color:#80dbb2}.vn-pay-card.datafono{background:radial-gradient(ellipse at 0 0,#829dd477,transparent 65%),radial-gradient(ellipse at 100% 100%,#7774cbbb,transparent 55%),linear-gradient(125deg,#202e4b,#080c24);border-color:#bedaff}.vn-pay-card h3{font-size:25px;font-weight:850;letter-spacing:-.045em}.vn-pay-card p{font-size:11px;margin:4px 0 13px;color:#d3dbf2}.vn-pay-card strong{font-size:31px;letter-spacing:-.04em}.vn-pay-check{position:absolute;top:21px;right:19px;width:23px;height:23px;border-radius:50%;background:#ebf4ff;color:#2141bc;display:grid;place-items:center;font-size:15px;font-weight:800}.vn-pay-check:empty{display:none}.vn-nequi-mark{display:block;width:45px;height:44px;position:relative}.vn-nequi-mark>i{position:absolute;left:2px;top:0;width:13px;height:11px;border-radius:3px;transform:rotate(-8deg);background:#ef42c4}.vn-nequi-mark>b{position:absolute;left:14px;top:13px;width:29px;height:29px;background:#f347cc;clip-path:polygon(8% 5%,40% 0,100% 75%,94% 96%,5% 100%,0 87%);border-radius:6px}.vn-banco-mark{display:flex;flex-direction:column;gap:4px;width:40px;transform:rotate(-12deg)}.vn-banco-mark>i{height:8px;width:34px;background:#ffdc55;border-radius:2px}.vn-banco-mark>i:nth-child(2){margin-left:4px}.vn-banco-mark>i:nth-child(3){margin-left:8px}.pagos{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:8px!important}.pago-opt{height:82px;min-width:0;padding:11px 3px!important;display:flex!important;flex-direction:column;justify-content:center;align-items:center;gap:9px!important;background:linear-gradient(140deg,#112742aa,#050e20)!important;border:1px solid #4c6a984b!important;border-radius:14px!important;box-shadow:none}.pago-opt.on{border-color:#96b5ff!important;box-shadow:inset 0 0 18px #527dca44,0 0 13px #2452a329!important;background:linear-gradient(145deg,#1d3d73,#0d1436)!important}.pago-opt>span:last-child{font-size:9px}.pago-opt .vn-nequi-mark{width:28px;height:27px;transform:scale(.65);transform-origin:50% 30%;margin-bottom:-2px}.pago-opt .vn-banco-mark{transform:scale(.65) rotate(-12deg);width:30px;height:26px}.pago-opt>.mw-i{width:24px;height:26px}.vn-payment-note{display:flex;font-size:11px;color:#b1c2df;padding:14px;border:1px solid #7494c52e;border-radius:12px;background:#11233b80;line-height:1.5;margin:16px 0}#datosPagoCard{background:linear-gradient(125deg,#102139bb,#050d1d)!important;border:1px solid #7390b92b!important;border-radius:16px!important;padding:16px!important}#datosPagoCard>div:last-child{display:none}#datosPagoTitulo{color:white!important;font-size:14px!important;letter-spacing:-.02em!important;text-transform:none!important}#datosPagoContenido .vn-hint{font-size:11px;margin:8px 0}.vn-account{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#ffffff06;border:1px solid #789acc38;padding:8px 12px;border-radius:11px}.vn-account>span{font-size:16px;font-weight:750;overflow-wrap:anywhere}.vn-account button{width:44px;min-height:44px;flex-shrink:0}.vn-change{color:#8af1c3;font-size:13px;margin:12px 0}.vn-change.invalid{color:#ffba73}.vn-address{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid #7399d345;border-radius:16px;padding:15px;background:linear-gradient(120deg,#102440,#060d21);margin:9px 0;color:#bbd3f9}.vn-address>span{flex:1}.vn-address b{font-size:13px;color:white}.vn-address small{display:block;font-size:11px;color:#a9bad8;margin-top:4px}.vn-address>button{width:44px;min-height:44px}.vn-delivery-cost{background:linear-gradient(90deg,#124b3344,transparent);color:#a0efcc;padding:15px;border-left:2px solid #57d9a2;font-size:13px;margin:16px 0}.vn-check{display:flex;align-items:center;gap:10px;min-height:44px;font-size:12px;color:#b3c4df}.vn-check input{width:20px;height:20px;accent-color:#8aadf4}.brr-drp{z-index:20;background:#0b1830}.brr-item{width:100%;display:flex;align-items:center;justify-content:space-between;text-align:left;padding:14px;color:white}.brr-item small{display:block;color:#9dacc6;font-size:11px}.brr-item b{font-size:13px}.vn-review-address{padding:18px 0;border-bottom:1px solid #a7c3ee26}.vn-review-address>b{display:block;font-size:18px;margin:10px 0}.vn-review-address p{font-size:13px;color:#abc0df}.vn-review-address .vn-text-link{margin-top:7px}.vn-review-payment{display:flex;align-items:center;gap:12px;padding:20px 0;border-bottom:1px solid #a7c3ee26}.vn-review-payment>b{flex:1;font-size:15px}.vn-review-payment .vn-nequi-mark{transform:scale(.7);margin:-5px}.vn-review-items{padding:20px 0}.vn-review-items>div{display:flex;justify-content:space-between;gap:10px;margin:12px 0;font-size:13px}.vn-review-items small{display:block;font-size:10px;color:#90a5c6;margin-top:4px;max-width:220px}.cart-total-box{background:none!important;border:0!important;border-radius:0!important;padding:8px 0!important}.cart-total-row{font-size:13px;padding:8px 0}.cart-total-row.grand .val{font-size:28px!important}.cart-total-row.grand{margin-top:15px!important;padding-top:20px!important}.uz{padding:17px!important}.uz-ico{font-size:18px}.uz-txt{font-size:12px}.uz-prev{max-height:160px;object-fit:contain}
+/* Club / holographic passport: light is texture, not a border on every row. */
+.vn-pass-scene{perspective:900px;padding:20px 7px 28px}.vn-member-card{height:208px;position:relative;border:1px solid var(--tier);border-radius:20px;padding:22px;display:flex;flex-direction:column;justify-content:space-between;transform:rotate(-5deg) rotateY(8deg);isolation:isolate;overflow:hidden;background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--tier) 55%,transparent),transparent 50%),radial-gradient(ellipse at 100% 100%,color-mix(in srgb,var(--tier) 75%,transparent),transparent 55%),conic-gradient(from 45deg at 65% 45%,#040b1e,#163768,#52598b,#a2af9588,#10162a,#040b1e);box-shadow:inset 0 0 0 3px #ffffff13,inset 0 1px 1px #ffffffe6,0 16px 28px #000b,0 12px 30px color-mix(in srgb,var(--tier) 16%,transparent)}.vn-member-card:before{content:'';position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.2' filter='url(%23n)'/%3E%3C/svg%3E");opacity:.4;z-index:-1;mix-blend-mode:soft-light}.vn-member-card:after{content:'';position:absolute;inset:-100%;background:linear-gradient(115deg,transparent 42%,#f9f0cd18 46%,#fff9 49%,transparent 53%);animation:vnFoil 9s ease-in-out infinite;z-index:-1}.vn-pass-wave{position:absolute;left:-15%;right:-15%;height:240px;top:45%;transform:rotate(-20deg);border-radius:50%;border-top:1px solid #ffeda89c;background:linear-gradient(#071832e8,#000b);z-index:-1}.vn-pass-top,.vn-pass-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px}.vn-pass-top>b{font-size:22px;letter-spacing:-.02em;color:var(--tier)}.vn-pass-top>b>span{font-weight:450;color:#edf3ff}.vn-pass-top>strong{font-size:11px;color:var(--tier);letter-spacing:.08em}.vn-pass-bottom>span{font-size:13px;text-transform:uppercase;letter-spacing:.12em;max-width:55%;overflow-wrap:anywhere}.vn-pass-bottom>strong{font-size:29px;white-space:nowrap}.vn-pass-bottom small{font-size:14px}.vn-club-stats{display:flex;justify-content:space-between;gap:14px;padding:10px 0 6px}.vn-club-stats>span{font-size:10px;color:#a9bddf}.vn-club-stats b{display:block;font-size:24px;color:#edf4ff;font-weight:850;margin-bottom:5px}.vn-sec-heading h3{font-size:22px;letter-spacing:-.04em;font-weight:800}.vn-sec-heading span{font-size:11px;color:#95accd;display:block;margin-top:6px}.vn-sec-heading{margin:26px 0 16px}.vn-reward-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.vn-reward{display:flex;flex-direction:column;gap:7px;text-align:left;background:linear-gradient(130deg,#152235,#050c18);border:1px solid #dcbd8159;border-radius:19px;overflow:hidden;padding:0 0 15px;color:#f0f5ff}.vn-reward>.vn-photo{height:135px;border-radius:0 0 8px 8px}.vn-reward>b{font-size:13px;margin:2px 12px 0}.vn-reward>span{color:#f4d891;font-size:12px;font-weight:700;margin:0 12px}.vn-reward>small{font-size:10px;color:#b4c7e7;margin:0 12px}.vn-reward-hero{height:260px;border-radius:22px;margin-bottom:20px}.vn-progress-reward{margin:20px 0;display:grid;grid-template-columns:1fr auto;gap:8px}.vn-progress-reward span,.vn-progress-reward small{font-size:10px;color:#adbfdd}.vn-progress-reward b{font-size:11px;color:#f2d083}.vn-progress-reward progress{grid-column:1/-1;width:100%;height:7px;appearance:none;border:0}.vn-progress-reward progress::-webkit-progress-bar{border-radius:8px;background:#152038}.vn-progress-reward progress::-webkit-progress-value{border-radius:8px;background:var(--vn-gold)}.vn-progress-reward progress::-moz-progress-bar{background:var(--vn-gold)}.vn-pass-skeleton{height:208px;margin-top:25px;border-radius:20px}.vn-reward-skeleton{height:180px}.vn-redeemed{text-align:center;padding-top:45px}.vn-gift-success{width:130px;height:130px;margin:0 auto 40px;display:grid;place-items:center;border:1px solid #f2d99a;border-radius:35px;background:radial-gradient(circle at 25% 10%,#f9e1a859,#091731);box-shadow:0 0 65px #efc86425;animation:vnGift .8s var(--vn-ease)}.vn-gift-success svg{width:60px;height:60px;color:#ffe7ac}.vn-redeemed .vn-title h2{font-size:32px}.vn-points-count{font-size:44px;font-weight:850;color:#ffdf90;margin:30px 0 5px}.vn-redeemed>p{color:#a5b8d7;font-size:12px;margin-bottom:40px}
+/* Customer identity */
+.vn-profile-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:20px 0 24px}.vn-profile-top h2{font-size:54px;letter-spacing:-.075em;line-height:1.15;font-weight:900;max-width:235px;overflow-wrap:anywhere;margin:12px 0}.vn-avatar{width:79px;height:79px;border-radius:50%;border:2px solid var(--tier);box-shadow:0 0 0 5px #354d792c,0 0 24px color-mix(in srgb,var(--tier) 15%,transparent);display:grid;place-items:center;flex-shrink:0;font-size:37px;font-weight:600;background:radial-gradient(circle at top left,#2e4766,#081329);color:var(--tier)}.vn-profile-stats{display:flex;justify-content:space-around;text-align:center;padding:4px 0 26px;gap:14px}.vn-profile-stats b{font-size:25px;font-weight:850;display:block;color:#eff6ff;margin-bottom:3px}.vn-profile-stats span{font-size:11px;color:#a7b7d4}.vn-repeat-banner{width:100%;height:169px;border-radius:19px;position:relative;overflow:hidden;display:flex;align-items:center;padding:22px;text-align:left}.vn-repeat-banner>.vn-photo{position:absolute;inset:0;border-radius:19px;z-index:0}.vn-repeat-banner:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#020714df,#02071433)}.vn-repeat-banner>span{position:relative;z-index:1}.vn-repeat-banner b{font-size:29px;letter-spacing:-.055em;line-height:1;display:block;font-weight:900}.vn-repeat-banner small{display:block;margin-top:18px;color:#d5e2f8;font-size:11px}.vn-profile-top .vn-kicker{display:none}#vnProfile .sheet-body{padding-bottom:40px!important}#vnUtility .fld-input{width:100%;margin-bottom:14px}#vnUtility .vn-button.primary{margin-top:18px}
+/* Abstract Luz orb: layered optical rings, compositor-only motion. */
+.vn-orb{--orb:58px;position:relative;display:inline-grid;place-items:center;width:var(--orb);height:var(--orb);flex-shrink:0;border-radius:50%;isolation:isolate;background:radial-gradient(circle at 60% 40%,#233e76 0,#06132c 38%,#2554b4 52%,#06162e 65%,#746bfc 71%,#a1dafa 75%,#15336d 80%);box-shadow:inset 0 0 10px #aec6ff8c,0 0 18px #497bff66,0 0 0 1px #ade3ff99;animation:vnBreathe 4.8s ease-in-out infinite;vertical-align:middle}.vn-orb:before{content:'';position:absolute;inset:-8%;border:1px solid #7960f8b3;border-radius:50%;box-shadow:inset 0 0 6px #5b80ff55,0 0 11px #8061ea55;transform:rotate(-30deg) scaleY(.88)}.vn-orb:after{content:'';position:absolute;inset:18%;background:radial-gradient(circle,#d8f5ff 0,#608efed1 6%,#304dea40 23%,transparent 55%);border-radius:50%;z-index:3}.vn-orb>i{position:absolute;inset:4%;border:2px solid transparent;border-top-color:#bcefff;border-bottom-color:#d997ff;border-radius:43% 57% 48% 52%;box-shadow:0 0 8px #69a1ff, inset 0 0 5px #6a63ea;transform:rotate(-30deg);animation:vnOrbit 11s linear infinite}.vn-orb>i:nth-child(2){inset:10% 0;border-left-color:#a5c9ff;border-right-color:#4baeff;transform:rotate(60deg) scaleX(.7);animation:vnOrbit2 13s linear infinite reverse}.vn-orb>i:nth-child(3){inset:0 12%;border-top-color:#f3bcff;border-bottom-color:#2786ff;transform:rotate(120deg) scaleX(.76);animation:vnOrbit2 16s linear infinite}.vn-orb>b{font-size:calc(var(--orb)*.26);font-weight:400;color:#d7e5ff;text-shadow:0 0 8px #99b6ff,0 0 15px #b68fff;z-index:4;line-height:1}.vn-orb.tiny{--orb:29px}.vn-orb.large{--orb:190px;display:grid;margin:32px auto}.vn-orb.large>i{border-width:3px;box-shadow:0 0 14px #5289ff88,inset 0 0 11px #7668f877}.vn-orb.large:before{border-width:2px}.vn-orb.large{box-shadow:inset 0 0 28px #8ed0ff66,0 0 50px #416cff44,0 0 85px #693fe333,0 0 0 1px #92d7ff66}#luzChat{position:fixed!important;left:50%!important;right:auto!important;top:0!important;bottom:0!important;transform:translate(-50%,105%)!important;width:100%!important;max-width:620px!important;height:100dvh!important;max-height:none!important;border:0!important;border-radius:0!important;z-index:300!important;background:radial-gradient(ellipse at 75% 45%,#1d14543d,transparent 70%),radial-gradient(ellipse at 15% 60%,#0e387f40,transparent 55%),#020714!important;display:flex!important;flex-direction:column!important;opacity:0;visibility:hidden;pointer-events:none;transition:transform .5s var(--vn-ease),opacity .35s,visibility .35s!important;box-shadow:none!important}#luzChat.open{transform:translate(-50%,0)!important;opacity:1;visibility:visible;pointer-events:auto;box-shadow:0 0 100px #000b!important}.lc-header{padding:calc(14px + env(safe-area-inset-top)) 22px 8px!important;justify-content:space-between;background:none!important;border:0!important;flex-shrink:0}.lc-close{width:44px;height:44px;border:1px solid #a6c6ff33!important;border-radius:50%!important;font-size:20px;background:#1b294c44!important;color:#bcd2f4}.vn-luz-stage{text-align:center;padding:18px 24px 0;flex-shrink:0;transition:padding .3s}.vn-luz-stage h2{font-size:37px;font-weight:900;letter-spacing:-.06em;line-height:1.05;max-width:300px;margin:auto}.vn-luz-stage>p{font-size:17px;color:#bdcfee;margin-top:12px}.vn-luz-stage .vn-orb.large{margin:35px auto 26px}.vn-luz-stage #lcStatus{font-size:11px;color:#b2cefa;display:block;margin-bottom:15px}.vn-luz-context{font-size:10px;line-height:1.5;color:#91accf;padding:5px 25px 12px;max-height:53px;overflow:auto;text-align:center;flex-shrink:0}.lc-msgs{flex:1;min-height:0;overflow-y:auto;padding:12px 22px;gap:12px}.lc-msgs:empty{padding:0;min-height:0}.lc-msg{font-size:14px!important;line-height:1.6!important;border-radius:16px!important;padding:13px 16px!important;max-width:92%!important;margin:8px 0!important;word-break:break-word}.lc-msg.user{background:linear-gradient(135deg,#244981,#22305b)!important;color:#f5f9ff!important;margin-left:auto!important}.lc-msg.luz{background:#101d35b0!important;border:1px solid #668bc63d!important;color:#d2e1fa!important}.lc-suggestions{display:flex!important;flex-direction:column!important;gap:10px!important;overflow-y:auto;max-height:210px;flex-shrink:0;margin:0!important;padding:6px 22px 14px!important;background:none!important;border:0!important}.lc-sug{display:flex;align-items:center;gap:10px;justify-content:space-between;white-space:normal!important;text-align:left!important;border-radius:24px!important;padding:13px 17px!important;background:linear-gradient(120deg,#142a57a6,#1a24537a)!important;box-shadow:inset 0 1px 0 #a4c5ff33!important;border:1px solid #859df08c!important;color:#e1eaff!important;font-size:12px!important;min-height:49px;flex-shrink:0}.lc-sug>span{flex:1}.lc-input-row{display:flex;align-items:center;gap:8px;margin:0 18px calc(18px + env(safe-area-inset-bottom))!important;padding:7px!important;border:1px solid #8cadf9!important;border-radius:30px!important;background:linear-gradient(125deg,#0b1e38,#171738)!important;box-shadow:inset 0 1px 2px #d1e5ff42,0 0 24px #5974e62b;flex-shrink:0}.lc-input{background:transparent!important;border:0!important;box-shadow:none!important;color:#ebf3ff;min-height:34px!important;max-height:100px;line-height:1.4;padding:7px 0!important;font-size:14px!important;resize:none;flex:1;min-width:0}.lc-input::placeholder{color:#9fb4d6}.lc-mic,.lc-send{width:42px!important;height:42px!important;min-height:42px;flex-shrink:0;display:grid;place-items:center;border:0!important}.lc-mic{background:none!important;color:#82b7ff!important}.lc-send{background:radial-gradient(at 20% 0,#bbd4ff,#526cde 48%,#543fe9)!important;border-radius:50%!important;color:white!important;box-shadow:0 0 15px #526bea55}.has-conversation .vn-luz-stage{padding-top:0;position:relative;min-height:72px;padding-right:100px;text-align:left}.has-conversation .vn-luz-stage h2{font-size:22px;max-width:none;text-align:left;margin:0}.has-conversation .vn-luz-stage>p{font-size:12px;margin-top:6px}.has-conversation .vn-luz-stage .vn-orb{--orb:48px;position:absolute;right:30px;top:0;margin:0}.has-conversation .vn-luz-stage #lcStatus{margin-top:8px}.has-conversation .vn-luz-context{text-align:left}.has-conversation .lc-suggestions{max-height:130px}.vn-luz-product .vn-photo{width:44px;height:44px;border-radius:10px;flex-shrink:0}.vn-luz-product small{display:block;font-size:11px;color:#a6dcca;margin-top:4px}#luzChat[data-state=thinking] .vn-orb>i{animation-duration:1.8s}#luzChat[data-state=listening] .vn-orb:before{animation:vnListen 1.4s ease-out infinite}#luzChat[data-state=speaking] .vn-orb{animation:vnBreathe .7s ease-in-out infinite}#luzChat[data-state=alert] .vn-orb{filter:hue-rotate(165deg)}
+/* Search */
+.vn-search-field{display:flex;align-items:center;gap:10px;border:1px solid #8caef278;border-radius:30px;padding:8px 16px;background:#12254291;margin:10px 0 22px;min-height:54px}.vn-search-field input{background:none;border:0;outline:0;color:white;flex:1;width:0}.vn-search-chips{display:flex;flex-wrap:wrap;gap:8px}.vn-search-chips button{padding:10px 14px;border:1px solid #81a4e143;border-radius:22px;font-size:12px;background:#10244666}.vn-search-count{font-size:12px;color:#9bb2d7;margin-bottom:10px}#vnSearch .vn-ai-link{margin-top:25px}
+/* Tracking and confirmed events */
+.vn-tracking{padding:20px 0;border-bottom:1px solid #92b3e733}.vn-tracking.active{border:1px solid #547dc663;border-radius:24px;background:linear-gradient(135deg,#11356655,#070e20);padding:20px 16px;margin:15px 0}.vn-tracking-top{display:flex;justify-content:space-between;align-items:center;font-size:14px}.vn-tracking-top small{font-size:11px;color:#a5b7d4}.vn-tracking h3{font-size:30px;margin:22px 0;font-weight:850;letter-spacing:-.045em}.vn-timeline{display:flex;margin:22px -5px 24px;position:relative;gap:2px}.vn-timeline:before{content:'';height:1px;position:absolute;left:10%;right:10%;top:15px;background:#7392c359}.vn-timeline>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative}.vn-timeline i{font-style:normal;display:grid;place-items:center;width:30px;height:30px;border:1px solid #56769f;border-radius:50%;background:#09152a;font-size:11px;color:#738fb5}.vn-timeline span{font-size:8px;color:#8ea5c6}.vn-timeline .done i{background:#134b40;color:#96f2d0;border-color:#359e7f}.vn-timeline .current i{background:#3069be;color:#fff;border-color:#aad5ff;box-shadow:0 0 15px #4a96ff66}.vn-timeline .current span{color:#c6e3ff}.vn-location-note{font-size:11px;color:#9fb4d8;display:flex;gap:6px;line-height:1.4;margin:10px 0 24px}.vn-order-items{font-size:12px;color:#bdd0ec;line-height:1.7}.vn-order-total{display:flex;justify-content:space-between;align-items:center;margin:18px 0;gap:10px}.vn-order-total strong{font-size:23px}.vn-order-total span{font-size:11px;color:#96afce}.vn-table-actions{display:flex;gap:8px}.vn-table-actions button{flex:1;border-radius:20px;background:#26385a;border:1px solid #a4bff244;font-size:12px}.exito{z-index:400!important;background:radial-gradient(ellipse at 50% 35%,#253a744d,transparent 60%),#020714!important;gap:20px;padding:36px 24px!important;text-align:center}.exito h2{font-size:36px;font-weight:900;letter-spacing:-.05em}.exito p{font-size:14px;line-height:1.6;color:#b7c9e9;max-width:360px}.exito>strong{font-size:24px;color:#dae7ff}.exito .vn-button{max-width:360px;margin-top:25px}.vn-success-halo{width:150px;height:150px;border:2px solid #a3bfff;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle,#224c73,#101932);box-shadow:inset 0 0 30px #7194ff77,0 0 40px #466de780,0 0 0 12px #4d75da14;margin-bottom:20px}.vn-success-halo svg{width:75px;height:75px;stroke:#c6f6ff;stroke-width:2.7;stroke-dasharray:50;animation:vnDraw 1s ease forwards}.toast{bottom:calc(95px + env(safe-area-inset-bottom))!important;padding:14px 19px!important;max-width:calc(100% - 40px)!important;font-size:12px!important;line-height:1.4;white-space:normal!important}.vn-fly{position:fixed;width:50px;height:50px;object-fit:cover;border-radius:50%;z-index:600;pointer-events:none;box-shadow:0 0 0 2px #d9e9ff77,0 0 24px #4776cb88}
+@keyframes vnEnter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}@keyframes vnHero{from{opacity:0;transform:scale(1.025)}to{opacity:1;transform:scale(1)}}@keyframes vnFoil{0%,30%{transform:translateX(-50%)}70%,100%{transform:translateX(50%)}}@keyframes vnWallet{from{opacity:0;transform:rotate(-12deg) translateY(18px)}to{opacity:1;transform:rotate(-5deg) rotateY(-8deg)}}@keyframes vnOrbit{to{transform:rotate(330deg)}}@keyframes vnOrbit2{from{transform:rotate(60deg) scaleX(.73)}to{transform:rotate(420deg) scaleX(.73)}}@keyframes vnBreathe{50%{transform:scale(1.045)}}@keyframes vnListen{from{transform:scale(.9);opacity:1}to{transform:scale(1.3);opacity:0}}@keyframes vnGift{from{transform:scale(.6) rotate(-15deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}@keyframes vnDraw{from{stroke-dashoffset:50}to{stroke-dashoffset:0}}
+@media(max-width:374px){.mw-wrap{padding-left:18px;padding-right:18px}.mw-hero{margin-left:-18px;margin-right:-18px}.sheet-body{padding-left:18px!important;padding-right:18px!important}.vn-title h2{font-size:33px}.vn-cart-line{grid-template-columns:82px 1fr;gap:10px}.vn-cart-price strong{font-size:14px}.vn-cart-price .mw-step button{width:29px}.vn-pay-card{padding:20px}.vn-pay-card.front{width:81%}.vn-member-card{padding:18px}.vn-pass-bottom>strong{font-size:25px}.vn-luz-stage .vn-orb.large{--orb:165px;margin:25px auto}.vn-profile-top h2{font-size:46px}.vn-avatar{width:68px;height:68px}}
+@media(min-width:640px){.mw-hero-slide{min-height:430px;padding:45px}.mw-hero-t{font-size:64px;max-width:460px}.mw-hero-d{font-size:17px;max-width:310px}.mw-hero-copy{max-width:55%}.mw-meta{font-size:12px}.mw-meta span:nth-child(n+3){display:flex}.mw-name{font-size:19px}.mw-logo{width:46px;height:46px}.vn-home-greeting{font-size:20px;max-width:300px}.vn-smart-search{max-width:600px;margin-left:auto!important;margin-right:auto!important}.mw-tipos{max-width:440px;margin-left:auto;margin-right:auto}.mw-cat{width:96px;min-height:112px}.vn-cat-image{width:78px;height:78px}.mw-cat .vn-cat-image img{width:70px;height:70px}.vn-feature{flex-basis:290px}.vn-feature .mw-card-media{height:225px}.mw-list{grid-template-columns:1fr 1fr;gap:0 30px}.mw-card-media{height:140px}.sheet-bg{padding:25px 0}.sheet{height:calc(100dvh - 50px);max-height:calc(100dvh - 50px)!important;border-radius:28px!important;border:1px solid #749bd439!important}.vn-wallet{height:290px;max-width:430px;margin-left:auto;margin-right:auto}.vn-pay-card.front{height:270px}.vn-pay-card.back{height:237px}.vn-pass-scene{max-width:440px;margin:auto;padding:26px 10px 34px}.vn-member-card{height:235px}.vn-luz-stage h2{font-size:42px}.vn-luz-stage .vn-orb.large{--orb:220px}.vn-title h2{font-size:40px}#luzChat{height:calc(100dvh - 50px)!important;top:25px!important;bottom:25px!important;border-radius:28px!important}.vn-feature-copy{padding-top:14px}.mw-hero-track.multi .mw-hero-slide{flex-basis:100%}.mw-list .mw-card-txt{min-width:0}}
+@media(min-width:1100px){.mw-wrap,.mw-cats .mw-wrap{max-width:1080px}.mw-hero{margin-left:0;margin-right:0}.mw-hero-track{border-radius:28px}.mw-hero-slide{border-radius:28px}.mw-list{grid-template-columns:1fr 1fr}.mw-card-media{width:40%;height:170px}.mw-card{min-height:200px!important}.mw-card h3{font-size:22px}.mw-card p{font-size:14px}.mw-price b{font-size:21px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.vn-orb,.vn-orb i{animation:none!important}.vn-pay-card.front{animation:none!important}.vn-success-halo svg{stroke-dashoffset:0!important}}
+
+/* Compact notices must not inherit the old top-and-bottom stretch. */
+.toast{top:auto!important;height:auto!important;min-height:0!important;width:max-content;pointer-events:none;transform:translate(-50%,20px)!important}.toast.show{transform:translate(-50%,0)!important}
+
+@media(max-width:374px){.mw-hero,.mw-hscroll{margin-left:-18px;margin-right:-18px}.mw-hscroll{padding-left:18px;padding-right:18px}}
+
 </style>
-<script id="hlMenuIntelligenceClient">
+
+<!-- ═══════════════════════════════════════════════════════════════
+ HOLA LUZ · HARDENING PATCH 2026-09-26
+ Mantiene congelada la dirección visual de Astra.
+ Objetivos:
+ 1) experiencia de pago honesta (subida → registro → revisión, sin fingir aprobación)
+ 2) tracking usa coordenadas reales si el backend ya las entrega
+ 3) Luz: error observable + reintento, sin fallback engañoso
+ 4) canjes: wording de solicitud/aprobación del restaurante
+════════════════════════════════════════════════════════════════ -->
+<style id="hlHardeningPatchCSS">
+.hl-pay-agent{position:fixed;inset:0;z-index:12000;display:grid;place-items:center;padding:24px;background:rgba(1,6,18,.82);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);opacity:0;pointer-events:none;transition:opacity .28s ease}
+.hl-pay-agent.open{opacity:1;pointer-events:auto}
+.hl-pay-core{width:min(420px,100%);border:1px solid rgba(130,174,255,.28);border-radius:30px;padding:28px 22px 24px;background:radial-gradient(circle at 50% 0,rgba(74,122,255,.22),transparent 44%),linear-gradient(145deg,#0c1932,#030817 72%);box-shadow:0 30px 90px #000b,0 0 70px rgba(76,111,255,.12);text-align:center;overflow:hidden;position:relative}
+.hl-pay-orb{width:112px;height:112px;margin:2px auto 24px;border-radius:50%;display:grid;place-items:center;position:relative;background:radial-gradient(circle at 50% 45%,#bff6ff 0 3%,#4b83ff 9%,#152b6a 34%,#060b20 68%);box-shadow:0 0 0 1px #b9d7ff66,inset 0 0 30px #5e9cff99,0 0 45px #4c71ff88}
+.hl-pay-orb:before,.hl-pay-orb:after{content:"";position:absolute;border-radius:50%;inset:-12px;border:2px solid #6fb8ff88;animation:hlPaySpin 3.2s linear infinite}
+.hl-pay-orb:after{inset:-22px;border-color:#b26cff66;animation-duration:5s;animation-direction:reverse}
+.hl-pay-orb svg{width:42px;height:42px;stroke:#fff;fill:none;stroke-width:1.8}
+.hl-pay-kicker{font-size:10px;font-weight:800;letter-spacing:.18em;color:#8db7ff;margin-bottom:9px}
+.hl-pay-core h2{font-size:28px;line-height:1.05;letter-spacing:-.045em;margin:0;color:#f7fbff}
+.hl-pay-core p{font-size:13px;line-height:1.55;color:#a9bddc;margin:10px auto 22px;max-width:320px}
+.hl-pay-steps{display:grid;gap:9px;text-align:left}
+.hl-pay-step{display:flex;align-items:center;gap:11px;padding:12px 13px;border-radius:15px;border:1px solid #7da4dd25;background:#ffffff05;color:#7890b4;font-size:12px;transition:.25s ease}
+.hl-pay-step i{width:25px;height:25px;border-radius:50%;display:grid;place-items:center;font-style:normal;border:1px solid #7194c64a;flex:0 0 auto}
+.hl-pay-step.active{color:#e8f4ff;border-color:#6ea8ff70;background:#3978d71c;box-shadow:inset 0 0 22px #367aff12}
+.hl-pay-step.active i{background:#316ed0;color:white;box-shadow:0 0 18px #428aff88}
+.hl-pay-step.done{color:#a8efd4;border-color:#55c79a55;background:#1c8a5d14}
+.hl-pay-step.done i{background:#167252;color:#d8ffef}
+.hl-pay-note{margin-top:17px!important;font-size:10px!important;color:#7187a9!important}
+@keyframes hlPaySpin{to{transform:rotate(360deg)}}
+
+.vn-live-location{margin:14px 0 22px;border:1px solid #5e9cff55;border-radius:18px;padding:14px;background:radial-gradient(circle at 85% 10%,#2d79d62c,transparent 35%),#07152a;overflow:hidden}
+.vn-live-location-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.vn-live-location-top b{font-size:12px;color:#ddecff}
+.vn-live-location-top span{font-size:9px;color:#77e8b9;background:#164a3c88;border:1px solid #42b98a55;padding:5px 8px;border-radius:999px}
+.vn-live-radar{height:92px;border-radius:13px;position:relative;overflow:hidden;background:linear-gradient(#ffffff05 1px,transparent 1px),linear-gradient(90deg,#ffffff05 1px,transparent 1px),radial-gradient(circle at 62% 45%,#2d72ff33,transparent 25%),#061020;background-size:18px 18px,18px 18px,auto,auto}
+.vn-live-radar:before{content:"";position:absolute;width:15px;height:15px;border-radius:50%;left:60%;top:42%;background:#78d9ff;border:3px solid #e8fbff;box-shadow:0 0 0 8px #4b8cff25,0 0 28px #4da4ff}
+.vn-live-radar:after{content:"";position:absolute;width:90px;height:90px;border:1px solid #5da3ff44;border-radius:50%;left:calc(60% - 38px);top:calc(42% - 38px);animation:hlRadar 2.4s ease-out infinite}
+.vn-live-meta{display:flex;justify-content:space-between;gap:10px;margin-top:10px;font-size:10px;color:#91a9ca}
+.vn-live-link{color:#a9ceff!important;text-decoration:none;font-weight:700}
+@keyframes hlRadar{0%{transform:scale(.45);opacity:1}100%{transform:scale(1.5);opacity:0}}
+
+.hl-luz-retry{margin-top:9px;padding:9px 12px;border-radius:12px;border:1px solid #6e9bdb55;background:#285aa62c;color:#cfe4ff;font:inherit;font-size:11px;font-weight:750}
+</style>
+
+<script id="hlHardeningPatchJS">
 (function(){
 'use strict';
-if(window.HLMenuIntel)return;
-var MI=window.HLMenuIntel={recs:[],started:false};
-function sid(){try{var k='hl_mi_sid',v=sessionStorage.getItem(k);if(!v){v='mi-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);sessionStorage.setItem(k,v)}return v}catch(e){return'mi-'+Date.now().toString(36)}}
-MI.sid=sid();
-function tel(){try{return (document.getElementById('cliTel')||{}).value||localStorage.getItem('luzTel_'+(window.rest&&rest.id||''))||''}catch(e){return''}}
-MI.track=function(type,data){if(!window.rest||!rest.id||window.HL_MENU_PREVIEW_Q)return;data=data||{};fetch('/api/menu-intelligence/event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest.id,session_id:MI.sid,cliente_tel:tel(),event_type:type,producto_id:data.producto_id||null,recommendation_id:data.recommendation_id||null,pedido_id:data.pedido_id||null,value:data.value==null?null:data.value,metadata:data.metadata||{}})}).catch(function(){})};
-function cartIds(){var a=[];Object.values(window.carrito||{}).forEach(function(c){if(c&&c.id&&a.indexOf(c.id)<0)a.push(c.id)});return a}
-MI.load=async function(context){if(!window.rest||!rest.id)return[];try{var u='/api/menu-intelligence/recommendations?restaurante_id='+encodeURIComponent(rest.id)+'&session_id='+encodeURIComponent(MI.sid)+'&telefono='+encodeURIComponent(tel())+'&context='+encodeURIComponent(context||'menu')+'&in_cart='+encodeURIComponent(cartIds().join(','))+'&limit=6';var r=await fetch(u),d=await r.json();MI.recs=d.items||[];return MI.recs}catch(e){return[]}};
-function smartHTML(){var list=(MI.recs||[]).slice(0,4);if(!list.length)return'';return '<section class="clasicas-section hl-smart-section" id="sec-luz-para-ti"><div class="clasicas-header"><div class="clasicas-badge" style="background:linear-gradient(135deg,#087BFF,#713BFF)">✦ LUZ PARA TI</div><div class="clasicas-title">Elegido inteligentemente</div><div class="clasicas-sub">Recomendaciones según tu carrito, favoritos y lo que funciona mejor ahora</div></div><div class="prods-grid">'+list.map(function(r,i){var p=r.producto||{};return window.renderProductCard?renderProductCard(p,i,false,'manual'):''}).join('')+'</div></section>'}
-var rp=window.renderProductos;if(typeof rp==='function'){window.renderProductos=function(){var x=rp.apply(this,arguments),w=document.getElementById('prodsArea');if(w&&MI.recs.length&&!busquedaActual&&catActiva==='todas'&&!document.getElementById('sec-luz-para-ti'))w.insertAdjacentHTML('afterbegin',smartHTML());return x}}
-var od=window.abrirDetalleProducto;if(typeof od==='function')window.abrirDetalleProducto=function(id){MI.track('product_view',{producto_id:id});return od.apply(this,arguments)};
-var ap=window.agregarProducto;if(typeof ap==='function')window.agregarProducto=function(id){MI.track('add_to_cart',{producto_id:id});return ap.apply(this,arguments)};
-var ic=window.incCarrito;if(typeof ic==='function')window.incCarrito=function(id){MI.track('add_to_cart',{producto_id:id});return ic.apply(this,arguments)};
-var dc=window.decCarrito;if(typeof dc==='function')window.decCarrito=function(id){MI.track('remove_from_cart',{producto_id:id});return dc.apply(this,arguments)};
-var fc=window.filtrarCategoria;if(typeof fc==='function')window.filtrarCategoria=function(c){MI.track('category_view',{metadata:{categoria:c}});return fc.apply(this,arguments)};
-var oc=window.openCart;if(typeof oc==='function')window.openCart=async function(){MI.track('cart_view',{value:Object.values(carrito||{}).reduce(function(s,x){return s+Number(x.precio||0)*Number(x.qty||0)},0)});return oc.apply(this,arguments)};
-var ac=window.abrirCheckout;if(typeof ac==='function')window.abrirCheckout=async function(){MI.track('checkout_started',{value:Object.values(carrito||{}).reduce(function(s,x){return s+Number(x.precio||0)*Number(x.qty||0)},0)});return ac.apply(this,arguments)};
-var cp=window.canjearProducto;if(typeof cp==='function')window.canjearProducto=async function(id,n,p,t){MI.track('reward_redeem',{producto_id:id,value:p});return cp.apply(this,arguments)};
-// Reemplaza el upsell fijo por Next Best Item, conservando el renderer y el carrito existentes.
-window.cargarUpsell=async function(){var rows=await MI.load('cart');return rows.map(function(r){var p=Object.assign({},r.producto||{});p.origen='luz_intelligence';p._recommendation_id=r.id;p._reasons=r.reasons||[];return p})};
-var oldRenderUp=window.renderUpsellInCart;if(typeof oldRenderUp==='function')window.renderUpsellInCart=function(prods){var out=oldRenderUp.apply(this,arguments);(prods||[]).forEach(function(p){MI.track('recommendation_impression',{producto_id:p.id,recommendation_id:p._recommendation_id,metadata:{reasons:p._reasons||[]}})});var body=document.getElementById('cartBody'),slot=document.getElementById('upsellSlot');if(body&&slot){var subtotal=Object.values(carrito||{}).reduce(function(s,x){return s+Number(x.precio||0)*Number(x.qty||0)},0),box=document.getElementById('hlCartCoach');if(!box){box=document.createElement('div');box.id='hlCartCoach';box.className='hl-intel-strip';slot.parentNode.insertBefore(box,slot)}box.innerHTML='<div class="k"><span class="orb"></span>LUZ · CART COACH</div><b>Tu pedido va en '+fmt(subtotal)+'</b><small>Estas sugerencias se priorizan por afinidad, compras conjuntas e inventario disponible. Si no aportan valor, Luz deja de insistir.</small>'}return out};
-var au=window.aceptarUpsell;if(typeof au==='function')window.aceptarUpsell=function(id,precio,nombre,origen){var r=(MI.recs||[]).find(function(x){return x.producto&&x.producto.id===id});MI.track('recommendation_accept',{producto_id:id,recommendation_id:r&&r.id||null,value:precio,metadata:{origen:origen||'luz_intelligence'}});return au.apply(this,arguments)};
-// La capa moderna agrega desde data-up sin pasar por aceptarUpsell: capturamos el click.
-document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-up]');if(b){var id=b.getAttribute('data-up'),r=(MI.recs||[]).find(function(x){return x.producto&&x.producto.id===id});MI.track('recommendation_accept',{producto_id:id,recommendation_id:r&&r.id||null})}},true);
-function init(){if(MI.started||!window.rest||!rest.id)return;MI.started=true;MI.track('menu_open',{metadata:{path:location.pathname}});MI.load('menu').then(function(){if(typeof window.renderProductos==='function')window.renderProductos()});}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(init,700)});else setTimeout(init,700);
-setInterval(function(){if(!MI.started)init()},1200);
+var W=window,D=document;
+function $(id){return D.getElementById(id)}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+/* ── PAYMENT EXPERIENCE: no afirma que un pago fue aprobado ── */
+function ensurePayAgent(){
+  if($('hlPayAgent')) return $('hlPayAgent');
+  var el=D.createElement('div'); el.id='hlPayAgent'; el.className='hl-pay-agent';
+  el.innerHTML='<div class="hl-pay-core" role="status" aria-live="polite">'
+    +'<div class="hl-pay-orb"><svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z"/><path d="M7 12h5M16 10v4"/></svg></div>'
+    +'<div class="hl-pay-kicker">AGENTE DE PAGOS · LUZ</div><h2 id="hlPayTitle">Procesando tu pedido</h2>'
+    +'<p id="hlPaySub">Estamos registrando la información de pago de forma segura.</p>'
+    +'<div class="hl-pay-steps"><div class="hl-pay-step" data-pstep="proof"><i>1</i><span>Preparar comprobante</span></div>'
+    +'<div class="hl-pay-step" data-pstep="order"><i>2</i><span>Registrar pedido y pago</span></div>'
+    +'<div class="hl-pay-step" data-pstep="review"><i>3</i><span>Enviar a revisión del restaurante</span></div></div>'
+    +'<p class="hl-pay-note">La aprobación final del pago la confirma el restaurante. Luz no marcará un pago como aprobado sin confirmación del backend.</p></div>';
+  D.body.appendChild(el); return el;
+}
+function payStage(stage,title,sub){
+  var el=ensurePayAgent(); el.classList.add('open');
+  var order=['proof','order','review'], idx=order.indexOf(stage);
+  el.querySelectorAll('[data-pstep]').forEach(function(s,i){
+    s.classList.toggle('done',i<idx); s.classList.toggle('active',i===idx);
+    var ic=s.querySelector('i'); if(ic) ic.textContent=i<idx?'✓':String(i+1);
+  });
+  if(title)$('hlPayTitle').textContent=title;if(sub)$('hlPaySub').textContent=sub;
+}
+function closePayAgent(){var el=$('hlPayAgent');if(el)el.classList.remove('open')}
+
+/* Instrumentar llamadas reales ya existentes, sin inventar endpoint de verificación. */
+var nativeFetch=W.fetch.bind(W);
+W.fetch=async function(input,init){
+  var url=typeof input==='string'?input:(input&&input.url)||'';
+  if(url.indexOf('/api/subir-comprobante')!==-1){
+    payStage('proof','Leyendo tu comprobante','Preparando la evidencia para asociarla al pedido.');
+  } else if(url.indexOf('/api/pedido-manual')!==-1){
+    payStage('order','Registrando tu pedido','Guardando pedido, total y método de pago en el restaurante.');
+  }
+  var response=await nativeFetch(input,init);
+  if(url.indexOf('/api/pedido-manual')!==-1 && response.ok){
+    setTimeout(function(){
+      payStage('review','Enviado a revisión','Tu pedido fue registrado. Si pagaste por transferencia, el restaurante debe confirmar el pago.');
+      setTimeout(closePayAgent,1800);
+    },250);
+  }
+  return response;
+};
+W.addEventListener('unhandledrejection',function(){closePayAgent()});
+
+/* ── TRACKING: utilizar ubicación si /api/mis-pedidos ya la entrega ── */
+function coordsOf(p){
+  var candidates=[
+    [p.domiciliario_lat,p.domiciliario_lng],[p.domiciliario_latitud,p.domiciliario_longitud],
+    [p.latitud_domiciliario,p.longitud_domiciliario],[p.delivery_lat,p.delivery_lng],
+    [p.ubicacion_lat,p.ubicacion_lng],[p.lat,p.lng],[p.latitude,p.longitude]
+  ];
+  for(var i=0;i<candidates.length;i++){
+    var a=Number(candidates[i][0]),b=Number(candidates[i][1]);
+    if(isFinite(a)&&isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180&&(a!==0||b!==0)) return [a,b];
+  }
+  return null;
+}
+var previousRender=W.renderPedidoCard;
+if(typeof previousRender==='function'){
+  W.renderPedidoCard=function(p,active){
+    var html=previousRender(p,active), c=active?coordsOf(p):null;
+    if(!c) return html;
+    var map='https://www.google.com/maps?q='+encodeURIComponent(c[0]+','+c[1]);
+    var live='<div class="vn-live-location"><div class="vn-live-location-top"><b>Ubicación del domiciliario</b><span>● ACTUALIZANDO</span></div>'
+      +'<div class="vn-live-radar"></div><div class="vn-live-meta"><span>'+esc(c[0].toFixed(5))+', '+esc(c[1].toFixed(5))+'</span>'
+      +'<a class="vn-live-link" target="_blank" rel="noopener" href="'+map+'">Abrir mapa ↗</a></div></div>';
+    return html.replace(/<p class="vn-location-note">[\s\S]*?<\/p>/,live);
+  };
+}
+
+/* ── CANJES: frontend deja claro que el comercio debe aprobar ── */
+var oldRedeem=W.canjearProducto;
+if(typeof oldRedeem==='function'){
+  W.canjearProducto=function(){ return oldRedeem.apply(this,arguments); };
+}
+/* Interceptar texto de confirmación nativo para evitar prometer auto-aprobación. */
+var nativeConfirm=W.confirm.bind(W);
+W.confirm=function(msg){
+  if(typeof msg==='string' && msg.indexOf('Se agregará automáticamente a tu pedido activo')!==-1){
+    msg=msg.replace('Se agregará automáticamente a tu pedido activo.','Se enviará la solicitud al restaurante. El restaurante debe aprobar el canje antes de confirmarlo.');
+  }
+  return nativeConfirm(msg);
+};
+
+/* ── LUZ: observabilidad y reintento; no oculta errores HTTP ── */
+var luzOriginal=W.luzEnviarMensaje;
+if(typeof luzOriginal==='function'){
+  W.luzEnviarMensaje=async function(txt){
+    W.__hlLastLuzMessage=String(txt||'');
+    try{return await luzOriginal(txt)}
+    catch(e){
+      console.error('[HL/Luz] error no controlado',e);
+      var msgs=$('lcMsgs');
+      if(msgs){
+        var box=D.createElement('div');box.className='lc-msg luz';
+        box.innerHTML='Luz no pudo completar la conexión.<br><button class="hl-luz-retry" type="button">Reintentar</button>';
+        var b=box.querySelector('button');b.onclick=function(){box.remove();W.luzEnviarMensaje(W.__hlLastLuzMessage)};
+        msgs.appendChild(box);msgs.scrollTop=msgs.scrollHeight;
+      }
+      throw e;
+    }
+  };
+}
+/* El flujo final de Astra usa data-vn; asegurar que el botón/input siempre invoquen la versión vigente. */
+W.enviarALuz=function(){
+  var input=$('lcInput'),txt=input?String(input.value||'').trim():'';
+  if(!txt)return;if(input){input.value='';input.style.height='auto'}
+  return W.luzEnviarMensaje(txt);
+};
+
+console.info('[HOLA LUZ] Hardening patch activo: visual congelado, payment UX, tracking compatible, Luz hardened.');
 })();
 </script>
+
+
+<style id="hlCommerceV9CSS">
+.hl-live-track{margin:16px 0 20px;border:1px solid rgba(93,163,255,.35);border-radius:18px;overflow:hidden;background:linear-gradient(145deg,#071326,#050b18);box-shadow:inset 0 1px rgba(255,255,255,.04)}
+.hl-live-track .map{height:132px;position:relative;background:linear-gradient(rgba(83,139,221,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(83,139,221,.08) 1px,transparent 1px),radial-gradient(circle at 58% 50%,rgba(45,122,255,.25),transparent 26%),#06101e;background-size:22px 22px,22px 22px,auto,auto}
+.hl-live-track .map:before{content:"";position:absolute;left:56%;top:43%;width:16px;height:16px;border-radius:50%;background:#70d8ff;border:3px solid white;box-shadow:0 0 0 9px rgba(78,143,255,.18),0 0 34px #438cff}
+.hl-live-track .map:after{content:"";position:absolute;left:calc(56% - 36px);top:calc(43% - 36px);width:88px;height:88px;border:1px solid rgba(97,167,255,.45);border-radius:50%;animation:hlLivePulse 2.3s ease-out infinite}
+.hl-live-track .meta{padding:12px 13px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:10px;color:#8fa9cd}.hl-live-track .meta b{display:block;color:#dceaff;font-size:11px;margin-bottom:3px}.hl-live-track .meta a{padding:8px 10px;border:1px solid #5595ec55;border-radius:10px;color:#b9d8ff;text-decoration:none;font-weight:800;white-space:nowrap}.hl-live-track.stale .map{filter:saturate(.45);opacity:.72}.hl-live-track.waiting .map:before,.hl-live-track.waiting .map:after{display:none}
+.hl-reward-pending{text-align:center;padding:38px 12px}.hl-reward-pending .orb{width:108px;height:108px;margin:0 auto 30px;border-radius:50%;background:radial-gradient(circle at 50% 45%,#fff 0 2%,#73dfff 5%,#4c58ff 17%,#131c52 42%,#060a18 68%);box-shadow:0 0 0 1px #9ccfff66,0 0 55px #536dff66;position:relative}.hl-reward-pending .orb:after{content:"";position:absolute;inset:-14px;border:2px solid #9a69ff77;border-radius:50%;animation:hlSpin 3.4s linear infinite}.hl-reward-pending h2{font-size:30px;letter-spacing:-.04em}.hl-reward-pending p{font-size:12px;color:#9fb3d3;line-height:1.55;max-width:300px;margin:10px auto 24px}
+@keyframes hlLivePulse{to{transform:scale(1.55);opacity:0}}@keyframes hlSpin{to{transform:rotate(360deg)}}
+</style>
+<script id="hlCommerceV9JS">
+(function(){
+var W=window,D=document; W.__hlLiveLocations=W.__hlLiveLocations||{};
+function E2(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+async function hydrateTracking(p){
+  if(!p||!p.id||!rest||!phone())return; var slot=D.querySelector('[data-hl-track="'+CSS.escape(String(p.id))+'"]'); if(!slot)return;
+  try{var r=await fetch('/api/customer-live-tracking/'+encodeURIComponent(p.id)+'?restaurante_id='+encodeURIComponent(rest.id)+'&telefono='+encodeURIComponent(phone()),{cache:'no-store'});var d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'tracking');
+    if(!d.location){slot.className='hl-live-track waiting';slot.innerHTML='<div class="map"></div><div class="meta"><span><b>Tracking preparado</b>'+(d.reason==='sin_domiciliario'?'Aún no hay domiciliario asignado.':'Esperando la primera señal GPS real.')+'</span></div>';return}
+    W.__hlLiveLocations[p.id]=d.location;var l=d.location, stale=!l.fresh, age=Math.max(0,Math.round((l.age_ms||0)/60000));var url='https://www.google.com/maps?q='+encodeURIComponent(l.lat+','+l.lng);
+    slot.className='hl-live-track'+(stale?' stale':'');slot.innerHTML='<div class="map"></div><div class="meta"><span><b>'+(stale?'Última ubicación conocida':'Domiciliario en vivo')+'</b>'+(stale?'Actualizada hace '+age+' min':'GPS actualizado · '+(l.accuracy?('±'+Math.round(l.accuracy)+' m'):'señal recibida'))+'</span><a target="_blank" rel="noopener" href="'+url+'">Ver mapa ↗</a></div>';
+  }catch(e){slot.className='hl-live-track waiting';slot.innerHTML='<div class="map"></div><div class="meta"><span><b>No pudimos actualizar el GPS</b>Conservamos el estado del pedido; reintentaremos automáticamente.</span></div>'}
+}
+var baseRender=renderPedidoCard;
+renderPedidoCard=function(p,active){var html=baseRender(p,active);if(active&&!(/mesa/i.test(p.direccion||'')||p.tipo_pedido==='mesa'||p.tipo_pedido==='recoger')){html=html.replace(/<p class="vn-location-note">[\s\S]*?<\/p>/,'<div class="hl-live-track waiting" data-hl-track="'+E2(p.id)+'"><div class="map"></div><div class="meta"><span><b>Conectando tracking</b>Buscando la señal real del domiciliario…</span></div></div>');setTimeout(function(){hydrateTracking(p)},0)}return html};
+
+// Reward request: restaurant approval is mandatory; points are not debited here.
+redeem=async function(){if(VN.redeeming||!VN.reward||PREVIEW)return;var p=VN.reward,b=D.querySelector('[data-vn="redeem"]');VN.redeeming=true;if(b){b.disabled=true;b.textContent='Enviando solicitud…'}try{var r=await fetch('/api/canjes/solicitar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest.id,telefono:VN.rewardPhone||phone(),producto_canje_id:p.id})});var d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'No se pudo solicitar el canje');$('vnRewardBody').innerHTML='<div class="hl-reward-pending"><div class="orb"></div><span class="vn-kicker">SOLICITUD ENVIADA</span><h2>Esperando al restaurante.</h2><p>'+E2(p.nombre)+' quedó reservado como solicitud. Tus puntos todavía no fueron descontados. Cuando el restaurante lo apruebe, se anexará a tu pedido activo como una modificación aprobada.</p>'+button('Volver a mi club','reward-close','gold')+'</div>';buzz([12,45,18]);}catch(e){showToast(e.message||'No pudimos enviar la solicitud');if(b){b.disabled=false;b.textContent='Reintentar'}}finally{VN.redeeming=false}};
+
+// Refresh live location independently while Orders is visible.
+setInterval(function(){try{if(!$('mpOv')||!$('mpOv').classList.contains('open')||D.hidden)return;(VN.orders||[]).filter(function(p){return !['entregado','cancelado','rechazado'].includes(p.estado)}).forEach(hydrateTracking)}catch(e){}},5000);
+
+// Luz receives real tracking context when available, never a fabricated ETA/location.
+var baseContext=contextText;contextText=function(){var t=baseContext();if($('mpOv')&&$('mpOv').classList.contains('open')){var live=Object.keys(W.__hlLiveLocations).map(function(id){var l=W.__hlLiveLocations[id];return '#'+id.slice(0,6)+' GPS '+Number(l.lat).toFixed(5)+','+Number(l.lng).toFixed(5)+' actualizado '+l.updated_at}).join('; ');if(live)t=t.replace('No hay GPS disponible en esta vista.',live)}return t};
+})();
+</script>
+
+
+<script id="hlPaymentAgentV9JS">
+(function(){var original=enviarPedido;enviarPedido=async function(){if(/^(nequi|bancolombia)$/i.test(String(pagoSel||''))&&compB64){var agent=document.getElementById('hlPayAgent');if(agent)agent.classList.add('open');var title=document.getElementById('hlPayTitle'),sub=document.getElementById('hlPaySub');if(title)title.textContent='Luz está leyendo tu comprobante';if(sub)sub.textContent='Comprobando monto, destinatario y señal visible de transacción finalizada.';try{var vr=await fetch('/api/verificar-comprobante-web',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest.id,telefono:phone()||document.getElementById('cliTel').value,total:checkoutTotals().total,imagen_base64:compB64})}),vd=await vr.json();window.__hlLastProofAnalysis=vd;if(!vr.ok||!vd.ok)throw Error(vd.error||'No se pudo analizar');if(title)title.textContent=vd.visual_ok?'Evidencia consistente':'Revisión necesaria';if(sub)sub.textContent=vd.visual_ok?'La captura coincide visualmente. El restaurante todavía debe confirmar que el dinero llegó.':((vd.analysis&&vd.analysis.razon)||'El restaurante revisará el comprobante antes de aceptar el pago.');await new Promise(function(r){setTimeout(r,900)})}catch(e){if(title)title.textContent='Revisión humana';if(sub)sub.textContent='No pudimos validar la captura automáticamente. Tu pedido quedará esperando revisión del restaurante.';await new Promise(function(r){setTimeout(r,700)})}}return original.apply(this,arguments)};window.enviarPedido=enviarPedido})();
+</script>
+
+
+<style id="hlLuzCommerceV10CSS">
+/* V10 is additive only: Astra visual shell stays frozen. */
+.lc-product-rail{display:grid;gap:10px;margin:10px 0 2px}.lc-product-card{display:grid;grid-template-columns:66px 1fr auto;align-items:center;gap:11px;padding:9px;border:1px solid rgba(112,164,255,.24);border-radius:16px;background:linear-gradient(135deg,rgba(14,31,62,.96),rgba(7,13,31,.94));box-shadow:inset 0 1px rgba(255,255,255,.035)}.lc-product-card img{width:66px;height:66px;object-fit:cover;border-radius:13px;background:#09152b}.lc-product-copy{min-width:0}.lc-product-copy b{display:block;color:#f4f7ff;font-size:13px;line-height:1.2}.lc-product-copy small{display:block;color:#91a9cc;font-size:10px;line-height:1.35;margin:5px 0}.lc-product-copy strong{color:#a8c9ff;font-size:12px}.lc-product-actions{display:grid;gap:6px}.lc-product-actions button{min-width:44px;min-height:38px;border-radius:11px;border:1px solid rgba(117,166,255,.35);background:#10244a;color:#dceaff;font:800 11px inherit;padding:0 10px}.lc-product-actions .add{background:linear-gradient(135deg,#2f6bff,#7650ff);color:white;border-color:#7ca4ff;box-shadow:0 0 18px rgba(80,104,255,.22)}
+.lc-live-cart{margin:11px 0;padding:12px 13px;border:1px solid rgba(100,153,255,.28);border-radius:16px;background:linear-gradient(135deg,rgba(9,24,51,.97),rgba(8,12,31,.95))}.lc-live-cart-head,.lc-live-cart-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}.lc-live-cart-head b{font-size:12px;color:#edf5ff}.lc-live-cart-head span{font-size:10px;color:#7eddb6}.lc-live-cart-lines{display:grid;gap:6px;margin:10px 0}.lc-live-cart-line{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:#b9cae4}.lc-live-cart-line b{color:#edf5ff}.lc-live-cart-foot strong{font-size:14px;color:white}.lc-live-cart-foot button{border:1px solid #6e96ff66;background:#15356d;color:#fff;border-radius:10px;min-height:38px;padding:0 12px;font-weight:800}
+.hl-pay-agent-v10{position:fixed;inset:0;z-index:99999;display:none;place-items:center;padding:22px;background:rgba(1,5,16,.78);backdrop-filter:blur(18px)}.hl-pay-agent-v10.open{display:grid}.hl-pay-agent-v10 .card{width:min(390px,100%);padding:28px 22px;border:1px solid rgba(121,164,255,.38);border-radius:28px;background:radial-gradient(circle at 50% 0,rgba(83,85,255,.22),transparent 42%),linear-gradient(150deg,#0b1732,#040916);box-shadow:0 30px 90px #000b,0 0 50px rgba(90,74,255,.18);text-align:center}.hl-pay-scan{width:128px;height:128px;margin:0 auto 24px;position:relative;border-radius:28px;border:1px solid #8abaff66;background:linear-gradient(135deg,#101f48,#090d24);overflow:hidden}.hl-pay-scan:before{content:"";position:absolute;inset:18px;border:1px dashed #87caff88;border-radius:16px}.hl-pay-scan:after{content:"";position:absolute;left:10px;right:10px;height:2px;top:12px;background:linear-gradient(90deg,transparent,#65e8ff,#9c72ff,transparent);box-shadow:0 0 18px #5ddfff;animation:hlPayScan 1.5s ease-in-out infinite alternate}.hl-pay-agent-v10 h3{font-size:25px;letter-spacing:-.04em;margin:0 0 8px}.hl-pay-agent-v10 p{font-size:12px;line-height:1.55;color:#9fb3d3}.hl-pay-steps{display:grid;gap:8px;text-align:left;margin-top:20px}.hl-pay-step{display:flex;align-items:center;gap:10px;font-size:11px;color:#8096b7}.hl-pay-step.on{color:#dceaff}.hl-pay-step.ok{color:#70e2b1}.hl-pay-dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 12px currentColor}@keyframes hlPayScan{to{top:112px}}
+.hl-track-real{height:190px;border-radius:16px;overflow:hidden;background:#06101e;position:relative}.hl-track-real iframe{width:100%;height:100%;border:0}.hl-track-badge{position:absolute;left:10px;top:10px;z-index:2;padding:7px 9px;border:1px solid #71b6ff55;border-radius:10px;background:#07152ddd;color:#dcecff;font-size:10px;font-weight:800;backdrop-filter:blur(10px)}
+</style>
+<div class="hl-pay-agent-v10" id="hlPayAgentV10" aria-live="polite" aria-modal="true" role="dialog"><div class="card"><div class="hl-pay-scan"></div><span class="vn-kicker">PAYMENT INTELLIGENCE</span><h3 id="hlPayV10Title">Luz está verificando tu pago</h3><p id="hlPayV10Sub">Leyendo el comprobante y contrastándolo con este pedido.</p><div class="hl-pay-steps"><div class="hl-pay-step on" id="hlPS1"><i class="hl-pay-dot"></i>Lectura del comprobante</div><div class="hl-pay-step" id="hlPS2"><i class="hl-pay-dot"></i>Monto y método</div><div class="hl-pay-step" id="hlPS3"><i class="hl-pay-dot"></i>Referencia y consistencia</div><div class="hl-pay-step" id="hlPS4"><i class="hl-pay-dot"></i>Resultado financiero</div></div></div></div>
+<script id="hlLuzCommerceV10JS">
+(function(){
+var W=window,D=document;
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function money(n){try{return '$'+Number(n||0).toLocaleString('es-CO')}catch(e){return '$'+n}}
+function itemById(id){try{return (typeof getItemById==='function'&&getItemById(id))||((W.items||W.productos||[]).find(function(x){return String(x.id)===String(id)}))}catch(e){return null}}
+function cartEntries(){try{return Object.keys(W.carrito||carrito||{}).map(function(k){var c=(W.carrito||carrito)[k];return c})}catch(e){return []}}
+function renderLiveCart(){var host=D.getElementById('lcSugs');if(!host)return;var a=cartEntries();var old=host.querySelector('.lc-live-cart');if(old)old.remove();if(!a.length)return;var total=0,qty=0,lines=a.map(function(c){var q=Number(c.cantidad||c.qty||1),pr=Number(c.precio||0);qty+=q;total+=q*pr;return '<div class="lc-live-cart-line"><span><b>'+q+'×</b> '+esc(c.nombre||'Producto')+'</span><span>'+money(q*pr)+'</span></div>'}).join('');host.insertAdjacentHTML('beforeend','<div class="lc-live-cart"><div class="lc-live-cart-head"><b>Tu pedido, en vivo</b><span>'+qty+' producto'+(qty===1?'':'s')+'</span></div><div class="lc-live-cart-lines">'+lines+'</div><div class="lc-live-cart-foot"><strong>'+money(total)+'</strong><button type="button" data-lc-cart>Ver pedido →</button></div></div>');var b=host.querySelector('[data-lc-cart]');if(b)b.onclick=function(){try{cerrarLuzChat();if(typeof abrirCarrito==='function')abrirCarrito();else if(W.HLMenuWeb)W.HLMenuWeb.nav('cart')}catch(e){}}}
+function productCard(p){var real=itemById(p.id)||p,img=real.imagen_url||real.imagen||real.foto||p.imagen_url||'',desc=real.descripcion||p.descripcion||'',price=Number(real.precio||p.precio||0);return '<article class="lc-product-card" data-lcp="'+esc(real.id||p.id)+'">'+(img?'<img src="'+esc(img)+'" alt="" loading="lazy">':'<div style="width:66px;height:66px;border-radius:13px;background:radial-gradient(circle at 50% 40%,#315da6,#09152b)"></div>')+'<div class="lc-product-copy"><b>'+esc(real.nombre||p.nombre)+'</b><small>'+esc(desc).slice(0,90)+'</small><strong>'+money(price)+'</strong></div><div class="lc-product-actions"><button type="button" data-lc-view>Ver</button><button type="button" class="add" data-lc-add>+ Agregar</button></div></article>'}
+function bindCards(host){host.querySelectorAll('.lc-product-card').forEach(function(card){var id=card.getAttribute('data-lcp'),p=itemById(id);var v=card.querySelector('[data-lc-view]'),a=card.querySelector('[data-lc-add]');if(v)v.onclick=function(){try{cerrarLuzChat();if(typeof abrirProducto==='function')abrirProducto(id);else if(typeof openProduct==='function')openProduct(id)}catch(e){}};if(a)a.onclick=function(){try{if(typeof luzAgregarProductoById==='function'){luzAgregarProductoById(String(id),String((p||{}).nombre||''),Number((p||{}).precio||0))}else if(typeof agregarCarrito==='function'){agregarCarrito(id)}a.textContent='✓ Agregado';setTimeout(function(){a.textContent='+ Agregar'},1000);renderLiveCart()}catch(e){console.error('[LuzCart]',e)}}})}
+function renderProducts(products){var host=D.getElementById('lcSugs');if(!host)return;host.innerHTML='';var valid=(products||[]).filter(function(p){return p&&p.nombre}).slice(0,5);if(valid.length){var rail=D.createElement('div');rail.className='lc-product-rail';rail.innerHTML=valid.map(productCard).join('');host.appendChild(rail);bindCards(rail)}renderLiveCart()}
+// Make markdown readable without changing Astra layout.
+var oldAdd=W.luzAgregarMsgChat;if(typeof oldAdd==='function')W.luzAgregarMsgChat=function(who,text,speak){oldAdd(who,String(text||'').replace(/\*\((.*?)\)\*/g,'($1)'),speak)};
+// Dynamic assistant: same endpoint, richer action payload support.
+var oldSend=W.luzEnviarMensaje;if(typeof oldSend==='function')W.luzEnviarMensaje=async function(txt){
+  if(!rest||!String(txt||'').trim())return;
+  luzAgregarMsgChat('user',txt,false);var host=D.getElementById('lcSugs');if(host)host.innerHTML='';luzConvHistory.push({role:'user',content:txt});var msgs=D.getElementById('lcMsgs'),typing=D.createElement('div');typing.className='lc-typing';typing.id='luzTyping';typing.innerHTML='<span></span><span></span><span></span>';msgs.appendChild(typing);msgs.scrollTop=msgs.scrollHeight;var st=D.getElementById('lcStatus');if(st)st.textContent='● Pensando…';
+  try{var tel=null;try{tel=localStorage.getItem('luzCli_'+rest.id)}catch(e){}var payload={restaurante_id:rest.id,mensaje:txt,telefono:tel,historial:luzConvHistory.slice(-12).map(function(m){return {rol:m.role==='assistant'?'luz':'cliente',texto:m.content}}),carrito:cartEntries().map(function(c){return {id:c.id,nombre:c.nombre,cantidad:Number(c.cantidad||c.qty||1),precio:Number(c.precio||0)}}),modo:'commerce_actions_v1'};var r=await fetch('/api/luz-menu-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),d=await r.json();if(!r.ok)throw Error(d.error||'Luz no respondió');var ans=d.respuesta||d.message||'¿Qué te gustaría agregar?';var t=D.getElementById('luzTyping');if(t)t.remove();if(st)st.textContent='● En línea';luzConvHistory.push({role:'assistant',content:ans});luzAgregarMsgChat('luz',ans,true);var products=d.productos||d.products||((d.actions||[]).filter(function(x){return x.type==='product'}).map(function(x){return x.product||x}));renderProducts(products);if(!products.length&&typeof luzSiguienteSugerencias==='function'){var ss=luzSiguienteSugerencias(txt,ans);if(ss&&ss.length)luzMostrarSugerencias(ss);renderLiveCart()}var first=ans.split(/[.!?]\s/)[0];if(first&&first.length>8&&typeof luzHablar==='function')luzHablar(first,true)}catch(e){var t=D.getElementById('luzTyping');if(t)t.remove();if(st)st.textContent='● Reconectando';console.error('[LuzCommerceV10]',e);luzAgregarMsgChat('luz','No pude sincronizar esa acción. Tu pedido no fue modificado. Intenta nuevamente.',true)}
+};
+// Keep inline onclick compatibility.
+if(typeof W.enviarALuz==='function')W.enviarALuz=function(){var i=D.getElementById('lcInput'),x=(i&&i.value||'').trim();if(!x)return;if(i){i.value='';i.style.height='auto'}return W.luzEnviarMensaje(x)};
+// Payment verification UX: analysis != payment confirmation.
+var baseOrder=W.enviarPedido;if(typeof baseOrder==='function'&&!W.__hlV10OrderWrapped){W.__hlV10OrderWrapped=true;W.enviarPedido=async function(){if(/^(nequi|bancolombia)$/i.test(String(pagoSel||''))&&compB64){var modal=D.getElementById('hlPayAgentV10'),title=D.getElementById('hlPayV10Title'),sub=D.getElementById('hlPayV10Sub'),steps=[1,2,3,4].map(function(n){return D.getElementById('hlPS'+n)});modal.classList.add('open');try{steps[0].classList.add('on');var vr=await fetch('/api/verificar-comprobante-web',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurante_id:rest.id,telefono:(typeof phone==='function'?phone():null)||(D.getElementById('cliTel')||{}).value,total:(typeof checkoutTotals==='function'?checkoutTotals().total:null),metodo_pago:pagoSel,imagen_base64:compB64})}),vd=await vr.json();steps[0].classList.add('ok');steps[1].classList.add('on');steps[2].classList.add('on');if(!vr.ok||!vd.ok)throw Error(vd.error||'No se pudo analizar');steps[1].classList.add('ok');steps[2].classList.toggle('ok',vd.visual_ok!==false);steps[3].classList.add('on');title.textContent=vd.payment_confirmed?'Pago confirmado':(vd.visual_ok?'Comprobante leído':'Necesita revisión');sub.textContent=vd.payment_confirmed?'El proveedor confirmó el pago de este pedido.':(vd.visual_ok?'La evidencia es consistente, pero todavía no confirma que el dinero haya ingresado. El restaurante la revisará.':'No pudimos validar automáticamente la evidencia. El restaurante deberá revisarla.');if(vd.payment_confirmed)steps[3].classList.add('ok');W.__hlLastProofAnalysis=vd;await new Promise(function(ok){setTimeout(ok,900)})}catch(e){title.textContent='Revisión del restaurante';sub.textContent='No se pudo verificar automáticamente. No marcaremos el pago como confirmado.';await new Promise(function(ok){setTimeout(ok,850)})}finally{modal.classList.remove('open')}}return baseOrder.apply(this,arguments)}}
+// Tracking: render actual coordinates in an embeddable map instead of a decorative grid.
+var oldHydrate=W.hydrateTracking;if(typeof oldHydrate==='function')W.hydrateTracking=async function(p){if(!p||!p.id||!rest)return oldHydrate(p);var slot=D.querySelector('[data-hl-track="'+CSS.escape(String(p.id))+'"]');try{var ph=(typeof phone==='function'?phone():null);if(!ph)return oldHydrate(p);var r=await fetch('/api/customer-live-tracking/'+encodeURIComponent(p.id)+'?restaurante_id='+encodeURIComponent(rest.id)+'&telefono='+encodeURIComponent(ph),{cache:'no-store'}),d=await r.json();if(!r.ok||!d.ok||!d.location)return oldHydrate(p);var l=d.location,lat=Number(l.lat),lng=Number(l.lng);if(!isFinite(lat)||!isFinite(lng))return oldHydrate(p);W.__hlLiveLocations[p.id]=l;var delta=.008,src='https://www.openstreetmap.org/export/embed.html?bbox='+encodeURIComponent((lng-delta)+','+(lat-delta)+','+(lng+delta)+','+(lat+delta))+'&layer=mapnik&marker='+encodeURIComponent(lat+','+lng);slot.className='hl-live-track';slot.innerHTML='<div class="hl-track-real"><span class="hl-track-badge">'+(l.fresh?'● GPS EN VIVO':'ÚLTIMA UBICACIÓN')+'</span><iframe loading="lazy" referrerpolicy="no-referrer" src="'+src+'"></iframe></div><div class="meta"><span><b>'+(l.fresh?'Domiciliario en movimiento':'Última señal recibida')+'</b>'+(l.accuracy?'Precisión aproximada ±'+Math.round(l.accuracy)+' m':'Ubicación GPS recibida')+'</span><a target="_blank" rel="noopener" href="https://www.google.com/maps?q='+encodeURIComponent(lat+','+lng)+'">Abrir mapa ↗</a></div>'}catch(e){return oldHydrate(p)}};
+console.info('[HOLA LUZ] Commerce Intelligence V10 activo — Astra visual frozen.');
+})();
+</script>
+
+
+<!-- HOLA LUZ V11 — tracking visibility + conversational orb + delivery confirmation signal -->
+<style id="hlV11CSS">
+/* Luz: the large orb is the welcome state only. Once there is conversation,
+   it becomes a compact live presence so answers/actions are never pushed below it. */
+#luzChat.hl-v11-conversation .vn-luz-stage{
+  min-height:64px!important;padding:4px 82px 8px 2px!important;text-align:left!important;
+}
+#luzChat.hl-v11-conversation .vn-luz-stage h2{
+  font-size:22px!important;line-height:1.05!important;text-align:left!important;margin:0!important;
+}
+#luzChat.hl-v11-conversation .vn-luz-stage>p{
+  font-size:12px!important;margin:5px 0 0!important;text-align:left!important;
+}
+#luzChat.hl-v11-conversation .vn-luz-stage .vn-orb,
+#luzChat.hl-v11-conversation .vn-luz-stage .vn-orb.large{
+  --orb:54px!important;position:absolute!important;right:18px!important;top:2px!important;
+  margin:0!important;transform:none!important;
+}
+#luzChat.hl-v11-conversation .vn-luz-stage #lcStatus{
+  margin-top:6px!important;text-align:left!important;font-size:11px!important;
+}
+#luzChat.hl-v11-conversation .vn-luz-context{padding-top:2px!important;padding-bottom:4px!important}
+#luzChat.hl-v11-conversation .lc-msgs{min-height:90px!important}
+#luzChat.hl-v11-conversation .lc-suggestions{max-height:240px!important;overflow:auto!important}
+
+/* Tracking must show an actual map surface, not an empty decorative grid. */
+.hl-live-track{overflow:hidden!important}
+.hl-track-real{position:relative;min-height:250px!important;background:#071226!important}
+.hl-track-real iframe{
+  display:block!important;width:100%!important;height:250px!important;border:0!important;
+  background:#dfe7ef!important;filter:saturate(.86) contrast(1.02);
+}
+.hl-track-badge{
+  position:absolute!important;z-index:3!important;left:12px!important;top:12px!important;
+  padding:7px 10px!important;border-radius:999px!important;background:rgba(2,8,23,.88)!important;
+  border:1px solid rgba(97,232,255,.28)!important;color:#bff5ff!important;
+  font-size:10px!important;font-weight:850!important;letter-spacing:.08em!important;
+}
+.hl-track-fallback{
+  min-height:250px;display:grid;place-items:center;padding:24px;text-align:center;
+  background:radial-gradient(circle at 50% 45%,rgba(47,107,255,.20),transparent 34%),
+             linear-gradient(rgba(75,140,255,.07) 1px,transparent 1px),
+             linear-gradient(90deg,rgba(75,140,255,.07) 1px,transparent 1px),#071226;
+  background-size:auto,38px 38px,38px 38px,auto;
+}
+.hl-track-fallback b{display:block;color:#fff;font-size:16px;margin-bottom:6px}
+.hl-track-fallback span{display:block;color:#9eb0cf;font-size:12px;line-height:1.45}
+</style>
+<script id="hlV11JS">
+(function(){
+'use strict';
+var W=window,D=document;
+function q(id){return D.getElementById(id)}
+function phoneV11(){try{return (typeof phone==='function'&&phone())||localStorage.getItem('luzCli_'+rest.id)||''}catch(e){return ''}}
+function setConversationMode(){
+  var p=q('luzChat'); if(!p)return;
+  var msgs=q('lcMsgs');
+  if((msgs&&msgs.children.length)||String(W.__hlLastLuzMessage||'').trim())p.classList.add('hl-v11-conversation');
+}
+var msgHost=q('lcMsgs');
+if(msgHost&&W.MutationObserver){
+  new MutationObserver(setConversationMode).observe(msgHost,{childList:true,subtree:true});
+}
+D.addEventListener('click',function(e){
+  if(e.target&&e.target.closest&&e.target.closest('#luzChat'))setTimeout(setConversationMode,0);
+},true);
+
+/* Replace V10 map hydration with a more compatible Google Maps embed.
+   No fabricated route: only the coordinate returned by the live-tracking API is rendered. */
+var hydrateV10=W.hydrateTracking;
+if(typeof hydrateV10==='function'){
+  W.hydrateTracking=async function(p){
+    if(!p||!p.id||!W.rest)return hydrateV10(p);
+    var slot=D.querySelector('[data-hl-track="'+CSS.escape(String(p.id))+'"]');
+    if(!slot)return hydrateV10(p);
+    try{
+      var ph=phoneV11(); if(!ph)return hydrateV10(p);
+      var r=await fetch('/api/customer-live-tracking/'+encodeURIComponent(p.id)+'?restaurante_id='+encodeURIComponent(rest.id)+'&telefono='+encodeURIComponent(ph),{cache:'no-store'});
+      var d=await r.json();
+      if(!r.ok||!d.ok)throw Error(d.error||'tracking');
+      if(!d.location){
+        slot.className='hl-live-track waiting';
+        slot.innerHTML='<div class="hl-track-fallback"><div><b>Esperando señal GPS</b><span>'+(d.reason==='sin_domiciliario'?'El pedido todavía no tiene domiciliario asignado.':'El domiciliario aún no ha enviado una ubicación válida.')+'</span></div></div>';
+        return;
+      }
+      var l=d.location,lat=Number(l.lat),lng=Number(l.lng);
+      if(!isFinite(lat)||!isFinite(lng)||(lat===0&&lng===0))throw Error('coordenadas inválidas');
+      W.__hlLiveLocations=W.__hlLiveLocations||{}; W.__hlLiveLocations[p.id]=l;
+      var embed='https://maps.google.com/maps?q='+encodeURIComponent(lat+','+lng)+'&z=16&output=embed';
+      var open='https://www.google.com/maps?q='+encodeURIComponent(lat+','+lng);
+      slot.className='hl-live-track';
+      slot.innerHTML='<div class="hl-track-real"><span class="hl-track-badge">'+(l.fresh?'● GPS EN VIVO':'● ÚLTIMA UBICACIÓN')+'</span><iframe title="Ubicación real del domiciliario" loading="eager" referrerpolicy="no-referrer-when-downgrade" src="'+embed+'"></iframe></div><div class="meta"><span><b>'+(l.fresh?'Domiciliario en movimiento':'Última señal recibida')+'</b>'+(l.accuracy?'Precisión aproximada ±'+Math.round(Number(l.accuracy))+' m':'Ubicación GPS recibida')+'</span><a target="_blank" rel="noopener" href="'+open+'">Abrir mapa ↗</a></div>';
+      var frame=slot.querySelector('iframe');
+      if(frame)frame.addEventListener('error',function(){
+        frame.parentNode.innerHTML='<span class="hl-track-badge">GPS RECIBIDO</span><div class="hl-track-fallback"><div><b>Ubicación disponible</b><span>El mapa embebido no cargó. Usa “Abrir mapa” para verla.</span></div></div>';
+      },{once:true});
+    }catch(e){
+      console.warn('[HL V11 tracking]',e);
+      return hydrateV10(p);
+    }
+  };
+}
+
+/* Delivery fee confirmation signal.
+   The backend can consume these explicit fields immediately; meanwhile the note
+   guarantees that the pending confirmation is visible in the order even if the
+   backend ignores unknown fields. */
+var nativeFetch=W.fetch.bind(W);
+W.fetch=async function(input,init){
+  var url=typeof input==='string'?input:(input&&input.url)||'';
+  if(url.indexOf('/api/pedido-manual')!==-1 && init && typeof init.body==='string'){
+    try{
+      var body=JSON.parse(init.body);
+      var deliveryOrder=String(body.tipo_pedido||'')==='domicilio';
+      var amount=Number(body.domicilio);
+      var pending=deliveryOrder && (!isFinite(amount)||amount<=0||W.__hlDeliveryNeedsConfirmation===true);
+      if(pending){
+        body.domicilio_pendiente_confirmacion=true;
+        body.domicilio_requiere_confirmacion=true;
+        body.alerta_domicilio='CONFIRMAR_VALOR_DOMICILIO';
+        var marker='⚠ DOMICILIO PENDIENTE: el domiciliario debe confirmar el valor.';
+        body.notas_especiales=(body.notas_especiales?body.notas_especiales+' · ':'')+marker;
+        init=Object.assign({},init,{body:JSON.stringify(body)});
+      }
+    }catch(e){}
+  }
+  return nativeFetch(input,init);
+};
+
+/* Detect when Luz explicitly tells the customer that the courier will confirm the fee,
+   so the subsequent order carries the same confirmation alert. */
+var addMsg=W.luzAgregarMsgChat;
+if(typeof addMsg==='function'){
+  W.luzAgregarMsgChat=function(who,text,speak){
+    var s=String(text||'');
+    if(who==='luz' && /domiciliari[oa].{0,55}(confirma|confirmar|confirmará)|confirm.{0,35}(domicilio|env[ií]o)/i.test(s)){
+      W.__hlDeliveryNeedsConfirmation=true;
+    }
+    return addMsg.apply(this,arguments);
+  };
+}
+console.info('[HOLA LUZ] V11 activo: tracking visible, orb conversacional y señal de confirmación de domicilio.');
+})();
+</script>
+
+
+
+<!-- HOLA LUZ V13 SURGICAL — tracking bridge + discreet install prompt; visual shell untouched -->
+<style id="hlV13SurgicalCSS">
+/* Only functional surfaces introduced here. No existing layout/theme selectors are changed. */
+#menuPwaBtn.hl-pwa-ready{
+  display:block!important;right:72px!important;bottom:calc(98px + env(safe-area-inset-bottom))!important;
+  z-index:2147481900!important;padding:8px 11px!important;border-radius:13px!important;
+  background:rgba(5,16,31,.88)!important;border:1px solid rgba(132,171,255,.24)!important;
+  box-shadow:0 8px 26px rgba(0,0,0,.28)!important;color:#dbe8ff!important;
+  font:750 10px/1.1 Inter,system-ui,sans-serif!important;backdrop-filter:blur(16px)!important;
+  -webkit-backdrop-filter:blur(16px)!important;opacity:.94!important;
+}
+#menuPwaBtn.hl-pwa-leaving{opacity:0!important;transform:translateY(7px)!important;pointer-events:none!important;transition:.25s ease!important}
+.hl-track-real{height:250px!important;min-height:250px!important;border-radius:16px!important;overflow:hidden!important;background:#06101e!important;position:relative!important}
+.hl-track-real iframe{display:block!important;width:100%!important;height:100%!important;min-height:250px!important;border:0!important;background:#06101e!important}
+</style>
+<script id="hlV13SurgicalJS">
+(function(){
+'use strict';
+var W=window,D=document;
+function $id(id){return D.getElementById(id)}
+function currentPhone(){try{return (typeof phone==='function'&&phone())||localStorage.getItem('luzCli_'+rest.id)||''}catch(e){return ''}}
+function escAttr(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function isDelivery(p){return p&&!(p.tipo_pedido==='mesa'||p.tipo_pedido==='recoger'||/mesa/i.test(p.direccion||''))}
+
+/* One canonical live-tracking function. Earlier versions had hydrateTracking scoped locally,
+   so later wrappers could not replace the function actually called by renderPedidoCard. */
+W.hydrateTracking=async function(p){
+  if(!p||!p.id||!W.rest||!isDelivery(p))return;
+  var slot=D.querySelector('[data-hl-track="'+CSS.escape(String(p.id))+'"]');
+  if(!slot)return;
+  var ph=currentPhone();
+  if(!ph){slot.className='hl-live-track waiting';slot.innerHTML='<div class="hl-track-fallback"><div><b>Falta identificar el pedido</b><span>Ingresa el WhatsApp usado en la compra para consultar la señal del domiciliario.</span></div></div>';return}
+  try{
+    var r=await fetch('/api/customer-live-tracking/'+encodeURIComponent(p.id)+'?restaurante_id='+encodeURIComponent(rest.id)+'&telefono='+encodeURIComponent(ph),{cache:'no-store'});
+    var d=await r.json();
+    if(!r.ok||!d.ok)throw Error(d.error||'tracking_no_disponible');
+    if(!d.location){
+      slot.className='hl-live-track waiting';
+      var reason=d.reason==='sin_domiciliario'?'El pedido todavía no tiene domiciliario asignado.':'Esperando la primera ubicación enviada por el domiciliario.';
+      slot.innerHTML='<div class="hl-track-fallback"><div><b>Esperando señal GPS</b><span>'+reason+'</span></div></div>';
+      return;
+    }
+    var l=d.location||{},lat=Number(l.lat),lng=Number(l.lng);
+    if(!isFinite(lat)||!isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180||(lat===0&&lng===0))throw Error('coordenadas_invalidas');
+    W.__hlLiveLocations=W.__hlLiveLocations||{};W.__hlLiveLocations[p.id]=l;
+    var delta=.0075;
+    /* OSM embed avoids the blank Google iframe seen on mobile while Google remains the external navigation target. */
+    var bbox=(lng-delta)+','+(lat-delta)+','+(lng+delta)+','+(lat+delta);
+    var embed='https://www.openstreetmap.org/export/embed.html?bbox='+encodeURIComponent(bbox)+'&layer=mapnik&marker='+encodeURIComponent(lat+','+lng);
+    var open='https://www.google.com/maps?q='+encodeURIComponent(lat+','+lng);
+    var age=Math.max(0,Math.round(Number(l.age_ms||0)/60000));
+    var fresh=l.fresh!==false;
+    slot.className='hl-live-track'+(fresh?'':' stale');
+    slot.innerHTML='<div class="hl-track-real"><span class="hl-track-badge">'+(fresh?'● GPS EN VIVO':'● ÚLTIMA UBICACIÓN')+'</span><iframe title="Ubicación real del domiciliario" loading="eager" referrerpolicy="no-referrer" src="'+escAttr(embed)+'"></iframe></div><div class="meta"><span><b>'+(fresh?'Domiciliario en movimiento':'Última señal recibida')+'</b>'+(fresh?(l.accuracy?'Precisión aproximada ±'+Math.round(Number(l.accuracy))+' m':'GPS actualizado'):'Actualizada hace '+age+' min')+'</span><a target="_blank" rel="noopener" href="'+escAttr(open)+'">Abrir mapa ↗</a></div>';
+  }catch(e){
+    console.warn('[HOLA LUZ V13 tracking]',e);
+    slot.className='hl-live-track waiting';
+    slot.innerHTML='<div class="hl-track-fallback"><div><b>No pudimos recibir el GPS</b><span>El estado del pedido sigue activo. Reintentaremos la señal automáticamente.</span></div></div>';
+  }
+};
+
+/* Make every active-order render call the canonical tracker, including renders created by fetchPedidos. */
+var renderBeforeV13=W.renderPedidoCard;
+if(typeof renderBeforeV13==='function'){
+  W.renderPedidoCard=function(p,active){
+    var html=renderBeforeV13.apply(this,arguments);
+    if(active&&isDelivery(p)){
+      if(html.indexOf('data-hl-track=')<0){
+        var block='<div class="hl-live-track waiting" data-hl-track="'+escAttr(p.id)+'"><div class="hl-track-fallback"><div><b>Conectando tracking</b><span>Buscando la señal real del domiciliario…</span></div></div></div>';
+        if(/<p class="vn-location-note">[\s\S]*?<\/p>/.test(html))html=html.replace(/<p class="vn-location-note">[\s\S]*?<\/p>/,block);else html+=block;
+      }
+      setTimeout(function(){W.hydrateTracking(p)},30);
+    }
+    return html;
+  };
+  try{renderPedidoCard=W.renderPedidoCard}catch(e){}
+}
+
+/* Refresh only while Orders is visible. */
+setInterval(function(){
+  try{
+    var ov=$id('mpOv');if(!ov||!ov.classList.contains('open')||D.hidden)return;
+    (W.VN&&VN.orders?VN.orders:[]).filter(function(p){return !['entregado','cancelado','rechazado'].includes(String(p.estado||'').toLowerCase())&&isDelivery(p)}).forEach(W.hydrateTracking);
+  }catch(e){}
+},5000);
+
+/* Keep Menú Studio modifier/promotion engine as-is; this patch only verifies its runtime source remains active. */
+W.__hlMenuStudioConnected=typeof groupsOf==='function'&&typeof promoFor==='function'&&typeof promoActive==='function';
+
+/* Temporary, non-obstructive PWA affordance. Existing beforeinstallprompt owns the actual install flow. */
+function revealInstall(){var b=$id('menuPwaBtn');if(!b||!W._deferredPWA)return;b.classList.remove('hl-pwa-leaving');b.classList.add('hl-pwa-ready');clearTimeout(W.__hlPwaHide);W.__hlPwaHide=setTimeout(function(){b.classList.add('hl-pwa-leaving');setTimeout(function(){b.classList.remove('hl-pwa-ready','hl-pwa-leaving')},280)},9000)}
+W.addEventListener('beforeinstallprompt',function(){setTimeout(revealInstall,80)});
+setTimeout(function(){if(W._deferredPWA)revealInstall()},1200);
+D.addEventListener('click',function(e){var b=e.target&&e.target.closest&&e.target.closest('#menuPwaBtn');if(b)setTimeout(function(){b.classList.remove('hl-pwa-ready')},250)},true);
+
+console.info('[HOLA LUZ] V13 surgical active · Studio logic preserved · canonical live tracking enabled');
+})();
+</script>
+
+<!-- HOLA LUZ V12 — WhatsApp contextual restaurant contact -->
+<style id="hlV12WhatsAppCSS">
+#hl-wa-contact{
+  position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(92px + env(safe-area-inset-bottom));
+  z-index:2147482000;width:48px;height:48px;border-radius:17px;
+  display:grid;place-items:center;border:1px solid rgba(108,255,190,.30);
+  background:rgba(5,18,31,.84);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  box-shadow:0 10px 34px rgba(0,0,0,.32),0 0 22px rgba(37,211,102,.10);
+  color:#5ff59a;cursor:pointer;transition:.22s ease;text-decoration:none;
+}
+#hl-wa-contact:hover{transform:translateY(-2px);border-color:rgba(108,255,190,.62);box-shadow:0 12px 36px rgba(0,0,0,.38),0 0 25px rgba(37,211,102,.18)}
+#hl-wa-contact:active{transform:scale(.95)}
+#hl-wa-contact svg{width:23px;height:23px;display:block}
+#hl-wa-contact .hl-wa-tip{
+  position:absolute;right:58px;white-space:nowrap;pointer-events:none;opacity:0;transform:translateX(5px);
+  padding:7px 10px;border-radius:10px;background:rgba(4,12,25,.94);border:1px solid rgba(148,177,230,.20);
+  color:#dbe7ff;font-size:11px;font-weight:750;transition:.2s ease;
+}
+#hl-wa-contact:hover .hl-wa-tip{opacity:1;transform:none}
+@media(max-width:700px){
+ #hl-wa-contact{width:46px;height:46px;border-radius:16px;bottom:calc(94px + env(safe-area-inset-bottom))}
+ #hl-wa-contact .hl-wa-tip{display:none}
+}
+body.hl-wa-modal-open #hl-wa-contact{opacity:0;pointer-events:none;transform:translateY(8px)}
+</style>
+<script id="hlV12WhatsAppJS">
+(function(){
+'use strict';
+var D=document,W=window;
+function digits(v){return String(v||'').replace(/\D/g,'');}
+function restaurantName(){
+ try{return (W.rest&&(rest.nombre||rest.name||rest.restaurant_name))||'el restaurante';}catch(e){return 'el restaurante';}
+}
+function restaurantWhatsApp(){
+ var candidates=[];
+ try{
+   if(W.rest)candidates=[
+     rest.whatsapp,rest.whatsapp_number,rest.telefono_whatsapp,rest.phone_whatsapp,
+     rest.telefono,rest.phone,rest.celular,rest.contact_phone
+   ];
+ }catch(e){}
+ try{
+   var cfg=W.restaurantConfig||W.restauranteConfig||W.menuConfig||{};
+   candidates=candidates.concat([cfg.whatsapp,cfg.whatsapp_number,cfg.telefono_whatsapp,cfg.telefono,cfg.phone]);
+ }catch(e){}
+ for(var i=0;i<candidates.length;i++){
+   var n=digits(candidates[i]);
+   if(n.length>=10){
+     /* Colombian local mobile numbers are normalized for wa.me */
+     if(n.length===10 && n.charAt(0)==='3')n='57'+n;
+     return n;
+   }
+ }
+ return '';
+}
+function create(){
+ if(D.getElementById('hl-wa-contact'))return;
+ var n=restaurantWhatsApp();
+ if(!n){console.info('[HOLA LUZ V12] Restaurante sin WhatsApp configurado; botón oculto.');return;}
+ var a=D.createElement('a');
+ a.id='hl-wa-contact';
+ a.href='#';
+ a.setAttribute('aria-label','Hablar con '+restaurantName()+' por WhatsApp');
+ a.innerHTML='<span class="hl-wa-tip">Hablar con el restaurante</span><svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16.04 3C9.39 3 4 8.27 4 14.78c0 2.29.67 4.43 1.84 6.24L4.02 27.5l6.75-1.74a12.2 12.2 0 0 0 5.27 1.19C22.69 26.95 28 21.68 28 15.17 28 8.66 22.69 3 16.04 3Zm0 21.8c-1.71 0-3.39-.45-4.85-1.3l-.35-.2-4 .99 1.07-3.81-.23-.37a9.48 9.48 0 0 1-1.49-5.08c0-5.32 4.42-9.65 9.85-9.65 5.44 0 9.85 4.33 9.85 9.65 0 5.33-4.41 9.77-9.85 9.77Zm5.4-7.24c-.3-.15-1.76-.85-2.03-.95-.27-.1-.47-.15-.67.15-.2.29-.77.95-.94 1.14-.17.2-.35.22-.64.08-.3-.15-1.25-.45-2.38-1.43a8.87 8.87 0 0 1-1.65-2.01c-.17-.3-.02-.45.13-.6.13-.13.3-.34.44-.51.15-.17.2-.3.3-.49.1-.2.05-.37-.03-.51-.07-.15-.67-1.58-.91-2.16-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.36-.27.3-1.04 1-1.04 2.43s1.07 2.82 1.21 3.01c.15.2 2.1 3.14 5.09 4.4.71.3 1.27.49 1.7.63.72.22 1.37.19 1.88.12.58-.08 1.76-.71 2.01-1.39.25-.68.25-1.26.17-1.38-.07-.12-.27-.2-.57-.34Z"/></svg>';
+ a.addEventListener('click',function(ev){
+   ev.preventDefault();
+   var phone=restaurantWhatsApp(); if(!phone)return;
+   var msg='Hola, vengo desde el menú digital de '+restaurantName()+' y necesito ayuda.';
+   var url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
+   W.open(url,'_blank','noopener,noreferrer');
+ });
+ D.body.appendChild(a);
+}
+function modalState(){
+ var chat=D.getElementById('luzChat');
+ var orders=D.getElementById('ordersPanel')||D.getElementById('pedidosPanel');
+ var open=(chat&&getComputedStyle(chat).display!=='none'&&chat.offsetParent!==null)||
+          (orders&&getComputedStyle(orders).display!=='none'&&orders.offsetParent!==null);
+ D.body.classList.toggle('hl-wa-modal-open',!!open);
+}
+if(D.readyState==='loading')D.addEventListener('DOMContentLoaded',create); else create();
+setTimeout(create,900);
+if(W.MutationObserver)new MutationObserver(modalState).observe(D.body,{attributes:true,childList:true,subtree:true,attributeFilter:['class','style']});
+console.info('[HOLA LUZ] V12 activo: acceso contextual a WhatsApp del restaurante.');
+})();
+</script>
+
+
+<!-- HOLA LUZ V15 SURGICAL — verified identity + versioned update tour. Existing Astra shell untouched. -->
+<style id="hlV15IdentityTourCSS">
+#hl-id-gate,#hl-update-tour{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(1,5,15,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#hl-id-gate.open,#hl-update-tour.open{display:flex}
+.hl-v15-card{width:min(430px,100%);max-height:min(760px,92vh);overflow:auto;position:relative;border-radius:28px;padding:24px;background:linear-gradient(155deg,rgba(9,21,47,.97),rgba(4,10,25,.98));border:1px solid rgba(127,165,255,.22);box-shadow:0 30px 90px rgba(0,0,0,.58),0 0 60px rgba(66,106,255,.10);color:#f4f7ff;font-family:Inter,system-ui,sans-serif}
+.hl-v15-orb{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;background:radial-gradient(circle at 42% 38%,#fff 0 4%,#9ff6ff 7%,#637cff 28%,#6337d8 52%,rgba(73,35,190,.25) 69%,transparent 72%);box-shadow:0 0 25px rgba(117,160,255,.55),0 0 70px rgba(97,72,255,.32);animation:hlV15Pulse 2.7s ease-in-out infinite}
+@keyframes hlV15Pulse{50%{transform:scale(1.055);filter:brightness(1.12)}}
+.hl-v15-eyebrow{text-align:center;font-size:10px;font-weight:850;letter-spacing:.16em;text-transform:uppercase;color:#8faeff;margin-bottom:8px}.hl-v15-card h2{text-align:center;font-size:25px;line-height:1.08;margin:0 0 9px}.hl-v15-card .sub{text-align:center;color:#9eacc8;font-size:13px;line-height:1.55;margin:0 0 20px}
+.hl-v15-field{display:block;margin:12px 0}.hl-v15-field span{display:block;font-size:11px;font-weight:800;color:#aab9d8;margin:0 0 7px}.hl-v15-input{width:100%;box-sizing:border-box;border-radius:15px;border:1px solid rgba(137,170,239,.20);background:rgba(3,10,25,.72);color:#fff;padding:14px 14px;font:650 15px Inter,system-ui;outline:none}.hl-v15-input:focus{border-color:rgba(99,214,255,.58);box-shadow:0 0 0 3px rgba(83,160,255,.09)}
+.hl-v15-phone{display:grid;grid-template-columns:76px 1fr;gap:8px}.hl-v15-prefix{display:flex;align-items:center;justify-content:center;border-radius:15px;border:1px solid rgba(137,170,239,.20);background:rgba(3,10,25,.72);font-size:14px;font-weight:800}.hl-v15-btn{width:100%;border:0;border-radius:15px;padding:14px 16px;margin-top:8px;background:linear-gradient(135deg,#5d72ff,#5b3ce2);color:#fff;font:850 13px Inter,system-ui;box-shadow:0 12px 30px rgba(73,74,230,.25);cursor:pointer}.hl-v15-btn:disabled{opacity:.48;cursor:not-allowed}.hl-v15-link{display:block;margin:12px auto 0;border:0;background:none;color:#93a3c2;font:700 11px Inter;cursor:pointer}.hl-v15-error{min-height:18px;margin:8px 0 0;color:#ff8796;font-size:11px;text-align:center}.hl-v15-ok{color:#78f2bb}.hl-v15-otp{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin:16px 0}.hl-v15-otp input{min-width:0;text-align:center;padding:13px 0;border-radius:12px;border:1px solid rgba(137,170,239,.22);background:rgba(3,10,25,.75);color:#fff;font:850 19px Inter;outline:none}
+.hl-tour-progress{height:3px;background:rgba(255,255,255,.08);border-radius:9px;overflow:hidden;margin:4px 0 18px}.hl-tour-progress i{display:block;height:100%;background:linear-gradient(90deg,#55e8ff,#725bff);transition:width .3s ease}.hl-tour-icon{width:48px;height:48px;display:grid;place-items:center;margin:0 auto 12px;border-radius:16px;background:rgba(87,117,255,.12);border:1px solid rgba(114,157,255,.20);font-size:22px}.hl-tour-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}.hl-tour-actions .hl-v15-btn{margin:0}.hl-tour-actions .secondary{background:rgba(255,255,255,.06);box-shadow:none;border:1px solid rgba(255,255,255,.09)}.hl-tour-dots{text-align:center;color:#7685a5;font-size:10px;margin-top:12px}.hl-v15-note{padding:10px 12px;border-radius:13px;background:rgba(73,105,255,.08);border:1px solid rgba(104,142,255,.14);font-size:11px;line-height:1.45;color:#aebbd6;margin-top:12px}
+@media(max-width:520px){.hl-v15-card{border-radius:24px;padding:21px}.hl-v15-card h2{font-size:23px}}
+</style>
+<div id="hl-id-gate" aria-hidden="true"><div class="hl-v15-card" role="dialog" aria-modal="true" aria-label="Identificación del cliente"><div class="hl-v15-orb"></div><div class="hl-v15-eyebrow">Luz, contigo</div><h2 id="hlIdTitle">Antes de empezar, quiero conocerte.</h2><p class="sub" id="hlIdSub">Así puedo recordar tus pedidos, tus puntos y acompañarte cuando pidas.</p><div id="hlIdStep1"><label class="hl-v15-field"><span>Tu nombre</span><input id="hlIdName" class="hl-v15-input" autocomplete="name" maxlength="70" placeholder="¿Cómo te llamas?"></label><label class="hl-v15-field"><span>Tu WhatsApp</span><div class="hl-v15-phone"><div class="hl-v15-prefix">🇨🇴 +57</div><input id="hlIdPhone" class="hl-v15-input" inputmode="numeric" autocomplete="tel" maxlength="10" placeholder="300 000 0000"></div></label><button id="hlIdStart" class="hl-v15-btn">Continuar →</button><div id="hlIdErr1" class="hl-v15-error"></div></div><div id="hlIdStep2" hidden><div class="hl-v15-note" id="hlOtpNote">Enviamos un código de 6 dígitos a tu WhatsApp.</div><div class="hl-v15-otp" id="hlOtpBoxes"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"></div><button id="hlIdVerify" class="hl-v15-btn">Verificar</button><button id="hlIdBack" class="hl-v15-link">Cambiar número</button><div id="hlIdErr2" class="hl-v15-error"></div></div></div></div>
+<div id="hl-update-tour" aria-hidden="true"><div class="hl-v15-card" role="dialog" aria-modal="true" aria-label="Novedades de Hola Luz"><div class="hl-v15-eyebrow">Nueva actualización · Hola Luz ✦</div><div class="hl-tour-progress"><i id="hlTourBar"></i></div><div id="hlTourIcon" class="hl-tour-icon">✦</div><h2 id="hlTourTitle"></h2><p class="sub" id="hlTourBody"></p><div class="hl-tour-actions"><button id="hlTourSkip" class="hl-v15-btn secondary">Saltar</button><button id="hlTourNext" class="hl-v15-btn">Siguiente</button></div><div id="hlTourDots" class="hl-tour-dots"></div></div></div>
+<script id="hlV15IdentityTourJS">
+(function(){'use strict';
+var W=window,D=document,V='2026.09.26-v15';
+function id(x){return D.getElementById(x)} function digits(v){return String(v||'').replace(/\D/g,'')}
+function rid(){try{return String((W.rest&&rest.id)||'default')}catch(e){return'default'}}
+function key(s){return 'hl_'+s+'_'+rid()} function get(k){try{return localStorage.getItem(k)}catch(e){return null}} function set(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function verified(){return get(key('identity_verified'))==='1'&&!!get(key('customer_id'))&&!!get(key('verified_phone'))}
+function gate(open){var e=id('hl-id-gate');if(!e)return;e.classList.toggle('open',!!open);e.setAttribute('aria-hidden',open?'false':'true');D.body.style.overflow=open?'hidden':''}
+function tour(open){var e=id('hl-update-tour');if(!e)return;e.classList.toggle('open',!!open);e.setAttribute('aria-hidden',open?'false':'true');D.body.style.overflow=open?'hidden':''}
+function normalizePhone(v){var n=digits(v);if(n.indexOf('57')===0&&n.length===12)n=n.slice(2);return n}
+async function post(url,body){var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});var t=await r.text(),d={};try{d=JSON.parse(t)}catch(e){d={error:t||('HTTP '+r.status)}}if(!r.ok||d.ok===false)throw Error(d.error||d.message||('HTTP '+r.status));return d}
+var challenge=null,pendingName='',pendingPhone='';
+async function startIdentity(){var n=String(id('hlIdName').value||'').trim(),p=normalizePhone(id('hlIdPhone').value);var er=id('hlIdErr1');er.textContent='';if(n.length<2){er.textContent='Escribe tu nombre para continuar.';return}if(!/^3\d{9}$/.test(p)){er.textContent='Ingresa un número móvil colombiano válido.';return}var b=id('hlIdStart');b.disabled=true;b.textContent='Enviando código…';try{var d=await post('/api/customer-identity/start',{restaurante_id:rid(),nombre:n,telefono:'+57'+p,channel:'whatsapp'});challenge=d.challenge_id||d.challengeId||d.id;if(!challenge)throw Error('El servidor no devolvió un challenge de verificación.');pendingName=n;pendingPhone='+57'+p;id('hlIdStep1').hidden=true;id('hlIdStep2').hidden=false;id('hlIdTitle').textContent='Confirma que eres tú.';id('hlIdSub').textContent='La verificación protege tus pedidos, puntos y seguimiento.';id('hlOtpNote').textContent='Enviamos un código a +57 ••• ••• '+p.slice(-4)+'.';var f=id('hlOtpBoxes').querySelector('input');if(f)f.focus()}catch(e){er.textContent=e.message||'No pudimos enviar el código. Intenta de nuevo.'}finally{b.disabled=false;b.textContent='Continuar →'}}
+async function verifyIdentity(){var boxes=[].slice.call(id('hlOtpBoxes').querySelectorAll('input')),code=boxes.map(function(x){return digits(x.value)}).join(''),er=id('hlIdErr2');er.textContent='';if(code.length!==6){er.textContent='Ingresa los 6 dígitos.';return}var b=id('hlIdVerify');b.disabled=true;b.textContent='Verificando…';try{var d=await post('/api/customer-identity/verify',{restaurante_id:rid(),challenge_id:challenge,telefono:pendingPhone,codigo:code});if(d.verified!==true)throw Error(d.error||'El código no pudo verificarse.');var cid=d.customer_id||d.customerId;if(!cid)throw Error('La identidad fue verificada, pero falta customer_id.');set(key('identity_verified'),'1');set(key('customer_id'),String(cid));set(key('verified_phone'),pendingPhone);set(key('customer_name'),pendingName);try{localStorage.setItem('luzCli_'+rid(),pendingPhone)}catch(e){}er.className='hl-v15-error hl-v15-ok';er.textContent='✓ Listo, '+pendingName+'. Luz ya puede reconocerte.';setTimeout(function(){gate(false);maybeTour()},650)}catch(e){er.textContent=e.message||'Código incorrecto o vencido.'}finally{b.disabled=false;b.textContent='Verificar'}}
+function wireOtp(){var xs=[].slice.call(id('hlOtpBoxes').querySelectorAll('input'));xs.forEach(function(x,i){x.addEventListener('input',function(){x.value=digits(x.value).slice(-1);if(x.value&&xs[i+1])xs[i+1].focus()});x.addEventListener('keydown',function(e){if(e.key==='Backspace'&&!x.value&&xs[i-1])xs[i-1].focus()});x.addEventListener('paste',function(e){var s=digits((e.clipboardData||W.clipboardData).getData('text')).slice(0,6);if(s.length){e.preventDefault();s.split('').forEach(function(c,j){if(xs[j])xs[j].value=c});if(xs[Math.min(s.length,6)-1])xs[Math.min(s.length,6)-1].focus()}})})}
+var steps=[
+ {i:'✦',t:'Hola Luz acaba de mejorar',b:'Ahora puedo ayudarte a descubrir productos, entender tu pedido y acompañarte durante toda la compra.'},
+ {i:'⌕',t:'Encuentra lo que quieres más rápido',b:'Usa la búsqueda y las categorías para llegar directo a tus favoritos, promociones y opciones disponibles.'},
+ {i:'◉',t:'Pídele a Luz como hablarías con alguien',b:'Prueba “algo para dos”, “menos de $30.000” o “quiero pollo”. Cuando haya productos reales, Luz puede llevarte a ellos y ayudarte a armar el carrito.'},
+ {i:'♛',t:'Tus beneficios viajan contigo',b:'Tus puntos, rango, recompensas e historial quedan vinculados a tu identidad verificada cuando el restaurante los tenga habilitados.'},
+ {i:'⌁',t:'Sigue tu pedido',b:'En Mis pedidos puedes ver el estado y, cuando el domiciliario esté compartiendo una señal válida, su ubicación real. Luz no inventará GPS.'},
+ {i:'☏',t:'Siempre puedes hablar con el restaurante',b:'El acceso discreto de WhatsApp te conecta directamente con el negocio cuando prefieras atención humana.'}
+],ti=0;
+function renderTour(){var s=steps[ti];id('hlTourIcon').textContent=s.i;id('hlTourTitle').textContent=s.t;id('hlTourBody').textContent=s.b;id('hlTourBar').style.width=((ti+1)/steps.length*100)+'%';id('hlTourDots').textContent=(ti+1)+' / '+steps.length;id('hlTourNext').textContent=ti===steps.length-1?'¿Qué hacemos?':'Siguiente'}
+function finishTour(){set(key('tour_seen'),V);tour(false);try{var el=D.querySelector('#luzChat,[data-action="luz"],.luz-fab');if(el&&typeof el.focus==='function')el.focus()}catch(e){}}
+function maybeTour(){if(get(key('tour_seen'))===V)return;ti=0;renderTour();setTimeout(function(){tour(true)},280)}
+function boot(){if(!id('hl-id-gate'))return;id('hlIdStart').addEventListener('click',startIdentity);id('hlIdVerify').addEventListener('click',verifyIdentity);id('hlIdBack').addEventListener('click',function(){challenge=null;id('hlIdStep2').hidden=true;id('hlIdStep1').hidden=false;id('hlIdTitle').textContent='Antes de empezar, quiero conocerte.';id('hlIdSub').textContent='Así puedo recordar tus pedidos, tus puntos y acompañarte cuando pidas.'});wireOtp();id('hlTourSkip').addEventListener('click',finishTour);id('hlTourNext').addEventListener('click',function(){if(ti<steps.length-1){ti++;renderTour()}else finishTour()});if(verified())maybeTour();else setTimeout(function(){gate(true);var saved=get(key('customer_name'));if(saved)id('hlIdName').value=saved},350)}
+W.HolaLuzOnboarding={replay:function(){ti=0;renderTour();tour(true)},identity:function(){gate(true)},version:V};
+if(D.readyState==='loading')D.addEventListener('DOMContentLoaded',boot);else boot();
+console.info('[HOLA LUZ] V15 surgical active · verified identity gate + versioned update tour');
+})();
+</script>
+
+</body>
+</html>
