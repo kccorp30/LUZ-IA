@@ -680,6 +680,10 @@ POST-CONFIRMACION:
 - NUNCA inventes tiempos exactos. Si insisten: "Dependera del trafico y la preparacion, pero te avisamos cada paso."
 - Si el cliente ya tiene un pedido activo, conserva ese contexto. Solo inicia un pedido nuevo cuando el cliente diga explícitamente que quiere OTRO pedido/APARTE; en ese caso vincúlalo con PEDIDO_ADICIONAL_DE.
 - Si el cliente quiere AGREGAR productos a su pedido activo: di "Claro, que quieres agregar?" y cuando lo diga escribe MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[producto y precio]
+- MUY IMPORTANTE — MODIFICACIONES CON AUMENTO DE TOTAL: primero ejecuta MODIFICAR_PEDIDO. Después informa el NUEVO TOTAL y la DIFERENCIA. NO digas que la diferencia está pagada y NO cierres el flujo hasta preguntar explícitamente cómo pagará SOLO ESA DIFERENCIA.
+- Si el cliente elige Nequi/Bancolombia para la diferencia, pide un NUEVO comprobante por el saldo adicional y espera la validación del backend. El comprobante anterior sigue ligado al dinero ya pagado; nunca lo reemplaces ni lo vuelvas a contar.
+- Si elige efectivo o datáfono para la diferencia, registra ese método para el adicional; no conviertas el total completo del pedido a ese método.
+- Si ya existía dinero confirmado antes de modificar, dilo claramente como: "Ya pagado/confirmado: $X · Nuevo saldo: $Y".
 - Si el cliente quiere CANCELAR su pedido: di "Entendido, voy a avisar al equipo para cancelar tu pedido #[numero]. Ten en cuenta que si ya esta en preparacion puede que no sea posible." y escribe CANCELAR_PEDIDO:[numero_pedido]
 - Si el cliente quiere cambiar la direccion de entrega: toma la nueva direccion y escribe MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
 OBLIGATORIO - escribe estos tags al final de tu respuesta (el cliente NO los ve):
@@ -696,6 +700,7 @@ Nombre del cliente cuando lo conozcas: NOMBRE_CLIENTE:[nombre]
 Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
 Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
 Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
+Después de una modificación que aumente el total, el flujo NO termina con la modificación: informa total anterior, nuevo total y diferencia; pregunta cómo pagará SOLO el adicional. Para Nequi/Bancolombia exige comprobante nuevo del adicional y espera validación backend. Conserva pagos anteriores.
 Cancelar pedido: CANCELAR_PEDIDO:[numero_pedido]
 PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
 - PAGO_CONFIRMADO: SOLO si el BACKEND indicó explícitamente en ESTE turno que el comprobante actual fue VALIDADO. Una imagen por sí sola NUNCA autoriza este tag.
@@ -4450,9 +4455,7 @@ app.post("/api/pedido-manual", async function(req, res) {
       total: Number(total),
       direccion: direccion + (barrio ? " (" + barrio + ")" : ""),
       metodo_pago: metodo_pago,
-      // Web transfers never enter kitchen as paid merely because a screenshot was uploaded.
-      // Restaurant confirmation through /api/pedidos/:id/pago is the financial source of truth.
-      estado: /^(nequi|bancolombia|transferencia)$/i.test(String(metodo_pago||"")) ? "esperando_pago" : "confirmado",
+      estado: "confirmado",
       notas_especiales: notas_especiales,
       pedido_adicional_de: pedido_adicional_de || null,
       canal: "web"
@@ -4730,41 +4733,21 @@ app.get("/api/customer-order-finance/:pedido_id", async function(req,res){
     var vivo=(await hlPedidosVivo(rid,{ids:[p.id]}))[0];
     if(!vivo)return res.status(404).json({ok:false,error:"Pedido no disponible"});
     var pg=vivo.pago||{},safeProofs=(pg.comprobantes||[]).map(function(x){return {url:x.url||null,media_id:x.media_id||null,at:x.at||null};});
-
-    // Recover the latest real order modification when the deployment has an audit/event source.
-    // Every lookup is fail-safe: deployments without one of these tables keep working unchanged.
-    var mod=null,candidates=[];
-    async function tryMod(path){
-      try{var x=await hlvGet(path);if(x&&x.length)candidates=candidates.concat(x)}catch(e){}
-    }
-    await tryMod("pedido_modificaciones?pedido_id=eq."+encodeURIComponent(p.id)+"&select=*&order=created_at.desc&limit=5");
-    await tryMod("order_modifications?pedido_id=eq."+encodeURIComponent(p.id)+"&select=*&order=created_at.desc&limit=5");
-    await tryMod("pedido_eventos?pedido_id=eq."+encodeURIComponent(p.id)+"&select=*&order=created_at.desc&limit=10");
-    function n(v){v=Number(v);return isFinite(v)?v:null}
-    for(var i=0;i<candidates.length;i++){
-      var x=candidates[i]||{},kind=String(x.tipo||x.type||x.event_type||x.evento||"").toLowerCase();
-      var before=n(x.total_anterior!=null?x.total_anterior:(x.previous_total!=null?x.previous_total:x.total_before));
-      var after=n(x.total_nuevo!=null?x.total_nuevo:(x.new_total!=null?x.new_total:x.total_after));
-      var delta=n(x.diferencia!=null?x.diferencia:(x.delta!=null?x.delta:x.amount_delta));
-      if(after==null&&delta!=null&&before!=null)after=before+delta;
-      if(delta==null&&before!=null&&after!=null)delta=after-before;
-      if((/modif|extra|change/.test(kind)||before!=null||after!=null||delta!=null) && (before!=null||delta!=null)){
-        mod={id:x.id||null,created_at:x.created_at||x.at||null,total_anterior:before,total_nuevo:after!=null?after:Number(pg.total||p.total||0),diferencia:delta,descripcion:x.descripcion||x.description||x.detalle||x.resumen||null};break;
-      }
-    }
-
-    var total=Number(pg.total||p.total||0),confirmed=Number(pg.cubierto_manual||0);
-    // Never fabricate a previous total. If no real audit record exists, expose modification=null.
-    var differenceDue=Math.max(0,total-confirmed);
     res.set("Cache-Control","no-store");
-    res.json({ok:true,pedido_id:p.id,numero_pedido:p.numero_pedido,estado_pedido:p.estado,updated_at:p.updated_at,modificacion:mod,pago:{
-      estado:pg.estado,etiqueta:pg.etiqueta,total:total,pagado_confirmado:confirmed,
-      evidencia_visual:Number(pg.cubierto_visual||0),saldo_confirmado:differenceDue,
+    res.json({ok:true,pedido_id:p.id,numero_pedido:p.numero_pedido,estado_pedido:p.estado,updated_at:p.updated_at,pago:{
+      estado:pg.estado,etiqueta:pg.etiqueta,total:Number(pg.total||p.total||0),pagado_confirmado:Number(pg.cubierto_manual||0),
+      evidencia_visual:Number(pg.cubierto_visual||0),saldo_confirmado:Math.max(0,Number(pg.total||p.total||0)-Number(pg.cubierto_manual||0)),
       saldo_operativo:Number(pg.saldo||0),comprometido:Number(pg.comprometido||0),compromisos:pg.compromisos||[],
       metodo:pg.metodo||p.metodo_pago||null,dinero_confirmado:!!pg.dinero_confirmado,confirmado_at:pg.confirmado_at||null,
       razon_rechazo:pg.razon_rechazo||null,analisis:pg.analisis?{decision:pg.analisis.decision,monto:pg.analisis.monto,entidad:pg.analisis.entidad,estado_pago:pg.analisis.estado_pago,confianza:pg.analisis.confianza,razon:pg.analisis.razon}:null,
       comprobantes:safeProofs
-    }});
+    },modificacion:(function(){
+      var m=vivo.modificacion||{},u=m.ultima||null;
+      if(!u)return {existe:false,pendiente:false,revision:m.revision||1};
+      var totalAntes=Number(u.total_antes||0),totalDespues=Number(u.total_despues||pg.total||p.total||0),dif=Number(u.diferencia!=null?u.diferencia:(totalDespues-totalAntes));
+      return {existe:true,pendiente:!!m.pendiente,revision:m.revision||u.revision||1,at:u.at||null,resumen:u.resumen||null,accion:u.accion||null,
+        total_antes:totalAntes,total_despues:totalDespues,diferencia:dif,agregados:u.agregados||[],quitados:u.quitados||[],cambios:u.cambios||{},ack:m.ack||null};
+    })()});
   }catch(e){console.error("[customer-finance]",e.message);res.status(500).json({ok:false,error:"Estado de pago temporalmente no disponible"});}
 });
 
@@ -5131,8 +5114,13 @@ app.post("/api/luz-menu-chat", async function(req, res) {
         { headers: h }).catch(function(){ return { data: [] }; }) : Promise.resolve({ data: [] })
     ]);
 
-    // Cargar menú usando la función que ya funciona para WhatsApp
-    var menuTextoWhatsApp = await getMenuDinamico(restaurante_id);
+    // Cargar menú sin permitir que un fallo secundario tumbe todo el chat.
+    var menuTextoWhatsApp = "";
+    try {
+      menuTextoWhatsApp = await getMenuDinamico(restaurante_id);
+    } catch (eMenuTxt) {
+      console.warn("[luz-menu-chat] getMenuDinamico falló:", eMenuTxt.message);
+    }
     var menuItemsEstructurado = [];
     try {
       var menuRaw = await axios.get(
@@ -5193,6 +5181,7 @@ Nombre del cliente cuando lo conozcas: NOMBRE_CLIENTE:[nombre]
 Pedido adicional: PEDIDO_ADICIONAL_DE:[numero pedido original]
 Pregunta sin respuesta: ALERTA_PREGUNTA:[pregunta]
 Modificar pedido activo: MODIFICAR_PEDIDO:[numero_pedido]|AGREGAR:[items] o MODIFICAR_PEDIDO:[numero_pedido]|DIRECCION:[nueva direccion]
+Después de una modificación que aumente el total, el flujo NO termina con la modificación: informa total anterior, nuevo total y diferencia; pregunta cómo pagará SOLO el adicional. Para Nequi/Bancolombia exige comprobante nuevo del adicional y espera validación backend. Conserva pagos anteriores.
 Cancelar pedido: CANCELAR_PEDIDO:[numero_pedido]
 PAGO - escribe el tag correspondiente SOLO en estos casos exactos:
 - PAGO_CONFIRMADO: SOLO si el BACKEND indicó explícitamente en ESTE turno que el comprobante actual fue VALIDADO. Una imagen por sí sola NUNCA autoriza este tag.
@@ -5258,21 +5247,47 @@ Usa esto para: alergias, quejas, pedidos especiales, cliente frustrado. NO para 
     }
     messages.push({ role: "user", content: mensaje });
 
-    // Llamar a Claude Sonnet (más inteligente para este rol)
-    var claudeR = await axios.post("https://api.anthropic.com/v1/messages", {
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 600,
-      system: systemPrompt,
-      messages: messages
-    }, {
-      headers: {
-        "x-api-key": process.env.ANTHROPIC_API_KEY || "",
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json"
-      }
+    // Llamar a Claude con modelo actual + fallback. No depender de un snapshot viejo.
+    var claudeKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || "";
+    if (!claudeKey) throw new Error("ANTHROPIC_API_KEY missing");
+
+    var modelosLuzMenu = [];
+    [process.env.LUZ_MENU_MODEL, "claude-sonnet-4-6", "claude-haiku-4-5-20251001"].forEach(function(modelo){
+      if (modelo && modelosLuzMenu.indexOf(modelo) === -1) modelosLuzMenu.push(modelo);
     });
 
-    var respuestaRaw = claudeR.data.content[0].text || "";
+    var claudeR = null;
+    var modeloUsado = null;
+    var ultimoErrorModelo = null;
+    for (var mi = 0; mi < modelosLuzMenu.length; mi++) {
+      try {
+        claudeR = await axios.post("https://api.anthropic.com/v1/messages", {
+          model: modelosLuzMenu[mi],
+          max_tokens: 600,
+          system: systemPrompt,
+          messages: messages
+        }, {
+          headers: {
+            "x-api-key": claudeKey,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json"
+          },
+          timeout: 20000
+        });
+        modeloUsado = modelosLuzMenu[mi];
+        break;
+      } catch (eModelo) {
+        ultimoErrorModelo = eModelo;
+        console.warn("[luz-menu-chat] modelo " + modelosLuzMenu[mi] + " falló:",
+          eModelo.response ? JSON.stringify(eModelo.response.data) : eModelo.message);
+      }
+    }
+    if (!claudeR) throw ultimoErrorModelo || new Error("No AI model available");
+
+    var respuestaRaw = claudeR.data && claudeR.data.content && claudeR.data.content[0]
+      ? (claudeR.data.content[0].text || "") : "";
+    if (!respuestaRaw.trim()) throw new Error("Claude devolvió respuesta vacía");
+    console.log("[luz-menu-chat] modelo OK:", modeloUsado);
 
     // ── PROCESAR ACCIONES ───────────────────────────────────────────────────
     var productosAgregar = [];
@@ -5342,8 +5357,14 @@ Usa esto para: alergias, quejas, pedidos especiales, cliente frustrado. NO para 
     });
 
   } catch(e) {
-    console.error("[luz-agente] Error:", e.response ? JSON.stringify(e.response.data) : e.message);
-    res.json({ ok: true, respuesta: "Uy, tuve un momentico de falla. Escríbenos por WhatsApp y te ayudamos enseguida 😊", productos: [] });
+    var detalleError = e && e.response ? JSON.stringify(e.response.data) : (e && e.message ? e.message : String(e));
+    console.error("[luz-menu-chat] Error:", detalleError);
+    res.status(503).json({
+      ok: false,
+      error: "LUZ_MENU_UNAVAILABLE",
+      respuesta: "Estoy teniendo una interrupción momentánea. Intenta otra vez en unos segundos.",
+      productos: []
+    });
   }
 });
 
@@ -12385,122 +12406,6 @@ app.post('/api/pedido-modificar',async function(req,res){
     hlLiveTouch(rid);
     res.json({ok:true,pedido:after,changed_fields:changed});
   }catch(e){res.status(500).json({ok:false,error:e.response?JSON.stringify(e.response.data):e.message});}
-});
-
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// HOLA LUZ · CUSTOMER COMMERCE HARDENING 2026-09-26
-// Real customer tracking + restaurant-approved rewards + web proof analysis.
-// Does not fabricate GPS or financial confirmation.
-// ═══════════════════════════════════════════════════════════════════════════════
-function hlCustomerTelVariants(raw){
-  var t=String(raw||"").replace(/\D/g,""); if(t.indexOf("57")===0&&t.length===12)t=t.slice(2);
-  return {local:t,full:t?"57"+t:""};
-}
-function hlCustomerOwns(p,t){return p&&t&&(String(p.cliente_tel||"").replace(/\D/g,"")===t.local||String(p.cliente_tel||"").replace(/\D/g,"")===t.full);}
-
-app.get("/api/customer-live-tracking/:pedido_id", async function(req,res){
-  var rid=String(req.query.restaurante_id||""), tv=hlCustomerTelVariants(req.query.telefono), pid=String(req.params.pedido_id||"");
-  if(!rid||!tv.local||!pid)return res.status(400).json({ok:false,error:"Faltan datos"});
-  try{
-    var h={"apikey":SUPABASE_SERVICE_KEY_VAL,"Authorization":"Bearer "+SUPABASE_SERVICE_KEY_VAL};
-    var pr=await axios.get(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+encodeURIComponent(pid)+"&restaurante_id=eq."+encodeURIComponent(rid)+"&select=id,numero_pedido,cliente_tel,estado,domiciliario_id,direccion,updated_at",{headers:h});
-    var p=pr.data&&pr.data[0]; if(!p||!hlCustomerOwns(p,tv))return res.status(404).json({ok:false,error:"Pedido no encontrado"});
-    var active=["listo","en_camino"].indexOf(String(p.estado))!==-1;
-    if(!p.domiciliario_id)return res.json({ok:true,pedido_id:p.id,estado:p.estado,tracking:false,reason:"sin_domiciliario",server_at:new Date().toISOString()});
-    var ur=await axios.get(SUPABASE_URL+"/rest/v1/domiciliario_ubicacion?domiciliario_id=eq."+encodeURIComponent(p.domiciliario_id)+"&restaurante_id=eq."+encodeURIComponent(rid)+"&order=updated_at.desc&limit=1&select=lat,lng,accuracy,updated_at,pedido_id",{headers:h});
-    var u=ur.data&&ur.data[0]; if(!u)return res.json({ok:true,pedido_id:p.id,estado:p.estado,tracking:false,reason:"sin_gps",server_at:new Date().toISOString()});
-    var age=Math.max(0,Date.now()-new Date(u.updated_at).getTime());
-    res.set("Cache-Control","no-store");
-    res.json({ok:true,pedido_id:p.id,numero_pedido:p.numero_pedido,estado:p.estado,tracking:active,location:{lat:Number(u.lat),lng:Number(u.lng),accuracy:u.accuracy==null?null:Number(u.accuracy),updated_at:u.updated_at,age_ms:age,fresh:age<180000},server_at:new Date().toISOString()});
-  }catch(e){res.status(500).json({ok:false,error:e.message});}
-});
-
-// Customer creates a REQUEST. Points/stock are changed only after restaurant approval.
-app.post("/api/canjes/solicitar", async function(req,res){
-  var rid=String(req.body.restaurante_id||""), tv=hlCustomerTelVariants(req.body.telefono), productId=String(req.body.producto_canje_id||"");
-  if(!rid||!tv.local||!productId)return res.status(400).json({ok:false,error:"Faltan datos"});
-  try{
-    var h={"apikey":SUPABASE_SERVICE_KEY_VAL,"Authorization":"Bearer "+SUPABASE_SERVICE_KEY_VAL,"Content-Type":"application/json"};
-    var rr=await Promise.all([
-      axios.get(SUPABASE_URL+"/rest/v1/productos_canje?id=eq."+encodeURIComponent(productId)+"&restaurante_id=eq."+encodeURIComponent(rid)+"&activo=eq.true&select=*",{headers:h}),
-      axios.get(SUPABASE_URL+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+encodeURIComponent(rid)+"&telefono=eq."+encodeURIComponent(tv.local)+"&select=*",{headers:h}),
-      axios.get(SUPABASE_URL+"/rest/v1/canjes?restaurante_id=eq."+encodeURIComponent(rid)+"&telefono=eq."+encodeURIComponent(tv.local)+"&producto_canje_id=eq."+encodeURIComponent(productId)+"&estado=eq.pendiente&select=id,created_at&order=created_at.desc&limit=1",{headers:h}).catch(function(){return {data:[]};})
-    ]);
-    var prod=rr[0].data&&rr[0].data[0], cli=rr[1].data&&rr[1].data[0];
-    if(!prod)return res.status(404).json({ok:false,error:"Recompensa no disponible"});
-    if(!cli)return res.status(404).json({ok:false,error:"Cliente no encontrado"});
-    if(Number(cli.puntos||0)<Number(prod.puntos_requeridos||0))return res.status(409).json({ok:false,error:"Puntos insuficientes"});
-    if(prod.stock!=null&&Number(prod.stock)<=0)return res.status(409).json({ok:false,error:"Producto agotado"});
-    if(rr[2].data&&rr[2].data[0])return res.json({ok:true,pending:true,canje_id:rr[2].data[0].id,message:"Esta recompensa ya está esperando aprobación."});
-    var cr=await axios.post(SUPABASE_URL+"/rest/v1/canjes",{restaurante_id:rid,telefono:tv.local,producto_canje_id:prod.id,producto_nombre:prod.nombre,puntos_usados:Number(prod.puntos_requeridos||0),estado:"pendiente"},{headers:Object.assign({},h,{"Prefer":"return=representation"})});
-    var c=cr.data&&cr.data[0];
-    await guardarMensajeSupabase(rid,tv.local,"🎁 SOLICITUD DE CANJE: "+(cli.nombre_cliente||tv.local)+" solicita "+(prod.emoji||"🎁")+" "+prod.nombre+" por "+prod.puntos_requeridos+" pts. Requiere aprobación del restaurante.","alerta_pregunta",null).catch(function(){});
-    hlLiveTouch(rid);
-    res.json({ok:true,pending:true,canje_id:c&&c.id||null,puntos_actuales:Number(cli.puntos||0),message:"Solicitud enviada al restaurante."});
-  }catch(e){console.error("[canje-solicitar]",e.message);res.status(500).json({ok:false,error:e.message});}
-});
-
-app.get("/api/canjes/pendientes", async function(req,res){
-  var rid=String(req.query.restaurante_id||""); if(!rid)return res.status(400).json({ok:false,error:"Falta restaurante_id"});
-  try{var h={"apikey":SUPABASE_SERVICE_KEY_VAL,"Authorization":"Bearer "+SUPABASE_SERVICE_KEY_VAL};var r=await axios.get(SUPABASE_URL+"/rest/v1/canjes?restaurante_id=eq."+encodeURIComponent(rid)+"&estado=eq.pendiente&select=*&order=created_at.asc&limit=100",{headers:h});res.set("Cache-Control","no-store");res.json({ok:true,canjes:r.data||[]});}catch(e){res.status(500).json({ok:false,error:e.message});}
-});
-
-app.post("/api/canjes/:id/decision", async function(req,res){
-  var rid=String(req.body.restaurante_id||""), action=String(req.body.accion||"").toLowerCase(), id=String(req.params.id||"");
-  if(!rid||!["aprobar","rechazar"].includes(action))return res.status(400).json({ok:false,error:"Datos inválidos"});
-  try{
-    var h={"apikey":SUPABASE_SERVICE_KEY_VAL,"Authorization":"Bearer "+SUPABASE_SERVICE_KEY_VAL,"Content-Type":"application/json"};
-    var qr=await axios.get(SUPABASE_URL+"/rest/v1/canjes?id=eq."+encodeURIComponent(id)+"&restaurante_id=eq."+encodeURIComponent(rid)+"&select=*",{headers:h}), c=qr.data&&qr.data[0];
-    if(!c)return res.status(404).json({ok:false,error:"Canje no encontrado"}); if(c.estado!=="pendiente")return res.status(409).json({ok:false,error:"Este canje ya fue procesado",estado:c.estado});
-    if(action==="rechazar"){
-      await axios.patch(SUPABASE_URL+"/rest/v1/canjes?id=eq."+encodeURIComponent(id)+"&estado=eq.pendiente",{estado:"rechazado"},{headers:Object.assign({},h,{"Prefer":"return=representation"})});
-      await guardarMensajeSupabase(rid,c.telefono,"El restaurante rechazó la solicitud de canje de "+c.producto_nombre+". Tus puntos no fueron descontados.","restaurante",null).catch(function(){});hlLiveTouch(rid);
-      return res.json({ok:true,estado:"rechazado"});
-    }
-    var tv=hlCustomerTelVariants(c.telefono), rr=await Promise.all([
-      axios.get(SUPABASE_URL+"/rest/v1/clientes_frecuentes?restaurante_id=eq."+encodeURIComponent(rid)+"&telefono=eq."+encodeURIComponent(tv.local)+"&select=*",{headers:h}),
-      axios.get(SUPABASE_URL+"/rest/v1/productos_canje?id=eq."+encodeURIComponent(c.producto_canje_id)+"&restaurante_id=eq."+encodeURIComponent(rid)+"&select=*",{headers:h}),
-      axios.get(SUPABASE_URL+"/rest/v1/pedidos?restaurante_id=eq."+encodeURIComponent(rid)+"&or=(cliente_tel.eq."+encodeURIComponent(tv.local)+",cliente_tel.eq."+encodeURIComponent(tv.full)+")&estado=in.(esperando_pago,confirmado,en_preparacion,listo,en_camino)&order=created_at.desc&limit=1&select=*",{headers:h})
-    ]), cli=rr[0].data&&rr[0].data[0], prod=rr[1].data&&rr[1].data[0], ped=rr[2].data&&rr[2].data[0];
-    if(!cli||!prod)return res.status(409).json({ok:false,error:"Cliente o recompensa ya no están disponibles"});
-    var cost=Number(c.puntos_usados||prod.puntos_requeridos||0), points=Number(cli.puntos||0); if(points<cost)return res.status(409).json({ok:false,error:"El cliente ya no tiene puntos suficientes"});
-    if(prod.stock!=null&&Number(prod.stock)<=0)return res.status(409).json({ok:false,error:"La recompensa se agotó antes de aprobarla"});
-    // optimistic point debit prevents two approvals spending the same balance
-    var cp=await axios.patch(SUPABASE_URL+"/rest/v1/clientes_frecuentes?id=eq."+encodeURIComponent(cli.id)+"&puntos=eq."+points,{puntos:points-cost,updated_at:new Date().toISOString()},{headers:Object.assign({},h,{"Prefer":"return=representation"})});
-    if(!cp.data||!cp.data[0])return res.status(409).json({ok:false,error:"El saldo de puntos cambió. Actualiza e intenta otra vez."});
-    try{
-      if(prod.stock!=null)await axios.patch(SUPABASE_URL+"/rest/v1/productos_canje?id=eq."+encodeURIComponent(prod.id),{stock:Math.max(0,Number(prod.stock)-1)},{headers:Object.assign({},h,{"Prefer":"return=minimal"})});
-      if(ped){var items=Array.isArray(ped.items)?ped.items.slice():[];items.push((prod.emoji||"🎁")+" CANJE APROBADO: "+prod.nombre+" ($0)");await axios.patch(SUPABASE_URL+"/rest/v1/pedidos?id=eq."+encodeURIComponent(ped.id),{items:items,notas_especiales:(ped.notas_especiales?ped.notas_especiales+" | ":"")+"⭐ CANJE APROBADO: "+prod.nombre+" ("+cost+" pts)",updated_at:new Date().toISOString()},{headers:Object.assign({},h,{"Prefer":"return=minimal"})});}
-      await axios.patch(SUPABASE_URL+"/rest/v1/canjes?id=eq."+encodeURIComponent(id)+"&estado=eq.pendiente",{estado:"aprobado"},{headers:Object.assign({},h,{"Prefer":"return=minimal"})});
-    }catch(inner){await axios.patch(SUPABASE_URL+"/rest/v1/clientes_frecuentes?id=eq."+encodeURIComponent(cli.id),{puntos:points,updated_at:new Date().toISOString()},{headers:Object.assign({},h,{"Prefer":"return=minimal"})}).catch(function(){});throw inner;}
-    await guardarMensajeSupabase(rid,tv.local,"🎁 Canje aprobado: "+prod.nombre+(ped?" fue anexado al pedido #"+ped.numero_pedido:" quedó aprobado para tu próximo pedido")+". Saldo: "+(points-cost)+" pts.","restaurante",null).catch(function(){});hlLiveTouch(rid);
-    res.json({ok:true,estado:"aprobado",puntos_restantes:points-cost,pedido_actualizado:!!ped,pedido_numero:ped&&ped.numero_pedido||null});
-  }catch(e){console.error("[canje-decision]",e.message);res.status(500).json({ok:false,error:e.message});}
-});
-
-
-
-// Visual proof agent for the web menu. This validates the SCREENSHOT evidence only;
-// it never claims money reached the bank. Human financial confirmation remains mandatory.
-app.post("/api/verificar-comprobante-web", async function(req,res){
-  var rid=String(req.body.restaurante_id||""), total=Math.round(Number(req.body.total||0)), img=String(req.body.imagen_base64||""), tel=hlCustomerTelVariants(req.body.telefono).local;
-  if(!rid||!total||!/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(img))return res.status(400).json({ok:false,error:"Comprobante o datos inválidos"});
-  try{
-    if(!process.env.ANTHROPIC_API_KEY)return res.status(503).json({ok:false,error:"Agente visual no configurado"});
-    var m=img.match(/^data:([^;]+);base64,(.+)$/), buf=Buffer.from(m[2],"base64"); if(buf.length>8*1024*1024)return res.status(413).json({ok:false,error:"La imagen supera 8 MB"});
-    var cfg={};try{var rr=await axios.get(SUPABASE_URL+"/rest/v1/restaurantes?id=eq."+encodeURIComponent(rid)+"&select=nombre,metodo_pago_nombre,metodo_pago_nequi,metodo_pago_banco",{headers:sbPrivilegedHeaders()});cfg=rr.data&&rr.data[0]||{}}catch(_e){}
-    var prompt="Lee únicamente lo visible en este comprobante. No infieras datos ausentes. Devuelve SOLO JSON válido: {es_comprobante:boolean,monto_cop:number|null,destinatario:string|null,referencia:string|null,fecha_texto:string|null,estado_pago:\"exitoso|pendiente|fallido|desconocido\",confianza:number,razon:string}. estado_pago exitoso solo si la imagen muestra una transacción finalizada inequívocamente.";
-    var ar=await axios.post("https://api.anthropic.com/v1/messages",{model:"claude-haiku-4-5-20251001",max_tokens:320,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:m[1],data:m[2]}},{type:"text",text:prompt}]}]},{headers:{"x-api-key":process.env.ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","Content-Type":"application/json"},timeout:20000});
-    var txt=ar.data&&ar.data.content&&ar.data.content[0]&&ar.data.content[0].text||"{}",a=txt.indexOf("{"),b=txt.lastIndexOf("}"),v=JSON.parse(txt.slice(a,b+1));
-    function norm(x){return String(x||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"")}
-    var amount=v.monto_cop==null?null:Math.round(Number(v.monto_cop)), amountOk=Number.isFinite(amount)&&Math.abs(amount-total)<=1, stateOk=String(v.estado_pago||"").toLowerCase()==="exitoso", conf=Number(v.confianza||0), dest=norm(v.destinatario), names=String(cfg.metodo_pago_nombre||cfg.nombre||"").split(/[/|;,]/).map(norm).filter(Boolean), destOk=!names.length||(dest&&names.some(function(n){return dest===n||dest.indexOf(n)>=0||n.indexOf(dest)>=0}));
-    var visualOk=v.es_comprobante===true&&amountOk&&stateOk&&destOk&&conf>=.85, decision=visualOk?"evidencia_consistente":"revision_requerida", reason=visualOk?"La evidencia visual coincide con el pedido. Falta confirmación financiera del restaurante.":(!amountOk?"El monto visible no coincide con el total.":!stateOk?"La captura no muestra una transacción finalizada.":!destOk?"El destinatario visible no coincide.":"La evidencia requiere revisión humana.");
-    var proofId="web_"+Date.now()+"_"+channelCrypto.randomBytes(6).toString("hex");
-    await registrarEventoLuz(rid,null,"restaurante",null,"comprobante_verificado","Comprobante web evaluado",reason,{media_id:proofId,source:"web_menu",telefono:tel,monto:amount,monto_esperado:total,monto_coincide:amountOk,destinatario:v.destinatario||null,destinatario_esperado:cfg.metodo_pago_nombre||cfg.nombre||null,destino_coincide:destOk,estado_pago:v.estado_pago||"desconocido",confianza:conf,decision:decision,financiero:false},"cliente",null).catch(function(){});
-    res.json({ok:true,proof_id:proofId,decision:decision,visual_ok:visualOk,financially_confirmed:false,analysis:{monto:amount,monto_esperado:total,monto_coincide:amountOk,destinatario:v.destinatario||null,destino_coincide:destOk,estado_pago:v.estado_pago||"desconocido",confianza:conf,razon:reason}});
-  }catch(e){console.error("[proof-web]",e.message);res.status(500).json({ok:false,error:"No se pudo analizar el comprobante con seguridad"});}
 });
 
 app.listen(PORT, function() {
