@@ -2488,6 +2488,19 @@ body::after {
 </style>
 </head>
 <body>
+<script id="hlRuntimeGuardV10">
+window.addEventListener('error',function(ev){
+  try{
+    var msg=String(ev&&ev.message||'');
+    if(/tText is not defined/i.test(msg)){
+      console.warn('[HOLA LUZ V10] legacy tText error isolated; continuing menu runtime.');
+      ev.preventDefault();
+    }
+  }catch(_e){}
+});
+console.log('[HOLA LUZ V10] runtime guard ready');
+</script>
+
 
 <div id="splash">
   <div class="splash-logo"></div>
@@ -7116,7 +7129,28 @@ redeem=async function(){if(VN.redeeming||!VN.reward||PREVIEW)return;var p=VN.rew
 setInterval(function(){try{if(!$('mpOv')||!$('mpOv').classList.contains('open')||D.hidden)return;(VN.orders||[]).filter(function(p){return !['entregado','cancelado','rechazado'].includes(p.estado)}).forEach(hydrateTracking)}catch(e){}},5000);
 
 // Luz receives real tracking context when available, never a fabricated ETA/location.
-var baseContext=contextText;contextText=function(){var t=baseContext();if($('mpOv')&&$('mpOv').classList.contains('open')){var live=Object.keys(W.__hlLiveLocations).map(function(id){var l=W.__hlLiveLocations[id];return '#'+id.slice(0,6)+' GPS '+Number(l.lat).toFixed(5)+','+Number(l.lng).toFixed(5)+' actualizado '+l.updated_at}).join('; ');if(live)t=t.replace('No hay GPS disponible en esta vista.',live)}return t};
+// Tracking context hardening: never allow this enhancement to break Luz or the menu boot.
+try{
+  var hlBaseContext = (typeof contextText === 'function') ? contextText : function(){ return ''; };
+  contextText = function(){
+    var text = '';
+    try { text = String(hlBaseContext() || ''); } catch(_ctxErr) { text = ''; }
+    try {
+      if($('mpOv') && $('mpOv').classList.contains('open')){
+        var store = (W.__hlLiveLocations && typeof W.__hlLiveLocations === 'object') ? W.__hlLiveLocations : {};
+        var live = Object.keys(store).map(function(id){
+          var l=store[id]||{}, lat=Number(l.lat), lng=Number(l.lng);
+          if(!isFinite(lat)||!isFinite(lng)) return '';
+          return '#'+String(id).slice(0,6)+' GPS '+lat.toFixed(5)+','+lng.toFixed(5)+(l.updated_at?' actualizado '+l.updated_at:'');
+        }).filter(Boolean).join('; ');
+        if(live){
+          text = text.indexOf('No hay GPS disponible en esta vista.')>=0 ? text.replace('No hay GPS disponible en esta vista.',live) : (text+' '+live).trim();
+        }
+      }
+    } catch(_trackingContextErr){}
+    return text;
+  };
+}catch(_contextPatchErr){ console.warn('[HOLA LUZ] tracking context patch skipped safely', _contextPatchErr); }
 })();
 </script>
 
