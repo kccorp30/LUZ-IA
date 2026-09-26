@@ -457,8 +457,11 @@ async function getMenuDinamico(restauranteId) {
     return menuCache[restauranteId].menu;
   }
   try {
-    var r = await axios.get(SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restauranteId + "&disponible=eq.true&order=categoria,orden&select=nombre,precio,categoria,es_bebida,es_arepa", { headers: sbH(false) });
-    var items = r.data || [];
+    var menuReq = axios.get(SUPABASE_URL + "/rest/v1/menu_items?restaurante_id=eq." + restauranteId + "&disponible=eq.true&order=categoria,orden&select=id,nombre,precio,descripcion,categoria,es_bebida,es_arepa,modificadores,agotado,controlar_stock,stock", { headers: sbH(false) });
+    var restReq = axios.get(SUPABASE_URL + "/rest/v1/restaurantes?id=eq." + restauranteId + "&select=menu_config", { headers: sbH(false) }).catch(function(){ return {data:[]}; });
+    var rr = await Promise.all([menuReq, restReq]);
+    var r = rr[0], restMenuCfg = (rr[1].data && rr[1].data[0] && rr[1].data[0].menu_config) || null;
+    var items = (r.data || []).filter(function(i){ return i.agotado !== true && !(i.controlar_stock && Number(i.stock||0) <= 0); });
     if (!items.length) return "(Sin productos cargados en el sistema. Informa al cliente que el menu esta siendo actualizado.)";
     var grupos = {};
     items.forEach(function(i) { if (!grupos[i.categoria]) grupos[i.categoria] = []; grupos[i.categoria].push(i); });
@@ -469,10 +472,26 @@ async function getMenuDinamico(restauranteId) {
         var precio = "$" + Number(i.precio).toLocaleString("es-CO");
         var desc = i.descripcion ? " (" + i.descripcion + ")" : "";
         var tipo = i.es_bebida ? " [bebida]" : (i.es_arepa ? " [arepa]" : "");
-        lines.push("- " + i.nombre + ": " + precio + desc + tipo);
+        var mods = Array.isArray(i.modificadores) ? i.modificadores : [];
+        var modTxt = mods.map(function(g){
+          var ops=(g.opciones||[]).filter(function(o){return o&&o.disponible!==false&&o.nombre;}).map(function(o){return o.nombre+(Number(o.precio||0)>0?" +$"+Number(o.precio).toLocaleString("es-CO"):"");});
+          return ops.length ? (g.nombre+" ["+(g.obligatorio?"obligatorio":"opcional")+", máx "+Number(g.max||g.maximo||1)+"]: "+ops.join(", ")) : null;
+        }).filter(Boolean);
+        lines.push("- " + i.nombre + ": " + precio + desc + tipo + (modTxt.length ? " | OPCIONES: "+modTxt.join(" · ") : ""));
       });
     });
     lines.push("\nSi el cliente pide algo que NO esta en esta lista, dile que hoy no esta disponible y ofrece alternativas.\n");
+    // Menú Studio también gobierna promociones del menú web. Exponerlas a Luz evita
+    // que recomiende promos inexistentes o ignore las activas.
+    try {
+      var mc = typeof restMenuCfg === "string" ? JSON.parse(restMenuCfg) : (restMenuCfg || {});
+      var ps = Array.isArray(mc.promociones) ? mc.promociones.filter(function(p){return p && p.estado === "activa";}) : [];
+      if(ps.length){
+        lines.push("\nPROMOCIONES CONFIGURADAS EN MENU STUDIO:");
+        ps.forEach(function(p){ lines.push("- "+String(p.titulo||p.nombre||p.tipo||"Promoción")+(p.descripcion?": "+p.descripcion:"")+(p.valor!=null?" | valor: "+p.valor:"")); });
+        lines.push("Solo ofrece estas promociones cuando correspondan; nunca inventes descuentos.");
+      }
+    } catch(_mc) {}
     // Detectar combos - solo los que estan explicitamente en el menu
     var combos = items.filter(function(i){ return (i.nombre||"").toLowerCase().includes("combo") || (i.categoria||"").toLowerCase().includes("combo"); });
     if(combos.length > 0){
